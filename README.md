@@ -18,6 +18,8 @@ Aplikacja **nie wymaga** połączenia z API Fantasy Premier League — działa o
 │   └── TECHNICAL.md        # Pełna dokumentacja techniczna
 ├── public/                 # Statyczne assety serwowane bez zmian (JSON, logo)
 │   ├── logo/               # Herby drużyn + logo ligi (skopiuj z folderu logo/)
+│   ├── soundtracks/        # WAV (recznie, gitignore) — Vite kopiuje do dist/
+│   ├── FPL-Arena-Soundtrack-Sezon-2025-26.zip  # recznie w public/ (gitignore)
 │   ├── player_highlights.json
 │   ├── player_season_history.json
 │   ├── wyniki_meczy.json
@@ -33,7 +35,10 @@ Aplikacja **nie wymaga** połączenia z API Fantasy Premier League — działa o
 │   ├── lib/                # Małe helpery (np. wynik meczu W/D/L)
 │   ├── types/              # Typy TypeScript
 │   └── styles/             # CSS globalny
-├── scripts/sync-public.ps1 # JSON + logo → public/ (predev / prebuild)
+├── scripts/sync-public.mjs # JSON + logo → public/ (predev / prebuild)
+├── scripts/verify-public.mjs
+├── scripts/verify-dist.mjs # Po buildzie — 20 WAV + ZIP w dist/
+├── deploy/                 # nginx.example.conf, DIGITALOCEAN.md
 ├── server/                 # Prosty serwer Node dla dist/ (SPA)
 ├── archive/                # Stary HTML + skrypty migracji (nieużywane w buildzie)
 ├── konwertuj_*.py          # Regeneracja JSON z Excel
@@ -68,29 +73,49 @@ Aplikacja: [http://localhost:5173](http://localhost:5173)
 
 ## Build (publikacja statyczna)
 
+**Produkcja (z audio):**
+
+```bash
+npm run build:prod
+```
+
+Sprawdza `public/soundtracks/` (20 WAV) + ZIP, buduje `dist/`, weryfikuje wynik (`postbuild`).
+
+**Szybki build (bez audio — verify-dist moze failowac):**
+
 ```bash
 npm run build
 ```
 
-Wynik w folderze **`dist/`** — można wrzucić na dowolny hosting statyczny (nginx, Apache, S3, Netlify, itd.).
+Wynik w **`dist/`**. Pliki z `public/` (w tym audio) sa kopiowane przez Vite bez obrobki.
 
 ```bash
-npm run preview   # podgląd lokalny buildu (port 4173)
+npm run preview   # podglad lokalny buildu (port 4173)
+npm run verify-public -- --strict   # tylko sprawdzenie public/
+npm run verify-dist                 # tylko sprawdzenie dist/
 ```
 
-## Deploy — wariant A: hosting statyczny (zalecany)
+## Deploy — DigitalOcean + Nginx (zalecany)
 
-1. `npm run build`
-2. Wgraj całą zawartość `dist/` na serwer.
-3. Skonfiguruj fallback do `index.html` (SPA), np. nginx:
+Pelna instrukcja: [`deploy/DIGITALOCEAN.md`](deploy/DIGITALOCEAN.md)
 
-```nginx
-location / {
-  try_files $uri $uri/ /index.html;
-}
-```
+1. Umiesc recznie w **`public/soundtracks/`** pliki `01-4002.wav` … `20-3873739.wav` oraz **`public/FPL-Arena-Soundtrack-Sezon-2025-26.zip`** (lista: `scripts/soundtrack-manifest.mjs`).
+2. `npm run build:prod` — komunikat: `OK - dist/ gotowy do publikacji`.
+3. Wgraj **caly** folder `dist/` na droplet (np. `rsync -avz dist/ user@IP:/var/www/fpl-arena-skarb-kibica/dist/`).
+4. Nginx: [`deploy/nginx.example.conf`](deploy/nginx.example.conf) — `try_files $uri =404` dla `/soundtracks/` i `*.wav`/`*.zip`.
 
-Dane (`*.json`) i `logo/` są już w `dist/` po buildzie Vite.
+Test: `https://twoja-domena.pl/soundtracks/12-22952.wav` musi zwrocic audio, **nie** HTML.
+
+## Deploy — inne hosty
+
+**Apache** — `dist/.htaccess` z `public/`.
+
+**Netlify / Cloudflare** — publish: `dist`, plik `dist/_redirects` z `public/`.
+
+### Dlaczego pobiera sie HTML zamiast WAV?
+
+1. Brak plikow w `dist/soundtracks/` na serwerze (build bez `public/soundtracks/` lub niepelny upload).
+2. SPA fallback w Nginx/Apache — naprawa: reguly z `deploy/nginx.example.conf`.
 
 ## Deploy — wariant B: Node.js
 
@@ -100,7 +125,7 @@ Po buildzie:
 npm run start
 ```
 
-Domyślny port **3000** (zmienna `PORT`). Serwer w `server/index.js` serwuje `dist/` i przekierowuje nieznane ścieżki na `index.html`.
+Domyślny port **3000** (zmienna `PORT`). Serwer w `server/index.js` serwuje `dist/`, zwraca poprawne MIME dla WAV/ZIP i **nie** podstawia `index.html` pod brakujące pliki audio.
 
 ## Regeneracja danych (bez zmiany kodu aplikacji)
 
@@ -109,7 +134,7 @@ python konwertuj_wyniki.py
 python konwertuj_highlights.py
 python konwertuj_history.py
 python konwertuj_or.py
-powershell -ExecutionPolicy Bypass -File scripts/sync-public.ps1
+node scripts/sync-public.mjs
 ```
 
 Szczegóły pipeline'u, schematy JSON i checklist testów: [`docs/TECHNICAL.md`](docs/TECHNICAL.md).
@@ -119,7 +144,10 @@ Szczegóły pipeline'u, schematy JSON i checklist testów: [`docs/TECHNICAL.md`]
 | Skrypt | Opis |
 |--------|------|
 | `npm run dev` | Vite dev server (+ sync `public/`) |
-| `npm run build` | Produkcja → `dist/` (+ sync `public/`) |
+| `npm run build` | Vite → `dist/` (+ postbuild verify-dist) |
+| `npm run build:prod` | Weryfikacja public/ + build + weryfikacja dist/ |
+| `npm run verify-public` | Sprawdzenie plikow audio w public/ |
+| `npm run verify-dist` | Sprawdzenie dist/ po buildzie |
 | `npm run preview` | Podgląd `dist/` |
 | `npm run start` | Serwer Node dla `dist/` |
 | `npm run typecheck` | Sprawdzenie typów TypeScript |

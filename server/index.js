@@ -1,10 +1,12 @@
 /**
  * Prosty serwer produkcyjny dla zbudowanej aplikacji (SPA).
  * Uruchom po: npm run build
+ *
+ * Na DigitalOcean produkcja: Nginx (deploy/nginx.example.conf), nie ten serwer.
  */
 import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
-import { existsSync } from "node:fs";
+import { existsSync, statSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -19,36 +21,66 @@ const MIME = {
   ".json": "application/json",
   ".png": "image/png",
   ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".webp": "image/webp",
   ".svg": "image/svg+xml",
   ".ico": "image/x-icon",
   ".woff2": "font/woff2",
+  ".wav": "audio/wav",
+  ".zip": "application/zip",
 };
+
+/** Brak pliku statycznego = 404, NIE index.html (unika pobierania HTML jako WAV/ZIP). */
+const STATIC_ASSET = /\.(wav|zip|png|jpe?g|gif|svg|ico|json|css|js|mjs|woff2?|webp|mp4|webm|map)$/i;
+
+const DOWNLOAD_EXT = new Set([".wav", ".zip"]);
 
 const server = createServer(async (req, res) => {
   try {
-    const url = new URL(req.url || "/", `http://localhost`);
+    const url = new URL(req.url || "/", "http://localhost");
     let pathname = decodeURIComponent(url.pathname);
     if (pathname === "/") pathname = "/index.html";
 
     let filePath = path.join(DIST, pathname);
-    if (!filePath.startsWith(DIST)) {
+    const distResolved = path.resolve(DIST);
+    if (!filePath.startsWith(distResolved + path.sep) && filePath !== distResolved) {
       res.writeHead(403);
       res.end("Forbidden");
       return;
     }
 
-    const isFile = existsSync(filePath) && !pathname.endsWith("/");
-    if (!isFile) {
+    let isFile = existsSync(filePath) && statSync(filePath).isFile();
+    if (!isFile && !pathname.endsWith("/")) {
+      if (STATIC_ASSET.test(pathname)) {
+        res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
+        res.end("404 Not Found");
+        return;
+      }
       filePath = path.join(DIST, "index.html");
+      isFile = existsSync(filePath) && statSync(filePath).isFile();
     }
 
-    const ext = path.extname(filePath);
+    if (!isFile) {
+      res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
+      res.end("Not found");
+      return;
+    }
+
+    const ext = path.extname(filePath).toLowerCase();
+    const headers = {
+      "Content-Type": MIME[ext] || "application/octet-stream",
+      "Content-Length": String(statSync(filePath).size),
+    };
+    if (DOWNLOAD_EXT.has(ext)) {
+      headers["Content-Disposition"] = `attachment; filename="${path.basename(filePath)}"`;
+    }
+
     const body = await readFile(filePath);
-    res.writeHead(200, { "Content-Type": MIME[ext] || "application/octet-stream" });
+    res.writeHead(200, headers);
     res.end(body);
   } catch {
-    res.writeHead(404);
-    res.end("Not found");
+    res.writeHead(500, { "Content-Type": "text/plain; charset=utf-8" });
+    res.end("Internal error");
   }
 });
 

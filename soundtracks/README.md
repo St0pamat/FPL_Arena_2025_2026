@@ -1,7 +1,7 @@
-# Soundtrack — zapowiedzi Gladiatorów
+# Soundtrack (archiwum robocze)
 
-Pliki WAV z playlisty sezonu 2025/26. Nazewnictwo: `{nr}. {gracz} - {klub}.wav`.
+Pliki produkcyjne umieszczaj bezposrednio w **`public/soundtracks/`** oraz ZIP w **`public/`**.
 
-Kopiowane do `public/soundtracks/` oraz pakowane do ZIP przez `scripts/sync-public.ps1` (uruchamiane przed `npm run dev` / `npm run build`).
+Ten folder (`soundtracks/` w korzeniu projektu) moze sluzyc jako lokalne archiwum — nie jest juz uzywany przez skrypt sync.
 
-Mapowanie plik → gracz: `src/data/soundtrackTracks.ts`.
+Szczegoly: `public/soundtracks/README.md` oraz `deploy/DIGITALOCEAN.md`.

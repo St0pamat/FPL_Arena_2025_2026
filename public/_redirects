@@ -1,0 +1,10 @@
+# Netlify / Cloudflare Pages: najpierw pliki statyczne z dist/, potem SPA.
+# Wazne: folder soundtracks/ musi byc w dist/ po buildzie (npm run build z plikami WAV).
+
+/soundtracks/*  /soundtracks/:splat  200
+/assets/*       /assets/:splat       200
+/logo/*         /logo/:splat         200
+/*.json         /:splat              200
+/*.wav          /:splat              200
+/*.zip          /:splat              200
+/*              /index.html          200

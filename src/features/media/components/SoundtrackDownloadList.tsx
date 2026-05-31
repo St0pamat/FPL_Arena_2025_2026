@@ -17,7 +17,10 @@ const TrackCard = ({
   order: number;
   player: Player;
   file: string;
-}) => (
+}) => {
+  const downloadLabel = `${String(order).padStart(2, "0")}-${playerDisplayName(player).replace(/[^\p{L}\p{N}.-]+/gu, "-")}.wav`;
+
+  return (
   <article className="glass-panel rounded-xl border border-slate-800 panel-pad flex items-center gap-4 hover:border-emerald-500/30 transition-colors group">
     <div
       className="shrink-0 w-10 h-10 rounded-lg bg-slate-900 border border-slate-700 flex items-center justify-center font-mono text-sm font-bold text-emerald-400 group-hover:border-emerald-500/40"
@@ -36,15 +39,16 @@ const TrackCard = ({
     </div>
     <a
       href={soundtrackFileUrl(file)}
-      download
+      download={downloadLabel}
       className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-fluid-xs font-semibold border border-slate-700 bg-slate-900/80 text-slate-200 hover:border-emerald-500/50 hover:bg-emerald-500/10 hover:text-emerald-300 transition-colors"
-      title={`Pobierz: ${file}`}
+      title={`Pobierz: ${downloadLabel}`}
     >
       <span aria-hidden>↓</span>
       WAV
     </a>
   </article>
-);
+  );
+};
 
 export const SoundtrackDownloadList = () => {
   const tracks = SOUNDTRACK_TRACKS.map((t) => ({

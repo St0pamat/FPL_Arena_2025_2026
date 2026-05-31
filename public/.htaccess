@@ -1,0 +1,21 @@
+# Apache: SPA + statyczne media (WAV, ZIP, logo, JSON)
+<IfModule mod_mime.c>
+  AddType audio/wav .wav
+  AddType application/zip .zip
+</IfModule>
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_URI} \.(wav|zip|png|jpe?g|gif|svg|ico|json|css|js|mjs|woff2?|webp|map)$ [NC]
+  RewriteRule ^ - [R=404,L]
+
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule ^ index.html [L]
+</IfModule>

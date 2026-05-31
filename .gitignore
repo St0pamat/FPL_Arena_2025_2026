@@ -19,12 +19,13 @@ Thumbs.db
 .vscode/
 .idea/
 
-# Duże pliki audio (kopiowane do public/ przez sync-public.ps1)
-soundtracks/*.wav
-public/soundtracks/
+# Duże pliki audio — recznie w public/ (Vite -> dist/); poza Git
+public/soundtracks/*
+!public/soundtracks/README.md
 public/FPL-Arena-Soundtrack-Sezon-2025-26.zip
+soundtracks/*.wav
 
-# Kopia robocza danych w public/ (źródło: pliki JSON w katalogu głównym + sync-public.ps1)
+# Kopia robocza danych w public/ (źródło: pliki JSON w katalogu głównym + sync-public)
 public/player_highlights.json
 public/player_season_history.json
 public/wyniki_meczy.json
@@ -32,3 +33,15 @@ public/gladiator_or.json
 
 # Cache TypeScript (gdyby włączono tsc -b)
 node_modules/.tmp/
+
+*.zip
+
+*.wav
+
+soundtracks/
+
+*.zip
+
+*.wav
+
+soundtracks/
