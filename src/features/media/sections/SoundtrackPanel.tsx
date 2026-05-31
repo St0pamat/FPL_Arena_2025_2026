@@ -11,7 +11,7 @@ export const SoundtrackPanel = () => (
     <div className="glass-panel panel-pad rounded-2xl border border-emerald-500/20 bg-emerald-500/5">
       <p className="text-fluid-sm text-slate-300 leading-relaxed">
         Oficjalny <strong className="text-emerald-300">soundtrack Areny</strong> — playlista utworów z zapowiedzi
-        wszystkich Gladiatorów sezonu 2025/26. Odtwórz online lub pobierz pojedyncze utwory i cały album poniżej.
+        wszystkich Gladiatorów sezonu 2025/26. Odtwórz online lub pobierz utwory poniżej — pojedynczo albo wszystkie naraz.
       </p>
     </div>
 

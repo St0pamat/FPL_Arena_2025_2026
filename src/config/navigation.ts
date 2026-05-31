@@ -143,7 +143,7 @@ export const HUB_CONFIG: Record<
         id: "soundtrack",
         title: "Soundtrack",
         icon: "🎵",
-        description: "Playlista SoundCloud oraz pobieranie utworów WAV (pojedynczo i ZIP).",
+        description: "Playlista SoundCloud oraz pobieranie utworów WAV (pojedynczo lub wszystkie naraz).",
       },
       {
         id: "logotypy",
