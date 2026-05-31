@@ -44,15 +44,26 @@ sudo nginx -t
 sudo systemctl reload nginx
 ```
 
-## 5. Test po deploy
+## 5. Diagnostyka na serwerze
 
-```text
-https://twoja-domena.pl/soundtracks/12-22952.wav     -> audio (nie HTML)
-https://twoja-domena.pl/FPL-Arena-Soundtrack-Sezon-2025-26.zip -> ZIP
-https://twoja-domena.pl/brakujacy.wav                -> 404 (nie index.html)
+```bash
+DIST_DIR=/var/www/fpl-arena-skarb-kibica/dist node scripts/verify-dist.mjs
 ```
 
-## 6. Typowy blad: pobierany HTML zamiast WAV
+Skrypt sprawdza 20 WAV, sciezke ZIP, rozmiar (~540 MB), uprawnienia odczytu, sygnature PK oraz czy plik to nie HTML.
 
-- Brak plikow w `dist/soundtracks/` na serwerze
-- Nginx `try_files $uri /index.html` dla sciezki /soundtracks/ (uzyj konfiguracji z tego repo)
+## 6. Test po deploy
+
+```text
+https://twoja-domena.pl/FPL-Arena-Soundtrack-Sezon-2025-26.zip -> ZIP (~540 MB, nie HTML)
+https://twoja-domena.pl/soundtracks/12-22952.wav               -> audio
+```
+
+## 7. Typowy blad: pobierany HTML zamiast ZIP/WAV
+
+- **ZIP wgrany do `public/` zamiast `dist/`** — Nginx serwuje `dist/`:
+  ```bash
+  cp /var/www/.../public/FPL-Arena-Soundtrack-Sezon-2025-26.zip /var/www/.../dist/
+  ```
+- Brak pliku w `dist/` (niepelny rsync)
+- SPA fallback bez reguly `try_files $uri =404` dla `.zip` / `/soundtracks/`

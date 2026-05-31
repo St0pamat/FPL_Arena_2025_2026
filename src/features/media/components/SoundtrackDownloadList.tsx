@@ -71,6 +71,7 @@ export const SoundtrackDownloadList = () => {
         <a
           href={soundtrackBundleUrl()}
           download={SOUNDTRACK_BUNDLE_FILE}
+          type="application/zip"
           className="shrink-0 inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl text-fluid-sm font-bold border-2 border-emerald-500/50 bg-emerald-500/20 text-emerald-200 hover:bg-emerald-500/30 hover:border-emerald-400 transition-all shadow-[0_0_24px_rgba(16,185,129,0.15)]"
         >
           <span aria-hidden>⬇</span>

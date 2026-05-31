@@ -31,6 +31,7 @@ export const SOUNDTRACK_TRACKS: SoundtrackTrackMeta[] = [
 
 export const SOUNDTRACK_BUNDLE_FILE = "FPL-Arena-Soundtrack-Sezon-2025-26.zip";
 
-export const soundtrackFileUrl = (filename: string) => `/soundtracks/${filename}`;
-
+/** Sciezka HTTP — plik musi lezec w {nginx root}/FPL-Arena-Soundtrack-Sezon-2025-26.zip (czyli dist/, nie public/). */
 export const soundtrackBundleUrl = () => `/${SOUNDTRACK_BUNDLE_FILE}`;
+
+export const soundtrackFileUrl = (filename: string) => `/soundtracks/${filename}`;
