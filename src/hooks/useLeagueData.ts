@@ -1,10 +1,8 @@
 import { useEffect, useState } from "react";
-import { FPL_BOOTSTRAP_URL } from "@/services/fpl/api";
 import type { GwMatchesBlock } from "@/types/match";
 import type { PlayerHighlightsMap } from "@/types/highlights";
 import type { PlayerSeasonHistoryMap } from "@/types/seasonHistory";
 import type { GladiatorOrMap } from "@/types/or";
-import type { FplElementMap } from "@/types/fpl";
 
 export function useLeagueData() {
   const [matchesByGw, setMatchesByGw] = useState<GwMatchesBlock[]>([]);
@@ -14,34 +12,6 @@ export function useLeagueData() {
   const [seasonHistory, setSeasonHistory] = useState<PlayerSeasonHistoryMap>({});
   const [seasonHistoryLoading, setSeasonHistoryLoading] = useState(true);
   const [gladiatorOr, setGladiatorOr] = useState<GladiatorOrMap>({});
-  const [fplPlayersById, setFplPlayersById] = useState<FplElementMap>({});
-
-  useEffect(() => {
-    let isMounted = true;
-
-    fetch(FPL_BOOTSTRAP_URL)
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (!isMounted || !data?.elements) return;
-        const map: FplElementMap = {};
-        data.elements.forEach((el: FplElementMap[number]) => {
-          map[el.id] = {
-            id: el.id,
-            web_name: el.web_name,
-            photo: el.photo,
-            element_type: el.element_type,
-          };
-        });
-        setFplPlayersById(map);
-      })
-      .catch(() => {
-        if (isMounted) setFplPlayersById({});
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -129,6 +99,5 @@ export function useLeagueData() {
     seasonHistory,
     seasonHistoryLoading,
     gladiatorOr,
-    fplPlayersById,
   };
 }

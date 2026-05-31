@@ -1,7 +1,6 @@
 import { useMemo } from "react";
 import type { PlayerHighlights } from "@/types/highlights";
 import type { SeasonGwDetail } from "@/types/seasonHistory";
-import type { FplElementMap } from "@/types/fpl";
 import {
   EVENT_TYPE_ICONS,
   EVENT_TYPE_LABELS,
@@ -14,11 +13,9 @@ import { TeamOfSeasonPanel } from "@/features/pitch/components/TeamOfSeasonPanel
 
 export const SeasonHighlightsPanel = ({
   highlights,
-  fplPlayersById = {},
   seasonGwDetails = [],
 }: {
   highlights: PlayerHighlights | null;
-  fplPlayersById?: Record<number, { web_name?: string }>;
   seasonGwDetails?: SeasonGwDetail[];
 }) => {
     if (!highlights || !highlights.gwPoints || highlights.gwPoints.length === 0) return null;
@@ -394,7 +391,6 @@ export const SeasonHighlightsPanel = ({
                 <TeamOfSeasonPanel
                     dreamTeam={highlights.dreamTeam}
                     squadPlayers={highlights.squadPlayers}
-                    fplPlayersById={fplPlayersById}
                 />
             )}
         </div>

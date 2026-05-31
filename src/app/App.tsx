@@ -54,8 +54,6 @@ export default function App() {
 
     gladiatorOr,
 
-    fplPlayersById,
-
   } = useLeagueData();
 
 
@@ -148,8 +146,6 @@ export default function App() {
               seasonHistoryLoading={seasonHistoryLoading}
 
               gladiatorOr={gladiatorOr}
-
-              fplPlayersById={fplPlayersById}
 
             />
 

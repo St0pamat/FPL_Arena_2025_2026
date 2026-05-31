@@ -4,7 +4,6 @@ import type { PlayerHighlightsMap } from "@/types/highlights";
 import type { PlayerSeasonHistoryMap } from "@/types/seasonHistory";
 import type { GwMatchesBlock } from "@/types/match";
 import type { GladiatorOrMap } from "@/types/or";
-import type { FplElementMap } from "@/types/fpl";
 import { TEAM_BY_NAME } from "@/config/playersIndex";
 import { getMatchOutcome } from "@/lib/match";
 import { TeamCrest } from "@/components/branding";
@@ -38,7 +37,6 @@ export const ProfilesView = ({
   seasonHistory,
   seasonHistoryLoading,
   gladiatorOr,
-  fplPlayersById,
 }: {
   players: Player[];
   selectedPlayerId: number;
@@ -50,7 +48,6 @@ export const ProfilesView = ({
   seasonHistory: PlayerSeasonHistoryMap;
   seasonHistoryLoading: boolean;
   gladiatorOr: GladiatorOrMap;
-  fplPlayersById: FplElementMap;
 }) => {
   const currentPlayer = useMemo(
     () => players.find((p) => p.id === selectedPlayerId),
@@ -501,7 +498,6 @@ export const ProfilesView = ({
             {!highlightsLoading && (
               <SeasonHighlightsPanel
                 highlights={currentHighlights}
-                fplPlayersById={fplPlayersById}
                 seasonGwDetails={currentSeasonHistory?.gwDetails}
               />
             )}

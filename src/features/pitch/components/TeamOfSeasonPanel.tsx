@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import type { DreamTeamPlayer, SquadPlayer } from "@/types/highlights";
-import type { FplElementMap } from "@/types/fpl";
 import { POSITION_COLORS, POSITION_SECTIONS } from "@/features/fpl/constants";
 import { inferFormation, mapDreamTeamPlayer } from "@/services/fpl/api";
 
@@ -108,18 +107,18 @@ const PlayerRow = ({
 export const TeamOfSeasonPanel = ({
   dreamTeam,
   squadPlayers = [],
-  fplPlayersById = {},
 }: {
   dreamTeam: DreamTeamPlayer[];
   squadPlayers?: SquadPlayer[];
-  fplPlayersById?: FplElementMap;
 }) => {
   const [showAllSquad, setShowAllSquad] = useState(false);
 
   const lineup = useMemo(() => {
-    const raw = (dreamTeam || []).filter((p) => p.position >= 1 && p.position <= 4);
-    return raw.map((p) => mapDreamTeamPlayer(p, fplPlayersById)) as MappedPlayer[];
-  }, [dreamTeam, fplPlayersById]);
+    const raw = (dreamTeam || []).filter(
+      (p) => p.position != null && p.position >= 1 && p.position <= 4
+    );
+    return raw.map((p) => mapDreamTeamPlayer(p)) as MappedPlayer[];
+  }, [dreamTeam]);
 
   const formation = useMemo(() => inferFormation(lineup), [lineup]);
   const groups = useMemo(() => groupByPosition(lineup), [lineup]);
@@ -133,9 +132,9 @@ export const TeamOfSeasonPanel = ({
     if (!squadPlayers.length) return [];
     return squadPlayers
       .filter((p) => !p.elementId || !top11Ids.has(p.elementId))
-      .map((p) => mapDreamTeamPlayer(p, fplPlayersById) as MappedPlayer)
+      .map((p) => mapDreamTeamPlayer(p) as MappedPlayer)
       .sort((a, b) => (b.points || 0) - (a.points || 0));
-  }, [squadPlayers, top11Ids, fplPlayersById]);
+  }, [squadPlayers, top11Ids]);
 
   const stats = useMemo(() => {
     if (!lineup.length) return null;
