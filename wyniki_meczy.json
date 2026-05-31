@@ -1,0 +1,2472 @@
+[
+  {
+    "gw": 1,
+    "matches": [
+      {
+        "teamA": "immigrants fc",
+        "pointsA": 58,
+        "teamB": "Kapcie Kłapcia",
+        "pointsB": 31
+      },
+      {
+        "teamA": "VeB",
+        "pointsA": 79,
+        "teamB": "Przemsza Klucze",
+        "pointsB": 71
+      },
+      {
+        "teamA": "Ulane Warchlaki",
+        "pointsA": 54,
+        "teamB": "FC Defconiarze",
+        "pointsB": 74
+      },
+      {
+        "teamA": "Scuderia Blaugrana",
+        "pointsA": 64,
+        "teamB": "MnstrNaf",
+        "pointsB": 39
+      },
+      {
+        "teamA": "Boom Saka Laka",
+        "pointsA": 58,
+        "teamB": "FcpoNalewce",
+        "pointsB": 55
+      },
+      {
+        "teamA": "MQUC",
+        "pointsA": 49,
+        "teamB": "Wirtz Team Ever",
+        "pointsB": 55
+      },
+      {
+        "teamA": "Bad Kompany",
+        "pointsA": 65,
+        "teamB": "Jarząbki",
+        "pointsB": 32
+      },
+      {
+        "teamA": "Pusan",
+        "pointsA": 44,
+        "teamB": "Furiosa FC Morfeusza",
+        "pointsB": 40
+      },
+      {
+        "teamA": "świnie Pepa",
+        "pointsA": 56,
+        "teamB": "Pewniaczki",
+        "pointsB": 59
+      },
+      {
+        "teamA": "Bolesławiec King",
+        "pointsA": 27,
+        "teamB": "C30-C39",
+        "pointsB": 77
+      }
+    ]
+  },
+  {
+    "gw": 2,
+    "matches": [
+      {
+        "teamA": "Kapcie Kłapcia",
+        "pointsA": 75,
+        "teamB": "Bolesławiec King",
+        "pointsB": 60
+      },
+      {
+        "teamA": "C30-C39",
+        "pointsA": 41,
+        "teamB": "świnie Pepa",
+        "pointsB": 62
+      },
+      {
+        "teamA": "Pewniaczki",
+        "pointsA": 50,
+        "teamB": "Pusan",
+        "pointsB": 42
+      },
+      {
+        "teamA": "Furiosa FC Morfeusza",
+        "pointsA": 60,
+        "teamB": "Bad Kompany",
+        "pointsB": 43
+      },
+      {
+        "teamA": "Jarząbki",
+        "pointsA": 36,
+        "teamB": "MQUC",
+        "pointsB": 24
+      },
+      {
+        "teamA": "Wirtz Team Ever",
+        "pointsA": 51,
+        "teamB": "Boom Saka Laka",
+        "pointsB": 58
+      },
+      {
+        "teamA": "FcpoNalewce",
+        "pointsA": 57,
+        "teamB": "Scuderia Blaugrana",
+        "pointsB": 56
+      },
+      {
+        "teamA": "MnstrNaf",
+        "pointsA": 57,
+        "teamB": "Ulane Warchlaki",
+        "pointsB": 47
+      },
+      {
+        "teamA": "FC Defconiarze",
+        "pointsA": 43,
+        "teamB": "VeB",
+        "pointsB": 61
+      },
+      {
+        "teamA": "Przemsza Klucze",
+        "pointsA": 24,
+        "teamB": "immigrants fc",
+        "pointsB": 59
+      }
+    ]
+  },
+  {
+    "gw": 3,
+    "matches": [
+      {
+        "teamA": "VeB",
+        "pointsA": 58,
+        "teamB": "Kapcie Kłapcia",
+        "pointsB": 43
+      },
+      {
+        "teamA": "Ulane Warchlaki",
+        "pointsA": 37,
+        "teamB": "immigrants fc",
+        "pointsB": 35
+      },
+      {
+        "teamA": "Scuderia Blaugrana",
+        "pointsA": 62,
+        "teamB": "Przemsza Klucze",
+        "pointsB": 50
+      },
+      {
+        "teamA": "Boom Saka Laka",
+        "pointsA": 57,
+        "teamB": "FC Defconiarze",
+        "pointsB": 68
+      },
+      {
+        "teamA": "MQUC",
+        "pointsA": 80,
+        "teamB": "MnstrNaf",
+        "pointsB": 39
+      },
+      {
+        "teamA": "Bad Kompany",
+        "pointsA": 60,
+        "teamB": "FcpoNalewce",
+        "pointsB": 10
+      },
+      {
+        "teamA": "Pusan",
+        "pointsA": 44,
+        "teamB": "Wirtz Team Ever",
+        "pointsB": 48
+      },
+      {
+        "teamA": "świnie Pepa",
+        "pointsA": 69,
+        "teamB": "Jarząbki",
+        "pointsB": 54
+      },
+      {
+        "teamA": "Bolesławiec King",
+        "pointsA": 36,
+        "teamB": "Furiosa FC Morfeusza",
+        "pointsB": 48
+      },
+      {
+        "teamA": "C30-C39",
+        "pointsA": 49,
+        "teamB": "Pewniaczki",
+        "pointsB": 53
+      }
+    ]
+  },
+  {
+    "gw": 4,
+    "matches": [
+      {
+        "teamA": "Kapcie Kłapcia",
+        "pointsA": 85,
+        "teamB": "C30-C39",
+        "pointsB": 61
+      },
+      {
+        "teamA": "Pewniaczki",
+        "pointsA": 58,
+        "teamB": "Bolesławiec King",
+        "pointsB": 58
+      },
+      {
+        "teamA": "Furiosa FC Morfeusza",
+        "pointsA": 83,
+        "teamB": "świnie Pepa",
+        "pointsB": 81
+      },
+      {
+        "teamA": "Jarząbki",
+        "pointsA": 53,
+        "teamB": "Pusan",
+        "pointsB": 68
+      },
+      {
+        "teamA": "Wirtz Team Ever",
+        "pointsA": 73,
+        "teamB": "Bad Kompany",
+        "pointsB": 74
+      },
+      {
+        "teamA": "FcpoNalewce",
+        "pointsA": 57,
+        "teamB": "MQUC",
+        "pointsB": 55
+      },
+      {
+        "teamA": "MnstrNaf",
+        "pointsA": 75,
+        "teamB": "Boom Saka Laka",
+        "pointsB": 86
+      },
+      {
+        "teamA": "FC Defconiarze",
+        "pointsA": 73,
+        "teamB": "Scuderia Blaugrana",
+        "pointsB": 70
+      },
+      {
+        "teamA": "Przemsza Klucze",
+        "pointsA": 77,
+        "teamB": "Ulane Warchlaki",
+        "pointsB": 40
+      },
+      {
+        "teamA": "immigrants fc",
+        "pointsA": 69,
+        "teamB": "VeB",
+        "pointsB": 64
+      }
+    ]
+  },
+  {
+    "gw": 5,
+    "matches": [
+      {
+        "teamA": "Ulane Warchlaki",
+        "pointsA": 34,
+        "teamB": "Kapcie Kłapcia",
+        "pointsB": 58
+      },
+      {
+        "teamA": "Scuderia Blaugrana",
+        "pointsA": 33,
+        "teamB": "VeB",
+        "pointsB": 43
+      },
+      {
+        "teamA": "Boom Saka Laka",
+        "pointsA": 58,
+        "teamB": "immigrants fc",
+        "pointsB": 70
+      },
+      {
+        "teamA": "MQUC",
+        "pointsA": 44,
+        "teamB": "Przemsza Klucze",
+        "pointsB": 42
+      },
+      {
+        "teamA": "Bad Kompany",
+        "pointsA": 58,
+        "teamB": "FC Defconiarze",
+        "pointsB": 53
+      },
+      {
+        "teamA": "Pusan",
+        "pointsA": 36,
+        "teamB": "MnstrNaf",
+        "pointsB": 34
+      },
+      {
+        "teamA": "świnie Pepa",
+        "pointsA": 52,
+        "teamB": "FcpoNalewce",
+        "pointsB": 49
+      },
+      {
+        "teamA": "Bolesławiec King",
+        "pointsA": 22,
+        "teamB": "Wirtz Team Ever",
+        "pointsB": 45
+      },
+      {
+        "teamA": "C30-C39",
+        "pointsA": 71,
+        "teamB": "Jarząbki",
+        "pointsB": 37
+      },
+      {
+        "teamA": "Pewniaczki",
+        "pointsA": 36,
+        "teamB": "Furiosa FC Morfeusza",
+        "pointsB": 47
+      }
+    ]
+  },
+  {
+    "gw": 6,
+    "matches": [
+      {
+        "teamA": "Kapcie Kłapcia",
+        "pointsA": 78,
+        "teamB": "Pewniaczki",
+        "pointsB": 58
+      },
+      {
+        "teamA": "Furiosa FC Morfeusza",
+        "pointsA": 71,
+        "teamB": "C30-C39",
+        "pointsB": 54
+      },
+      {
+        "teamA": "Jarząbki",
+        "pointsA": 48,
+        "teamB": "Bolesławiec King",
+        "pointsB": 50
+      },
+      {
+        "teamA": "Wirtz Team Ever",
+        "pointsA": 69,
+        "teamB": "świnie Pepa",
+        "pointsB": 80
+      },
+      {
+        "teamA": "FcpoNalewce",
+        "pointsA": 44,
+        "teamB": "Pusan",
+        "pointsB": 58
+      },
+      {
+        "teamA": "MnstrNaf",
+        "pointsA": 57,
+        "teamB": "Bad Kompany",
+        "pointsB": 80
+      },
+      {
+        "teamA": "FC Defconiarze",
+        "pointsA": 51,
+        "teamB": "MQUC",
+        "pointsB": 69
+      },
+      {
+        "teamA": "Przemsza Klucze",
+        "pointsA": 72,
+        "teamB": "Boom Saka Laka",
+        "pointsB": 74
+      },
+      {
+        "teamA": "immigrants fc",
+        "pointsA": 31,
+        "teamB": "Scuderia Blaugrana",
+        "pointsB": 53
+      },
+      {
+        "teamA": "VeB",
+        "pointsA": 60,
+        "teamB": "Ulane Warchlaki",
+        "pointsB": 80
+      }
+    ]
+  },
+  {
+    "gw": 7,
+    "matches": [
+      {
+        "teamA": "Scuderia Blaugrana",
+        "pointsA": 38,
+        "teamB": "Kapcie Kłapcia",
+        "pointsB": 77
+      },
+      {
+        "teamA": "Boom Saka Laka",
+        "pointsA": 82,
+        "teamB": "Ulane Warchlaki",
+        "pointsB": 69
+      },
+      {
+        "teamA": "MQUC",
+        "pointsA": 44,
+        "teamB": "VeB",
+        "pointsB": 52
+      },
+      {
+        "teamA": "Bad Kompany",
+        "pointsA": 71,
+        "teamB": "immigrants fc",
+        "pointsB": 54
+      },
+      {
+        "teamA": "Pusan",
+        "pointsA": 59,
+        "teamB": "Przemsza Klucze",
+        "pointsB": 68
+      },
+      {
+        "teamA": "świnie Pepa",
+        "pointsA": 73,
+        "teamB": "FC Defconiarze",
+        "pointsB": 64
+      },
+      {
+        "teamA": "Bolesławiec King",
+        "pointsA": 66,
+        "teamB": "MnstrNaf",
+        "pointsB": 53
+      },
+      {
+        "teamA": "C30-C39",
+        "pointsA": 49,
+        "teamB": "FcpoNalewce",
+        "pointsB": 68
+      },
+      {
+        "teamA": "Pewniaczki",
+        "pointsA": 78,
+        "teamB": "Wirtz Team Ever",
+        "pointsB": 73
+      },
+      {
+        "teamA": "Furiosa FC Morfeusza",
+        "pointsA": 88,
+        "teamB": "Jarząbki",
+        "pointsB": 61
+      }
+    ]
+  },
+  {
+    "gw": 8,
+    "matches": [
+      {
+        "teamA": "Kapcie Kłapcia",
+        "pointsA": 61,
+        "teamB": "Furiosa FC Morfeusza",
+        "pointsB": 59
+      },
+      {
+        "teamA": "Jarząbki",
+        "pointsA": 32,
+        "teamB": "Pewniaczki",
+        "pointsB": 73
+      },
+      {
+        "teamA": "Wirtz Team Ever",
+        "pointsA": 91,
+        "teamB": "C30-C39",
+        "pointsB": 55
+      },
+      {
+        "teamA": "FcpoNalewce",
+        "pointsA": 61,
+        "teamB": "Bolesławiec King",
+        "pointsB": 76
+      },
+      {
+        "teamA": "MnstrNaf",
+        "pointsA": 73,
+        "teamB": "świnie Pepa",
+        "pointsB": 85
+      },
+      {
+        "teamA": "FC Defconiarze",
+        "pointsA": 71,
+        "teamB": "Pusan",
+        "pointsB": 61
+      },
+      {
+        "teamA": "Przemsza Klucze",
+        "pointsA": 68,
+        "teamB": "Bad Kompany",
+        "pointsB": 60
+      },
+      {
+        "teamA": "immigrants fc",
+        "pointsA": 64,
+        "teamB": "MQUC",
+        "pointsB": 52
+      },
+      {
+        "teamA": "VeB",
+        "pointsA": 65,
+        "teamB": "Boom Saka Laka",
+        "pointsB": 51
+      },
+      {
+        "teamA": "Ulane Warchlaki",
+        "pointsA": 51,
+        "teamB": "Scuderia Blaugrana",
+        "pointsB": 66
+      }
+    ]
+  },
+  {
+    "gw": 9,
+    "matches": [
+      {
+        "teamA": "Boom Saka Laka",
+        "pointsA": 46,
+        "teamB": "Kapcie Kłapcia",
+        "pointsB": 41
+      },
+      {
+        "teamA": "MQUC",
+        "pointsA": 62,
+        "teamB": "Scuderia Blaugrana",
+        "pointsB": 59
+      },
+      {
+        "teamA": "Bad Kompany",
+        "pointsA": 52,
+        "teamB": "Ulane Warchlaki",
+        "pointsB": 40
+      },
+      {
+        "teamA": "Pusan",
+        "pointsA": 71,
+        "teamB": "VeB",
+        "pointsB": 51
+      },
+      {
+        "teamA": "świnie Pepa",
+        "pointsA": 37,
+        "teamB": "immigrants fc",
+        "pointsB": 38
+      },
+      {
+        "teamA": "Bolesławiec King",
+        "pointsA": 33,
+        "teamB": "Przemsza Klucze",
+        "pointsB": 43
+      },
+      {
+        "teamA": "C30-C39",
+        "pointsA": 42,
+        "teamB": "FC Defconiarze",
+        "pointsB": 62
+      },
+      {
+        "teamA": "Pewniaczki",
+        "pointsA": 62,
+        "teamB": "MnstrNaf",
+        "pointsB": 51
+      },
+      {
+        "teamA": "Furiosa FC Morfeusza",
+        "pointsA": 29,
+        "teamB": "FcpoNalewce",
+        "pointsB": 52
+      },
+      {
+        "teamA": "Jarząbki",
+        "pointsA": 57,
+        "teamB": "Wirtz Team Ever",
+        "pointsB": 40
+      }
+    ]
+  },
+  {
+    "gw": 10,
+    "matches": [
+      {
+        "teamA": "Kapcie Kłapcia",
+        "pointsA": 74,
+        "teamB": "Jarząbki",
+        "pointsB": 60
+      },
+      {
+        "teamA": "Wirtz Team Ever",
+        "pointsA": 91,
+        "teamB": "Furiosa FC Morfeusza",
+        "pointsB": 60
+      },
+      {
+        "teamA": "FcpoNalewce",
+        "pointsA": 78,
+        "teamB": "Pewniaczki",
+        "pointsB": 80
+      },
+      {
+        "teamA": "MnstrNaf",
+        "pointsA": 65,
+        "teamB": "C30-C39",
+        "pointsB": 85
+      },
+      {
+        "teamA": "FC Defconiarze",
+        "pointsA": 65,
+        "teamB": "Bolesławiec King",
+        "pointsB": 79
+      },
+      {
+        "teamA": "Przemsza Klucze",
+        "pointsA": 75,
+        "teamB": "świnie Pepa",
+        "pointsB": 77
+      },
+      {
+        "teamA": "immigrants fc",
+        "pointsA": 74,
+        "teamB": "Pusan",
+        "pointsB": 76
+      },
+      {
+        "teamA": "VeB",
+        "pointsA": 72,
+        "teamB": "Bad Kompany",
+        "pointsB": 79
+      },
+      {
+        "teamA": "Ulane Warchlaki",
+        "pointsA": 58,
+        "teamB": "MQUC",
+        "pointsB": 58
+      },
+      {
+        "teamA": "Scuderia Blaugrana",
+        "pointsA": 84,
+        "teamB": "Boom Saka Laka",
+        "pointsB": 56
+      }
+    ]
+  },
+  {
+    "gw": 11,
+    "matches": [
+      {
+        "teamA": "MQUC",
+        "pointsA": 53,
+        "teamB": "Kapcie Kłapcia",
+        "pointsB": 45
+      },
+      {
+        "teamA": "Bad Kompany",
+        "pointsA": 46,
+        "teamB": "Boom Saka Laka",
+        "pointsB": 41
+      },
+      {
+        "teamA": "Pusan",
+        "pointsA": 31,
+        "teamB": "Scuderia Blaugrana",
+        "pointsB": 43
+      },
+      {
+        "teamA": "świnie Pepa",
+        "pointsA": 56,
+        "teamB": "Ulane Warchlaki",
+        "pointsB": 33
+      },
+      {
+        "teamA": "Bolesławiec King",
+        "pointsA": 49,
+        "teamB": "VeB",
+        "pointsB": 48
+      },
+      {
+        "teamA": "C30-C39",
+        "pointsA": 46,
+        "teamB": "immigrants fc",
+        "pointsB": 37
+      },
+      {
+        "teamA": "Pewniaczki",
+        "pointsA": 40,
+        "teamB": "Przemsza Klucze",
+        "pointsB": 48
+      },
+      {
+        "teamA": "Furiosa FC Morfeusza",
+        "pointsA": 50,
+        "teamB": "FC Defconiarze",
+        "pointsB": 38
+      },
+      {
+        "teamA": "Jarząbki",
+        "pointsA": 25,
+        "teamB": "MnstrNaf",
+        "pointsB": 26
+      },
+      {
+        "teamA": "Wirtz Team Ever",
+        "pointsA": 34,
+        "teamB": "FcpoNalewce",
+        "pointsB": 43
+      }
+    ]
+  },
+  {
+    "gw": 12,
+    "matches": [
+      {
+        "teamA": "Kapcie Kłapcia",
+        "pointsA": 65,
+        "teamB": "Wirtz Team Ever",
+        "pointsB": 43
+      },
+      {
+        "teamA": "FcpoNalewce",
+        "pointsA": 27,
+        "teamB": "Jarząbki",
+        "pointsB": 41
+      },
+      {
+        "teamA": "MnstrNaf",
+        "pointsA": 44,
+        "teamB": "Furiosa FC Morfeusza",
+        "pointsB": 49
+      },
+      {
+        "teamA": "FC Defconiarze",
+        "pointsA": 34,
+        "teamB": "Pewniaczki",
+        "pointsB": 43
+      },
+      {
+        "teamA": "Przemsza Klucze",
+        "pointsA": 43,
+        "teamB": "C30-C39",
+        "pointsB": 47
+      },
+      {
+        "teamA": "immigrants fc",
+        "pointsA": 40,
+        "teamB": "Bolesławiec King",
+        "pointsB": 40
+      },
+      {
+        "teamA": "VeB",
+        "pointsA": 68,
+        "teamB": "świnie Pepa",
+        "pointsB": 40
+      },
+      {
+        "teamA": "Ulane Warchlaki",
+        "pointsA": 42,
+        "teamB": "Pusan",
+        "pointsB": 29
+      },
+      {
+        "teamA": "Scuderia Blaugrana",
+        "pointsA": 52,
+        "teamB": "Bad Kompany",
+        "pointsB": 45
+      },
+      {
+        "teamA": "Boom Saka Laka",
+        "pointsA": 42,
+        "teamB": "MQUC",
+        "pointsB": 28
+      }
+    ]
+  },
+  {
+    "gw": 13,
+    "matches": [
+      {
+        "teamA": "Bad Kompany",
+        "pointsA": 64,
+        "teamB": "Kapcie Kłapcia",
+        "pointsB": 72
+      },
+      {
+        "teamA": "Pusan",
+        "pointsA": 36,
+        "teamB": "MQUC",
+        "pointsB": 59
+      },
+      {
+        "teamA": "świnie Pepa",
+        "pointsA": 55,
+        "teamB": "Boom Saka Laka",
+        "pointsB": 39
+      },
+      {
+        "teamA": "Bolesławiec King",
+        "pointsA": 51,
+        "teamB": "Scuderia Blaugrana",
+        "pointsB": 37
+      },
+      {
+        "teamA": "C30-C39",
+        "pointsA": 36,
+        "teamB": "Ulane Warchlaki",
+        "pointsB": 49
+      },
+      {
+        "teamA": "Pewniaczki",
+        "pointsA": 57,
+        "teamB": "VeB",
+        "pointsB": 44
+      },
+      {
+        "teamA": "Furiosa FC Morfeusza",
+        "pointsA": 51,
+        "teamB": "immigrants fc",
+        "pointsB": 42
+      },
+      {
+        "teamA": "Jarząbki",
+        "pointsA": 25,
+        "teamB": "Przemsza Klucze",
+        "pointsB": 71
+      },
+      {
+        "teamA": "Wirtz Team Ever",
+        "pointsA": 53,
+        "teamB": "FC Defconiarze",
+        "pointsB": 39
+      },
+      {
+        "teamA": "FcpoNalewce",
+        "pointsA": 25,
+        "teamB": "MnstrNaf",
+        "pointsB": 29
+      }
+    ]
+  },
+  {
+    "gw": 14,
+    "matches": [
+      {
+        "teamA": "Kapcie Kłapcia",
+        "pointsA": 53,
+        "teamB": "FcpoNalewce",
+        "pointsB": 56
+      },
+      {
+        "teamA": "MnstrNaf",
+        "pointsA": 66,
+        "teamB": "Wirtz Team Ever",
+        "pointsB": 58
+      },
+      {
+        "teamA": "FC Defconiarze",
+        "pointsA": 53,
+        "teamB": "Jarząbki",
+        "pointsB": 64
+      },
+      {
+        "teamA": "Przemsza Klucze",
+        "pointsA": 69,
+        "teamB": "Furiosa FC Morfeusza",
+        "pointsB": 65
+      },
+      {
+        "teamA": "immigrants fc",
+        "pointsA": 56,
+        "teamB": "Pewniaczki",
+        "pointsB": 75
+      },
+      {
+        "teamA": "VeB",
+        "pointsA": 80,
+        "teamB": "C30-C39",
+        "pointsB": 44
+      },
+      {
+        "teamA": "Ulane Warchlaki",
+        "pointsA": 54,
+        "teamB": "Bolesławiec King",
+        "pointsB": 75
+      },
+      {
+        "teamA": "Scuderia Blaugrana",
+        "pointsA": 62,
+        "teamB": "świnie Pepa",
+        "pointsB": 67
+      },
+      {
+        "teamA": "Boom Saka Laka",
+        "pointsA": 50,
+        "teamB": "Pusan",
+        "pointsB": 78
+      },
+      {
+        "teamA": "MQUC",
+        "pointsA": 52,
+        "teamB": "Bad Kompany",
+        "pointsB": 67
+      }
+    ]
+  },
+  {
+    "gw": 15,
+    "matches": [
+      {
+        "teamA": "Pusan",
+        "pointsA": 62,
+        "teamB": "Kapcie Kłapcia",
+        "pointsB": 54
+      },
+      {
+        "teamA": "świnie Pepa",
+        "pointsA": 51,
+        "teamB": "Bad Kompany",
+        "pointsB": 44
+      },
+      {
+        "teamA": "Bolesławiec King",
+        "pointsA": 49,
+        "teamB": "MQUC",
+        "pointsB": 61
+      },
+      {
+        "teamA": "C30-C39",
+        "pointsA": 58,
+        "teamB": "Boom Saka Laka",
+        "pointsB": 47
+      },
+      {
+        "teamA": "Pewniaczki",
+        "pointsA": 64,
+        "teamB": "Scuderia Blaugrana",
+        "pointsB": 79
+      },
+      {
+        "teamA": "Furiosa FC Morfeusza",
+        "pointsA": 58,
+        "teamB": "Ulane Warchlaki",
+        "pointsB": 53
+      },
+      {
+        "teamA": "Jarząbki",
+        "pointsA": 85,
+        "teamB": "VeB",
+        "pointsB": 56
+      },
+      {
+        "teamA": "Wirtz Team Ever",
+        "pointsA": 63,
+        "teamB": "immigrants fc",
+        "pointsB": 71
+      },
+      {
+        "teamA": "FcpoNalewce",
+        "pointsA": 46,
+        "teamB": "Przemsza Klucze",
+        "pointsB": 66
+      },
+      {
+        "teamA": "MnstrNaf",
+        "pointsA": 43,
+        "teamB": "FC Defconiarze",
+        "pointsB": 67
+      }
+    ]
+  },
+  {
+    "gw": 16,
+    "matches": [
+      {
+        "teamA": "Kapcie Kłapcia",
+        "pointsA": 89,
+        "teamB": "MnstrNaf",
+        "pointsB": 59
+      },
+      {
+        "teamA": "FC Defconiarze",
+        "pointsA": 68,
+        "teamB": "FcpoNalewce",
+        "pointsB": 41
+      },
+      {
+        "teamA": "Przemsza Klucze",
+        "pointsA": 74,
+        "teamB": "Wirtz Team Ever",
+        "pointsB": 85
+      },
+      {
+        "teamA": "immigrants fc",
+        "pointsA": 88,
+        "teamB": "Jarząbki",
+        "pointsB": 69
+      },
+      {
+        "teamA": "VeB",
+        "pointsA": 46,
+        "teamB": "Furiosa FC Morfeusza",
+        "pointsB": 64
+      },
+      {
+        "teamA": "Ulane Warchlaki",
+        "pointsA": 53,
+        "teamB": "Pewniaczki",
+        "pointsB": 92
+      },
+      {
+        "teamA": "Scuderia Blaugrana",
+        "pointsA": 67,
+        "teamB": "C30-C39",
+        "pointsB": 72
+      },
+      {
+        "teamA": "Boom Saka Laka",
+        "pointsA": 57,
+        "teamB": "Bolesławiec King",
+        "pointsB": 72
+      },
+      {
+        "teamA": "MQUC",
+        "pointsA": 61,
+        "teamB": "świnie Pepa",
+        "pointsB": 93
+      },
+      {
+        "teamA": "Bad Kompany",
+        "pointsA": 92,
+        "teamB": "Pusan",
+        "pointsB": 76
+      }
+    ]
+  },
+  {
+    "gw": 17,
+    "matches": [
+      {
+        "teamA": "świnie Pepa",
+        "pointsA": 73,
+        "teamB": "Kapcie Kłapcia",
+        "pointsB": 89
+      },
+      {
+        "teamA": "Bolesławiec King",
+        "pointsA": 99,
+        "teamB": "Pusan",
+        "pointsB": 66
+      },
+      {
+        "teamA": "C30-C39",
+        "pointsA": 76,
+        "teamB": "Bad Kompany",
+        "pointsB": 67
+      },
+      {
+        "teamA": "Pewniaczki",
+        "pointsA": 98,
+        "teamB": "MQUC",
+        "pointsB": 69
+      },
+      {
+        "teamA": "Furiosa FC Morfeusza",
+        "pointsA": 79,
+        "teamB": "Boom Saka Laka",
+        "pointsB": 72
+      },
+      {
+        "teamA": "Jarząbki",
+        "pointsA": 67,
+        "teamB": "Scuderia Blaugrana",
+        "pointsB": 97
+      },
+      {
+        "teamA": "Wirtz Team Ever",
+        "pointsA": 95,
+        "teamB": "Ulane Warchlaki",
+        "pointsB": 84
+      },
+      {
+        "teamA": "FcpoNalewce",
+        "pointsA": 59,
+        "teamB": "VeB",
+        "pointsB": 92
+      },
+      {
+        "teamA": "MnstrNaf",
+        "pointsA": 75,
+        "teamB": "immigrants fc",
+        "pointsB": 73
+      },
+      {
+        "teamA": "FC Defconiarze",
+        "pointsA": 96,
+        "teamB": "Przemsza Klucze",
+        "pointsB": 75
+      }
+    ]
+  },
+  {
+    "gw": 18,
+    "matches": [
+      {
+        "teamA": "Kapcie Kłapcia",
+        "pointsA": 47,
+        "teamB": "FC Defconiarze",
+        "pointsB": 43
+      },
+      {
+        "teamA": "Przemsza Klucze",
+        "pointsA": 47,
+        "teamB": "MnstrNaf",
+        "pointsB": 37
+      },
+      {
+        "teamA": "immigrants fc",
+        "pointsA": 31,
+        "teamB": "FcpoNalewce",
+        "pointsB": 60
+      },
+      {
+        "teamA": "VeB",
+        "pointsA": 63,
+        "teamB": "Wirtz Team Ever",
+        "pointsB": 42
+      },
+      {
+        "teamA": "Ulane Warchlaki",
+        "pointsA": 61,
+        "teamB": "Jarząbki",
+        "pointsB": 43
+      },
+      {
+        "teamA": "Scuderia Blaugrana",
+        "pointsA": 71,
+        "teamB": "Furiosa FC Morfeusza",
+        "pointsB": 49
+      },
+      {
+        "teamA": "Boom Saka Laka",
+        "pointsA": 34,
+        "teamB": "Pewniaczki",
+        "pointsB": 67
+      },
+      {
+        "teamA": "MQUC",
+        "pointsA": 39,
+        "teamB": "C30-C39",
+        "pointsB": 51
+      },
+      {
+        "teamA": "Bad Kompany",
+        "pointsA": 44,
+        "teamB": "Bolesławiec King",
+        "pointsB": 34
+      },
+      {
+        "teamA": "Pusan",
+        "pointsA": 58,
+        "teamB": "świnie Pepa",
+        "pointsB": 41
+      }
+    ]
+  },
+  {
+    "gw": 19,
+    "matches": [
+      {
+        "teamA": "Przemsza Klucze",
+        "pointsA": 30,
+        "teamB": "Kapcie Kłapcia",
+        "pointsB": 40
+      },
+      {
+        "teamA": "immigrants fc",
+        "pointsA": 43,
+        "teamB": "FC Defconiarze",
+        "pointsB": 43
+      },
+      {
+        "teamA": "VeB",
+        "pointsA": 43,
+        "teamB": "MnstrNaf",
+        "pointsB": 40
+      },
+      {
+        "teamA": "Ulane Warchlaki",
+        "pointsA": 35,
+        "teamB": "FcpoNalewce",
+        "pointsB": 41
+      },
+      {
+        "teamA": "Scuderia Blaugrana",
+        "pointsA": 44,
+        "teamB": "Wirtz Team Ever",
+        "pointsB": 41
+      },
+      {
+        "teamA": "Boom Saka Laka",
+        "pointsA": 32,
+        "teamB": "Jarząbki",
+        "pointsB": 46
+      },
+      {
+        "teamA": "MQUC",
+        "pointsA": 39,
+        "teamB": "Furiosa FC Morfeusza",
+        "pointsB": 36
+      },
+      {
+        "teamA": "Bad Kompany",
+        "pointsA": 37,
+        "teamB": "Pewniaczki",
+        "pointsB": 49
+      },
+      {
+        "teamA": "Pusan",
+        "pointsA": 30,
+        "teamB": "C30-C39",
+        "pointsB": 42
+      },
+      {
+        "teamA": "świnie Pepa",
+        "pointsA": 42,
+        "teamB": "Bolesławiec King",
+        "pointsB": 38
+      }
+    ]
+  },
+  {
+    "gw": 20,
+    "matches": [
+      {
+        "teamA": "immigrants fc",
+        "pointsA": 61,
+        "teamB": "Kapcie Kłapcia",
+        "pointsB": 74
+      },
+      {
+        "teamA": "VeB",
+        "pointsA": 67,
+        "teamB": "Przemsza Klucze",
+        "pointsB": 47
+      },
+      {
+        "teamA": "Ulane Warchlaki",
+        "pointsA": 54,
+        "teamB": "FC Defconiarze",
+        "pointsB": 61
+      },
+      {
+        "teamA": "Scuderia Blaugrana",
+        "pointsA": 53,
+        "teamB": "MnstrNaf",
+        "pointsB": 40
+      },
+      {
+        "teamA": "Boom Saka Laka",
+        "pointsA": 57,
+        "teamB": "FcpoNalewce",
+        "pointsB": 30
+      },
+      {
+        "teamA": "MQUC",
+        "pointsA": 43,
+        "teamB": "Wirtz Team Ever",
+        "pointsB": 47
+      },
+      {
+        "teamA": "Bad Kompany",
+        "pointsA": 51,
+        "teamB": "Jarząbki",
+        "pointsB": 42
+      },
+      {
+        "teamA": "Pusan",
+        "pointsA": 51,
+        "teamB": "Furiosa FC Morfeusza",
+        "pointsB": 39
+      },
+      {
+        "teamA": "świnie Pepa",
+        "pointsA": 43,
+        "teamB": "Pewniaczki",
+        "pointsB": 29
+      },
+      {
+        "teamA": "Bolesławiec King",
+        "pointsA": 54,
+        "teamB": "C30-C39",
+        "pointsB": 51
+      }
+    ]
+  },
+  {
+    "gw": 21,
+    "matches": [
+      {
+        "teamA": "Kapcie Kłapcia",
+        "pointsA": 55,
+        "teamB": "Bolesławiec King",
+        "pointsB": 50
+      },
+      {
+        "teamA": "C30-C39",
+        "pointsA": 29,
+        "teamB": "świnie Pepa",
+        "pointsB": 50
+      },
+      {
+        "teamA": "Pewniaczki",
+        "pointsA": 41,
+        "teamB": "Pusan",
+        "pointsB": 47
+      },
+      {
+        "teamA": "Furiosa FC Morfeusza",
+        "pointsA": 43,
+        "teamB": "Bad Kompany",
+        "pointsB": 49
+      },
+      {
+        "teamA": "Jarząbki",
+        "pointsA": 70,
+        "teamB": "MQUC",
+        "pointsB": 29
+      },
+      {
+        "teamA": "Wirtz Team Ever",
+        "pointsA": 43,
+        "teamB": "Boom Saka Laka",
+        "pointsB": 52
+      },
+      {
+        "teamA": "FcpoNalewce",
+        "pointsA": 24,
+        "teamB": "Scuderia Blaugrana",
+        "pointsB": 63
+      },
+      {
+        "teamA": "MnstrNaf",
+        "pointsA": 51,
+        "teamB": "Ulane Warchlaki",
+        "pointsB": 56
+      },
+      {
+        "teamA": "FC Defconiarze",
+        "pointsA": 33,
+        "teamB": "VeB",
+        "pointsB": 69
+      },
+      {
+        "teamA": "Przemsza Klucze",
+        "pointsA": 53,
+        "teamB": "immigrants fc",
+        "pointsB": 46
+      }
+    ]
+  },
+  {
+    "gw": 22,
+    "matches": [
+      {
+        "teamA": "VeB",
+        "pointsA": 29,
+        "teamB": "Kapcie Kłapcia",
+        "pointsB": 50
+      },
+      {
+        "teamA": "Ulane Warchlaki",
+        "pointsA": 36,
+        "teamB": "immigrants fc",
+        "pointsB": 39
+      },
+      {
+        "teamA": "Scuderia Blaugrana",
+        "pointsA": 42,
+        "teamB": "Przemsza Klucze",
+        "pointsB": 45
+      },
+      {
+        "teamA": "Boom Saka Laka",
+        "pointsA": 47,
+        "teamB": "FC Defconiarze",
+        "pointsB": 43
+      },
+      {
+        "teamA": "MQUC",
+        "pointsA": 24,
+        "teamB": "MnstrNaf",
+        "pointsB": 34
+      },
+      {
+        "teamA": "Bad Kompany",
+        "pointsA": 35,
+        "teamB": "FcpoNalewce",
+        "pointsB": 48
+      },
+      {
+        "teamA": "Pusan",
+        "pointsA": 44,
+        "teamB": "Wirtz Team Ever",
+        "pointsB": 40
+      },
+      {
+        "teamA": "świnie Pepa",
+        "pointsA": 52,
+        "teamB": "Jarząbki",
+        "pointsB": 41
+      },
+      {
+        "teamA": "Bolesławiec King",
+        "pointsA": 40,
+        "teamB": "Furiosa FC Morfeusza",
+        "pointsB": 32
+      },
+      {
+        "teamA": "C30-C39",
+        "pointsA": 42,
+        "teamB": "Pewniaczki",
+        "pointsB": 37
+      }
+    ]
+  },
+  {
+    "gw": 23,
+    "matches": [
+      {
+        "teamA": "Kapcie Kłapcia",
+        "pointsA": 45,
+        "teamB": "C30-C39",
+        "pointsB": 50
+      },
+      {
+        "teamA": "Pewniaczki",
+        "pointsA": 37,
+        "teamB": "Bolesławiec King",
+        "pointsB": 34
+      },
+      {
+        "teamA": "Furiosa FC Morfeusza",
+        "pointsA": 35,
+        "teamB": "świnie Pepa",
+        "pointsB": 39
+      },
+      {
+        "teamA": "Jarząbki",
+        "pointsA": 52,
+        "teamB": "Pusan",
+        "pointsB": 40
+      },
+      {
+        "teamA": "Wirtz Team Ever",
+        "pointsA": 48,
+        "teamB": "Bad Kompany",
+        "pointsB": 38
+      },
+      {
+        "teamA": "FcpoNalewce",
+        "pointsA": 64,
+        "teamB": "MQUC",
+        "pointsB": 40
+      },
+      {
+        "teamA": "MnstrNaf",
+        "pointsA": 45,
+        "teamB": "Boom Saka Laka",
+        "pointsB": 21
+      },
+      {
+        "teamA": "FC Defconiarze",
+        "pointsA": 38,
+        "teamB": "Scuderia Blaugrana",
+        "pointsB": 48
+      },
+      {
+        "teamA": "Przemsza Klucze",
+        "pointsA": 27,
+        "teamB": "Ulane Warchlaki",
+        "pointsB": 32
+      },
+      {
+        "teamA": "immigrants fc",
+        "pointsA": 54,
+        "teamB": "VeB",
+        "pointsB": 36
+      }
+    ]
+  },
+  {
+    "gw": 24,
+    "matches": [
+      {
+        "teamA": "Ulane Warchlaki",
+        "pointsA": 39,
+        "teamB": "Kapcie Kłapcia",
+        "pointsB": 76
+      },
+      {
+        "teamA": "Scuderia Blaugrana",
+        "pointsA": 74,
+        "teamB": "VeB",
+        "pointsB": 65
+      },
+      {
+        "teamA": "Boom Saka Laka",
+        "pointsA": 60,
+        "teamB": "immigrants fc",
+        "pointsB": 63
+      },
+      {
+        "teamA": "MQUC",
+        "pointsA": 44,
+        "teamB": "Przemsza Klucze",
+        "pointsB": 67
+      },
+      {
+        "teamA": "Bad Kompany",
+        "pointsA": 52,
+        "teamB": "FC Defconiarze",
+        "pointsB": 59
+      },
+      {
+        "teamA": "Pusan",
+        "pointsA": 63,
+        "teamB": "MnstrNaf",
+        "pointsB": 52
+      },
+      {
+        "teamA": "świnie Pepa",
+        "pointsA": 56,
+        "teamB": "FcpoNalewce",
+        "pointsB": 52
+      },
+      {
+        "teamA": "Bolesławiec King",
+        "pointsA": 55,
+        "teamB": "Wirtz Team Ever",
+        "pointsB": 75
+      },
+      {
+        "teamA": "C30-C39",
+        "pointsA": 66,
+        "teamB": "Jarząbki",
+        "pointsB": 81
+      },
+      {
+        "teamA": "Pewniaczki",
+        "pointsA": 69,
+        "teamB": "Furiosa FC Morfeusza",
+        "pointsB": 76
+      }
+    ]
+  },
+  {
+    "gw": 25,
+    "matches": [
+      {
+        "teamA": "Kapcie Kłapcia",
+        "pointsA": 67,
+        "teamB": "Pewniaczki",
+        "pointsB": 64
+      },
+      {
+        "teamA": "Furiosa FC Morfeusza",
+        "pointsA": 63,
+        "teamB": "C30-C39",
+        "pointsB": 57
+      },
+      {
+        "teamA": "Jarząbki",
+        "pointsA": 51,
+        "teamB": "Bolesławiec King",
+        "pointsB": 61
+      },
+      {
+        "teamA": "Wirtz Team Ever",
+        "pointsA": 67,
+        "teamB": "świnie Pepa",
+        "pointsB": 84
+      },
+      {
+        "teamA": "FcpoNalewce",
+        "pointsA": 54,
+        "teamB": "Pusan",
+        "pointsB": 63
+      },
+      {
+        "teamA": "MnstrNaf",
+        "pointsA": 55,
+        "teamB": "Bad Kompany",
+        "pointsB": 70
+      },
+      {
+        "teamA": "FC Defconiarze",
+        "pointsA": 84,
+        "teamB": "MQUC",
+        "pointsB": 50
+      },
+      {
+        "teamA": "Przemsza Klucze",
+        "pointsA": 77,
+        "teamB": "Boom Saka Laka",
+        "pointsB": 85
+      },
+      {
+        "teamA": "immigrants fc",
+        "pointsA": 59,
+        "teamB": "Scuderia Blaugrana",
+        "pointsB": 78
+      },
+      {
+        "teamA": "VeB",
+        "pointsA": 68,
+        "teamB": "Ulane Warchlaki",
+        "pointsB": 60
+      }
+    ]
+  },
+  {
+    "gw": 26,
+    "matches": [
+      {
+        "teamA": "Scuderia Blaugrana",
+        "pointsA": 61,
+        "teamB": "Kapcie Kłapcia",
+        "pointsB": 82
+      },
+      {
+        "teamA": "Boom Saka Laka",
+        "pointsA": 63,
+        "teamB": "Ulane Warchlaki",
+        "pointsB": 57
+      },
+      {
+        "teamA": "MQUC",
+        "pointsA": 50,
+        "teamB": "VeB",
+        "pointsB": 80
+      },
+      {
+        "teamA": "Bad Kompany",
+        "pointsA": 51,
+        "teamB": "immigrants fc",
+        "pointsB": 66
+      },
+      {
+        "teamA": "Pusan",
+        "pointsA": 54,
+        "teamB": "Przemsza Klucze",
+        "pointsB": 73
+      },
+      {
+        "teamA": "świnie Pepa",
+        "pointsA": 49,
+        "teamB": "FC Defconiarze",
+        "pointsB": 52
+      },
+      {
+        "teamA": "Bolesławiec King",
+        "pointsA": 60,
+        "teamB": "MnstrNaf",
+        "pointsB": 42
+      },
+      {
+        "teamA": "C30-C39",
+        "pointsA": 81,
+        "teamB": "FcpoNalewce",
+        "pointsB": 50
+      },
+      {
+        "teamA": "Pewniaczki",
+        "pointsA": 72,
+        "teamB": "Wirtz Team Ever",
+        "pointsB": 61
+      },
+      {
+        "teamA": "Furiosa FC Morfeusza",
+        "pointsA": 63,
+        "teamB": "Jarząbki",
+        "pointsB": 60
+      }
+    ]
+  },
+  {
+    "gw": 27,
+    "matches": [
+      {
+        "teamA": "Kapcie Kłapcia",
+        "pointsA": 52,
+        "teamB": "Furiosa FC Morfeusza",
+        "pointsB": 37
+      },
+      {
+        "teamA": "Jarząbki",
+        "pointsA": 42,
+        "teamB": "Pewniaczki",
+        "pointsB": 41
+      },
+      {
+        "teamA": "Wirtz Team Ever",
+        "pointsA": 40,
+        "teamB": "C30-C39",
+        "pointsB": 53
+      },
+      {
+        "teamA": "FcpoNalewce",
+        "pointsA": 66,
+        "teamB": "Bolesławiec King",
+        "pointsB": 34
+      },
+      {
+        "teamA": "MnstrNaf",
+        "pointsA": 34,
+        "teamB": "świnie Pepa",
+        "pointsB": 43
+      },
+      {
+        "teamA": "FC Defconiarze",
+        "pointsA": 39,
+        "teamB": "Pusan",
+        "pointsB": 43
+      },
+      {
+        "teamA": "Przemsza Klucze",
+        "pointsA": 36,
+        "teamB": "Bad Kompany",
+        "pointsB": 39
+      },
+      {
+        "teamA": "immigrants fc",
+        "pointsA": 47,
+        "teamB": "MQUC",
+        "pointsB": 38
+      },
+      {
+        "teamA": "VeB",
+        "pointsA": 59,
+        "teamB": "Boom Saka Laka",
+        "pointsB": 42
+      },
+      {
+        "teamA": "Ulane Warchlaki",
+        "pointsA": 60,
+        "teamB": "Scuderia Blaugrana",
+        "pointsB": 50
+      }
+    ]
+  },
+  {
+    "gw": 28,
+    "matches": [
+      {
+        "teamA": "Boom Saka Laka",
+        "pointsA": 68,
+        "teamB": "Kapcie Kłapcia",
+        "pointsB": 88
+      },
+      {
+        "teamA": "MQUC",
+        "pointsA": 42,
+        "teamB": "Scuderia Blaugrana",
+        "pointsB": 78
+      },
+      {
+        "teamA": "Bad Kompany",
+        "pointsA": 83,
+        "teamB": "Ulane Warchlaki",
+        "pointsB": 49
+      },
+      {
+        "teamA": "Pusan",
+        "pointsA": 57,
+        "teamB": "VeB",
+        "pointsB": 54
+      },
+      {
+        "teamA": "świnie Pepa",
+        "pointsA": 73,
+        "teamB": "immigrants fc",
+        "pointsB": 54
+      },
+      {
+        "teamA": "Bolesławiec King",
+        "pointsA": 48,
+        "teamB": "Przemsza Klucze",
+        "pointsB": 81
+      },
+      {
+        "teamA": "C30-C39",
+        "pointsA": 64,
+        "teamB": "FC Defconiarze",
+        "pointsB": 72
+      },
+      {
+        "teamA": "Pewniaczki",
+        "pointsA": 90,
+        "teamB": "MnstrNaf",
+        "pointsB": 62
+      },
+      {
+        "teamA": "Furiosa FC Morfeusza",
+        "pointsA": 62,
+        "teamB": "FcpoNalewce",
+        "pointsB": 27
+      },
+      {
+        "teamA": "Jarząbki",
+        "pointsA": 64,
+        "teamB": "Wirtz Team Ever",
+        "pointsB": 83
+      }
+    ]
+  },
+  {
+    "gw": 29,
+    "matches": [
+      {
+        "teamA": "Kapcie Kłapcia",
+        "pointsA": 67,
+        "teamB": "Jarząbki",
+        "pointsB": 59
+      },
+      {
+        "teamA": "Wirtz Team Ever",
+        "pointsA": 68,
+        "teamB": "Furiosa FC Morfeusza",
+        "pointsB": 90
+      },
+      {
+        "teamA": "FcpoNalewce",
+        "pointsA": 64,
+        "teamB": "Pewniaczki",
+        "pointsB": 56
+      },
+      {
+        "teamA": "MnstrNaf",
+        "pointsA": 44,
+        "teamB": "C30-C39",
+        "pointsB": 47
+      },
+      {
+        "teamA": "FC Defconiarze",
+        "pointsA": 50,
+        "teamB": "Bolesławiec King",
+        "pointsB": 42
+      },
+      {
+        "teamA": "Przemsza Klucze",
+        "pointsA": 60,
+        "teamB": "świnie Pepa",
+        "pointsB": 57
+      },
+      {
+        "teamA": "immigrants fc",
+        "pointsA": 42,
+        "teamB": "Pusan",
+        "pointsB": 38
+      },
+      {
+        "teamA": "VeB",
+        "pointsA": 58,
+        "teamB": "Bad Kompany",
+        "pointsB": 59
+      },
+      {
+        "teamA": "Ulane Warchlaki",
+        "pointsA": 60,
+        "teamB": "MQUC",
+        "pointsB": 32
+      },
+      {
+        "teamA": "Scuderia Blaugrana",
+        "pointsA": 76,
+        "teamB": "Boom Saka Laka",
+        "pointsB": 68
+      }
+    ]
+  },
+  {
+    "gw": 30,
+    "matches": [
+      {
+        "teamA": "MQUC",
+        "pointsA": 45,
+        "teamB": "Kapcie Kłapcia",
+        "pointsB": 62
+      },
+      {
+        "teamA": "Bad Kompany",
+        "pointsA": 67,
+        "teamB": "Boom Saka Laka",
+        "pointsB": 56
+      },
+      {
+        "teamA": "Pusan",
+        "pointsA": 43,
+        "teamB": "Scuderia Blaugrana",
+        "pointsB": 60
+      },
+      {
+        "teamA": "świnie Pepa",
+        "pointsA": 53,
+        "teamB": "Ulane Warchlaki",
+        "pointsB": 47
+      },
+      {
+        "teamA": "Bolesławiec King",
+        "pointsA": 48,
+        "teamB": "VeB",
+        "pointsB": 46
+      },
+      {
+        "teamA": "C30-C39",
+        "pointsA": 49,
+        "teamB": "immigrants fc",
+        "pointsB": 54
+      },
+      {
+        "teamA": "Pewniaczki",
+        "pointsA": 55,
+        "teamB": "Przemsza Klucze",
+        "pointsB": 44
+      },
+      {
+        "teamA": "Furiosa FC Morfeusza",
+        "pointsA": 62,
+        "teamB": "FC Defconiarze",
+        "pointsB": 58
+      },
+      {
+        "teamA": "Jarząbki",
+        "pointsA": 40,
+        "teamB": "MnstrNaf",
+        "pointsB": 47
+      },
+      {
+        "teamA": "Wirtz Team Ever",
+        "pointsA": 67,
+        "teamB": "FcpoNalewce",
+        "pointsB": 25
+      }
+    ]
+  },
+  {
+    "gw": 31,
+    "matches": [
+      {
+        "teamA": "Kapcie Kłapcia",
+        "pointsA": 63,
+        "teamB": "Wirtz Team Ever",
+        "pointsB": 49
+      },
+      {
+        "teamA": "FcpoNalewce",
+        "pointsA": 19,
+        "teamB": "Jarząbki",
+        "pointsB": 61
+      },
+      {
+        "teamA": "MnstrNaf",
+        "pointsA": 42,
+        "teamB": "Furiosa FC Morfeusza",
+        "pointsB": 48
+      },
+      {
+        "teamA": "FC Defconiarze",
+        "pointsA": 57,
+        "teamB": "Pewniaczki",
+        "pointsB": 57
+      },
+      {
+        "teamA": "Przemsza Klucze",
+        "pointsA": 56,
+        "teamB": "C30-C39",
+        "pointsB": 52
+      },
+      {
+        "teamA": "immigrants fc",
+        "pointsA": 62,
+        "teamB": "Bolesławiec King",
+        "pointsB": 78
+      },
+      {
+        "teamA": "VeB",
+        "pointsA": 76,
+        "teamB": "świnie Pepa",
+        "pointsB": 52
+      },
+      {
+        "teamA": "Ulane Warchlaki",
+        "pointsA": 46,
+        "teamB": "Pusan",
+        "pointsB": 49
+      },
+      {
+        "teamA": "Scuderia Blaugrana",
+        "pointsA": 58,
+        "teamB": "Bad Kompany",
+        "pointsB": 60
+      },
+      {
+        "teamA": "Boom Saka Laka",
+        "pointsA": 58,
+        "teamB": "MQUC",
+        "pointsB": 32
+      }
+    ]
+  },
+  {
+    "gw": 32,
+    "matches": [
+      {
+        "teamA": "Bad Kompany",
+        "pointsA": 57,
+        "teamB": "Kapcie Kłapcia",
+        "pointsB": 66
+      },
+      {
+        "teamA": "Pusan",
+        "pointsA": 56,
+        "teamB": "MQUC",
+        "pointsB": 51
+      },
+      {
+        "teamA": "świnie Pepa",
+        "pointsA": 51,
+        "teamB": "Boom Saka Laka",
+        "pointsB": 53
+      },
+      {
+        "teamA": "Bolesławiec King",
+        "pointsA": 60,
+        "teamB": "Scuderia Blaugrana",
+        "pointsB": 52
+      },
+      {
+        "teamA": "C30-C39",
+        "pointsA": 58,
+        "teamB": "Ulane Warchlaki",
+        "pointsB": 63
+      },
+      {
+        "teamA": "Pewniaczki",
+        "pointsA": 49,
+        "teamB": "VeB",
+        "pointsB": 75
+      },
+      {
+        "teamA": "Furiosa FC Morfeusza",
+        "pointsA": 50,
+        "teamB": "immigrants fc",
+        "pointsB": 59
+      },
+      {
+        "teamA": "Jarząbki",
+        "pointsA": 47,
+        "teamB": "Przemsza Klucze",
+        "pointsB": 56
+      },
+      {
+        "teamA": "Wirtz Team Ever",
+        "pointsA": 58,
+        "teamB": "FC Defconiarze",
+        "pointsB": 64
+      },
+      {
+        "teamA": "FcpoNalewce",
+        "pointsA": 36,
+        "teamB": "MnstrNaf",
+        "pointsB": 45
+      }
+    ]
+  },
+  {
+    "gw": 33,
+    "matches": [
+      {
+        "teamA": "Kapcie Kłapcia",
+        "pointsA": 135,
+        "teamB": "FcpoNalewce",
+        "pointsB": 63
+      },
+      {
+        "teamA": "MnstrNaf",
+        "pointsA": 70,
+        "teamB": "Wirtz Team Ever",
+        "pointsB": 134
+      },
+      {
+        "teamA": "FC Defconiarze",
+        "pointsA": 115,
+        "teamB": "Jarząbki",
+        "pointsB": 43
+      },
+      {
+        "teamA": "Przemsza Klucze",
+        "pointsA": 63,
+        "teamB": "Furiosa FC Morfeusza",
+        "pointsB": 100
+      },
+      {
+        "teamA": "immigrants fc",
+        "pointsA": 75,
+        "teamB": "Pewniaczki",
+        "pointsB": 101
+      },
+      {
+        "teamA": "VeB",
+        "pointsA": 98,
+        "teamB": "C30-C39",
+        "pointsB": 101
+      },
+      {
+        "teamA": "Ulane Warchlaki",
+        "pointsA": 137,
+        "teamB": "Bolesławiec King",
+        "pointsB": 52
+      },
+      {
+        "teamA": "Scuderia Blaugrana",
+        "pointsA": 76,
+        "teamB": "świnie Pepa",
+        "pointsB": 95
+      },
+      {
+        "teamA": "Boom Saka Laka",
+        "pointsA": 100,
+        "teamB": "Pusan",
+        "pointsB": 134
+      },
+      {
+        "teamA": "MQUC",
+        "pointsA": 67,
+        "teamB": "Bad Kompany",
+        "pointsB": 121
+      }
+    ]
+  },
+  {
+    "gw": 34,
+    "matches": [
+      {
+        "teamA": "Pusan",
+        "pointsA": 45,
+        "teamB": "Kapcie Kłapcia",
+        "pointsB": 58
+      },
+      {
+        "teamA": "świnie Pepa",
+        "pointsA": 61,
+        "teamB": "Bad Kompany",
+        "pointsB": 81
+      },
+      {
+        "teamA": "Bolesławiec King",
+        "pointsA": 35,
+        "teamB": "MQUC",
+        "pointsB": 27
+      },
+      {
+        "teamA": "C30-C39",
+        "pointsA": 52,
+        "teamB": "Boom Saka Laka",
+        "pointsB": 31
+      },
+      {
+        "teamA": "Pewniaczki",
+        "pointsA": 65,
+        "teamB": "Scuderia Blaugrana",
+        "pointsB": 76
+      },
+      {
+        "teamA": "Furiosa FC Morfeusza",
+        "pointsA": 37,
+        "teamB": "Ulane Warchlaki",
+        "pointsB": 66
+      },
+      {
+        "teamA": "Jarząbki",
+        "pointsA": 43,
+        "teamB": "VeB",
+        "pointsB": 41
+      },
+      {
+        "teamA": "Wirtz Team Ever",
+        "pointsA": 70,
+        "teamB": "immigrants fc",
+        "pointsB": 57
+      },
+      {
+        "teamA": "FcpoNalewce",
+        "pointsA": 26,
+        "teamB": "Przemsza Klucze",
+        "pointsB": 55
+      },
+      {
+        "teamA": "MnstrNaf",
+        "pointsA": 37,
+        "teamB": "FC Defconiarze",
+        "pointsB": 55
+      }
+    ]
+  },
+  {
+    "gw": 35,
+    "matches": [
+      {
+        "teamA": "Kapcie Kłapcia",
+        "pointsA": 45,
+        "teamB": "MnstrNaf",
+        "pointsB": 44
+      },
+      {
+        "teamA": "FC Defconiarze",
+        "pointsA": 53,
+        "teamB": "FcpoNalewce",
+        "pointsB": 39
+      },
+      {
+        "teamA": "Przemsza Klucze",
+        "pointsA": 56,
+        "teamB": "Wirtz Team Ever",
+        "pointsB": 52
+      },
+      {
+        "teamA": "immigrants fc",
+        "pointsA": 51,
+        "teamB": "Jarząbki",
+        "pointsB": 38
+      },
+      {
+        "teamA": "VeB",
+        "pointsA": 49,
+        "teamB": "Furiosa FC Morfeusza",
+        "pointsB": 47
+      },
+      {
+        "teamA": "Ulane Warchlaki",
+        "pointsA": 64,
+        "teamB": "Pewniaczki",
+        "pointsB": 52
+      },
+      {
+        "teamA": "Scuderia Blaugrana",
+        "pointsA": 51,
+        "teamB": "C30-C39",
+        "pointsB": 66
+      },
+      {
+        "teamA": "Boom Saka Laka",
+        "pointsA": 70,
+        "teamB": "Bolesławiec King",
+        "pointsB": 73
+      },
+      {
+        "teamA": "MQUC",
+        "pointsA": 52,
+        "teamB": "świnie Pepa",
+        "pointsB": 53
+      },
+      {
+        "teamA": "Bad Kompany",
+        "pointsA": 45,
+        "teamB": "Pusan",
+        "pointsB": 56
+      }
+    ]
+  },
+  {
+    "gw": 36,
+    "matches": [
+      {
+        "teamA": "świnie Pepa",
+        "pointsA": 103,
+        "teamB": "Kapcie Kłapcia",
+        "pointsB": 73
+      },
+      {
+        "teamA": "Bolesławiec King",
+        "pointsA": 65,
+        "teamB": "Pusan",
+        "pointsB": 72
+      },
+      {
+        "teamA": "C30-C39",
+        "pointsA": 82,
+        "teamB": "Bad Kompany",
+        "pointsB": 66
+      },
+      {
+        "teamA": "Pewniaczki",
+        "pointsA": 88,
+        "teamB": "MQUC",
+        "pointsB": 51
+      },
+      {
+        "teamA": "Furiosa FC Morfeusza",
+        "pointsA": 61,
+        "teamB": "Boom Saka Laka",
+        "pointsB": 52
+      },
+      {
+        "teamA": "Jarząbki",
+        "pointsA": 41,
+        "teamB": "Scuderia Blaugrana",
+        "pointsB": 110
+      },
+      {
+        "teamA": "Wirtz Team Ever",
+        "pointsA": 78,
+        "teamB": "Ulane Warchlaki",
+        "pointsB": 86
+      },
+      {
+        "teamA": "FcpoNalewce",
+        "pointsA": 59,
+        "teamB": "VeB",
+        "pointsB": 79
+      },
+      {
+        "teamA": "MnstrNaf",
+        "pointsA": 73,
+        "teamB": "immigrants fc",
+        "pointsB": 77
+      },
+      {
+        "teamA": "FC Defconiarze",
+        "pointsA": 84,
+        "teamB": "Przemsza Klucze",
+        "pointsB": 84
+      }
+    ]
+  },
+  {
+    "gw": 37,
+    "matches": [
+      {
+        "teamA": "Kapcie Kłapcia",
+        "pointsA": 56,
+        "teamB": "FC Defconiarze",
+        "pointsB": 70
+      },
+      {
+        "teamA": "Przemsza Klucze",
+        "pointsA": 75,
+        "teamB": "MnstrNaf",
+        "pointsB": 89
+      },
+      {
+        "teamA": "immigrants fc",
+        "pointsA": 61,
+        "teamB": "FcpoNalewce",
+        "pointsB": 45
+      },
+      {
+        "teamA": "VeB",
+        "pointsA": 70,
+        "teamB": "Wirtz Team Ever",
+        "pointsB": 64
+      },
+      {
+        "teamA": "Ulane Warchlaki",
+        "pointsA": 45,
+        "teamB": "Jarząbki",
+        "pointsB": 48
+      },
+      {
+        "teamA": "Scuderia Blaugrana",
+        "pointsA": 82,
+        "teamB": "Furiosa FC Morfeusza",
+        "pointsB": 60
+      },
+      {
+        "teamA": "Boom Saka Laka",
+        "pointsA": 51,
+        "teamB": "Pewniaczki",
+        "pointsB": 60
+      },
+      {
+        "teamA": "MQUC",
+        "pointsA": 66,
+        "teamB": "C30-C39",
+        "pointsB": 60
+      },
+      {
+        "teamA": "Bad Kompany",
+        "pointsA": 47,
+        "teamB": "Bolesławiec King",
+        "pointsB": 40
+      },
+      {
+        "teamA": "Pusan",
+        "pointsA": 56,
+        "teamB": "świnie Pepa",
+        "pointsB": 62
+      }
+    ]
+  },
+  {
+    "gw": 38,
+    "matches": [
+      {
+        "teamA": "Przemsza Klucze",
+        "pointsA": 49,
+        "teamB": "Kapcie Kłapcia",
+        "pointsB": 65
+      },
+      {
+        "teamA": "immigrants fc",
+        "pointsA": 56,
+        "teamB": "FC Defconiarze",
+        "pointsB": 70
+      },
+      {
+        "teamA": "VeB",
+        "pointsA": 32,
+        "teamB": "MnstrNaf",
+        "pointsB": 61
+      },
+      {
+        "teamA": "Ulane Warchlaki",
+        "pointsA": 57,
+        "teamB": "FcpoNalewce",
+        "pointsB": 38
+      },
+      {
+        "teamA": "Scuderia Blaugrana",
+        "pointsA": 44,
+        "teamB": "Wirtz Team Ever",
+        "pointsB": 47
+      },
+      {
+        "teamA": "Boom Saka Laka",
+        "pointsA": 45,
+        "teamB": "Jarząbki",
+        "pointsB": 65
+      },
+      {
+        "teamA": "MQUC",
+        "pointsA": 65,
+        "teamB": "Furiosa FC Morfeusza",
+        "pointsB": 59
+      },
+      {
+        "teamA": "Bad Kompany",
+        "pointsA": 52,
+        "teamB": "Pewniaczki",
+        "pointsB": 58
+      },
+      {
+        "teamA": "Pusan",
+        "pointsA": 81,
+        "teamB": "C30-C39",
+        "pointsB": 66
+      },
+      {
+        "teamA": "świnie Pepa",
+        "pointsA": 63,
+        "teamB": "Bolesławiec King",
+        "pointsB": 41
+      }
+    ]
+  }
+]

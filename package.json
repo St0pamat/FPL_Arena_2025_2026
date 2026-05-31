@@ -1,0 +1,40 @@
+{
+  "name": "fpl-arena-skarb-kibica",
+  "version": "1.0.0",
+  "private": true,
+  "description": "FPL Arena — interaktywny Skarb Kibica (sezon 2025/26)",
+  "type": "module",
+  "scripts": {
+    "predev": "powershell -ExecutionPolicy Bypass -File scripts/sync-public.ps1",
+    "prebuild": "powershell -ExecutionPolicy Bypass -File scripts/sync-public.ps1",
+    "dev": "vite",
+    "build": "vite build",
+    "typecheck": "tsc -p tsconfig.app.json --noEmit",
+    "preview": "vite preview",
+    "start": "node server/index.js",
+    "lint": "eslint .",
+    "format": "prettier --write \"src/**/*.{ts,tsx,css}\""
+  },
+  "dependencies": {
+    "html-to-image": "^1.11.13",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.17.0",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.4.20",
+    "eslint": "^9.17.0",
+    "eslint-plugin-react-hooks": "^5.1.0",
+    "eslint-plugin-react-refresh": "^0.4.16",
+    "globals": "^15.14.0",
+    "postcss": "^8.4.49",
+    "prettier": "^3.4.2",
+    "tailwindcss": "^3.4.17",
+    "typescript": "~5.7.2",
+    "typescript-eslint": "^8.18.2",
+    "vite": "^6.0.6"
+  }
+}

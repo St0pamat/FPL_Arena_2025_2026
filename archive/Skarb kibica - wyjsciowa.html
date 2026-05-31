@@ -1,0 +1,2980 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FPL Arena - Oficjalny Skarb Kibica (Sezon Posezonowy)</title>
+    <link rel="icon" href="logo/FPL Arena.png" type="image/png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #020617; /* Deep slate background */
+            color: #f8fafc;
+            overflow-y: scroll;
+        }
+        .font-athletic {
+            font-family: 'Oswald', sans-serif;
+        }
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #10b981; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #059669; 
+        }
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+        .gradient-text {
+            background: linear-gradient(to right, #10b981, #3b82f6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        /* Page transition animations */
+        .animate-fade-in {
+            animation: fadeIn 0.4s ease-out forwards;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .crest-frame {
+            border: 2px solid rgba(248, 250, 252, 0.28);
+            border-radius: 10px;
+            background: transparent;
+            box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.55), 0 4px 14px rgba(0, 0, 0, 0.35);
+            padding: 3px;
+        }
+        .crest-frame-profile {
+            border-color: rgba(16, 185, 129, 0.65);
+            border-width: 2px;
+            border-radius: 14px;
+            padding: 5px;
+            box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.2), 0 8px 28px rgba(0, 0, 0, 0.45);
+        }
+        .league-logo-wrap {
+            border: 2px solid rgba(16, 185, 129, 0.55);
+            border-radius: 12px;
+            background: transparent;
+            padding: 6px 8px;
+            box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.45), 0 6px 20px rgba(0, 0, 0, 0.35);
+        }
+        .season-pitch-wrap {
+            max-width: 640px;
+            margin: 0 auto;
+        }
+        /* Kompaktowa połowa boiska — styl lineup TV / broadcast */
+        .season-pitch {
+            position: relative;
+            aspect-ratio: 68 / 58;
+            max-height: 480px;
+            border-radius: 14px;
+            overflow: hidden;
+            background:
+                linear-gradient(180deg, rgba(2, 6, 23, 0.55) 0%, rgba(2, 6, 23, 0.15) 18%, transparent 32%),
+                linear-gradient(165deg, #14532d 0%, #166534 45%, #15803d 78%, #14532d 100%);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: inset 0 -24px 48px rgba(0, 0, 0, 0.2);
+        }
+        /* Linia połowy u góry (obcinamy górną połowę boiska) */
+        .season-pitch::after {
+            content: "";
+            position: absolute;
+            left: 6%;
+            right: 6%;
+            top: 0;
+            height: 0;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            pointer-events: none;
+            z-index: 0;
+        }
+        /* Pole karne przy bramce (dół) */
+        .season-pitch::before {
+            content: "";
+            position: absolute;
+            left: 22%;
+            right: 22%;
+            bottom: 5%;
+            height: 26%;
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            border-bottom: none;
+            border-radius: 2px 2px 0 0;
+            pointer-events: none;
+            z-index: 0;
+        }
+        .season-pitch__inner {
+            position: relative;
+            z-index: 1;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            align-items: center;
+            padding: 8% 6% 5%;
+            gap: 8px;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+        /* 4 sztywne rzędy — jeden poziom Y na linię */
+        .season-pitch__row {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: nowrap;
+            justify-content: center;
+            align-items: flex-start;
+            width: 100%;
+            max-width: 100%;
+            height: 104px;
+            min-height: 104px;
+            max-height: 104px;
+            flex-shrink: 0;
+            gap: var(--row-gap, 8px);
+            box-sizing: border-box;
+            padding: 0 4px;
+        }
+        /* Identyczny slot dla każdego zawodnika (max 5 w rzędzie: 5×60 + 4×6 = 324px) */
+        .player-slot {
+            width: 60px;
+            min-width: 60px;
+            max-width: 60px;
+            height: 104px;
+            min-height: 104px;
+            max-height: 104px;
+            flex: 0 0 60px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+        .player-slot__avatar {
+            width: 38px;
+            height: 38px;
+            min-height: 38px;
+            flex-shrink: 0;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.28);
+            background: rgba(15, 23, 42, 0.85);
+            overflow: hidden;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
+        }
+        .player-slot__avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: top center;
+            transform: scale(1.08);
+        }
+        .player-slot__avatar-fallback {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Oswald', sans-serif;
+            font-weight: 700;
+            font-size: 12px;
+            color: #6ee7b7;
+        }
+        .player-slot__body {
+            width: 100%;
+            height: 62px;
+            min-height: 62px;
+            max-height: 62px;
+            margin-top: 4px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            overflow: hidden;
+        }
+        .player-slot__name {
+            width: 100%;
+            height: 24px;
+            min-height: 24px;
+            max-height: 24px;
+            font-weight: 700;
+            font-size: 9px;
+            line-height: 12px;
+            color: #f8fafc;
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 2;
+            word-break: break-word;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85);
+        }
+        .player-slot__points {
+            width: 100%;
+            height: 14px;
+            min-height: 14px;
+            flex-shrink: 0;
+            font-family: ui-monospace, monospace;
+            font-weight: 700;
+            font-size: 9px;
+            line-height: 14px;
+            color: #6ee7b7;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .player-slot__captain {
+            width: 100%;
+            height: 16px;
+            min-height: 16px;
+            max-height: 16px;
+            flex-shrink: 0;
+            margin-top: 2px;
+            font-size: 7px;
+            font-weight: 700;
+            line-height: 14px;
+            color: #fde68a;
+            background: rgba(234, 179, 8, 0.18);
+            border: 1px solid rgba(234, 179, 8, 0.4);
+            border-radius: 3px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            box-sizing: border-box;
+        }
+        .player-slot__captain--empty {
+            visibility: hidden;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body className="antialiased selection:bg-emerald-500 selection:text-white">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useMemo, useEffect } = React;
+
+        const PLAYERS_DATA = [
+            {
+                id: 22952, manager: "--- St0pa ---", discord: "-=☆ St0pa ☆=-", team: "Kapcie Kłapcia", rank: 1, gw19Rank: 3, w: 29, d: 0, l: 9, score: 2456, pts: 87, seasons: 3, bestOr: "665", bestOrSeason: "2025/26", avgPosition: 3.76,
+                likes: "Real Madryt, piwo domowe, gry planszowe, powieści kryminalne", dislikes: "Angielska piłka, reprezentacja Anglii, hity transferowe", quote: "Nie ma sentymentów do wyspiarzy, gramy swoje bez patrzenia na herby.",
+                videoScript: "Założyciel ligi, wyciągnięty z emerytury... i od razu zdemolował konkurencję. Sezon w wykonaniu St0py to nie była zwykła walka o mistrzostwo – to była bezwzględna, geopolityczna egzekucja. Człowiek, który otwarcie deklaruje niechęć do wyspiarskiego futbolu i reprezentacji Anglii, wszedł do matecznika Premier League i poukładał klocki lepiej niż sam Pep Guardiola, kończąc sezon na nieprawdopodobnym 665. miejscu w rankingu ogólnym na ŚWIECIE (OR 665)! Sukces 'Kapci Kłapcia' opierał się na dwóch filarach: żelaznej cierpliwości taktycznej (tylko jeden hit za -4 przez cały rok!) oraz nieprawdopodobnym wiosennym terrorze. Seria 12 zwycięstw H2H z rzędu między GW24 a GW35 złamała kręgosłup moralny wszystkim rywalom. Prawdziwy, niekwestionowany Hegemon, który zasłużył na złoty puchar.",
+                transfers: 38, hits: -4, greenArrows: 23, captainPts: 557, mostCaptained: "Haaland (22 razy)", mostPointsPlayer: "Haaland (394 pkt)", superStar: "Virgil (+84.21 pkt vs Top 10k)", rankKiller: "Guéhi (-43.05 pkt)", pointsBenched: 312, winStreak: "12 (GW24 - GW35)", monthlyWins: "Wrzesień, Luty", bestGw: "GW20 (74 pkt), GW26 (82 pkt)", weeksTop: 15, weeksBottom: 0
+            },
+            {
+                id: 49321, manager: "Marcel Kapala", discord: "Baldwiniasty", team: "świnie Pepa", rank: 2, gw19Rank: 2, w: 27, d: 0, l: 11, score: 2329, pts: 81, seasons: 2, bestOr: "892 686", bestOrSeason: "2023/24", avgPosition: 2.68,
+                likes: "Manchester United, Lana Del Rey, podcasty kryminalne", dislikes: "Przegrywanie, Liverpool FC, Arsenal, Pep-rotation", quote: "Świnie Pepa nie biorą jeńców. Każdy mecz to krwawa łaźnia.",
+                videoScript: "Marcel Kapała, znany jako Baldwiniasty, to wicemistrz naszej ligi i człowiek, który w tym sezonie przedefiniował pojęcie stabilności formy. Mimo kibicowania United, nazwa drużyny przewrotnie oddaje hołd Guardioli. Sezon 'Świń Pepa' to absolutny majstersztyk regularności – Marcel przez całe 38 kolejek notował średnią pozycję w lidze na kosmicznym poziomie 2.68! Marcel wyciągnął z opaski nieprawdopodobne 601 punktów (głównie dzięki Haalandowi). Gdzie tkwił haczyk? Otóż Marcel okazał się niekwestionowanym Władcą Marnotrawstwa – na ławce pozostawił aż 382 punkty (głównie trzymając Dúbravkę na rezerwie przez 32 kolejki), co jest antyrekordem całej ligi!",
+                transfers: 41, hits: -16, greenArrows: 17, captainPts: 601, mostCaptained: "Haaland (25 razy)", mostPointsPlayer: "Haaland (445 pkt)", superStar: "B.Fernandes (+129.90 pkt)", rankKiller: "Rice (-53.81 pkt)", pointsBenched: 382, winStreak: "7 (GW19 - GW25)", monthlyWins: "Styczeń, Maj", bestGw: "GW16 (93 pkt)", weeksTop: 6, weeksBottom: 0
+            },
+            {
+                id: 43986, manager: "Dawid Rapciak", discord: "mroczny goblin", team: "Bad Kompany", rank: 3, gw19Rank: 4, w: 23, d: 0, l: 15, score: 2271, pts: 69, seasons: 8, bestOr: "36 764", bestOrSeason: "2024/25", avgPosition: 3.63,
+                likes: "Kofeina, ciemne jaskinie, zimne kalkulacje matematyczne", dislikes: "Czerwone strzałki, sentymenty, brak cenzury", quote: "FPL to nie zabawa, to matematyczne równanie czekające na rozwiązanie.",
+                videoScript: "Mroczny Goblin naszej areny. Człowiek, dla którego emocje to zbędny szum, a piłka to złożone równanie czekające na rozwiązanie. Zamknięty w jaskini, zasilany kofeiną, analizuje xG do trzeciego miejsca po przecinku. Bad Kompany nie kibicuje nikomu – Dawid gardzi sentymentami. Bezduszna kalkulacja sprawiła, że spędził 6 tygodni jako lider ze średnią pozycją 3.63! Jego sukces to genialne wyczucie kapitańskie (aż 601 punktów z opaski!). Nawet u niego pojawił się jednak sabotażysta – Antoine Semenyo przyniósł mu stratę -60.98 punktów. Piwniczny algorytm przepalił też 316 punktów na ławce. Podium jest jednak dowodem, że matematyka wygrywa z chaosem.",
+                transfers: 44, hits: -28, greenArrows: 18, captainPts: 601, mostCaptained: "Haaland (22 razy)", mostPointsPlayer: "Haaland (431 pkt)", superStar: "Haaland (+73.76 pkt vs Top 10k)", rankKiller: "Semenyo (-60.98 pkt)", pointsBenched: 316, winStreak: "5 (GW8 - GW12)", monthlyWins: "Brak", bestGw: "GW34 (81 pkt)", weeksTop: 6, weeksBottom: 0
+            },
+            {
+                id: 298030, manager: "Bartosz Bernard", discord: "szybcior47", team: "Pewniaczki", rank: 4, gw19Rank: 1, w: 22, d: 2, l: 14, score: 2313, pts: 68, seasons: 7, bestOr: "150 070", bestOrSeason: "2024/25", avgPosition: 3.68,
+                likes: "FC Barcelona, Andrés Iniesta, podcast 'Tetrycy', Chris Wood", dislikes: "Manchester United, pośpieszne transfery, brak rzetelności", quote: "Na Discordzie najszybszy rewolwerowiec, przy transferach – paraliż decyzyjny.",
+                videoScript: "Znany jako szybcior47. Bartek jest najszybszym rewolwerowcem na Discordzie, ale jego palec nad przyciskiem 'Confirm Transfer' zastyga w urzędniczym paraliżu. Nienawidzi pośpiechu, co dało mu miano 'Mistrza Jesieni' (lider w GW19 z 43 pkt!). Jego Pewniaczki szły po tytuł jak walec. Wiosna przyniosła jednak taktyczny paraliż. Podczas gdy rywale ryzykowali, Bartek kurczowo trzymał się szablonu (tylko 1 hit przez cały sezon!). Koszmarny zjazd formy Thiago zepchnął go na bolesne 4. miejsce – tuż pod podium. Ochroniła go genialna forma Bruno Fernandesa (+115.64 pkt).",
+                transfers: 38, hits: -4, greenArrows: 21, captainPts: 594, mostCaptained: "Haaland (23 razy)", mostPointsPlayer: "Haaland (367 pkt)", superStar: "B.Fernandes (+115.64 pkt)", rankKiller: "Thiago (-48.57 pkt)", pointsBenched: 293, winStreak: "5 (GW10 - GW14)", monthlyWins: "Październik, Grudzień", bestGw: "GW28 (90 pkt)", weeksTop: 7, weeksBottom: 0
+            },
+            {
+                id: 425158, manager: "Sebastian G", discord: "seb.19.", team: "Scuderia Blaugrana", rank: 5, gw19Rank: 7, w: 22, d: 0, l: 16, score: 2369, pts: 66, seasons: 2, bestOr: "903 959", bestOrSeason: "2023/24", avgPosition: 6.68,
+                likes: "FC Barcelona, Formuła 1, Leo Messi, szybkie tempo", dislikes: "Cebula, zimowe mrozy, powolne auta", quote: "Robienie transferów za -4 to czysta adrenalina. Kto nie ryzykuje, ten nie pije szampana.",
+                videoScript: "Kierowca F1 w świecie FPL. Twierdzi, że 'hity za -4 to czysta adrenalina', ale rzeczywistość obnażyła genialny paradoks. Sebastian, kreujący się na szaleńca pędzącego bez trzymanki, zachował ascetyczną dyscyplinę – przyjął tylko JEDNEGO hita za -4 punkty! Ta precyzyjna jazda dała piorunujący efekt. Ukończył sezon na kapitalnym 5. miejscu, wbijając się do ścisłej światowej elity (OR 29128!). Potężnym wsparciem był Richards (+94.83 pkt), a plamą na kombinezonie przepalone 346 punktów w boksach (na ławce). Potworne 110 punktów w GW36 to wyczyn godny samego DRS-u.",
+                transfers: 38, hits: -4, greenArrows: 24, captainPts: 569, mostCaptained: "Haaland (25 razy)", mostPointsPlayer: "Haaland (449 pkt)", superStar: "Richards (+94.83 pkt)", rankKiller: "Semenyo (-68.39 pkt)", pointsBenched: 346, winStreak: "5 (GW14 - GW18)", monthlyWins: "Brak", bestGw: "GW36 (110 pkt) (Rekord!)", weeksTop: 0, weeksBottom: 0
+            },
+            {
+                id: 418929, manager: "Sergiusz Kaczmarek", discord: "Sergiusz Kaczmarek", team: "Pusan", rank: 6, gw19Rank: 11, w: 22, d: 0, l: 16, score: 2117, pts: 66, seasons: 11, bestOr: "14 858", bestOrSeason: "2016/17", avgPosition: 9.42,
+                likes: "Chelsea Londyn, Reece James, Simracing, Żużel", dislikes: "Polska Ekstraklasa, defensywna jazda, Gabriel Magalhães", quote: "FPL jest jak wejście w pierwszy łuk na żużlu. Trzeba iść na pełnym gazie.",
+                videoScript: "Absolutny dinozaur ligi (11 sezonów w FPL!). Życiówka na poziomie 14k OR. Prywatnie fan simracingu i żużla, dla którego FPL to wejście w łuk bez hamulców. Choć jego całkowity Score (2117) był stosunkowo niski, Sergiusz wycisnął z H2H absolutne maksimum, wyszarpując 6. miejsce! Sabotażystą okazał się Gabriel Magalhães (strata -140.92 pkt!), ale bramkarz Petrović (+72.82 pkt) dał mu powiew świeżości. Doskonałe udowodnienie, że żużlowe doświadczenie na wirażach pozwala omijać dołki w tabeli.",
+                transfers: 38, hits: -4, greenArrows: 20, captainPts: 564, mostCaptained: "Haaland (22 razy)", mostPointsPlayer: "Haaland (357 pkt)", superStar: "Petrović (+72.82 pkt)", rankKiller: "Gabriel (-140.92 pkt)", pointsBenched: 302, winStreak: "4 (GW30 - GW33)", monthlyWins: "Brak", bestGw: "GW38 (81 pkt)", weeksTop: 0, weeksBottom: 0
+            },
+            {
+                id: 3804416, manager: "Maciej Czyżewski", discord: "Maciej", team: "VeB", rank: 7, gw19Rank: 6, w: 21, d: 0, l: 17, score: 2296, pts: 63, seasons: 2, bestOr: "741 384", bestOrSeason: "2023/24", avgPosition: 5.66,
+                likes: "FC Barcelona, Lionel Messi, dobre zimne piwo", dislikes: "Real Madryt, paraliż decyzyjny", quote: "Gramy ładną piłkę dla oka, wyniki przyjdą same. Wiedza z boiska daje przewagę.",
+                videoScript: "Jedyny Gladiator grający czynnie w piłkę w Niemczech ('Mały'). Wierzył, że zapach prawdziwej murawy da mu przewagę nad 'kanapowymi klepaczami Excela'. Ekipa VeB (Visca el Barça) miała grać pięknie. Wysoki Score (2296) potwierdza dobry silnik, ale brutalny system H2H zepchnął go na 7. miejsce. Niemiecka dyscyplina transferowa (1 hit za -4 przez cały rok!). Prawdziwym Super Starem był Thiago (+99.10 pkt), ale 347 punktów przepalonych na ławce (głównie Kelleher) zablokowało atak na podium. 3-krotny MVP kolejki!",
+                transfers: 37, hits: -4, greenArrows: 19, captainPts: 519, mostCaptained: "Haaland (22 razy)", mostPointsPlayer: "Haaland (423 pkt)", superStar: "Thiago (+99.10 pkt)", rankKiller: "B.Fernandes (-145.54 pkt)", pointsBenched: 347, winStreak: "5 (GW11 - GW15)", monthlyWins: "Sierpień", bestGw: "GW14 (80 pkt)", weeksTop: 0, weeksBottom: 0
+            },
+            {
+                id: 55981, manager: "Paweł Piotrowski", discord: "panpawel14", team: "FC Defconiarze", rank: 8, gw19Rank: 13, w: 20, d: 3, l: 15, score: 2262, pts: 63, seasons: 4, bestOr: "113 116", bestOrSeason: "2024/25", avgPosition: 11.32,
+                likes: "Liverpool FC, Mohamed Salah, Anfield, stabilne 3 punkty", dislikes: "Żużel (antypiłka), marnowanie dogodnych sytuacji", quote: "Defcon 1 ogłoszony! Wolę grać bez robota, niż kłaniać się norweskiemu imperium.",
+                videoScript: "Piłkarski purysta, dla którego Anfield to jedyna świątynia. Przemianował The Reds na FC Defconiarze przez ciągłe stany alarmowe wywoływane jego jawną Haaland-fobią! Zdecydował się na bunt i rzucił wyzwanie norweskiemu imperium, przez kluczowe tygodnie nie dając mu opaski. Kosztowało go to kolosalne -177.17 punktów straty do elity! Wspierany jednak przez genialnego Mbeumo (+97.07 pkt) i Bruno Fernandesa, konsekwentnie łatał dziury. Ósme miejsce to hołd dla twardych, tradycyjnych przekonań i zaciekłej wojny z żużlem.",
+                transfers: 41, hits: -16, greenArrows: 20, captainPts: 539, mostCaptained: "Haaland (8 razy)", mostPointsPlayer: "B.Fernandes (226 pkt)", superStar: "Mbeumo (+97.07 pkt)", rankKiller: "Haaland (-177.17 pkt)", pointsBenched: 290, winStreak: "4 (GW22 - GW25)", monthlyWins: "Brak", bestGw: "GW25 (88 pkt)", weeksTop: 0, weeksBottom: 0
+            },
+            {
+                id: 4002, manager: "Leszek Brze21na", discord: "Morfeusz FPL", team: "Furiosa FC Morfeusza", rank: 9, gw19Rank: 5, w: 21, d: 0, l: 17, score: 2150, pts: 63, seasons: 6, bestOr: "143 763", bestOrSeason: "2022/23", avgPosition: 6.11,
+                likes: "AC Milan 89', Rijkaard - Gullit - Van Basten, Stephen King", dislikes: "Mleko, Modern Talking", quote: "Kuźwa chyba muszę wrócić do 89 roku i widzę tylko Rijkaard - Gullit - Van Basten...",
+                videoScript: "Przedstawia się jako Morfeusz... i jego taktyka w FPL często usypia rywali. Prawdziwy łowca niskich ID w FPL – jego palec na przycisku F5 miał większą częstotliwość niż skrzydła kolibra w dniu startu serwerów! Zakończył na 9. miejscu jako totalny rzeźnik transferowy (-100 punktów z hitów!). Pożar w jego taktyce uzupełniają aż 339 punkty wyrzucone do kosza na ławkę rezerwowych. Zapatrzony w stary Milan, rozegrał sezon niczym bohaterowie książek Kinga – w ciągłym niepokoju.",
+                transfers: 62, hits: -100, greenArrows: 16, captainPts: 513, mostCaptained: "Haaland (20 razy)", mostPointsPlayer: "Haaland (367 pkt)", superStar: "Saka (+70.92 pkt)", rankKiller: "Raya (-52.49 pkt)", pointsBenched: 339, winStreak: "6 (GW2 - GW7)", monthlyWins: "Marzec", bestGw: "GW29 (94 pkt)", weeksTop: 0, weeksBottom: 0
+            },
+            {
+                id: 1109898, manager: "Rafal Kowalczyk", discord: "Kowal2k", team: "immigrants fc", rank: 10, gw19Rank: 12, w: 19, d: 2, l: 17, score: 2116, pts: 59, seasons: 7, bestOr: "436 923", bestOrSeason: "2024/25", avgPosition: 10.03,
+                likes: "Wayne Rooney, łzy kibiców Liverpoolu, twardy futbol", dislikes: "Bezduszny maszynowy VAR, spokojne kalkulacje", quote: "Idziemy na pełną wymianę ciosów, nie ma kalkulacji.",
+                videoScript: "Wieczny tułacz FPL-owych bezdroży i bezkompromisowy wojownik. Nie chowa się za podwójną gardą, wchodzi na arenę z mentalnością Wayne'a Rooneya gotowy na wymianę ciosów (-56 pkt hitów!). Jego napędem są słodkie łzy kibiców Liverpoolu oraz Bruno Fernandes (+111.78 pkt zysku!). Największym uchybieniem okazał się bezduszny VAR i Gabriel Magalhães (-130.77 pkt sabotażu). Radosna twórczość na rezerwie przepaliła mu 311 punktów, ale jego obecność na Arenie uzasadnił epicki pojedynek z Ankarą Messim.",
+                transfers: 51, hits: -56, greenArrows: 21, captainPts: 521, mostCaptained: "Haaland (13 razy)", mostPointsPlayer: "B.Fernandes (279 pkt)", superStar: "B.Fernandes (+111.78 pkt)", rankKiller: "Gabriel (-130.77 pkt)", pointsBenched: 311, winStreak: "3 (GW5 - GW7)", monthlyWins: "Brak", bestGw: "GW27 (66 pkt)", weeksTop: 0, weeksBottom: 0
+            },
+            {
+                id: 126745, manager: "Michał Czarnota", discord: "Michał", team: "Przemsza Klucze", rank: 11, gw19Rank: 10, w: 19, d: 1, l: 18, score: 2217, pts: 58, seasons: 4, bestOr: "31 741", bestOrSeason: "2024/25", avgPosition: 11.55,
+                likes: "Legia Warszawa, Cristiano Ronaldo, horrory i atesty BHP", dislikes: "Sporty bez piłki, pożary w defensywie", quote: "Transfery bez atestu to proszenie się o pożar w tabeli.",
+                videoScript: "Znany jako 'Inspektor BHP' lub 'Gaśnica'. Porządek to priorytet – najpierw sprawdza, czy zawodnik ma ważną gaśnicę, a potem klika 'Confirm'. Nawet gdy wygrywa 5:0, potrafi narzekać, że obrońca nie miał kasku. Sezon przetrwał stabilnie (11. lokata, bilans 19-1-18). Haaland dał mu zysk +82.25 pkt, a potężnym uchybieniem bezpieczeństwa okazał się Semenyo (-63.80 pkt strat). Mimo 284 punktów wyrzuconych na ławkę, 'Gaśnica' odbiera certyfikat rzetelności.",
+                transfers: 58, hits: -84, greenArrows: 21, captainPts: 561, mostCaptained: "Haaland (25 razy)", mostPointsPlayer: "Haaland (431 pkt)", superStar: "Haaland (+82.25 pkt)", rankKiller: "Semenyo (-63.80 pkt)", pointsBenched: 284, winStreak: "4 (GW16 - GW19)", monthlyWins: "Brak", bestGw: "GW1 (71 pkt)", weeksTop: 0, weeksBottom: 0
+            },
+            {
+                id: 248187, manager: "Ferdynand Lipski", discord: "mav", team: "C30-C39", rank: 12, gw19Rank: 8, w: 19, d: 0, l: 19, score: 2182, pts: 57, seasons: 5, bestOr: "358 940", bestOrSeason: "2023/24", avgPosition: 12.21,
+                likes: "Real Madryt, Śląsk Wrocław, album PRO8L3Mu 'C30-C39'", dislikes: "Pusta kasa na koncie, nudna defensywa", quote: "Albo grubo, albo wcale. Poeta betonu nie gra na półśrodki.",
+                videoScript: "Poeta betonu i autor ekipy, której nazwa to hołd dla debiutanckiego albumu PRO8L3M-u. Jego styl to czysty wielkomiejski rap: 'albo grubo, albo pusty portfel'. Rozdarty między Realem a Śląskiem, z przytupem zaczął sezon odpalając Bench Boosta już w GW1 (77 punktów!). Zakończył w idealnie, poetycko zbalansowanym układzie: 19 wygranych i 19 porażek w H2H. Rice jako Super Star wciągnął +83.13 pkt do bazy, a Semenyo zabrał kasę (-67.46 pkt). Czysty beton.",
+                transfers: 44, hits: -28, greenArrows: 23, captainPts: 531, mostCaptained: "Haaland (17 razy)", mostPointsPlayer: "Haaland (364 pkt)", superStar: "Rice (+83.13 pkt)", rankKiller: "Semenyo (-67.46 pkt)", pointsBenched: 283, winStreak: "4 (GW3 - GW6)", monthlyWins: "Brak", bestGw: "GW1 (77 pkt) (Bench Boost!)", weeksTop: 0, weeksBottom: 0
+            },
+            {
+                id: 2953280, manager: "Bartosz Pietrzak", discord: "Owen", team: "Bolesławiec King", rank: 13, gw19Rank: 9, w: 18, d: 2, l: 18, score: 1984, pts: 56, seasons: 2, bestOr: "1 025 802", bestOrSeason: "2024/25", avgPosition: 12.13,
+                likes: "Fernando Torres, encyklopedia motoryzacji, whisky na lodzie", dislikes: "Manchester United, Barcelona, wątróbka", quote: "Następnym razem chipy potrójnego kapitana schowam głęboko do sejfu.",
+                videoScript: "Król Bolesławca, znany jako Owen. Encyklopedia motoryzacji i fanatyk Torresa. Jesienią dumnie zasiadał na tronie, zdobywając nagrodę Menedżera Listopada. Los bywa jednak okrutny – symbolem jego porażek i zjazdów stał się katastrofalny Triple Captain na Erlingu Haalandzie za słynne... 6 punktów! Paweł (MQUC) szydzi z tego w każdy piątek. Skutkiem tego błędu Haaland był jego Rank Killerem (-160.08 pkt vs elita). Królewski honor uratował wybitny Jordan Pickford (+114 pkt zysku!).",
+                transfers: 43, hits: -36, greenArrows: 18, captainPts: 417, mostCaptained: "Haaland (17 razy)", mostPointsPlayer: "Haaland (227 pkt)", superStar: "Pickford (+114.30 pkt)", rankKiller: "Haaland (-160.08 pkt)", pointsBenched: 365, winStreak: "4 (GW14 - GW17)", monthlyWins: "Listopad", bestGw: "GW17 (99 pkt)", weeksTop: 0, weeksBottom: 0
+            },
+            {
+                id: 9084, manager: "LFC 3palczasty", discord: "3palce", team: "Wirtz Team Ever", rank: 14, gw19Rank: 14, w: 16, d: 0, l: 22, score: 2341, pts: 48, seasons: 7, bestOr: "3 815", bestOrSeason: "2024/25", avgPosition: 12.71,
+                likes: "Liverpool FC, Fernando Torres, Florian Wirtz", dislikes: "Bezalkoholowe piwo, Manchester United", quote: "Liczby nie kłamią, ale system H2H tak.",
+                videoScript: "Prawdziwa elita, król pecha i ofiara systemowej brutalności H2H. W przeszłości otarł się o absolutny światowy TOP (OR 3 815). I pod wieloma względami nie zawiódł – wykręcił czwarty najlepszy Score w lidze (2341 pkt!), wykonując tylko 38 ruchów z jednym hitem w sezonie (-4). Los okazał się jednak dla niego wybitnie okrutny. Przez niesamowity układ terminarza (wszyscy rywale punktowali przeciwko niemu kosmicznie), skończył zaledwie na 14. miejscu w tabeli! Wirtz, Torres i pech H2H.",
+                transfers: 38, hits: -4, greenArrows: 22, captainPts: 569, mostCaptained: "Haaland (19 razy)", mostPointsPlayer: "Haaland (338 pkt)", superStar: "Semenyo (+90.00 pkt)", rankKiller: "Rice (-53.81 pkt)", pointsBenched: 312, winStreak: "3 (GW10 - GW12)", monthlyWins: "Brak", bestGw: "GW30 (67 pkt)", weeksTop: 0, weeksBottom: 0
+            },
+            {
+                id: 1178442, manager: "Igor Janiak", discord: "igorektojestkoza", team: "Boom Saka Laka", rank: 15, gw19Rank: 15, w: 16, d: 0, l: 22, score: 2185, pts: 48, seasons: 0, bestOr: "Debiut", bestOrSeason: "—", avgPosition: 11.53,
+                likes: "Luka Modrić, kebaby od Książula, wielkie ego debiutanta", dislikes: "Arsenal Londyn, puste żołądki, Declan Rice", quote: "Przyszedłem tu pokazać staruchom jak się gra w tę grę.",
+                videoScript: "Debiutant o ego wielkości Pałacu Kultury. 'FC Topka' brutalnie zweryfikowana przez H2H, spychając go na 15. lokatę. Grał ułańską fantazją: wykonał 59 transferów, przyjmując bolesne -88 pkt hitów! Zasilany kebabami od Książula i Modriciem, Igor miał jednak dni triumfu – został MVP 35. kolejki (74 punkty), uciszając starszyznę pod szyldem 'Boom Saka Laka'. Semenyo wyniósł go w zysk (+65 pkt), ale brak Declana Rice'a kosztował mrożącą krew w żyłach stratę.",
+                transfers: 59, hits: -88, greenArrows: 14, captainPts: 460, mostCaptained: "Saka (18 razy)", mostPointsPlayer: "Saka (290 pkt)", superStar: "Modrić-magic (+20.00 pkt)", rankKiller: "None", pointsBenched: 202, winStreak: "3 (GW2 - GW4)", monthlyWins: "Brak", bestGw: "GW35 (74 pkt)", weeksTop: 0, weeksBottom: 0
+            },
+            {
+                id: 546068, manager: "Pawel P.", discord: "Pawel", team: "MQUC", rank: 16, gw19Rank: 16, w: 14, d: 0, l: 24, score: 1978, pts: 42, seasons: 8, bestOr: "9 885", bestOrSeason: "2023/24", avgPosition: 16.13,
+                likes: "Ollie McBurnie jako GOAT, szydzenie z rywali", dislikes: "Konferencje prasowe Eddiego Howe'a, algorytmy xG", quote: "Ollie McBurnie to jedyny napastnik z duszą. Reszta to bezduszne roboty.",
+                videoScript: "Legenda, TOP 10k globu w przeszłości. W tym sezonie Paweł przeżył jednak absolutny koszmar - ustanowił przerażający, niewytłumaczalny rekord 17 porażek H2H z rzędu (od GW20 do GW36)! Jako zdeklarowany wyznawca tradycyjnego futbolu lat 90., szukał ukojenia w kulcie Olliego McBurniego jako jedynego napastnika 'z duszą'. Mimo tragedii sportowej, wciąż uśmiechnięty i szydzący z rywali. Największym sabotażystą został u niego Gabriel (-140.92 pkt).",
+                transfers: 43, hits: -24, greenArrows: 11, captainPts: 410, mostCaptained: "Haaland (16 razy)", mostPointsPlayer: "McBurnie (99 pkt)", superStar: "B.Fernandes (+110.09 pkt)", rankKiller: "Gabriel (-140.92 pkt)", pointsBenched: 310, winStreak: "2 (GW1 - GW2)", monthlyWins: "Brak", bestGw: "GW2 (54 pkt)", weeksTop: 0, weeksBottom: 8
+            },
+            {
+                id: 68435, manager: "Alan Bekus", discord: "V10_Alan", team: "FcpoNalewce", rank: 17, gw19Rank: 17, w: 13, d: 0, l: 25, score: 1913, pts: 39, seasons: 0, bestOr: "Debiut", bestOrSeason: "—", avgPosition: 16.03,
+                likes: "Roberto Carlos, nocne transfery po integracjach", dislikes: "Alvaro Morata (czysta nienawiść), wczesne deadliny", quote: "Najlepsze transfery robi się o 3 w nocy. Wtedy umysł jest najczystszy.",
+                videoScript: "Debiutant, który wszedł z drzwiami bez znajomości brutalnych reguł. Po nocnej, intensywnej integracji towarzyskiej, o 3 w nocy, kiedy umysł weszedł w tryb oświecenia, Alan zrobił 16 transferów, przyjmując absolutnie rekordowy hit za -60 PUNKTÓW w GW3! Do tego obsesyjnie ufał w João Pedro, dając mu opaskę 29 razy (zysk +250.03 pkt vs elita). W GW23 i GW27 uciszył krytyków wygrywając MVP tygodnia. Nienawidzi Alvaro Moraty. Totalny FPL-owy rock'n'roll.",
+                transfers: 29, hits: -72, greenArrows: 17, captainPts: 463, mostCaptained: "João Pedro (29 razy)", mostPointsPlayer: "João Pedro (316 pkt)", superStar: "João Pedro (+250.03 pkt)", rankKiller: "B.Fernandes (-177.00 pkt)", pointsBenched: 239, winStreak: "3 (GW21 - GW23)", monthlyWins: "Brak", bestGw: "GW23, GW27", weeksTop: 0, weeksBottom: 0
+            },
+            {
+                id: 24962, manager: "Pawel Klonek", discord: "PuebloFPL", team: "Ulane Warchlaki", rank: 18, gw19Rank: 18, w: 12, d: 0, l: 26, score: 1993, pts: 36, seasons: 5, bestOr: "402 478", bestOrSeason: "2022/23", avgPosition: 17.66,
+                likes: "Darwin Nunez, mroczna i ciężka muzyka klubowa", dislikes: "Inwazje teściowej przed deadlinem, Gabriel Magalhães", quote: "Darwin Nunez to chaos w czystej postaci, czyli mój idealny odpowiednik w FPL.",
+                videoScript: "Wódz Warchlakowa i naczelny anarchista ligi. Wymaga ciężkich klubowych brzmień i czystego boiskowego chaosu - z idolizacją Darwina Nuneza. Paweł ma na koncie rekord absolutny - w GW33 zdemolował ligę uderzeniem na 137 punktów w jednej kolejce! Został Królem Kwietnia. Niestety, rządy regularnie upadały pod naporem nagłych, przed-deadlinowych inwazji teściowej. Gabriel (-133 pkt strat) pociągnął go na dół tabeli. Przepalone 307 punktów i 18. lokata na mecie to cena za ten niesamowity chaos.",
+                transfers: 41, hits: -16, greenArrows: 20, captainPts: 413, mostCaptained: "Haaland (15 razy)", mostPointsPlayer: "Haaland (314 pkt)", superStar: "Andersen (+73.54 pkt)", rankKiller: "Gabriel (-133.23 pkt)", pointsBenched: 307, winStreak: "3 (GW31 - GW33)", monthlyWins: "Kwiecień (3-0-0)", bestGw: "GW33 (137 pkt) (Rekord Sezonu!)", weeksTop: 0, weeksBottom: 0
+            },
+            {
+                id: 3873739, manager: "Rafał Jastrząb", discord: "Jarząbek", team: "Jarząbki", rank: 19, gw19Rank: 19, w: 10, d: 0, l: 28, score: 1923, pts: 30, seasons: 1, bestOr: "1 997 984", bestOrSeason: "2024/25", avgPosition: 18.05,
+                likes: "Rowery górskie, puszcze, Ronaldo R9, Liverpool FC", dislikes: "Zmywanie garów, podwójne kolejki, Haaland-captaincy", quote: "Jak zjeżdżać, to z wysokiej góry i prosto w krzaki.",
+                videoScript: "Człowiek, który na debiutanckiej karcie uosabia Syndrom Ikara. Wystartował potężnie, ale uderzenie w blanki zamieniło sezon w jego górską pasję rowerową - stromy lot w dół prosto w błoto! Zajął przedostatnie miejsce grając ascetycznie (tylko -8 pkt z hitów). Jego skrajna Bruno-filia (kapitan x15) dała +129.98 pkt zysku, ale fatalna Haaland-fobia zabiła szanse na sukces (-176.39 pkt sabotażu!). Co ciekawe, na tym błotnistym zjeździe Rafał aż TRZYKROTNIE został Królem Tygodnia (GW15, GW21, GW24).",
+                transfers: 22, hits: -8, greenArrows: 18, captainPts: 406, mostCaptained: "B.Fernandes (15 razy)", mostPointsPlayer: "B.Fernandes (293 pkt)", superStar: "B.Fernandes (+129.98 pkt)", rankKiller: "Haaland (-176.39 pkt)", pointsBenched: 256, winStreak: "2 (GW13 - GW14)", monthlyWins: "Brak", bestGw: "GW15, GW21, GW24", weeksTop: 0, weeksBottom: 7
+            },
+            {
+                id: 3749264, manager: "Ankara Messi", discord: "MnstrNaf", team: "MnstrNaf", rank: 20, gw19Rank: 20, w: 9, d: 0, l: 29, score: 1980, pts: 27, seasons: 2, bestOr: "2 611 220", bestOrSeason: "2024/25", avgPosition: 19.03,
+                likes: "Andre Onana, płacz kibiców Realu Madryt, szalone hity", dislikes: "Spokojne, analityczne planowanie, oszczędzanie hitów", quote: "Hity to tylko cyfry, zabawa jest wtedy gdy robisz -24 i wygrywasz.",
+                videoScript: "Romantyk czystego chaosu i największy dostarczyciel emocji w lidze. Dla niego hity transferowe nie są karą, lecz wyrazem artystycznej ekspresji – przyjął na klatę niszczycielskie -36 punktów! Uderzał odważnie, stawiając za wzór Andre Onanę. Fatalny spadek Gabrielowi kosztował go stratę -139.97 pkt, co skutkowało tym, że spędził 18 tygodni jako honorowy administrator piwnicy tabeli (20. miejsce). Mimo to, w przedostatniej rundzie sezonu zaliczył wybuchowe, drapieżne uderzenie za 89 punktów, zostając MVP!",
+                transfers: 44, hits: -36, greenArrows: 18, captainPts: 465, mostCaptained: "Haaland (23 razy)", mostPointsPlayer: "Haaland (368 pkt)", superStar: "Watkins (+98.32 pkt)", rankKiller: "Gabriel (-139.97 pkt)", pointsBenched: 141, winStreak: "2 (GW36 - GW37)", monthlyWins: "Brak", bestGw: "GW37 (89 pkt)", weeksTop: 0, weeksBottom: 18
+            }
+        ];
+
+        const getMatchOutcome = (goalsFor, goalsAgainst) => {
+            if (goalsFor > goalsAgainst) return "W";
+            if (goalsFor < goalsAgainst) return "L";
+            return "D";
+        };
+
+        const LOGO_BASE = "logo";
+        const LEAGUE_LOGO_SRC = `${LOGO_BASE}/FPL Arena.png`;
+        const teamLogoSrc = (fplId) => `${LOGO_BASE}/${fplId}.png`;
+        const TEAM_BY_NAME = Object.fromEntries(PLAYERS_DATA.map((p) => [p.team, p]));
+        const PLAYER_BY_ID = Object.fromEntries(PLAYERS_DATA.map((p) => [p.id, p]));
+
+        const formatOrDisplay = (n) => {
+            if (n == null || n === undefined || n === "Debiut") return "—";
+            const num = Number(String(n).replace(/\s/g, ""));
+            return Number.isFinite(num) ? num.toLocaleString("pl-PL") : String(n);
+        };
+
+        const orTierLabel = (or) => {
+            if (or == null) return null;
+            if (or <= 10_000) return "światowa elita";
+            if (or <= 100_000) return "mocna światówka";
+            if (or <= 500_000) return "solidny poziom";
+            return "środkowa półka globu";
+        };
+
+        const getPlayerOrBundle = (playerId, orById, highlights) => {
+            const row = orById[String(playerId)] || orById[playerId] || {};
+            const seasonOr = highlights?.seasonOr ?? row.seasonOr ?? null;
+            const hist = row.historicalOr;
+            return {
+                historicalOr: hist != null && Number(hist) > 0 ? Number(hist) : null,
+                historicalOrSeason: row.historicalOrSeason ?? null,
+                seasonOr: seasonOr != null ? Number(seasonOr) : null
+            };
+        };
+
+        const buildPredictedStandings = (players, orById) => {
+            const ranked = [];
+            const debuts = [];
+            players.forEach((p) => {
+                const or = getPlayerOrBundle(p.id, orById, null);
+                const entry = {
+                    id: p.id,
+                    team: p.team,
+                    actualRank: p.rank,
+                    historicalOr: or.historicalOr,
+                    historicalOrSeason: or.historicalOrSeason
+                };
+                if (or.historicalOr != null) ranked.push(entry);
+                else debuts.push({ ...entry, predictedRank: null, isDebut: true });
+            });
+            ranked.sort((a, b) => a.historicalOr - b.historicalOr);
+            ranked.forEach((e, i) => { e.predictedRank = i + 1; });
+            const base = ranked.length;
+            debuts.forEach((e, i) => {
+                e.predictedRank = base + i + 1;
+                e.isDebut = true;
+            });
+            return [...ranked, ...debuts];
+        };
+
+        const getPredictionForPlayer = (playerId, predictedStandings) =>
+            predictedStandings.find((e) => e.id === playerId) || null;
+
+        const buildProfileSeasonStory = (player, highlights, orBundle, prediction) => {
+            const positives = [];
+            const negatives = [];
+            const actual = player.rank;
+            const predicted = prediction?.predictedRank;
+            const delta = predicted != null ? predicted - actual : null;
+
+            if (prediction?.isDebut) {
+                positives.push({
+                    icon: "🆕",
+                    text: `Debiut na Arenie — brak historycznego OR sprzed sezonu. Końcowy glob: ${formatOrDisplay(orBundle.seasonOr)}.`
+                });
+            } else if (delta != null && delta >= 5) {
+                positives.push({
+                    icon: "📈",
+                    text: `Niedoceniony przez historię: przed sezonem typowano ~${predicted}. miejsce (OR ${formatOrDisplay(prediction.historicalOr)}), a skończył na ${actual}.`
+                });
+            } else if (delta != null && delta <= -5) {
+                negatives.push({
+                    icon: "📉",
+                    text: `Wyżej w oczekiwaniach niż w tabeli: historyczny OR sugerował ~${predicted}. lokatę, realnie ${actual}.`
+                });
+            } else if (predicted != null) {
+                positives.push({
+                    icon: "⚖️",
+                    text: `Prognoza (~${predicted}. w tabeli) trafiła w punkt z wynikiem ${actual}. — stabilny sezon względem reputacji.`
+                });
+            }
+
+            if (orBundle.seasonOr != null && orBundle.historicalOr != null) {
+                const improved = orBundle.seasonOr < orBundle.historicalOr;
+                if (improved) {
+                    positives.push({
+                        icon: "🌍",
+                        text: `Życiówka w rankingu globu: z OR ${formatOrDisplay(orBundle.historicalOr)} (${orBundle.historicalOrSeason || "wcześniej"}) na ${formatOrDisplay(orBundle.seasonOr)} po sezonie 25/26.`
+                    });
+                } else if (orBundle.seasonOr > orBundle.historicalOr * 1.5) {
+                    negatives.push({
+                        icon: "🌧️",
+                        text: `Spadek formy w FPL Classic: końcowy OR ${formatOrDisplay(orBundle.seasonOr)} vs najlepszy historyczny ${formatOrDisplay(orBundle.historicalOr)}.`
+                    });
+                }
+            } else if (orBundle.seasonOr != null) {
+                positives.push({
+                    icon: "🌍",
+                    text: `Sezon 25/26 zamknięty na OR ${formatOrDisplay(orBundle.seasonOr)} w rankingu ogólnym (${orTierLabel(orBundle.seasonOr) || "FPL"}).`
+                });
+            }
+
+            if (player.gw19Rank && player.gw19Rank <= 3 && actual > player.gw19Rank + 2) {
+                negatives.push({
+                    icon: "❄️",
+                    text: `Po przerwie świątecznej był w czołówce (${player.gw19Rank}.), ale wiosna zepchnęła na ${actual}. — zjazd po jesieni.`
+                });
+            } else if (player.gw19Rank && actual < player.gw19Rank - 2) {
+                positives.push({
+                    icon: "☀️",
+                    text: `Mocny finisz: z ${player.gw19Rank}. miejsca po GW19 wspiął się na ${actual}. w lidze H2H.`
+                });
+            }
+
+            if (highlights?.seasonSplit?.trend != null) {
+                const t = highlights.seasonSplit.trend;
+                if (t >= 3) {
+                    positives.push({
+                        icon: "🔥",
+                        text: `Druga połowa sezonu (+${t.toFixed(1)} pkt/kolejkę vs pierwsza) — forma rosła wraz z kalendarzem.`
+                    });
+                } else if (t <= -3) {
+                    negatives.push({
+                        icon: "🥶",
+                        text: `Po GW19 siadła średnia (${t.toFixed(1)} pkt/kolejkę mniej w drugiej połowie).`
+                    });
+                }
+            }
+
+            if (highlights?.expSummary) {
+                const { overperform, underperform } = highlights.expSummary;
+                if (overperform > underperform + 5) {
+                    positives.push({
+                        icon: "🎲",
+                        text: `Częściej bijał oczekiwania statystyczne (${overperform} kolejek ponad xP vs ${underperform} poniżej).`
+                    });
+                } else if (underperform > overperform + 5) {
+                    negatives.push({
+                        icon: "📊",
+                        text: `Statystyki częściej go zawodziły (${underperform} słabszych kolejek vs ${overperform} lepszych od xP).`
+                    });
+                }
+            }
+
+            if (player.pointsBenched >= 300) {
+                negatives.push({
+                    icon: "🪑",
+                    text: `Kosztowna ławka: ${player.pointsBenched} pkt FPL nie weszło do składu — potencjał został w szatni.`
+                });
+            }
+
+            if (player.hits <= -40) {
+                negatives.push({
+                    icon: "💳",
+                    text: `Agresywne hity (${player.hits} pkt) — transferowa ruletka zjadała budżet co tydzień.`
+                });
+            } else if (player.hits >= -8 && player.transfers >= 35) {
+                positives.push({
+                    icon: "🧘",
+                    text: `Spokojna gospodarka transferami (${player.hits} pkt kar, ${player.transfers} ruchów) — mało chaosu przy deadlinach.`
+                });
+            }
+
+            const topGain = highlights?.topGains?.[0];
+            if (topGain && !positives.some((p) => p.text.includes(topGain.name))) {
+                positives.push({
+                    icon: "⭐",
+                    text: `${topGain.name} dowiózł największą przewagę nad przeciętnym menedżerem (+${topGain.net} pkt netto).`
+                });
+            }
+            const topLoss = highlights?.topLosses?.[0];
+            if (topLoss && !negatives.some((n) => n.text.includes(topLoss.name))) {
+                negatives.push({
+                    icon: "💸",
+                    text: `${topLoss.name} najbardziej odstawał od reszty ligi (${topLoss.net} pkt netto).`
+                });
+            }
+
+            const briefParts = [];
+            if (player.rank === 1) {
+                briefParts.push(`${player.team} — mistrz FPL Arena 25/26, ${player.w} zwycięstw H2H i ${player.pts} pkt ligowych.`);
+            } else if (player.rank <= 3) {
+                briefParts.push(`Podium Areny: ${player.rank}. miejsce (${player.w}W–${player.d}D–${player.l}L), ${player.score} pkt FPL w klasyku.`);
+            } else {
+                briefParts.push(`${player.team} kończy sezon na ${player.rank}. miejscu w H2H (${player.pts} pkt, bilans ${player.w}-${player.d}-${player.l}).`);
+            }
+            if (orBundle.seasonOr != null) {
+                briefParts.push(`W rankingu ogólnym FPL: OR ${formatOrDisplay(orBundle.seasonOr)}.`);
+            }
+
+            let conclusion = "";
+            if (delta != null && delta >= 8) {
+                conclusion = "Werdykt: sezon powyżej pedigree — historia OR nie przewidziała takiego skoku.";
+            } else if (delta != null && delta <= -8) {
+                conclusion = "Werdykt: rozczarowanie względem reputacji — tabela H2H odjechała od prognozy.";
+            } else if (player.rank <= 5) {
+                conclusion = "Werdykt: udany rok — wynik ligowy potwierdza klasę menedżera.";
+            } else {
+                conclusion = "Werdykt: mieszany bilans — kilka mocnych akcentów, ale tabela nie poszła w parze z ambicjami.";
+            }
+
+            return {
+                brief: briefParts.join(" "),
+                positives: positives.slice(0, 3),
+                negatives: negatives.slice(0, 3),
+                conclusion
+            };
+        };
+
+        const ProfileExpectationsPanel = ({ player, highlights, orBundle, prediction, predictedStandings, preSeasonFavorite }) => {
+            const story = useMemo(
+                () => buildProfileSeasonStory(player, highlights, orBundle, prediction),
+                [player, highlights, orBundle, prediction]
+            );
+            const delta = prediction?.predictedRank != null ? prediction.predictedRank - player.rank : null;
+            const deltaLabel = delta == null
+                ? null
+                : delta > 0
+                ? { text: `+${delta} miejsca vs prognoza`, tone: "good" }
+                : delta < 0
+                ? { text: `${delta} miejsca vs prognoza`, tone: "bad" }
+                : { text: "Trafiona prognoza", tone: "neutral" };
+
+            const topPredicted = predictedStandings.filter((e) => !e.isDebut).slice(0, 5);
+
+            return (
+                <div className="space-y-5">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="bg-[#020617] rounded-2xl border border-blue-500/30 p-4">
+                            <div className="text-[10px] uppercase tracking-widest text-blue-400 font-mono mb-1">Najlepszy historyczny OR</div>
+                            <div className="text-2xl font-athletic font-bold text-white">
+                                {orBundle.historicalOr != null ? formatOrDisplay(orBundle.historicalOr) : "Debiut"}
+                            </div>
+                            <div className="text-xs text-slate-500 mt-1">
+                                {orBundle.historicalOrSeason ? `Sezon ${orBundle.historicalOrSeason}` : "Brak wcześniejszej historii w Akta"}
+                            </div>
+                            {orBundle.historicalOr != null && (
+                                <div className="text-[10px] text-blue-300/80 mt-2 uppercase">{orTierLabel(orBundle.historicalOr)}</div>
+                            )}
+                        </div>
+                        <div className="bg-[#020617] rounded-2xl border border-emerald-500/30 p-4">
+                            <div className="text-[10px] uppercase tracking-widest text-emerald-400 font-mono mb-1">OR po sezonie 2025/26</div>
+                            <div className="text-2xl font-athletic font-bold text-emerald-300">
+                                {orBundle.seasonOr != null ? formatOrDisplay(orBundle.seasonOr) : "—"}
+                            </div>
+                            <div className="text-xs text-slate-500 mt-1">Ranking ogólny FPL (koniec sezonu)</div>
+                            {orBundle.seasonOr != null && (
+                                <div className="text-[10px] text-emerald-300/80 mt-2 uppercase">{orTierLabel(orBundle.seasonOr)}</div>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="bg-gradient-to-br from-slate-900/80 to-[#020617] rounded-2xl border border-slate-700 p-4">
+                        <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                            <span className="text-xs font-bold text-slate-300 uppercase tracking-wide">Prognoza przed sezonem (wg historycznego OR)</span>
+                            {deltaLabel && (
+                                <span className={`text-[10px] font-bold px-2 py-1 rounded-lg border ${
+                                    deltaLabel.tone === "good"
+                                        ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/30"
+                                        : deltaLabel.tone === "bad"
+                                        ? "bg-red-500/15 text-red-300 border-red-500/30"
+                                        : "bg-slate-700/50 text-slate-300 border-slate-600"
+                                }`}>{deltaLabel.text}</span>
+                            )}
+                        </div>
+                        <div className="flex flex-wrap gap-4 text-sm">
+                            <div>
+                                <span className="text-slate-500 block text-[10px] uppercase font-mono">Typowany ranking H2H</span>
+                                <span className="text-white font-bold text-lg">
+                                    {prediction?.predictedRank != null ? `#${prediction.predictedRank}` : "—"}
+                                </span>
+                            </div>
+                            <div>
+                                <span className="text-slate-500 block text-[10px] uppercase font-mono">Rzeczywisty wynik</span>
+                                <span className="text-emerald-400 font-bold text-lg">#{player.rank}</span>
+                            </div>
+                        </div>
+                        {preSeasonFavorite && (
+                            <p className="text-xs text-slate-400 mt-3 leading-relaxed">
+                                Faworyt przed GW1 (najlepszy historyczny OR): <strong className="text-yellow-400/90">{preSeasonFavorite.team}</strong> (OR {formatOrDisplay(preSeasonFavorite.historicalOr)}).
+                                {player.id === preSeasonFavorite.id
+                                    ? " To właśnie ta drużyna miała największe pedigree — presja była maksymalna."
+                                    : player.rank === 1
+                                    ? ` Mimo że typowano innych, to ${player.team} zabrało tytuł.`
+                                    : null}
+                            </p>
+                        )}
+                        {prediction?.isDebut && (
+                            <p className="text-xs text-amber-300/90 mt-3">Debiutant bez wpisu w Akta — do tabeli oczekiwań wliczony na koniec listy (brak historycznego OR).</p>
+                        )}
+                    </div>
+
+                    <div className="rounded-2xl border border-slate-800 overflow-hidden">
+                        <div className="bg-slate-900/60 px-3 py-2 text-[10px] uppercase tracking-widest text-slate-500 font-mono">Top 5 prognozy przed sezonem</div>
+                        <div className="divide-y divide-slate-800/80">
+                            {topPredicted.map((row) => {
+                                const actual = PLAYER_BY_ID[row.id];
+                                const diff = row.predictedRank - (actual?.rank ?? row.predictedRank);
+                                const isCurrent = row.id === player.id;
+                                return (
+                                    <div
+                                        key={row.id}
+                                        className={`flex items-center gap-2 px-3 py-2 text-xs ${isCurrent ? "bg-emerald-500/10" : ""}`}
+                                    >
+                                        <span className="w-5 font-mono text-slate-500">{row.predictedRank}.</span>
+                                        <span className={`flex-1 truncate font-semibold ${isCurrent ? "text-emerald-300" : "text-slate-200"}`}>{row.team}</span>
+                                        <span className="text-slate-500 font-mono hidden sm:inline">OR {formatOrDisplay(row.historicalOr)}</span>
+                                        <span className="text-slate-500">→</span>
+                                        <span className={`font-bold ${diff >= 3 ? "text-emerald-400" : diff <= -3 ? "text-red-400" : "text-slate-300"}`}>#{actual?.rank}</span>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    <p className="text-slate-300 text-sm leading-relaxed">{story.brief}</p>
+
+                    {story.positives.length > 0 && (
+                        <div className="space-y-2">
+                            <div className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">Na plus</div>
+                            {story.positives.map((item, i) => (
+                                <div key={i} className="flex gap-2 text-sm text-slate-300 bg-emerald-500/5 border border-emerald-500/20 rounded-xl px-3 py-2">
+                                    <span className="shrink-0">{item.icon}</span>
+                                    <span>{item.text}</span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {story.negatives.length > 0 && (
+                        <div className="space-y-2">
+                            <div className="text-[10px] font-bold text-red-400 uppercase tracking-widest">Na minus</div>
+                            {story.negatives.map((item, i) => (
+                                <div key={i} className="flex gap-2 text-sm text-slate-300 bg-red-500/5 border border-red-500/20 rounded-xl px-3 py-2">
+                                    <span className="shrink-0">{item.icon}</span>
+                                    <span>{item.text}</span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    <p className="text-xs text-slate-400 italic border-l-2 border-emerald-500/40 pl-3">{story.conclusion}</p>
+
+                    <div className="relative bg-[#020617] p-5 rounded-2xl border border-slate-800/80 italic text-slate-400 text-sm pl-11">
+                        <span className="absolute left-3 top-2 text-4xl font-athletic text-emerald-500/20 leading-none">"</span>
+                        <p className="relative z-10 leading-snug">{player.quote}</p>
+                    </div>
+                </div>
+            );
+        };
+
+        const CREST_SIZES = {
+            xs: { box: "w-8 h-8" },
+            sm: { box: "w-10 h-10" },
+            md: { box: "w-12 h-12" },
+            lg: { box: "w-16 h-16" },
+            xl: { box: "w-20 h-20" },
+            profile: { box: "w-28 h-28 sm:w-36 sm:h-36 md:w-44 md:h-44" }
+        };
+
+        const TeamCrest = ({ fplId, size = "md", className = "", framed = true, profile = false }) => {
+            const s = CREST_SIZES[size] || CREST_SIZES.md;
+            if (!fplId) {
+                return <div className={`${s.box} rounded-lg border-2 border-dashed border-slate-600 shrink-0 ${className}`} />;
+            }
+            const frameClass = framed ? (profile ? "crest-frame crest-frame-profile" : "crest-frame") : "";
+            return (
+                <div className={`${s.box} shrink-0 flex items-center justify-center ${frameClass} ${className}`}>
+                    <img
+                        src={teamLogoSrc(fplId)}
+                        alt=""
+                        className="w-full h-full object-contain"
+                        loading="lazy"
+                    />
+                </div>
+            );
+        };
+
+        const LeagueLogo = ({ size = "md", className = "" }) => {
+            const sizes = {
+                sm: "h-8",
+                md: "h-10",
+                lg: "h-14",
+                xl: "h-20",
+                hero: "h-24 md:h-28"
+            };
+            return (
+                <img
+                    src={LEAGUE_LOGO_SRC}
+                    alt="FPL Arena"
+                    className={`object-contain w-auto ${sizes[size] || sizes.md} ${className}`}
+                />
+            );
+        };
+
+        const TeamBrand = ({ player, crestSize = "sm", nameClassName = "text-slate-200", subClassName = "", layout = "row" }) => {
+            if (!player) return null;
+            const isCol = layout === "col";
+            return (
+                <div className={`flex ${isCol ? "flex-col items-center text-center" : "items-center"} gap-3 min-w-0`}>
+                    <TeamCrest fplId={player.id} size={crestSize} />
+                    <div className={`min-w-0 ${isCol ? "w-full" : "flex-1"}`}>
+                        <div className={`font-bold truncate ${nameClassName}`}>{player.team}</div>
+                        {player.manager ? (
+                            <div className={`text-xs text-slate-500 truncate ${subClassName}`}>{player.manager}</div>
+                        ) : null}
+                    </div>
+                </div>
+            );
+        };
+
+        const EVENT_TYPE_LABELS = {
+            minutes: "Występy (minuty na boisku)",
+            clean_sheets: "Czyste konta",
+            goals_scored: "Bramki",
+            assists: "Asysty",
+            bonus: "Punkty bonusowe (BPS)",
+            defensive_contribution: "Defcon (wkład w obronie)",
+            saves: "Obrony bramkarza (saves)",
+            goals_conceded: "Stracone gole (obrońcy / GK)",
+            yellow_cards: "Żółte kartki",
+            red_cards: "Czerwone kartki",
+            penalties_missed: "Niewykorzystane karne",
+            own_goals: "Gole samobójcze"
+        };
+
+        const EVENT_TYPE_ICONS = {
+            minutes: "⏱️",
+            clean_sheets: "🧤",
+            goals_scored: "⚽",
+            assists: "🅰️",
+            bonus: "⭐",
+            defensive_contribution: "🛡️",
+            saves: "🧤",
+            goals_conceded: "📉",
+            yellow_cards: "🟨",
+            red_cards: "🟥",
+            penalties_missed: "❌",
+            own_goals: "😱"
+        };
+
+        const POSITION_COLORS = {
+            1: { border: "border-cyan-500/40", bg: "bg-cyan-500/10", text: "text-cyan-300", bar: "from-cyan-600 to-cyan-400" },
+            2: { border: "border-blue-500/40", bg: "bg-blue-500/10", text: "text-blue-300", bar: "from-blue-600 to-blue-400" },
+            3: { border: "border-violet-500/40", bg: "bg-violet-500/10", text: "text-violet-300", bar: "from-violet-600 to-violet-400" },
+            4: { border: "border-rose-500/40", bg: "bg-rose-500/10", text: "text-rose-300", bar: "from-rose-600 to-rose-400" }
+        };
+
+        const H2H_PL = { W: "Wygrana", D: "Remis", L: "Porażka" };
+        const H2H_ICON = { W: "✓", D: "=", L: "✗" };
+
+        const StatPill = ({ label, value, sub, tone = "neutral" }) => {
+            const tones = {
+                neutral: "bg-slate-900/80 border-slate-700 text-white",
+                good: "bg-emerald-500/15 border-emerald-500/40 text-emerald-300",
+                warn: "bg-yellow-500/15 border-yellow-500/40 text-yellow-300",
+                info: "bg-blue-500/15 border-blue-500/40 text-blue-300"
+            };
+            return (
+                <div className={`rounded-xl border px-4 py-3 text-center min-w-[100px] ${tones[tone] || tones.neutral}`}>
+                    <div className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">{label}</div>
+                    <div className="text-2xl font-athletic font-bold mt-0.5">{value}</div>
+                    {sub && <div className="text-[10px] text-slate-500 mt-0.5">{sub}</div>}
+                </div>
+            );
+        };
+
+        const InsightCard = ({ icon, title, detail, badge, badgeTone = "good" }) => {
+            const badgeClass = badgeTone === "good"
+                ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
+                : badgeTone === "bad"
+                ? "bg-red-500/20 text-red-300 border-red-500/30"
+                : "bg-slate-700/50 text-slate-300 border-slate-600";
+            return (
+                <div className={`rounded-xl border p-4 flex gap-3 items-start ${badgeTone === "good" ? "border-emerald-500/25 bg-emerald-500/5" : badgeTone === "bad" ? "border-red-500/25 bg-red-500/5" : "border-slate-700 bg-slate-900/40"}`}>
+                    <span className="text-2xl shrink-0 leading-none">{icon}</span>
+                    <div className="flex-1 min-w-0">
+                        <div className="text-sm font-semibold text-white leading-snug">{title}</div>
+                        {detail && <div className="text-xs text-slate-400 mt-1 leading-relaxed">{detail}</div>}
+                    </div>
+                    {badge && (
+                        <span className={`shrink-0 text-xs font-bold px-2.5 py-1 rounded-lg border ${badgeClass}`}>{badge}</span>
+                    )}
+                </div>
+            );
+        };
+
+        const FPL_BOOTSTRAP_URL = "https://fantasy.premierleague.com/api/bootstrap-static/";
+        const FPL_PHOTO_SIZES = [
+            (code) => `https://resources.premierleague.com/premierleague/photos/players/250x250/p${code}.png`,
+            (code) => `https://resources.premierleague.com/premierleague/photos/players/110x140/p${code}.png`,
+            (code) => `https://resources.premierleague.com/premierleague25/photos/players/250x250/p${code}.png`
+        ];
+
+        const getPhotoCode = (elementId, photoField) => {
+            if (photoField) {
+                const code = String(photoField).replace(/\.jpg$/i, "").split("/").pop();
+                if (code && /^\d+$/.test(code)) return code;
+            }
+            if (elementId) return String(elementId);
+            return null;
+        };
+
+        const getPlayerPhotoUrl = (elementId, photoField, variantIndex = 0) => {
+            const code = getPhotoCode(elementId, photoField);
+            if (!code) return null;
+            const builder = FPL_PHOTO_SIZES[variantIndex] || FPL_PHOTO_SIZES[0];
+            return builder(code);
+        };
+
+        const mapDreamTeamPlayer = (player, fplPlayersById) => {
+            const fpl = player.elementId ? fplPlayersById[player.elementId] : null;
+            let fplMatch = fpl;
+            if (!fplMatch && player.name) {
+                const key = String(player.name).toLowerCase();
+                fplMatch = Object.values(fplPlayersById).find(
+                    (x) => x.web_name && x.web_name.toLowerCase() === key
+                );
+            }
+            const elementId = player.elementId || fplMatch?.id || null;
+            const photoField = fplMatch?.photo || null;
+            return {
+                ...player,
+                elementId,
+                displayName: player.name || fplMatch?.web_name || "Zawodnik",
+                photoField,
+                position: player.position || fplMatch?.element_type || 0
+            };
+        };
+
+        const inferFormation = (players) => {
+            let def = 0;
+            let mid = 0;
+            let fwd = 0;
+            players.forEach((p) => {
+                if (p.position === 2) def += 1;
+                else if (p.position === 3) mid += 1;
+                else if (p.position === 4) fwd += 1;
+            });
+            return `${def}-${mid}-${fwd}`;
+        };
+
+        const groupPlayersByPosition = (players) => {
+            const rows = { 1: [], 2: [], 3: [], 4: [] };
+            players.forEach((p) => {
+                const key = p.position;
+                if (rows[key]) rows[key].push(p);
+            });
+            [1, 2, 3, 4].forEach((k) => {
+                rows[k].sort((a, b) => (a.pitchX || 0) - (b.pitchX || 0));
+            });
+            return rows;
+        };
+
+        /** Stały slot 60×104px — zmienia się tylko odstęp poziomy między slotami w rzędzie. */
+        const PITCH_SLOT_WIDTH = 60;
+        const PITCH_SLOT_GAP = { 1: 0, 2: 22, 3: 16, 4: 10, 5: 6 };
+
+        const computeRowGap = (playerCount) => {
+            const n = Math.max(1, Math.min(playerCount, 5));
+            return PITCH_SLOT_GAP[n] ?? 6;
+        };
+
+        const rowLayoutStyle = (playerCount) => ({
+            "--row-gap": `${computeRowGap(playerCount)}px`
+        });
+
+        const PlayerSlot = ({ player }) => {
+            const [photoIndex, setPhotoIndex] = useState(0);
+            const [failed, setFailed] = useState(false);
+            const initials = (player.displayName || "?")
+                .split(/[\s.]+/)
+                .filter(Boolean)
+                .slice(0, 2)
+                .map((s) => s[0])
+                .join("")
+                .toUpperCase();
+
+            const photoUrl = failed
+                ? null
+                : getPlayerPhotoUrl(player.elementId, player.photoField, photoIndex);
+
+            const handleImgError = () => {
+                if (photoIndex < FPL_PHOTO_SIZES.length - 1) {
+                    setPhotoIndex((i) => i + 1);
+                } else {
+                    setFailed(true);
+                }
+            };
+
+            return (
+                <div className="player-slot">
+                    <div className="player-slot__avatar">
+                        {photoUrl && !failed ? (
+                            <img
+                                src={photoUrl}
+                                alt=""
+                                loading="lazy"
+                                onError={handleImgError}
+                            />
+                        ) : (
+                            <div className="player-slot__avatar-fallback">{initials}</div>
+                        )}
+                    </div>
+                    <div className="player-slot__body">
+                        <div className="player-slot__name" title={player.displayName}>
+                            {player.displayName}
+                        </div>
+                        <div className="player-slot__points">{player.points} pkt</div>
+                        <div
+                            className={`player-slot__captain ${player.captaincies > 0 ? "" : "player-slot__captain--empty"}`}
+                            title={player.captaincies > 0 ? `Kapitan w ${player.captaincies} kolejkach` : undefined}
+                        >
+                            {player.captaincies > 0 ? `Kapitan ×${player.captaincies}` : "\u00a0"}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const PitchLineRow = ({ players, rowClass, label }) => {
+            if (!players.length) return null;
+            const layoutStyle = rowLayoutStyle(players.length);
+            return (
+                <div
+                    className={`season-pitch__row ${rowClass}`}
+                    style={layoutStyle}
+                    aria-label={label}
+                >
+                    {players.map((p) => (
+                        <PlayerSlot
+                            key={`${p.elementId || p.displayName}-${rowClass}`}
+                            player={p}
+                        />
+                    ))}
+                </div>
+            );
+        };
+
+        const TeamOfSeasonPitch = ({ dreamTeam, fplPlayersById }) => {
+            const lineup = useMemo(() => {
+                const raw = (dreamTeam || []).filter((p) => p.position >= 1 && p.position <= 4);
+                return raw.map((p) => mapDreamTeamPlayer(p, fplPlayersById));
+            }, [dreamTeam, fplPlayersById]);
+
+            const formation = useMemo(() => inferFormation(lineup), [lineup]);
+            const rows = useMemo(() => groupPlayersByPosition(lineup), [lineup]);
+
+            if (lineup.length === 0) return null;
+
+            const pitchRows = [
+                { key: "fwd", rowClass: "season-pitch__row--fwd", players: rows[4], label: "Napastnicy" },
+                { key: "mid", rowClass: "season-pitch__row--mid", players: rows[3], label: "Pomocnicy" },
+                { key: "def", rowClass: "season-pitch__row--def", players: rows[2], label: "Obrońcy" },
+                { key: "gk", rowClass: "season-pitch__row--gk", players: rows[1], label: "Bramkarz" }
+            ];
+
+            return (
+                <div className="season-pitch-wrap">
+                    <div className="flex flex-wrap items-center justify-between gap-2 mb-3 px-1">
+                        <span className="text-xs text-slate-400">Układ z najczęściej wybieranej jedenastki sezonu</span>
+                        <span className="text-sm font-athletic font-bold text-yellow-200/90 tracking-widest bg-slate-950/50 border border-yellow-500/30 px-3 py-1 rounded-lg">
+                            {formation}
+                        </span>
+                    </div>
+                    <div className="season-pitch">
+                        <div className="season-pitch__inner">
+                            {pitchRows.map((row) => (
+                                <PitchLineRow
+                                    key={row.key}
+                                    players={row.players}
+                                    rowClass={row.rowClass}
+                                    label={row.label}
+                                />
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const SeasonHighlightsPanel = ({ highlights, fplPlayersById = {} }) => {
+            if (!highlights || !highlights.gwPoints || highlights.gwPoints.length === 0) return null;
+
+            const maxPts = Math.max(...highlights.gwPoints.map((g) => g.points), 1);
+            const h2h = highlights.h2hStreaks || {};
+            const wins = highlights.gwPoints.filter((g) => g.h2hOutcome === "W").length;
+            const losses = highlights.gwPoints.filter((g) => g.h2hOutcome === "L").length;
+            const draws = highlights.gwPoints.filter((g) => g.h2hOutcome === "D").length;
+
+            const goodInsights = [];
+            const badInsights = [];
+
+            (highlights.bestGWs || []).forEach((g) => {
+                goodInsights.push({
+                    key: `best-${g.gw}`,
+                    icon: "🔥",
+                    title: `Najlepsza kolejka sezonu: nr ${g.gw}`,
+                    detail: "Tyle punktów FPL udało się zdobyć w jeden weekend — szczyt formy.",
+                    badge: `${g.points} pkt`,
+                    tone: "good"
+                });
+            });
+
+            (highlights.topGains || []).slice(0, 3).forEach((p) => {
+                goodInsights.push({
+                    key: `gain-${p.name}`,
+                    icon: "⭐",
+                    title: `${p.name} — bohater sezonu`,
+                    detail: "Ten zawodnik dał ci największą przewagę nad przeciętnym menedżerem w lidze.",
+                    badge: `+${p.net} pkt`,
+                    tone: "good"
+                });
+            });
+
+            (highlights.bestTransfers || []).slice(0, 3).forEach((t) => {
+                goodInsights.push({
+                    key: `bt-${t.gw}-${t.bought}`,
+                    icon: "🔄",
+                    title: `Trafiony transfer (kolejka ${t.gw})`,
+                    detail: `Wypchnąłeś ${t.sold} i wprowadziłeś ${t.bought}. Decyzja się zwróciła.`,
+                    badge: `+${t.rpDiff} pkt`,
+                    tone: "good"
+                });
+            });
+
+            (highlights.gainMoments || []).slice(0, 2).forEach((m) => {
+                goodInsights.push({
+                    key: `gm-${m.gw}-${m.name}`,
+                    icon: "🎯",
+                    title: `Szczęśliwy strzał: ${m.name} (kolejka ${m.gw})`,
+                    detail: "Zawodnik zagrał znacznie lepiej, niż przewidywały statystyki.",
+                    badge: `+${m.diff} pkt`,
+                    tone: "good"
+                });
+            });
+
+            if (highlights.biggestWin) {
+                const b = highlights.biggestWin;
+                goodInsights.push({
+                    key: "bigwin",
+                    icon: "🏆",
+                    title: `Największe zwycięstwo w lidze H2H (kolejka ${b.gw})`,
+                    detail: `Wynik ${b.score} przeciwko ${b.opponent}. Rywal nie miał szans.`,
+                    badge: `+${b.margin} różnicy`,
+                    tone: "good"
+                });
+            }
+
+            (highlights.worstGWs || []).forEach((g) => {
+                badInsights.push({
+                    key: `worst-${g.gw}`,
+                    icon: "🌧️",
+                    title: `Najgorsza kolejka: nr ${g.gw}`,
+                    detail: "Weekend do szybkiego zapomnienia — mało punktów FPL.",
+                    badge: `${g.points} pkt`,
+                    tone: "bad"
+                });
+            });
+
+            (highlights.topLosses || []).slice(0, 3).forEach((p) => {
+                badInsights.push({
+                    key: `loss-${p.name}`,
+                    icon: "💸",
+                    title: `${p.name} — rozczarowanie sezonu`,
+                    detail: "Ten wybór kosztował cię najwięcej w porównaniu z innymi menedżerami.",
+                    badge: `${p.net} pkt`,
+                    tone: "bad"
+                });
+            });
+
+            (highlights.worstTransfers || []).slice(0, 3).forEach((t) => {
+                badInsights.push({
+                    key: `wt-${t.gw}-${t.bought}`,
+                    icon: "🚫",
+                    title: `Nietrafiony transfer (kolejka ${t.gw})`,
+                    detail: `${t.sold} → ${t.bought}. Ten ruch nie wyszedł.`,
+                    badge: `${t.rpDiff} pkt`,
+                    tone: "bad"
+                });
+            });
+
+            (highlights.lossMoments || []).slice(0, 2).forEach((m) => {
+                badInsights.push({
+                    key: `lm-${m.gw}-${m.name}`,
+                    icon: "😤",
+                    title: `Zawiedziony wybór: ${m.name} (kolejka ${m.gw})`,
+                    detail: "Zawodnik zagrał poniżej oczekiwań statystycznych.",
+                    badge: `${m.diff} pkt`,
+                    tone: "bad"
+                });
+            });
+
+            if (highlights.heaviestLoss) {
+                const l = highlights.heaviestLoss;
+                badInsights.push({
+                    key: "bigloss",
+                    icon: "💀",
+                    title: `Najcięższa porażka H2H (kolejka ${l.gw})`,
+                    detail: `${l.score} przeciwko ${l.opponent}.`,
+                    badge: `${l.margin} różnicy`,
+                    tone: "bad"
+                });
+            }
+
+            const last5Labels = (h2h.last5 || []).map((o) => H2H_PL[o] || o);
+
+            return (
+                <div className="glass-panel p-6 md:p-8 rounded-3xl border border-slate-800 shadow-xl w-full space-y-8">
+                    <div className="border-b border-slate-800/60 pb-5">
+                        <h4 className="text-2xl font-athletic font-bold text-white uppercase tracking-wide">Twój sezon w pigułce</h4>
+                        <p className="text-sm text-slate-400 mt-2 max-w-3xl">
+                            Przejrzyste podsumowanie: co wyszło, co bolało i jak wyglądała forma w każdej z 38 kolejek.
+                            Bez tabel Excela — same konkrety.
+                        </p>
+                    </div>
+
+                    <div className="flex flex-wrap gap-3 justify-center sm:justify-start">
+                        <StatPill label="Średnio na kolejkę" value={`${highlights.avgGwPoints}`} sub="punktów FPL" tone="info" />
+                        <StatPill label="Wygrane H2H" value={wins} sub="w lidze Areny" tone="good" />
+                        <StatPill label="Porażki H2H" value={losses} sub="w lidze Areny" tone="bad" />
+                        {draws > 0 && <StatPill label="Remisy H2H" value={draws} tone="neutral" />}
+                        {h2h.maxWins != null && <StatPill label="Najdłuższa seria" value={h2h.maxWins} sub="wygranych z rzędu" tone="good" />}
+                        {highlights.totalBench > 0 && (
+                            <StatPill label="Zmarnowane na ławce" value={highlights.totalBench} sub="pkt przez cały sezon" tone="warn" />
+                        )}
+                    </div>
+
+                    <div>
+                        <h5 className="text-sm font-bold text-white mb-1">Mapa sezonu — 38 kolejek</h5>
+                        <p className="text-xs text-slate-400 mb-3">
+                            Wyższy zielony pasek = więcej punktów FPL. Ramka: <span className="text-emerald-400">wygrana</span> / <span className="text-slate-400">remis</span> / <span className="text-red-400">porażka</span> w meczu ligi H2H.
+                        </p>
+                        <div className="grid grid-cols-6 sm:grid-cols-[repeat(19,minmax(0,1fr))] lg:grid-cols-[repeat(38,minmax(0,1fr))] gap-1.5">
+                            {highlights.gwPoints.map((g) => {
+                                const barH = Math.max(20, Math.round((g.points / maxPts) * 100));
+                                const borderColor = g.h2hOutcome === "W"
+                                    ? "border-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.35)]"
+                                    : g.h2hOutcome === "L"
+                                    ? "border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.35)]"
+                                    : "border-slate-500";
+                                return (
+                                    <div
+                                        key={g.gw}
+                                        title={`Kolejka ${g.gw}: ${g.points} pkt FPL${g.opponent ? ` | vs ${g.opponent}` : ""}${g.h2hOutcome ? ` | ${H2H_PL[g.h2hOutcome]}` : ""}`}
+                                        className={`rounded-lg border-2 bg-slate-950/80 p-1 flex flex-col items-center min-h-[64px] ${borderColor}`}
+                                    >
+                                        <span className="text-[9px] text-slate-500 font-mono">{g.gw}</span>
+                                        <div className="w-full flex-1 flex items-end justify-center my-0.5 min-h-[28px]">
+                                            <div
+                                                className="w-3/4 rounded-t bg-gradient-to-t from-emerald-600 to-emerald-400"
+                                                style={{ height: `${barH}%`, minHeight: "4px" }}
+                                            />
+                                        </div>
+                                        <span className="text-xs font-bold text-white leading-none">{g.points}</span>
+                                        {g.h2hOutcome && (
+                                            <span className={`text-[9px] font-bold mt-0.5 ${g.h2hOutcome === "W" ? "text-emerald-400" : g.h2hOutcome === "L" ? "text-red-400" : "text-slate-400"}`}>
+                                                {H2H_ICON[g.h2hOutcome]}
+                                            </span>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                        {last5Labels.length > 0 && (
+                            <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                                <span className="px-2 py-1 rounded-md bg-slate-800 text-slate-300">Ostatnie 5 kolejek H2H:</span>
+                                {last5Labels.map((label, i) => (
+                                    <span key={i} className={`px-2 py-1 rounded-md font-semibold ${label === "Wygrana" ? "bg-emerald-500/20 text-emerald-300" : label === "Porażka" ? "bg-red-500/20 text-red-300" : "bg-slate-700 text-slate-300"}`}>
+                                        {label}
+                                    </span>
+                                ))}
+                                {highlights.seasonSplit && (
+                                    <span className="px-2 py-1 rounded-md bg-blue-500/15 text-blue-300 border border-blue-500/30">
+                                        Jesień {highlights.seasonSplit.firstHalfAvg} pkt → Wiosna {highlights.seasonSplit.secondHalfAvg} pkt / kolejkę
+                                    </span>
+                                )}
+                            </div>
+                        )}
+                    </div>
+
+                    {(highlights.pointsByPosition?.length > 0 || highlights.pointSources?.length > 0) && (
+                        <div className="rounded-2xl border border-slate-700 bg-slate-900/30 p-5 md:p-6 space-y-6">
+                            <div>
+                                <h5 className="text-lg font-athletic font-bold text-white uppercase tracking-wide">Mapa punktów sezonu</h5>
+                                <p className="text-xs text-slate-400 mt-1 max-w-3xl">
+                                    Rozkład z analizy Excel (arkusze Event Points Total i GW Picks) — widać, skąd wzięły się punkty FPL: według pozycji w składzie oraz według zdarzeń punktowanych w grze.
+                                </p>
+                            </div>
+
+                            {highlights.pointsByPosition?.length > 0 && (
+                                <div>
+                                    <h6 className="text-sm font-bold text-slate-200 mb-3 flex items-center gap-2">
+                                        <span>🧩</span> Punkty według pozycji w składzie
+                                    </h6>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                                        {highlights.pointsByPosition.map((pos) => {
+                                            const style = POSITION_COLORS[pos.position] || POSITION_COLORS[3];
+                                            return (
+                                                <div key={pos.position} className={`rounded-xl border p-4 ${style.border} ${style.bg}`}>
+                                                    <div className={`text-[10px] uppercase tracking-widest font-mono ${style.text}`}>{pos.label}</div>
+                                                    <div className="text-2xl font-athletic font-bold text-white mt-1">{pos.points} pkt</div>
+                                                    <div className="text-xs text-slate-400 mt-0.5">{pos.pct}% całego składu</div>
+                                                    <div className="h-2 bg-slate-950 rounded-full overflow-hidden mt-3">
+                                                        <div className={`h-full bg-gradient-to-r ${style.bar} rounded-full`} style={{ width: `${Math.min(100, pos.pct)}%` }} />
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+
+                            {highlights.pointSources?.length > 0 && (
+                                <div>
+                                    <h6 className="text-sm font-bold text-slate-200 mb-3 flex items-center gap-2">
+                                        <span>📋</span> Punkty według zdarzeń FPL
+                                    </h6>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                        {highlights.pointSources.map((s) => {
+                                            const positive = s.points >= 0;
+                                            const barPct = s.pct != null ? Math.min(100, Math.abs(s.pct)) : Math.min(100, Math.abs(s.points) / 25);
+                                            return (
+                                                <div
+                                                    key={s.type}
+                                                    className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 ${
+                                                        positive ? "border-emerald-500/20 bg-emerald-500/5" : "border-red-500/25 bg-red-500/5"
+                                                    }`}
+                                                >
+                                                    <span className="text-lg shrink-0 w-7 text-center" title={s.type}>
+                                                        {EVENT_TYPE_ICONS[s.type] || "•"}
+                                                    </span>
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex justify-between gap-2 items-start">
+                                                            <span className="text-xs text-slate-200 leading-snug">
+                                                                {EVENT_TYPE_LABELS[s.type] || s.type}
+                                                            </span>
+                                                            <span className={`text-sm font-bold font-mono shrink-0 ${positive ? "text-emerald-400" : "text-red-400"}`}>
+                                                                {s.points > 0 ? "+" : ""}{s.points}
+                                                            </span>
+                                                        </div>
+                                                        <div className="h-1.5 bg-slate-950 rounded-full overflow-hidden mt-1.5">
+                                                            <div
+                                                                className={`h-full rounded-full ${positive ? "bg-emerald-500" : "bg-red-500"}`}
+                                                                style={{ width: `${barPct}%` }}
+                                                            />
+                                                        </div>
+                                                        {s.count != null && (
+                                                            <div className="text-[10px] text-slate-500 mt-1 font-mono">
+                                                                Zdarzenia w sezonie: {s.count}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                    <p className="text-[10px] text-slate-500 mt-3 italic">
+                                        Zgodnie z zasadami FPL: m.in. występy, czyste konta, bramki, asysty, bonusy, defcon, obrony GK, kary za kartki, stracone gole, spalone karne.
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div>
+                            <h5 className="text-base font-bold text-emerald-400 mb-3 flex items-center gap-2">
+                                <span className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center text-lg">👍</span>
+                                Co wyszło świetnie
+                            </h5>
+                            <div className="space-y-3">
+                                {goodInsights.length > 0 ? goodInsights.map((item) => (
+                                    <InsightCard key={item.key} icon={item.icon} title={item.title} detail={item.detail} badge={item.badge} badgeTone={item.tone} />
+                                )) : <p className="text-sm text-slate-500">Brak wyróżnionych pozycji.</p>}
+                            </div>
+                        </div>
+                        <div>
+                            <h5 className="text-base font-bold text-red-400 mb-3 flex items-center gap-2">
+                                <span className="w-8 h-8 rounded-lg bg-red-500/20 flex items-center justify-center text-lg">👎</span>
+                                Co kosztowało najwięcej
+                            </h5>
+                            <div className="space-y-3">
+                                {badInsights.length > 0 ? badInsights.map((item) => (
+                                    <InsightCard key={item.key} icon={item.icon} title={item.title} detail={item.detail} badge={item.badge} badgeTone={item.tone} />
+                                )) : <p className="text-sm text-slate-500">Brak wyróżnionych pozycji.</p>}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-800/60">
+                        {highlights.chips && highlights.chips.length > 0 && (
+                            <div className="rounded-2xl border border-purple-500/30 bg-purple-500/5 p-5">
+                                <h5 className="text-sm font-bold text-purple-300 mb-3 flex items-center gap-2">🎴 Użyte chipy menedżera</h5>
+                                <div className="space-y-2">
+                                    {highlights.chips.map((c) => (
+                                        <div key={`${c.gw}-${c.chip}`} className="flex justify-between items-center bg-slate-950/60 rounded-xl border border-purple-500/20 px-4 py-3">
+                                            <div>
+                                                <div className="text-xs text-slate-500">Kolejka {c.gw}</div>
+                                                <div className="text-sm font-semibold text-white">{c.chipLabel}</div>
+                                            </div>
+                                            <div className="text-lg font-athletic font-bold text-purple-200">{c.points} pkt</div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {highlights.formations && highlights.formations.length > 0 && (
+                            <div className="rounded-2xl border border-blue-500/30 bg-blue-500/5 p-5">
+                                <h5 className="text-sm font-bold text-blue-300 mb-3 flex items-center gap-2">📐 Ulubiony układ taktyczny</h5>
+                                <div className="space-y-2">
+                                    {highlights.formations.map((f) => (
+                                        <div key={f.name} className="flex justify-between items-center bg-slate-950/60 rounded-xl border border-blue-500/20 px-4 py-3">
+                                            <span className="text-lg font-athletic text-white">{f.name}</span>
+                                            <span className="text-xs text-blue-200">{f.count} razy · średnio <strong>{f.avg}</strong> pkt</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {highlights.expSummary && (
+                            <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-5">
+                                <h5 className="text-sm font-bold text-amber-300 mb-3 flex items-center gap-2">🎲 Czy trafiałeś w formę?</h5>
+                                <p className="text-xs text-slate-400 mb-3">Porównanie z tym, ile punktów „powinien” dać skład według statystyk.</p>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="bg-slate-950/60 rounded-xl p-4 text-center border border-emerald-500/30">
+                                        <div className="text-3xl font-athletic font-bold text-emerald-400">{highlights.expSummary.overperform}</div>
+                                        <div className="text-xs text-slate-400 mt-1">kolejek powyżej oczekiwań</div>
+                                    </div>
+                                    <div className="bg-slate-950/60 rounded-xl p-4 text-center border border-red-500/30">
+                                        <div className="text-3xl font-athletic font-bold text-red-400">{highlights.expSummary.underperform}</div>
+                                        <div className="text-xs text-slate-400 mt-1">kolejek poniżej oczekiwań</div>
+                                    </div>
+                                </div>
+                                {highlights.expSummary.best && (
+                                    <p className="text-xs text-slate-500 mt-3 text-center">
+                                        Największa pozytywna niespodzianka: kolejka {highlights.expSummary.best.gw} ({highlights.expSummary.best.diff > 0 ? "+" : ""}{highlights.expSummary.best.diff} pkt)
+                                    </p>
+                                )}
+                            </div>
+                        )}
+
+                        {highlights.dreamTeam && highlights.dreamTeam.length > 0 && (
+                            <div className="rounded-2xl border border-yellow-500/30 bg-yellow-500/5 p-5 md:col-span-2">
+                                <h5 className="text-sm font-bold text-yellow-300 mb-1 flex items-center gap-2">🌟 Twoja jedenastka sezonu</h5>
+                                <p className="text-xs text-slate-400 mb-4">
+                                    Największy wkład punktowy w Twoim składzie startowym — układ na boisku według pozycji FPL.
+                                </p>
+                                <TeamOfSeasonPitch dreamTeam={highlights.dreamTeam} fplPlayersById={fplPlayersById} />
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        const HomeNavButton = ({ onClick, icon, children }) => (
+            <button
+                type="button"
+                onClick={onClick}
+                className="w-full sm:w-auto min-w-[200px] px-6 py-3 bg-slate-800/90 text-white font-semibold rounded-xl hover:bg-slate-700 transition-all border border-slate-700 hover:border-emerald-500/40 flex items-center justify-center gap-2"
+            >
+                <span>{icon}</span>
+                {children}
+            </button>
+        );
+
+        const WynikiView = ({ matchesByGw, loading }) => {
+            const gwList = useMemo(() => {
+                if (!matchesByGw?.length) return [];
+                return [...matchesByGw]
+                    .map((b) => Number(b.gw))
+                    .filter((n) => Number.isFinite(n))
+                    .sort((a, b) => a - b);
+            }, [matchesByGw]);
+
+            const [selectedGw, setSelectedGw] = useState(1);
+
+            useEffect(() => {
+                if (gwList.length && !gwList.includes(selectedGw)) {
+                    setSelectedGw(gwList[0]);
+                }
+            }, [gwList, selectedGw]);
+
+            const currentBlock = useMemo(
+                () => matchesByGw.find((b) => Number(b.gw) === selectedGw),
+                [matchesByGw, selectedGw]
+            );
+
+            const matches = currentBlock?.matches || [];
+            const gwIndex = gwList.indexOf(selectedGw);
+            const canPrev = gwIndex > 0;
+            const canNext = gwIndex >= 0 && gwIndex < gwList.length - 1;
+
+            const gwStats = useMemo(() => {
+                if (!matches.length) return null;
+                const scores = matches.flatMap((m) => [m.pointsA, m.pointsB]);
+                const top = [...matches].sort(
+                    (a, b) => Math.max(b.pointsA, b.pointsB) - Math.max(a.pointsA, a.pointsB)
+                )[0];
+                const topPts = top ? Math.max(top.pointsA, top.pointsB) : 0;
+                const topTeam = top
+                    ? (top.pointsA >= top.pointsB ? top.teamA : top.teamB)
+                    : "";
+                return {
+                    totalPts: scores.reduce((s, n) => s + Number(n), 0),
+                    topTeam,
+                    topPts
+                };
+            }, [matches]);
+
+            return (
+                <div className="space-y-6 animate-fade-in w-full max-w-6xl mx-auto">
+                    <div className="border-b border-slate-800 pb-4">
+                        <h2 className="text-3xl font-athletic font-bold uppercase tracking-tight text-white flex items-center gap-3">
+                            <div className="league-logo-wrap rounded-lg p-1.5">
+                                <LeagueLogo size="sm" />
+                            </div>
+                            Wyniki kolejek
+                        </h2>
+                        <p className="text-slate-400 mt-1">Wszystkie mecze H2H FPL Arena — 10 spotkań na kolejkę, 38 tygodni sezonu.</p>
+                    </div>
+
+                    {loading ? (
+                        <div className="glass-panel rounded-2xl border border-slate-800 p-8 text-center text-slate-400">
+                            Ładowanie wyników…
+                        </div>
+                    ) : gwList.length === 0 ? (
+                        <div className="glass-panel rounded-2xl border border-red-500/30 bg-red-950/20 p-6 text-red-300 text-sm">
+                            Brak danych. Upewnij się, że plik <span className="font-mono">wyniki_meczy.json</span> leży obok strony HTML.
+                        </div>
+                    ) : (
+                        <>
+                            <div className="glass-panel rounded-2xl border border-slate-800 p-4 md:p-5 flex flex-col lg:flex-row gap-4 lg:items-center lg:justify-between">
+                                <div className="flex items-center justify-center gap-3">
+                                    <button
+                                        type="button"
+                                        disabled={!canPrev}
+                                        onClick={() => canPrev && setSelectedGw(gwList[gwIndex - 1])}
+                                        className="w-11 h-11 rounded-xl border border-slate-700 bg-slate-900/80 text-white font-bold disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-800 hover:border-emerald-500/40 transition-all"
+                                        aria-label="Poprzednia kolejka"
+                                    >
+                                        ←
+                                    </button>
+                                    <div className="text-center min-w-[140px]">
+                                        <div className="text-[10px] uppercase tracking-widest text-slate-500 font-mono">Kolejka</div>
+                                        <div className="text-4xl font-athletic font-bold text-emerald-400 leading-none">GW {selectedGw}</div>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        disabled={!canNext}
+                                        onClick={() => canNext && setSelectedGw(gwList[gwIndex + 1])}
+                                        className="w-11 h-11 rounded-xl border border-slate-700 bg-slate-900/80 text-white font-bold disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-800 hover:border-emerald-500/40 transition-all"
+                                        aria-label="Następna kolejka"
+                                    >
+                                        →
+                                    </button>
+                                </div>
+
+                                <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+                                    <label className="text-[10px] uppercase tracking-widest text-slate-500 font-mono sm:sr-only">
+                                        Wybierz kolejkę
+                                    </label>
+                                    <select
+                                        value={selectedGw}
+                                        onChange={(e) => setSelectedGw(Number(e.target.value))}
+                                        className="flex-1 sm:min-w-[220px] bg-[#020617] border border-slate-700 text-white rounded-xl px-4 py-2.5 text-sm font-semibold focus:outline-none focus:border-emerald-500/50"
+                                    >
+                                        {gwList.map((g) => (
+                                            <option key={g} value={g}>Kolejka {g}</option>
+                                        ))}
+                                    </select>
+                                    <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto sm:max-w-md">
+                                        {gwList.map((g) => (
+                                            <button
+                                                key={g}
+                                                type="button"
+                                                onClick={() => setSelectedGw(g)}
+                                                className={`px-2 py-1 rounded-lg text-[11px] font-mono font-bold border transition-all ${
+                                                    g === selectedGw
+                                                        ? "bg-emerald-500 text-slate-950 border-emerald-400"
+                                                        : "bg-slate-900/60 text-slate-400 border-slate-700 hover:border-slate-500"
+                                                }`}
+                                            >
+                                                {g}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {gwStats && (
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                    <div className="glass-panel rounded-xl border border-slate-800 p-4 text-center">
+                                        <div className="text-[10px] text-slate-500 uppercase font-mono">Mecze w kolejce</div>
+                                        <div className="text-2xl font-athletic font-bold text-white mt-1">{matches.length}</div>
+                                    </div>
+                                    <div className="glass-panel rounded-xl border border-slate-800 p-4 text-center">
+                                        <div className="text-[10px] text-slate-500 uppercase font-mono">Suma punktów FPL</div>
+                                        <div className="text-2xl font-athletic font-bold text-emerald-400 mt-1">{gwStats.totalPts}</div>
+                                    </div>
+                                    <div className="glass-panel rounded-xl border border-slate-800 p-4 text-center">
+                                        <div className="text-[10px] text-slate-500 uppercase font-mono">Najwyższy wynik</div>
+                                        <div className="text-sm font-bold text-yellow-400 mt-1 truncate" title={gwStats.topTeam}>
+                                            {gwStats.topTeam}
+                                        </div>
+                                        <div className="text-lg font-athletic font-bold text-white">{gwStats.topPts} pkt</div>
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {matches.map((m, idx) => {
+                                    const playerA = TEAM_BY_NAME[m.teamA];
+                                    const playerB = TEAM_BY_NAME[m.teamB];
+                                    const ptsA = Number(m.pointsA);
+                                    const ptsB = Number(m.pointsB);
+                                    const outcomeA = getMatchOutcome(ptsA, ptsB);
+                                    const outcomeB = outcomeA === "W" ? "L" : outcomeA === "L" ? "W" : "D";
+                                    const winA = outcomeA === "W";
+                                    const winB = outcomeB === "W";
+
+                                    return (
+                                        <div
+                                            key={`${selectedGw}-${idx}-${m.teamA}-${m.teamB}`}
+                                            className="glass-panel rounded-2xl border border-slate-800 p-4 md:p-5 hover:border-slate-600 transition-colors"
+                                        >
+                                            <div className="flex items-center justify-between gap-3">
+                                                <div className={`flex-1 min-w-0 flex items-center gap-2 ${winA ? "opacity-100" : winB ? "opacity-75" : ""}`}>
+                                                    <TeamCrest fplId={playerA?.id} size="sm" />
+                                                    <div className="min-w-0">
+                                                        <div className={`text-sm font-bold truncate ${winA ? "text-emerald-300" : "text-slate-200"}`}>{m.teamA}</div>
+                                                        {playerA && <div className="text-[10px] text-slate-500 truncate">{playerA.manager}</div>}
+                                                    </div>
+                                                </div>
+                                                <div className="shrink-0 text-center px-2 font-mono font-bold text-xl text-white whitespace-nowrap">
+                                                    <span className={winA ? "text-emerald-400" : ""}>{ptsA}</span>
+                                                    <span className="text-slate-600 mx-1">:</span>
+                                                    <span className={winB ? "text-emerald-400" : ""}>{ptsB}</span>
+                                                </div>
+                                                <div className={`flex-1 min-w-0 flex items-center gap-2 justify-end text-right ${winB ? "opacity-100" : winA ? "opacity-75" : ""}`}>
+                                                    <div className="min-w-0">
+                                                        <div className={`text-sm font-bold truncate ${winB ? "text-emerald-300" : "text-slate-200"}`}>{m.teamB}</div>
+                                                        {playerB && <div className="text-[10px] text-slate-500 truncate">{playerB.manager}</div>}
+                                                    </div>
+                                                    <TeamCrest fplId={playerB?.id} size="sm" />
+                                                </div>
+                                            </div>
+                                            <div className="flex justify-center gap-2 mt-3">
+                                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
+                                                    outcomeA === "W" ? "text-emerald-400 border-emerald-500/40 bg-emerald-500/10" :
+                                                    outcomeA === "L" ? "text-red-400 border-red-500/40 bg-red-500/10" :
+                                                    "text-slate-400 border-slate-600 bg-slate-800/50"
+                                                }`}>{m.teamA.split(" ")[0]}: {H2H_PL[outcomeA]}</span>
+                                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
+                                                    outcomeB === "W" ? "text-emerald-400 border-emerald-500/40 bg-emerald-500/10" :
+                                                    outcomeB === "L" ? "text-red-400 border-red-500/40 bg-red-500/10" :
+                                                    "text-slate-400 border-slate-600 bg-slate-800/50"
+                                                }`}>{m.teamB.split(" ")[0]}: {H2H_PL[outcomeB]}</span>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </>
+                    )}
+                </div>
+            );
+        };
+
+        const emptyStandingRow = (team) => ({
+            team,
+            id: TEAM_BY_NAME[team]?.id || null,
+            w: 0,
+            d: 0,
+            l: 0,
+            pts: 0,
+            score: 0
+        });
+
+        const miniLeagueStats = (teams, matchLog) => {
+            const s = {};
+            teams.forEach((t) => { s[t] = { pts: 0, score: 0 }; });
+            matchLog.forEach((m) => {
+                if (!teams.includes(m.teamA) || !teams.includes(m.teamB)) return;
+                s[m.teamA].pts += m.leaguePtsA;
+                s[m.teamB].pts += m.leaguePtsB;
+                s[m.teamA].score += m.fa;
+                s[m.teamB].score += m.fb;
+            });
+            return s;
+        };
+
+        const compareStandingRows = (a, b, matchLog) => {
+            if (b.pts !== a.pts) return b.pts - a.pts;
+            if (b.score !== a.score) return b.score - a.score;
+            const mini = miniLeagueStats([a.team, b.team], matchLog);
+            if (mini[b.team].pts !== mini[a.team].pts) return mini[b.team].pts - mini[a.team].pts;
+            if (mini[b.team].score !== mini[a.team].score) return mini[b.team].score - mini[a.team].score;
+            return a.team.localeCompare(b.team, "pl");
+        };
+
+        const computeStandingsAtGw = (matchesByGw, throughGw) => {
+            const teamNames = PLAYERS_DATA.map((p) => p.team);
+            const stats = {};
+            teamNames.forEach((t) => { stats[t] = emptyStandingRow(t); });
+            const matchLog = [];
+
+            const sortedBlocks = [...matchesByGw].sort((a, b) => Number(a.gw) - Number(b.gw));
+            for (const block of sortedBlocks) {
+                const gw = Number(block.gw);
+                if (gw > throughGw) break;
+                for (const m of block.matches || []) {
+                    const fa = Number(m.pointsA);
+                    const fb = Number(m.pointsB);
+                    let lpa;
+                    let lpb;
+                    if (fa > fb) {
+                        lpa = 3;
+                        lpb = 0;
+                        stats[m.teamA].w += 1;
+                        stats[m.teamB].l += 1;
+                    } else if (fa < fb) {
+                        lpa = 0;
+                        lpb = 3;
+                        stats[m.teamB].w += 1;
+                        stats[m.teamA].l += 1;
+                    } else {
+                        lpa = 1;
+                        lpb = 1;
+                        stats[m.teamA].d += 1;
+                        stats[m.teamB].d += 1;
+                    }
+                    stats[m.teamA].pts += lpa;
+                    stats[m.teamB].pts += lpb;
+                    stats[m.teamA].score += fa;
+                    stats[m.teamB].score += fb;
+                    matchLog.push({
+                        teamA: m.teamA,
+                        teamB: m.teamB,
+                        leaguePtsA: lpa,
+                        leaguePtsB: lpb,
+                        fa,
+                        fb
+                    });
+                }
+            }
+
+            const rows = teamNames.map((t) => ({ ...stats[t] }));
+            rows.sort((a, b) => compareStandingRows(a, b, matchLog));
+            rows.forEach((r, i) => { r.rank = i + 1; });
+            return rows;
+        };
+
+        const buildStandingsHistory = (matchesByGw) => {
+            if (!matchesByGw?.length) return { byGw: {}, gwList: [], maxGw: 38 };
+            const gwList = [...matchesByGw]
+                .map((b) => Number(b.gw))
+                .filter((n) => Number.isFinite(n))
+                .sort((a, b) => a - b);
+            const maxGw = gwList[gwList.length - 1] || 38;
+            const byGw = {};
+            let prevRankByTeam = {};
+
+            for (let gw = 1; gw <= maxGw; gw++) {
+                if (!gwList.includes(gw)) continue;
+                const rows = computeStandingsAtGw(matchesByGw, gw);
+                rows.forEach((r) => {
+                    if (gw === 1) {
+                        r.rankChange = null;
+                    } else {
+                        const prev = prevRankByTeam[r.team];
+                        r.rankChange = prev != null ? prev - r.rank : null;
+                    }
+                });
+                prevRankByTeam = Object.fromEntries(rows.map((r) => [r.team, r.rank]));
+                byGw[gw] = rows;
+            }
+
+            return { byGw, gwList, maxGw };
+        };
+
+        const RankChangeBadge = ({ change }) => {
+            if (change == null) {
+                return (
+                    <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-slate-800/80 text-slate-500 text-xs font-mono" title="Pierwsza kolejka — brak poprzedniej pozycji">
+                        —
+                    </span>
+                );
+            }
+            if (change > 0) {
+                return (
+                    <span className="inline-flex flex-col items-center justify-center w-8 h-8 rounded-lg bg-emerald-500/15 border border-emerald-500/40 text-emerald-400" title={`Awans o ${change} ${change === 1 ? "miejsce" : "miejsca"}`}>
+                        <span className="text-sm leading-none">▲</span>
+                        <span className="text-[9px] font-bold font-mono">{change}</span>
+                    </span>
+                );
+            }
+            if (change < 0) {
+                const drop = Math.abs(change);
+                return (
+                    <span className="inline-flex flex-col items-center justify-center w-8 h-8 rounded-lg bg-red-500/15 border border-red-500/40 text-red-400" title={`Spadek o ${drop} ${drop === 1 ? "miejsce" : "miejsc"}`}>
+                        <span className="text-sm leading-none">▼</span>
+                        <span className="text-[9px] font-bold font-mono">{drop}</span>
+                    </span>
+                );
+            }
+            return (
+                <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-slate-700/50 border border-slate-600 text-slate-400" title="Bez zmian względem poprzedniej kolejki">
+                    <span className="text-base leading-none">▬</span>
+                </span>
+            );
+        };
+
+        const StandingsView = ({ matchesByGw, loading }) => {
+            const standingsHistory = useMemo(
+                () => buildStandingsHistory(matchesByGw),
+                [matchesByGw]
+            );
+            const { byGw, gwList, maxGw } = standingsHistory;
+            const [selectedGw, setSelectedGw] = useState(null);
+
+            useEffect(() => {
+                if (maxGw && selectedGw == null) {
+                    setSelectedGw(maxGw);
+                } else if (maxGw && selectedGw > maxGw) {
+                    setSelectedGw(maxGw);
+                }
+            }, [maxGw, selectedGw]);
+
+            const effectiveGw = selectedGw ?? maxGw;
+            const rows = byGw[effectiveGw] || [];
+            const gwIndex = gwList.indexOf(effectiveGw);
+            const canPrev = gwIndex > 0;
+            const canNext = gwIndex >= 0 && gwIndex < gwList.length - 1;
+            const isFinal = effectiveGw === maxGw;
+
+            return (
+                <div className="space-y-6 animate-fade-in w-full max-w-6xl mx-auto">
+                    <div className="border-b border-slate-800 pb-4">
+                        <h2 className="text-3xl font-athletic font-bold uppercase tracking-tight text-white flex items-center gap-3">
+                            <div className="league-logo-wrap rounded-lg p-1.5">
+                                <LeagueLogo size="sm" />
+                            </div>
+                            {isFinal ? "Tabela końcowa FPL Arena" : `Tabela po kolejce ${effectiveGw}`}
+                        </h2>
+                        <p className="text-slate-400 mt-1 text-sm max-w-3xl">
+                            Klasyfikacja H2H liczona z wyników meczów: <strong className="text-slate-300">pkt ligi</strong> (3/1/0),
+                            przy remisie punktów — <strong className="text-slate-300">Score ogółem</strong>, potem <strong className="text-slate-300">bilans bezpośredni</strong>.
+                            {isFinal ? " Domyślnie widok po 38. kolejce." : ""}
+                        </p>
+                    </div>
+
+                    {loading ? (
+                        <div className="glass-panel rounded-2xl border border-slate-800 p-8 text-center text-slate-400">
+                            Ładowanie tabel…
+                        </div>
+                    ) : gwList.length === 0 ? (
+                        <div className="glass-panel rounded-2xl border border-red-500/30 bg-red-950/20 p-6 text-red-300 text-sm">
+                            Brak wyników meczowych — sprawdź plik <span className="font-mono">wyniki_meczy.json</span>.
+                        </div>
+                    ) : (
+                        <>
+                            <div className="glass-panel rounded-2xl border border-slate-800 p-4 md:p-5 flex flex-col lg:flex-row gap-4 lg:items-center lg:justify-between">
+                                <div className="flex items-center justify-center gap-3">
+                                    <button
+                                        type="button"
+                                        disabled={!canPrev}
+                                        onClick={() => canPrev && setSelectedGw(gwList[gwIndex - 1])}
+                                        className="w-11 h-11 rounded-xl border border-slate-700 bg-slate-900/80 text-white font-bold disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-800 hover:border-emerald-500/40 transition-all"
+                                        aria-label="Poprzednia kolejka"
+                                    >
+                                        ←
+                                    </button>
+                                    <div className="text-center min-w-[160px]">
+                                        <div className="text-[10px] uppercase tracking-widest text-slate-500 font-mono">Stan tabeli</div>
+                                        <div className="text-3xl font-athletic font-bold text-emerald-400 leading-none">
+                                            {isFinal ? "Finał" : `GW ${effectiveGw}`}
+                                        </div>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        disabled={!canNext}
+                                        onClick={() => canNext && setSelectedGw(gwList[gwIndex + 1])}
+                                        className="w-11 h-11 rounded-xl border border-slate-700 bg-slate-900/80 text-white font-bold disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-800 hover:border-emerald-500/40 transition-all"
+                                        aria-label="Następna kolejka"
+                                    >
+                                        →
+                                    </button>
+                                </div>
+                                <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+                                    <select
+                                        value={effectiveGw}
+                                        onChange={(e) => setSelectedGw(Number(e.target.value))}
+                                        className="flex-1 sm:min-w-[200px] bg-[#020617] border border-slate-700 text-white rounded-xl px-4 py-2.5 text-sm font-semibold focus:outline-none focus:border-emerald-500/50"
+                                    >
+                                        {gwList.map((g) => (
+                                            <option key={g} value={g}>
+                                                {g === maxGw ? `Kolejka ${g} (tabela końcowa)` : `Po kolejce ${g}`}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <button
+                                        type="button"
+                                        onClick={() => setSelectedGw(maxGw)}
+                                        className={`px-4 py-2.5 rounded-xl text-sm font-semibold border transition-all ${
+                                            isFinal
+                                                ? "bg-emerald-500 text-slate-950 border-emerald-400"
+                                                : "bg-slate-900 text-slate-300 border-slate-700 hover:border-emerald-500/40"
+                                        }`}
+                                    >
+                                        Tabela końcowa
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto">
+                                {gwList.map((g) => (
+                                    <button
+                                        key={g}
+                                        type="button"
+                                        onClick={() => setSelectedGw(g)}
+                                        className={`px-2 py-1 rounded-lg text-[11px] font-mono font-bold border transition-all ${
+                                            g === effectiveGw
+                                                ? "bg-emerald-500 text-slate-950 border-emerald-400"
+                                                : "bg-slate-900/60 text-slate-400 border-slate-700 hover:border-slate-500"
+                                        }`}
+                                    >
+                                        {g}
+                                    </button>
+                                ))}
+                            </div>
+
+                            <div className="overflow-x-auto rounded-2xl border border-slate-800 shadow-2xl glass-panel">
+                                <table className="w-full text-left text-sm whitespace-nowrap">
+                                    <thead className="bg-slate-900/80 text-slate-400 font-mono uppercase text-xs border-b border-slate-800">
+                                        <tr>
+                                            <th className="p-4 font-semibold text-center w-14">Poz.</th>
+                                            <th className="p-4 font-semibold text-center w-16" title="Zmiana vs poprzednia kolejka">Zm.</th>
+                                            <th className="p-4 font-semibold">Menedżer & Klub</th>
+                                            <th className="p-4 font-semibold text-center">Bilans (W-D-L)</th>
+                                            <th className="p-4 font-semibold text-center text-white">Pkt H2H</th>
+                                            <th className="p-4 font-semibold text-center text-emerald-400">Score ogółem</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-800/50">
+                                        {rows.map((r) => {
+                                            const player = PLAYER_BY_ID[r.id] || {
+                                                id: r.id,
+                                                team: r.team,
+                                                manager: TEAM_BY_NAME[r.team]?.manager || ""
+                                            };
+                                            const pos = r.rank;
+                                            return (
+                                                <tr key={r.team} className="hover:bg-slate-800/30 transition-colors">
+                                                    <td className={`p-4 text-center font-athletic text-xl font-bold ${pos <= 3 ? "text-yellow-500" : pos >= 18 ? "text-red-500" : "text-slate-500"}`}>
+                                                        {pos}
+                                                    </td>
+                                                    <td className="p-4 text-center">
+                                                        <RankChangeBadge change={r.rankChange} />
+                                                    </td>
+                                                    <td className="p-4">
+                                                        <TeamBrand player={player} crestSize="sm" />
+                                                    </td>
+                                                    <td className="p-4 text-center font-mono text-slate-400">
+                                                        <span className="text-emerald-500">{r.w}</span>
+                                                        {" - "}
+                                                        <span className="text-slate-500">{r.d}</span>
+                                                        {" - "}
+                                                        <span className="text-red-500">{r.l}</span>
+                                                    </td>
+                                                    <td className="p-4 text-center font-bold text-white text-lg">{r.pts}</td>
+                                                    <td className="p-4 text-center font-mono text-emerald-400">{r.score}</td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </>
+                    )}
+                </div>
+            );
+        };
+
+        const parsePtsFromStat = (str) => {
+            if (!str) return 0;
+            const m = String(str).match(/([-+]?[\d.]+)/);
+            return m ? parseFloat(m[1]) : 0;
+        };
+
+        const buildExtraHallAwards = (players, highlights) => {
+            if (!highlights || Object.keys(highlights).length === 0) return [];
+
+            const scan = {
+                bestGw: { points: 0, gw: 0, id: 0 },
+                maxBench: { val: 0, id: 0 },
+                maxWinStreak: { val: 0, id: 0 },
+                maxAvg: { val: 0, id: 0 },
+                maxChipPts: { val: 0, id: 0 },
+                bestChipWeek: { points: 0, id: 0, gw: 0, label: "" },
+                bestTransfer: { rp: -999, id: 0, gw: 0, sold: "", bought: "" },
+                worstTransfer: { rp: 999, id: 0, gw: 0, sold: "", bought: "" },
+                maxExpOver: { val: 0, id: 0 },
+                maxSpring: { trend: -999, id: 0 },
+                minAutumn: { trend: 999, id: 0 },
+                maxDraws: { val: 0, id: 0 },
+                maxTopGain: { net: 0, id: 0, name: "" },
+                minHits: { val: 999, id: 0 }
+            };
+
+            Object.entries(highlights).forEach(([idStr, data]) => {
+                const id = Number(idStr);
+                (data.gwPoints || []).forEach((g) => {
+                    if (g.points > scan.bestGw.points) scan.bestGw = { points: g.points, gw: g.gw, id };
+                });
+                if ((data.totalBench || 0) > scan.maxBench.val) scan.maxBench = { val: data.totalBench, id };
+                const ws = data.h2hStreaks?.maxWins || 0;
+                if (ws > scan.maxWinStreak.val) scan.maxWinStreak = { val: ws, id };
+                if ((data.avgGwPoints || 0) > scan.maxAvg.val) scan.maxAvg = { val: data.avgGwPoints, id };
+                const chipSum = (data.chips || []).reduce((s, c) => s + c.points, 0);
+                if (chipSum > scan.maxChipPts.val) scan.maxChipPts = { val: chipSum, id };
+                (data.chips || []).forEach((c) => {
+                    if (c.points > scan.bestChipWeek.points) {
+                        scan.bestChipWeek = { points: c.points, id, gw: c.gw, label: c.chipLabel };
+                    }
+                });
+                (data.bestTransfers || []).forEach((t) => {
+                    if (t.rpDiff > scan.bestTransfer.rp) scan.bestTransfer = { rp: t.rpDiff, id, gw: t.gw, sold: t.sold, bought: t.bought };
+                });
+                (data.worstTransfers || []).forEach((t) => {
+                    if (t.rpDiff < scan.worstTransfer.rp) scan.worstTransfer = { rp: t.rpDiff, id, gw: t.gw, sold: t.sold, bought: t.bought };
+                });
+                const over = data.expSummary?.overperform || 0;
+                if (over > scan.maxExpOver.val) scan.maxExpOver = { val: over, id };
+                const trend = data.seasonSplit?.trend;
+                if (trend != null) {
+                    if (trend > scan.maxSpring.trend) scan.maxSpring = { trend, id };
+                    if (trend < scan.minAutumn.trend) scan.minAutumn = { trend, id };
+                }
+                const draws = (data.gwPoints || []).filter((g) => g.h2hOutcome === "D").length;
+                if (draws > scan.maxDraws.val) scan.maxDraws = { val: draws, id };
+                const top = data.topGains?.[0];
+                if (top && top.net > scan.maxTopGain.net) scan.maxTopGain = { net: top.net, id, name: top.name };
+                const hits = data.totalHitCost ?? 999;
+                if (hits < scan.minHits.val) scan.minHits = { val: hits, id };
+            });
+
+            const autumn = [...players].sort((a, b) => a.gw19Rank - b.gw19Rank)[0];
+            const mostTransfers = [...players].sort((a, b) => b.transfers - a.transfers)[0];
+            const mostGreen = [...players].sort((a, b) => b.greenArrows - a.greenArrows)[0];
+            const mostCaptain = [...players].sort((a, b) => b.captainPts - a.captainPts)[0];
+            const veteran = [...players].sort((a, b) => b.seasons - a.seasons)[0];
+            const orLegend = [...players].filter((p) => p.bestOr !== "Debiut").sort((a, b) => {
+                const na = parseInt(String(a.bestOr).replace(/\s/g, ""), 10) || 9999999;
+                const nb = parseInt(String(b.bestOr).replace(/\s/g, ""), 10) || 9999999;
+                return na - nb;
+            })[0];
+            const balanced = players.find((p) => p.w === 19 && p.l === 19);
+            const killer = [...players].sort((a, b) => parsePtsFromStat(a.rankKiller) - parsePtsFromStat(b.rankKiller))[0];
+            const mvpGw = [...players].sort((a, b) => {
+                const extract = (s) => { const m = String(s).match(/\((\d+)\s*pkt\)/); return m ? parseInt(m[1], 10) : 0; };
+                return extract(b.bestGw) - extract(a.bestGw);
+            })[0];
+
+            const cards = [];
+
+            if (scan.maxWinStreak.val > 0 && scan.maxWinStreak.id !== 22952) {
+                cards.push({
+                    id: "win-streak",
+                    emoji: "🔥",
+                    border: "border-t-cyan-500",
+                    title: "Najdłuższa seria zwycięstw H2H",
+                    playerIds: [scan.maxWinStreak.id],
+                    body: <>Nieprzerwana passa <strong className="text-cyan-400">{scan.maxWinStreak.val} wygranych meczów ligowych</strong> z rzędu. Rywale nie mieli litości w terminarzu.</>
+                });
+            }
+
+            if (autumn) {
+                cards.push({
+                    id: "autumn-king",
+                    emoji: "🍂",
+                    border: "border-t-amber-500",
+                    title: "Mistrz Jesieni",
+                    playerIds: [autumn.id],
+                    body: <>Po pierwszej połowie sezonu (do GW19) prowadził tabelę ligi H2H. Potem sezon nabrał innego biegu, ale jesień należała do niego.</>
+                });
+            }
+
+            if (scan.bestChipWeek.points > 0) {
+                cards.push({
+                    id: "chip-explosion",
+                    emoji: "🎴",
+                    border: "border-t-violet-500",
+                    title: "Najlepszy weekend z chipem",
+                    playerIds: [scan.bestChipWeek.id],
+                    body: <>W kolejce <strong className="text-violet-400">{scan.bestChipWeek.gw}</strong> użył <strong className="text-violet-300">{scan.bestChipWeek.label}</strong> i zdobył <strong className="text-white">{scan.bestChipWeek.points} pkt</strong> — najlepszy wynik chipowy w całej lidze.</>
+                });
+            }
+
+            if (scan.bestTransfer.rp > 0) {
+                cards.push({
+                    id: "transfer-sniper",
+                    emoji: "🎯",
+                    border: "border-t-teal-500",
+                    title: "Transfer roku",
+                    playerIds: [scan.bestTransfer.id],
+                    body: <>Kolejka {scan.bestTransfer.gw}: zamiana <strong className="text-slate-200">{scan.bestTransfer.sold}</strong> na <strong className="text-slate-200">{scan.bestTransfer.bought}</strong> dała <strong className="text-teal-400">+{scan.bestTransfer.rp} pkt</strong> ponad oczekiwania.</>
+                });
+            }
+
+            if (scan.worstTransfer.rp < 0) {
+                cards.push({
+                    id: "transfer-disaster",
+                    emoji: "💣",
+                    border: "border-t-rose-600",
+                    title: "Najgorszy transfer sezonu",
+                    playerIds: [scan.worstTransfer.id],
+                    body: <>Kolejka {scan.worstTransfer.gw}: <strong className="text-slate-200">{scan.worstTransfer.sold} → {scan.worstTransfer.bought}</strong> kosztował <strong className="text-red-400">{scan.worstTransfer.rp} pkt</strong>. Ból w czystej postaci.</>
+                });
+            }
+
+            if (scan.minHits.val < 999) {
+                cards.push({
+                    id: "discipline",
+                    emoji: "🧘",
+                    border: "border-t-sky-500",
+                    title: "Asceta transferowy",
+                    playerIds: [scan.minHits.id],
+                    body: <>Tylko <strong className="text-sky-400">{Math.abs(scan.minHits.val)} pkt</strong> kar za transfery przez cały sezon. Spokój, cierpliwość i brak paniki przed deadline.</>
+                });
+            }
+
+            if (scan.maxAvg.val > 0) {
+                cards.push({
+                    id: "avg-machine",
+                    emoji: "⚙️",
+                    border: "border-t-emerald-400",
+                    title: "Maszyna punktowa",
+                    playerIds: [scan.maxAvg.id],
+                    body: <>Najwyższa średnia FPL w lidze: <strong className="text-emerald-400">{scan.maxAvg.val} pkt na kolejkę</strong>. Regularność, która buduje przewagę.</>
+                });
+            }
+
+            if (scan.maxExpOver.val > 0) {
+                cards.push({
+                    id: "lucky",
+                    emoji: "🍀",
+                    border: "border-t-lime-500",
+                    title: "Łowca niespodzianek",
+                    playerIds: [scan.maxExpOver.id],
+                    body: <><strong className="text-lime-400">{scan.maxExpOver.val} kolejek</strong> z wynikiem lepszym niż przewidywały statystyki. Sezon uśmiechał się częściej niż rywalom.</>
+                });
+            }
+
+            if (scan.maxSpring.trend > 0) {
+                cards.push({
+                    id: "spring",
+                    emoji: "🌱",
+                    border: "border-t-green-500",
+                    title: "Wiosenny comeback",
+                    playerIds: [scan.maxSpring.id],
+                    body: <>Po przerwie świątecznej podniósł średnią o <strong className="text-green-400">+{scan.maxSpring.trend} pkt na kolejkę</strong>. Druga połowa sezonu należała do niego.</>
+                });
+            }
+
+            if (scan.minAutumn.trend < 0) {
+                cards.push({
+                    id: "fall",
+                    emoji: "📉",
+                    border: "border-t-stone-500",
+                    title: "Jesienny zjazd",
+                    playerIds: [scan.minAutumn.id],
+                    body: <>Druga połowa sezonu obcięła formę o <strong className="text-red-400">{Math.abs(scan.minAutumn.trend)} pkt</strong> średnio na kolejkę. Terminarz i decyzje nie pomogły.</>
+                });
+            }
+
+            if (scan.maxTopGain.net > 0) {
+                cards.push({
+                    id: "hero-pick",
+                    emoji: "⭐",
+                    border: "border-t-yellow-400",
+                    title: "Zawodnik sezonu (zysk vs liga)",
+                    playerIds: [scan.maxTopGain.id],
+                    body: <><strong className="text-yellow-300">{scan.maxTopGain.name}</strong> dał największą przewagę nad przeciętnym menedżerem: <strong className="text-emerald-400">+{scan.maxTopGain.net} pkt</strong> w całym sezonie.</>
+                });
+            }
+
+            if (killer && parsePtsFromStat(killer.rankKiller) < -100) {
+                cards.push({
+                    id: "killer",
+                    emoji: "☠️",
+                    border: "border-t-red-700",
+                    title: "Klątwa sezonu",
+                    playerIds: [killer.id],
+                    body: <>Sabotażysta nr 1: <strong className="text-red-400">{killer.rankKiller.split("(")[0].trim()}</strong> — największa strata do elity FPL w całej Arenie.</>
+                });
+            }
+
+            if (mostGreen) {
+                cards.push({
+                    id: "arrows",
+                    emoji: "📈",
+                    border: "border-t-green-400",
+                    title: "Król zielonych strzałek",
+                    playerIds: [mostGreen.id],
+                    body: <><strong className="text-green-400">{mostGreen.greenArrows} tygodni</strong> ze wzrostem w rankingu ogólnym FPL. Liga widziała, kiedy trafia w formę.</>
+                });
+            }
+
+            if (mostCaptain) {
+                cards.push({
+                    id: "captain",
+                    emoji: "©️",
+                    border: "border-t-indigo-500",
+                    title: "Kapitanowski bank",
+                    playerIds: [mostCaptain.id],
+                    body: <>Opaska przyniosła mu <strong className="text-indigo-300">{mostCaptain.captainPts} pkt</strong> w sezonie — najwięcej w całej lidze. Zaufanie do jednego wyboru się opłaciło.</>
+                });
+            }
+
+            if (balanced) {
+                cards.push({
+                    id: "balance",
+                    emoji: "⚖️",
+                    border: "border-t-slate-400",
+                    title: "Idealna równowaga",
+                    playerIds: [balanced.id],
+                    body: <>Dokładnie <strong className="text-slate-200">19 wygranych i 19 porażek</strong> H2H. Sezon jak metronom — zero remisów, czysta matematyka chaosu.</>
+                });
+            }
+
+            if (mostTransfers) {
+                cards.push({
+                    id: "f5",
+                    emoji: "⌨️",
+                    border: "border-t-orange-600",
+                    title: "Król przycisku F5",
+                    playerIds: [mostTransfers.id],
+                    body: <><strong className="text-orange-400">{mostTransfers.transfers} transferów</strong> w sezonie. Palec na klawiaturze pracował więcej niż niejeden menedżer w biurze.</>
+                });
+            }
+
+            if (veteran && veteran.seasons >= 8) {
+                cards.push({
+                    id: "veteran",
+                    emoji: "🦖",
+                    border: "border-t-zinc-500",
+                    title: "Dinozaur Areny",
+                    playerIds: [veteran.id],
+                    body: <><strong className="text-slate-200">{veteran.seasons} sezonów</strong> w Fantasy Premier League. Pamięta czasy, gdy chipy jeszcze nie istniały.</>
+                });
+            }
+
+            if (orLegend) {
+                cards.push({
+                    id: "or",
+                    emoji: "🌍",
+                    border: "border-t-blue-500",
+                    title: "Globalna legenda",
+                    playerIds: [orLegend.id],
+                    body: <>Życiówka na poziomie <strong className="text-blue-400">OR {orLegend.bestOr}</strong> — najlepszy historyczny wynik wśród wszystkich gladiatorów ligi.</>
+                });
+            }
+
+            const mquc = players.find((p) => p.id === 546068);
+            if (mquc) {
+                cards.push({
+                    id: "mcburnie",
+                    emoji: "🐐",
+                    border: "border-t-pink-500",
+                    title: "Kult jednego napastnika",
+                    playerIds: [mquc.id],
+                    body: <>Najwięcej punktów z jednego zawodnika w składzie: <strong className="text-pink-300">Ollie McBurnie</strong>. Reszta świata grała na Haalandzie — on na duszy.</>
+                });
+            }
+
+            const owen = players.find((p) => p.id === 2953280);
+            if (owen && parsePtsFromStat(owen.rankKiller) < -100) {
+                cards.push({
+                    id: "tc-fail",
+                    emoji: "🎭",
+                    border: "border-t-fuchsia-600",
+                    title: "Potrójny kapitan w piekło",
+                    playerIds: [owen.id],
+                    body: <>Legendarny Triple Captain na Haalandzie za <strong className="text-red-400">6 punktów</strong>. Strata <strong className="text-red-400">{Math.abs(parsePtsFromStat(owen.rankKiller)).toFixed(0)} pkt</strong> vs elita — temat na wiele piątkowych roastów.</>
+                });
+            }
+
+            if (mvpGw && mvpGw.id !== 24962) {
+                const pts = String(mvpGw.bestGw).match(/(\d+)\s*pkt/);
+                cards.push({
+                    id: "mvp-gw",
+                    emoji: "💥",
+                    border: "border-t-amber-400",
+                    title: "Eksplozja pojedynczej kolejki",
+                    playerIds: [mvpGw.id],
+                    body: <>{mvpGw.bestGw.split("(")[0].trim()} — weekend, który zapamięta cała liga (poza rekordem 137 pkt Klonka).</>
+                });
+            }
+
+            if (scan.maxDraws.val >= 2) {
+                cards.push({
+                    id: "draws",
+                    emoji: "🤝",
+                    border: "border-t-gray-500",
+                    title: "Dyplomata remisów",
+                    playerIds: [scan.maxDraws.id],
+                    body: <><strong className="text-slate-300">{scan.maxDraws.val} remisy</strong> H2H w sezonie — najwięcej w lidze. Nikt nie wygrywał, nikt nie przegrywał… czasem.</>
+                });
+            }
+
+            const alan = players.find((p) => p.id === 68435);
+            if (alan) {
+                cards.push({
+                    id: "debut",
+                    emoji: "🌟",
+                    border: "border-t-cyan-400",
+                    title: "Debiutant z charakterem",
+                    playerIds: [alan.id],
+                    body: <>Pierwszy sezon w Arenie i już legenda: <strong className="text-red-400">hit -60 pkt w GW3</strong> po nocnej sesji transferowej. Wszedł jak przyszła burza.</>
+                });
+            }
+
+            return cards;
+        };
+
+        const HallFameCard = ({ emoji, border, title, playerIds, body, children }) => (
+            <div className={`glass-panel p-6 rounded-2xl border-t-4 ${border} flex flex-col gap-3`}>
+                <div className="flex items-center justify-between gap-3">
+                    <div className="text-4xl">{emoji}</div>
+                    {playerIds?.length === 1 && <TeamCrest fplId={playerIds[0]} size="lg" />}
+                    {playerIds?.length > 1 && (
+                        <div className="flex -space-x-2">
+                            {playerIds.map((id, i) => (
+                                <TeamCrest key={id} fplId={id} size="md" className={i > 0 ? "relative" : "relative z-10"} />
+                            ))}
+                        </div>
+                    )}
+                </div>
+                <h3 className="text-xs text-slate-400 uppercase tracking-widest font-bold">{title}</h3>
+                {playerIds?.length === 1 && (
+                    <TeamBrand player={PLAYER_BY_ID[playerIds[0]]} crestSize="md" nameClassName="text-xl font-athletic text-white" subClassName="text-slate-400" />
+                )}
+                {playerIds?.length > 1 && (
+                    <div className="space-y-2">
+                        {playerIds.map((id) => (
+                            <TeamBrand key={id} player={PLAYER_BY_ID[id]} crestSize="sm" nameClassName="text-lg font-athletic text-white" />
+                        ))}
+                    </div>
+                )}
+                <p className="text-sm text-slate-300 leading-relaxed">{body}</p>
+                {children}
+            </div>
+        );
+
+        const HallOfFameView = ({ players, playerHighlights }) => {
+            const extraAwards = useMemo(
+                () => buildExtraHallAwards(players, playerHighlights),
+                [players, playerHighlights]
+            );
+
+            return (
+            <div className="space-y-8 animate-fade-in w-full max-w-6xl mx-auto">
+                <div className="border-b border-slate-800 pb-4">
+                    <h2 className="text-3xl font-athletic font-bold uppercase tracking-tight text-white flex items-center gap-3">
+                        <div className="league-logo-wrap rounded-lg p-1.5">
+                            <LeagueLogo size="sm" />
+                        </div>
+                        Złota Sala Chwały
+                    </h2>
+                    <p className="text-slate-400 mt-1">Największe ekstremalne osiągnięcia i kompromitacje minionego sezonu — oficjalne dane z całej FPL Arena.</p>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <HallFameCard
+                        emoji="👑"
+                        border="border-t-yellow-500"
+                        title="Oficjalny Mistrz Ligi"
+                        playerIds={[22952]}
+                        body={<>Zmiażdżył ligę Wiosennym Terrorem (<strong className="text-yellow-400">12 zwycięstw H2H z rzędu</strong>!) i ukończył na kosmicznym <strong className="text-yellow-400">665. miejscu OR</strong> w rankingu globu.</>}
+                    />
+
+                    <HallFameCard
+                        emoji="🚀"
+                        border="border-t-emerald-500"
+                        title="Najlepszy weekend sezonu"
+                        playerIds={[24962]}
+                        body={<>Astronomiczne <strong className="text-emerald-400">137 punktów w kolejce 33</strong> (Bench Boost). Najwyższy pojedynczy wynik w historii tej edycji ligi.</>}
+                    />
+
+                    <HallFameCard
+                        emoji="🎭"
+                        border="border-t-purple-500"
+                        title="Największy pechowiec H2H"
+                        playerIds={[9084]}
+                        body={<>Wykręcił <strong className="text-purple-300">4. najlepszy Score</strong> w lidze (2341 pkt FPL), a przez brutalny terminarz H2H skończył dopiero na <strong className="text-purple-400">14. miejscu</strong>.</>}
+                    />
+
+                    <HallFameCard
+                        emoji="🪓"
+                        border="border-t-red-500"
+                        title="Rzeźnicy transferowi"
+                        playerIds={[3749264, 68435]}
+                        body={<>Ankara: <strong className="text-red-400">-36 pkt</strong> z hitów w sezonie. Alan: legendarne <strong className="text-red-400">-60 pkt</strong> w jednej kolejce (GW3) po nocnej serii transferów.</>}
+                    />
+
+                    <HallFameCard
+                        emoji="⛓️"
+                        border="border-t-slate-600"
+                        title="Piwnica sezonu"
+                        playerIds={[546068]}
+                        body={<>Rekord ligi: <strong className="text-red-500">17 porażek H2H z rzędu</strong> (od kolejki 20 do 36). Koszmar, z którego trudno się podnieść.</>}
+                    />
+
+                    <HallFameCard
+                        emoji="🛋️"
+                        border="border-t-orange-500"
+                        title="Władca marnotrawstwa"
+                        playerIds={[49321]}
+                        body={<>Na ławce zostawił <strong className="text-orange-400">382 punkty</strong> — rekord Areny. Gdyby weszły do gry, mógłby być mistrzem.</>}
+                    />
+
+                    {extraAwards.map((award) => (
+                        <HallFameCard
+                            key={award.id}
+                            emoji={award.emoji}
+                            border={award.border}
+                            title={award.title}
+                            playerIds={award.playerIds}
+                            body={award.body}
+                        />
+                    ))}
+                </div>
+            </div>
+            );
+        };
+
+        function App() {
+            const [players] = useState(PLAYERS_DATA);
+            const [activeTab, setActiveTab] = useState("home");
+            const [magazynOpen, setMagazynOpen] = useState(false);
+            const [selectedPlayerId, setSelectedPlayerId] = useState(22952); // Mistrz jako domyślny
+            const [matchesByGw, setMatchesByGw] = useState([]);
+            const [matchesLoading, setMatchesLoading] = useState(true);
+            const [playerHighlights, setPlayerHighlights] = useState({});
+            const [highlightsLoading, setHighlightsLoading] = useState(true);
+            const [gladiatorOr, setGladiatorOr] = useState({});
+            const [fplPlayersById, setFplPlayersById] = useState({});
+
+            useEffect(() => {
+                let isMounted = true;
+
+                fetch(FPL_BOOTSTRAP_URL)
+                    .then((res) => (res.ok ? res.json() : null))
+                    .then((data) => {
+                        if (!isMounted || !data?.elements) return;
+                        const map = {};
+                        data.elements.forEach((el) => {
+                            map[el.id] = {
+                                id: el.id,
+                                web_name: el.web_name,
+                                photo: el.photo,
+                                element_type: el.element_type
+                            };
+                        });
+                        setFplPlayersById(map);
+                    })
+                    .catch(() => {
+                        if (isMounted) setFplPlayersById({});
+                    });
+
+                return () => { isMounted = false; };
+            }, []);
+
+            useEffect(() => {
+                let isMounted = true;
+
+                fetch("wyniki_meczy.json")
+                    .then((res) => {
+                        if (!res.ok) {
+                            throw new Error("Nie udało się odczytać terminarza.");
+                        }
+                        return res.json();
+                    })
+                    .then((data) => {
+                        if (isMounted && Array.isArray(data)) {
+                            setMatchesByGw(data);
+                        }
+                    })
+                    .catch(() => {
+                        if (isMounted) {
+                            setMatchesByGw([]);
+                        }
+                    })
+                    .finally(() => {
+                        if (isMounted) {
+                            setMatchesLoading(false);
+                        }
+                    });
+
+                return () => {
+                    isMounted = false;
+                };
+            }, []);
+
+            useEffect(() => {
+                let isMounted = true;
+
+                fetch("player_highlights.json")
+                    .then((res) => (res.ok ? res.json() : {}))
+                    .then((data) => {
+                        if (isMounted && data && typeof data === "object") {
+                            setPlayerHighlights(data);
+                        }
+                    })
+                    .catch(() => {
+                        if (isMounted) setPlayerHighlights({});
+                    })
+                    .finally(() => {
+                        if (isMounted) setHighlightsLoading(false);
+                    });
+
+                return () => {
+                    isMounted = false;
+                };
+            }, []);
+
+            useEffect(() => {
+                let isMounted = true;
+                fetch("gladiator_or.json")
+                    .then((res) => (res.ok ? res.json() : {}))
+                    .then((data) => {
+                        if (isMounted && data && typeof data === "object") {
+                            setGladiatorOr(data);
+                        }
+                    })
+                    .catch(() => {
+                        if (isMounted) setGladiatorOr({});
+                    });
+                return () => { isMounted = false; };
+            }, []);
+
+            const currentPlayer = useMemo(() => {
+                return players.find(p => p.id === selectedPlayerId);
+            }, [players, selectedPlayerId]);
+
+            const currentHighlights = useMemo(() => {
+                return playerHighlights[String(selectedPlayerId)] || null;
+            }, [playerHighlights, selectedPlayerId]);
+
+            const predictedStandings = useMemo(
+                () => buildPredictedStandings(players, gladiatorOr),
+                [players, gladiatorOr]
+            );
+
+            const currentOrBundle = useMemo(() => {
+                if (!currentPlayer) return { historicalOr: null, historicalOrSeason: null, seasonOr: null };
+                return getPlayerOrBundle(currentPlayer.id, gladiatorOr, currentHighlights);
+            }, [currentPlayer, gladiatorOr, currentHighlights]);
+
+            const currentPrediction = useMemo(() => {
+                if (!currentPlayer) return null;
+                return getPredictionForPlayer(currentPlayer.id, predictedStandings);
+            }, [currentPlayer, predictedStandings]);
+
+            const preSeasonFavorite = useMemo(() => {
+                const withHist = predictedStandings.filter((e) => e.historicalOr != null);
+                return withHist[0] || null;
+            }, [predictedStandings]);
+
+            const playerSchedule = useMemo(() => {
+                if (!currentPlayer) return [];
+
+                return matchesByGw
+                    .map((gwData) => {
+                        const currentGw = Number(gwData.gw);
+                        const matches = Array.isArray(gwData.matches) ? gwData.matches : [];
+                        const match = matches.find((m) => m.teamA === currentPlayer.team || m.teamB === currentPlayer.team);
+
+                        if (!match) return null;
+
+                        const isHome = match.teamA === currentPlayer.team;
+                        const goalsFor = isHome ? match.pointsA : match.pointsB;
+                        const goalsAgainst = isHome ? match.pointsB : match.pointsA;
+                        const opponent = isHome ? match.teamB : match.teamA;
+                        const outcome = getMatchOutcome(goalsFor, goalsAgainst);
+
+                        return {
+                            gw: currentGw,
+                            isHome,
+                            goalsFor,
+                            goalsAgainst,
+                            opponent,
+                            opponentId: TEAM_BY_NAME[opponent]?.id || null,
+                            outcome
+                        };
+                    })
+                    .filter(Boolean)
+                    .sort((a, b) => a.gw - b.gw);
+            }, [currentPlayer, matchesByGw]);
+
+            const scheduleSummary = useMemo(() => {
+                const base = { wins: 0, draws: 0, losses: 0, goalsFor: 0, goalsAgainst: 0 };
+                playerSchedule.forEach((match) => {
+                    if (match.outcome === "W") base.wins += 1;
+                    else if (match.outcome === "D") base.draws += 1;
+                    else base.losses += 1;
+
+                    base.goalsFor += match.goalsFor;
+                    base.goalsAgainst += match.goalsAgainst;
+                });
+                return base;
+            }, [playerSchedule]);
+
+            return (
+                <div className="min-h-screen flex flex-col relative pb-8">
+                    
+                    {/* Background decorations */}
+                    <div className="fixed top-0 right-0 -z-10 w-full h-full overflow-hidden pointer-events-none opacity-20">
+                        <div className="absolute -top-[10%] -right-[10%] w-[50%] h-[50%] rounded-full bg-emerald-600/30 blur-[120px]"></div>
+                        <div className="absolute bottom-[10%] -left-[10%] w-[50%] h-[50%] rounded-full bg-blue-600/20 blur-[120px]"></div>
+                    </div>
+
+                    {/* Header bar */}
+                    <header className="bg-[#0b0f19]/90 backdrop-blur-md border-b border-emerald-500/20 px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-4 sticky top-0 z-50 shadow-2xl">
+                        <div className="flex items-center gap-3">
+                            <div className="league-logo-wrap rounded-xl p-2 flex items-center justify-center shrink-0">
+                                <LeagueLogo size="md" />
+                            </div>
+                            <div>
+                                <h1 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+                                    Igrzyska Kapci Kłapcia <span className="text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full font-mono uppercase tracking-wider">Ostateczny Raport</span>
+                                </h1>
+                                <p className="text-xs text-slate-400">Oficjalny, Interaktywny Skarb Kibica (Sezon 2025/26)</p>
+                            </div>
+                        </div>
+
+                        {/* Navigation Tabs */}
+                        <div className="flex flex-wrap justify-center items-center gap-2 bg-[#020617] p-1.5 rounded-xl border border-slate-800">
+                            <button onClick={() => setActiveTab("home")} className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 ${activeTab === "home" ? "bg-emerald-500 text-slate-950 shadow-md" : "text-slate-400 hover:text-white"}`}>
+                                🏠 Okładka
+                            </button>
+                            <button onClick={() => setActiveTab("profiles")} className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 ${activeTab === "profiles" ? "bg-emerald-500 text-slate-950 shadow-md" : "text-slate-400 hover:text-white"}`}>
+                                ⚔️ Gladiatorzy
+                            </button>
+                            <button onClick={() => setActiveTab("wyniki")} className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 ${activeTab === "wyniki" ? "bg-emerald-500 text-slate-950 shadow-md" : "text-slate-400 hover:text-white"}`}>
+                                📋 Wyniki
+                            </button>
+                            <button onClick={() => setActiveTab("standings")} className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 ${activeTab === "standings" ? "bg-emerald-500 text-slate-950 shadow-md" : "text-slate-400 hover:text-white"}`}>
+                                📊 Tabela
+                            </button>
+                            <button onClick={() => setActiveTab("hall")} className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 ${activeTab === "hall" ? "bg-emerald-500 text-slate-950 shadow-md" : "text-slate-400 hover:text-white"}`}>
+                                ✨ Sala Chwały
+                            </button>
+                        </div>
+                    </header>
+
+                    {/* Main workspace */}
+                    <main className="flex-1 w-full max-w-7xl mx-auto p-4 md:p-8 flex flex-col mt-4">
+                        
+                        {/* VIEWS */}
+                        {activeTab === "home" && (
+                            <div className="flex flex-col items-center justify-center min-h-[65vh] text-center space-y-8 animate-fade-in px-4">
+                                <div className="league-logo-wrap rounded-2xl p-4 md:p-5">
+                                    <LeagueLogo size="hero" />
+                                </div>
+                                <h2 className="text-5xl md:text-7xl font-athletic font-bold text-white uppercase tracking-tighter drop-shadow-2xl">
+                                    Sezon <span className="gradient-text">Zakończony</span>
+                                </h2>
+                                <p className="text-lg md:text-xl text-slate-300 max-w-3xl leading-relaxed">
+                                    To był spektakularny cyfrowy teatr. Za nami 38 morderczych kolejek pełnych dramaturgii w formacie H2H. Byliśmy świadkami upadków liderów, rzezi transferowych o 3 nad ranem, legendarnych serii i mrożących krew w żyłach wyników. Przed Tobą 20 Gladiatorów odartych z tajemnic przez bezwzględną matematykę.
+                                </p>
+                                <div className="flex flex-col items-center gap-4 pt-6 w-full max-w-lg">
+                                    {!magazynOpen ? (
+                                        <button
+                                            type="button"
+                                            onClick={() => setMagazynOpen(true)}
+                                            className="w-full px-10 py-4 bg-emerald-500 text-slate-950 font-bold rounded-xl hover:bg-emerald-400 transition-all text-lg shadow-[0_0_24px_rgba(16,185,129,0.35)]"
+                                        >
+                                            Otwórz magazyn
+                                        </button>
+                                    ) : (
+                                        <div className="w-full space-y-4 animate-fade-in">
+                                            <p className="text-sm text-emerald-400/90 font-semibold uppercase tracking-widest">Magazyn otwarty — wybierz sekcję</p>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
+                                                <HomeNavButton onClick={() => setActiveTab("profiles")} icon="⚔️">Gladiatorzy</HomeNavButton>
+                                                <HomeNavButton onClick={() => setActiveTab("wyniki")} icon="📋">Wyniki</HomeNavButton>
+                                                <HomeNavButton onClick={() => setActiveTab("standings")} icon="📊">Tabela</HomeNavButton>
+                                                <HomeNavButton onClick={() => setActiveTab("hall")} icon="✨">Sala Chwały</HomeNavButton>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {activeTab === "wyniki" && (
+                            <WynikiView matchesByGw={matchesByGw} loading={matchesLoading} />
+                        )}
+                        {activeTab === "standings" && (
+                            <StandingsView matchesByGw={matchesByGw} loading={matchesLoading} />
+                        )}
+                        {activeTab === "hall" && <HallOfFameView players={players} playerHighlights={playerHighlights} />}
+
+                        {}
+                        {activeTab === "profiles" && (
+                            <div className="flex flex-col lg:flex-row gap-8 w-full h-full min-h-[75vh]">
+                                
+                                {/* Players Sidebar */}
+                                <aside className="w-full lg:w-80 glass-panel rounded-2xl border-slate-800 flex flex-col shrink-0 lg:h-[75vh] overflow-hidden shadow-2xl">
+                                    <div className="p-5 border-b border-slate-800/80 bg-slate-900/60 backdrop-blur-sm z-10">
+                                        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Spis Treści</h3>
+                                        <p className="text-xs text-slate-500">Wybierz stronę menedżera</p>
+                                    </div>
+                                    <div className="overflow-y-auto flex-1 divide-y divide-slate-800/40 p-2 space-y-1">
+                                        {players.sort((a,b)=>a.rank - b.rank).map((p) => {
+                                            const isSelected = p.id === selectedPlayerId;
+                                            return (
+                                                <button 
+                                                    key={p.id}
+                                                    onClick={() => setSelectedPlayerId(p.id)}
+                                                    className={`w-full p-3 text-left transition-all rounded-xl flex items-center gap-3 ${isSelected ? "bg-emerald-500/15 border border-emerald-500/30" : "hover:bg-slate-800/50 border border-transparent"}`}
+                                                >
+                                                    <div className={`w-8 h-8 shrink-0 rounded-full flex items-center justify-center font-athletic font-bold text-xs ${p.rank === 1 ? "bg-yellow-500/20 text-yellow-500 border border-yellow-500/50" : p.rank <= 3 ? "bg-slate-800 text-slate-300 border border-slate-600" : "bg-slate-900/50 text-slate-500 border border-slate-800"}`}>
+                                                        {p.rank}
+                                                    </div>
+                                                    <TeamCrest fplId={p.id} size="sm" />
+                                                    <div className="overflow-hidden flex-1 min-w-0">
+                                                        <h4 className={`text-sm font-bold truncate ${isSelected ? "text-emerald-400" : "text-slate-200"}`}>{p.team}</h4>
+                                                        <p className="text-xs text-slate-500 truncate">{p.manager}</p>
+                                                    </div>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </aside>
+
+                                {/* Player Detail Spread (Magazine Layout) */}
+                                {currentPlayer && (
+                                    <div className="flex-1 flex flex-col gap-6 w-full animate-fade-in relative z-10">
+                                        
+                                        {/* Top Identity Banner */}
+                                        <div className="glass-panel p-6 md:p-8 rounded-3xl border border-slate-800 shadow-2xl relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                                            <div className="absolute -right-10 -bottom-10 text-emerald-500/5 font-athletic font-bold text-[12rem] uppercase pointer-events-none select-none leading-none z-0">
+                                                #{currentPlayer.rank}
+                                            </div>
+                                            <div className="relative z-10 flex gap-4 md:gap-6 items-center min-w-0">
+                                                <TeamCrest fplId={currentPlayer.id} size="profile" profile={true} className="shrink-0" />
+                                                <div className="min-w-0 flex-1">
+                                                    <div className="flex flex-wrap items-center gap-2 mb-2">
+                                                        <span className="text-xl md:text-2xl leading-none">
+                                                            {currentPlayer.rank === 1 ? "🥇" : currentPlayer.rank === 2 ? "🥈" : currentPlayer.rank === 3 ? "🥉" : "🛡️"}
+                                                        </span>
+                                                        <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-mono font-bold uppercase tracking-wider">POZYCJA W LIDZE: #{currentPlayer.rank}</span>
+                                                        <span className="px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 text-[10px] font-mono font-bold uppercase tracking-wider" title={currentOrBundle.historicalOrSeason || ""}>
+                                                            HIST. OR: {currentOrBundle.historicalOr != null ? formatOrDisplay(currentOrBundle.historicalOr) : "Debiut"}
+                                                        </span>
+                                                        <span className="px-2 py-0.5 rounded bg-violet-500/10 text-violet-300 border border-violet-500/20 text-[10px] font-mono font-bold uppercase tracking-wider">
+                                                            OR 25/26: {currentOrBundle.seasonOr != null ? formatOrDisplay(currentOrBundle.seasonOr) : "—"}
+                                                        </span>
+                                                    </div>
+                                                    <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-athletic font-bold text-white tracking-tight uppercase leading-[0.95] mt-1 mb-2">{currentPlayer.team}</h2>
+                                                    <p className="text-slate-400 text-sm md:text-base">Menedżer: <span className="text-white font-semibold">{currentPlayer.manager}</span> <span className="text-slate-500">({currentPlayer.discord})</span></p>
+                                                </div>
+                                            </div>
+                                            <div className="relative z-10 flex gap-4 w-full md:w-auto">
+                                                <div className="flex-1 md:flex-none text-center bg-[#020617]/80 p-4 rounded-2xl border border-slate-800 shadow-inner">
+                                                    <div className="text-[10px] text-slate-500 uppercase tracking-widest font-mono mb-1">PUNKTY H2H</div>
+                                                    <div className="text-3xl md:text-4xl font-athletic font-bold text-white">{currentPlayer.pts}</div>
+                                                </div>
+                                                <div className="flex-1 md:flex-none text-center bg-[#020617]/80 p-4 rounded-2xl border border-slate-800 shadow-inner">
+                                                    <div className="text-[10px] text-slate-500 uppercase tracking-widest font-mono mb-1">SCORE (OVERALL)</div>
+                                                    <div className="text-3xl md:text-4xl font-athletic font-bold text-emerald-400">{currentPlayer.score}</div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Main Content Grid */}
+                                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 w-full">
+                                            
+                                            {/* LEFT COL: Publicistics & Identity */}
+                                            <div className="lg:col-span-6 space-y-6">
+                                                <div className="glass-panel p-6 md:p-8 rounded-3xl border border-slate-800 shadow-xl h-full flex flex-col">
+                                                    <h4 className="text-xl font-bold text-white border-l-4 border-emerald-500 pl-3 mb-2 uppercase tracking-wide font-athletic">Oczekiwania vs Rzeczywistość</h4>
+                                                    <p className="text-xs text-slate-500 mb-5">Prognoza z historycznego OR (Akta Gladiatorów) kontra tabela H2H i OR po sezonie 25/26.</p>
+                                                    <ProfileExpectationsPanel
+                                                        player={currentPlayer}
+                                                        highlights={currentHighlights}
+                                                        orBundle={currentOrBundle}
+                                                        prediction={currentPrediction}
+                                                        predictedStandings={predictedStandings}
+                                                        preSeasonFavorite={preSeasonFavorite}
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            {/* RIGHT COL: Hard Data & Stats */}
+                                            <div className="lg:col-span-6 space-y-6">
+                                                
+                                                {/* Identity blocks */}
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                    <div className="glass-panel p-5 rounded-2xl border border-slate-800 shadow-lg">
+                                                        <h5 className="text-[10px] font-bold text-emerald-400 flex items-center gap-1.5 mb-2 uppercase tracking-widest font-mono"><span className="text-base">✔️</span> Lubi:</h5>
+                                                        <p className="text-slate-300 text-sm leading-snug">{currentPlayer.likes}</p>
+                                                    </div>
+                                                    <div className="glass-panel p-5 rounded-2xl border border-slate-800 shadow-lg">
+                                                        <h5 className="text-[10px] font-bold text-red-400 flex items-center gap-1.5 mb-2 uppercase tracking-widest font-mono"><span className="text-base">❌</span> Nie znosi:</h5>
+                                                        <p className="text-slate-300 text-sm leading-snug">{currentPlayer.dislikes}</p>
+                                                    </div>
+                                                </div>
+
+                                                {/* Tactical ROI Card */}
+                                                <div className="glass-panel p-6 rounded-3xl border border-slate-800 shadow-xl space-y-5">
+                                                    <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest border-b border-slate-800/60 pb-2">Zarządzanie Taktyką</h4>
+                                                    
+                                                    <div>
+                                                        <div className="flex justify-between text-xs mb-1.5">
+                                                            <span className="text-slate-400">Przepalone punkty (Ławka):</span>
+                                                            <span className="font-mono font-bold text-yellow-500">{currentPlayer.pointsBenched} pkt</span>
+                                                        </div>
+                                                        <div className="w-full bg-[#020617] rounded-full h-2 overflow-hidden border border-slate-800">
+                                                            <div className={`h-full rounded-full ${currentPlayer.pointsBenched > 280 ? "bg-red-500" : "bg-emerald-500"}`} style={{ width: `${Math.min(100, (currentPlayer.pointsBenched / 400) * 100)}%` }}></div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div>
+                                                        <div className="flex justify-between text-xs mb-1.5">
+                                                            <span className="text-slate-400">Poniesione kary (Hity):</span>
+                                                            <span className="font-mono font-bold text-red-400">{currentPlayer.hits} pkt</span>
+                                                        </div>
+                                                        <div className="w-full bg-[#020617] rounded-full h-2 overflow-hidden border border-slate-800">
+                                                            <div className="h-full bg-red-500 rounded-full" style={{ width: `${Math.min(100, (Math.abs(currentPlayer.hits) / 100) * 100)}%` }}></div>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <div className="bg-[#020617] p-4 rounded-xl border border-slate-800 flex justify-between items-center mt-4">
+                                                        <div>
+                                                            <span className="text-[10px] text-slate-400 uppercase tracking-widest font-mono block">Punkty Kapitanów:</span>
+                                                            <span className="text-xs text-slate-500 mt-0.5 block">Zaufany: {currentPlayer.mostCaptained.split('(')[0].trim()}</span>
+                                                        </div>
+                                                        <span className="text-2xl font-athletic font-bold text-emerald-400">{currentPlayer.captainPts} <span className="text-sm">pkt</span></span>
+                                                    </div>
+                                                </div>
+
+                                                {/* Heroes & Villains Grid */}
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div className="glass-panel p-5 rounded-2xl border border-emerald-500/20 shadow-lg shadow-emerald-500/5 relative overflow-hidden group">
+                                                        <div className="absolute -right-4 -bottom-4 text-6xl opacity-10 group-hover:scale-110 transition-transform">🌟</div>
+                                                        <span className="text-[10px] text-emerald-400 font-mono block uppercase tracking-wide">SUPER STAR (ZYSK)</span>
+                                                        <span className="text-sm md:text-base font-bold text-white mt-1 block relative z-10">{currentPlayer.superStar}</span>
+                                                    </div>
+                                                    <div className="glass-panel p-5 rounded-2xl border border-red-500/20 shadow-lg shadow-red-500/5 relative overflow-hidden group">
+                                                        <div className="absolute -right-4 -bottom-4 text-6xl opacity-10 group-hover:scale-110 transition-transform">💀</div>
+                                                        <span className="text-[10px] text-red-400 font-mono block uppercase tracking-wide">SABOTAŻYSTA</span>
+                                                        <span className="text-sm md:text-base font-bold text-white mt-1 block relative z-10">{currentPlayer.rankKiller}</span>
+                                                    </div>
+                                                </div>
+
+                                                {/* Form and Timeline */}
+                                                <div className="glass-panel p-6 rounded-3xl border border-slate-800 shadow-xl">
+                                                    <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest border-b border-slate-800/60 pb-2 mb-4">Gablota Osiągnięć i Serie</h4>
+                                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                                        <div className="bg-[#020617] p-3 rounded-xl border border-slate-800 text-center flex flex-col justify-center">
+                                                            <span className="text-[10px] text-slate-500 font-mono block uppercase">ŚR. POZYCJA</span>
+                                                            <span className="text-xl font-athletic font-bold text-emerald-400 mt-0.5">{currentPlayer.avgPosition}</span>
+                                                        </div>
+                                                        <div className="bg-[#020617] p-3 rounded-xl border border-slate-800 text-center flex flex-col justify-center">
+                                                            <span className="text-[10px] text-slate-500 font-mono block uppercase">SERIA WIN</span>
+                                                            <span className="text-xs font-bold text-white mt-1 truncate" title={currentPlayer.winStreak}>{currentPlayer.winStreak ? currentPlayer.winStreak.split(' ')[0] : "-"}</span>
+                                                        </div>
+                                                        <div className="bg-[#020617] p-3 rounded-xl border border-slate-800 text-center flex flex-col justify-center">
+                                                            <span className="text-[10px] text-slate-500 font-mono block uppercase">KOLEJKA MVP</span>
+                                                            <span className="text-xs font-bold text-yellow-500 mt-1 truncate" title={currentPlayer.bestGw}>{currentPlayer.bestGw ? currentPlayer.bestGw.split('(')[0].trim() : "-"}</span>
+                                                        </div>
+                                                        <div className="bg-[#020617] p-3 rounded-xl border border-slate-800 text-center flex flex-col justify-center">
+                                                            <span className="text-[10px] text-slate-500 font-mono block uppercase">MIESIĄC</span>
+                                                            <span className="text-xs font-bold text-purple-400 mt-1 truncate" title={currentPlayer.monthlyWins}>{currentPlayer.monthlyWins || "-"}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Full fixture list */}
+                                                <div className="glass-panel p-6 rounded-3xl border border-slate-800 shadow-xl">
+                                                    <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 border-b border-slate-800/60 pb-3 mb-4">
+                                                        <div>
+                                                            <h4 className="text-sm md:text-base font-bold text-white uppercase tracking-wide font-athletic">Terminarz 38 kolejek</h4>
+                                                            <p className="text-xs text-slate-400 mt-1">Tylko mecze profilu: szybki podgląd przeciwników i wyników.</p>
+                                                        </div>
+                                                        <div className="text-[11px] text-slate-500 font-mono">
+                                                            Mecze: <span className="text-slate-300 font-bold">{playerSchedule.length}</span> / 38
+                                                        </div>
+                                                    </div>
+
+                                                    {!matchesLoading && playerSchedule.length > 0 && (
+                                                        <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-4">
+                                                            <div className="bg-[#020617] p-2.5 rounded-xl border border-slate-800 text-center">
+                                                                <div className="text-[10px] text-slate-500 uppercase font-mono">W</div>
+                                                                <div className="text-base font-bold text-emerald-400">{scheduleSummary.wins}</div>
+                                                            </div>
+                                                            <div className="bg-[#020617] p-2.5 rounded-xl border border-slate-800 text-center">
+                                                                <div className="text-[10px] text-slate-500 uppercase font-mono">D</div>
+                                                                <div className="text-base font-bold text-slate-300">{scheduleSummary.draws}</div>
+                                                            </div>
+                                                            <div className="bg-[#020617] p-2.5 rounded-xl border border-slate-800 text-center">
+                                                                <div className="text-[10px] text-slate-500 uppercase font-mono">L</div>
+                                                                <div className="text-base font-bold text-red-400">{scheduleSummary.losses}</div>
+                                                            </div>
+                                                            <div className="bg-[#020617] p-2.5 rounded-xl border border-slate-800 text-center">
+                                                                <div className="text-[10px] text-slate-500 uppercase font-mono">Punkty za</div>
+                                                                <div className="text-base font-bold text-emerald-300">{scheduleSummary.goalsFor}</div>
+                                                            </div>
+                                                            <div className="bg-[#020617] p-2.5 rounded-xl border border-slate-800 text-center">
+                                                                <div className="text-[10px] text-slate-500 uppercase font-mono">Punkty przeciw</div>
+                                                                <div className="text-base font-bold text-amber-300">{scheduleSummary.goalsAgainst}</div>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {matchesLoading ? (
+                                                        <div className="text-sm text-slate-400 bg-[#020617] rounded-xl border border-slate-800 p-4">Ładowanie terminarza...</div>
+                                                    ) : playerSchedule.length === 0 ? (
+                                                        <div className="text-sm text-red-300 bg-red-950/20 rounded-xl border border-red-500/30 p-4">
+                                                            Brak danych meczowych. Sprawdź, czy plik <span className="font-mono">wyniki_meczy.json</span> jest obok strony i zawiera wyniki.
+                                                        </div>
+                                                    ) : (
+                                                        <div className="max-h-[360px] overflow-y-auto pr-1 space-y-2">
+                                                            {playerSchedule.map((match) => (
+                                                                <div key={`${currentPlayer.id}-${match.gw}`} className="bg-[#020617] border border-slate-800 rounded-xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                                                    <div className="min-w-0 flex-1">
+                                                                        <div className="text-[11px] text-slate-500 font-mono uppercase mb-2">GW {match.gw} • {match.isHome ? "Dom" : "Wyjazd"}</div>
+                                                                        <div className="flex items-center gap-2 min-w-0">
+                                                                            <TeamCrest fplId={currentPlayer.id} size="xs" />
+                                                                            <span className="text-xs text-slate-300 truncate max-w-[28%] sm:max-w-[32%]" title={currentPlayer.team}>{currentPlayer.team}</span>
+                                                                            <span className="text-sm font-mono font-bold text-white px-1.5 shrink-0">{match.goalsFor}:{match.goalsAgainst}</span>
+                                                                            <span className="text-xs text-slate-300 truncate max-w-[28%] sm:max-w-[32%] text-right" title={match.opponent}>{match.opponent}</span>
+                                                                            <TeamCrest fplId={match.opponentId} size="xs" />
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                                                                        <span className={`text-[11px] font-bold px-2.5 py-1 rounded-md border ${match.outcome === "W" ? "text-emerald-400 border-emerald-500/30 bg-emerald-500/10" : match.outcome === "D" ? "text-slate-300 border-slate-500/30 bg-slate-500/10" : "text-red-400 border-red-500/30 bg-red-500/10"}`}>
+                                                                            {match.outcome}
+                                                                        </span>
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                            </div>
+                                        </div>
+
+                                        {!highlightsLoading && (
+                                            <SeasonHighlightsPanel
+                                                highlights={currentHighlights}
+                                                fplPlayersById={fplPlayersById}
+                                            />
+                                        )}
+
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                    </main>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

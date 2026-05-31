@@ -1,0 +1,805 @@
+{
+  "historyCount": 20,
+  "sampleHistory22952": {
+    "file": "22952_history25-26.xlsx",
+    "summary": {
+      "Manager": "--- St0pa ---",
+      "Team": "Kapcie Kłapcia",
+      "Points": 2456,
+      "OR": 665,
+      "Transfers": 38,
+      "Hits": -4,
+      "Green Arrows": 23,
+      "Captain Points": 557,
+      "Most Captained": "Haaland 22",
+      "Most Points": "Haaland 394",
+      "Super Star": "Virgil 84.21 pts gaind",
+      "Rank Killer": "Guéhi -43.05 pts lost",
+      "Most started": "Haaland 31",
+      "Most Benched": "Dúbravka 29",
+      "Points Benched": 312
+    },
+    "gwCount": 48,
+    "totalPoints": 2460.0,
+    "avgVsTop10k": 7.73,
+    "avgVsOverall": 11.77,
+    "weeksAboveTop10k": 28,
+    "weeksBelowTop10k": 10,
+    "bestGwRank": 28168,
+    "worstGwRank": 9196024,
+    "greenArrowsFromHistory": 32,
+    "redArrowsFromHistory": 14,
+    "playerAnalysisTop": [
+      {
+        "helper": "Virgil",
+        "helperGain": 84.21139999999998,
+        "hurter": "Guéhi",
+        "hurterLoss": 43.04669999999999,
+        "mostPts": "Haaland",
+        "mostPtsVal": 394,
+        "mostCap": "Haaland",
+        "mostCapVal": 22,
+        "mostStart": "Haaland",
+        "mostStartVal": 31,
+        "mostBench": "Dúbravka",
+        "mostBenchVal": 29
+      },
+      {
+        "helper": "Raya",
+        "helperGain": 67.12170000000002,
+        "hurter": "Saka",
+        "hurterLoss": 38.40170000000001,
+        "mostPts": "B.Fernandes",
+        "mostPtsVal": 202,
+        "mostCap": "B.Fernandes",
+        "mostCapVal": 7,
+        "mostStart": "Raya",
+        "mostStartVal": 27,
+        "mostBench": "Gudmundsson",
+        "mostBenchVal": 21
+      },
+      {
+        "helper": "Semenyo",
+        "helperGain": 59.5988,
+        "hurter": "J.Timber",
+        "hurterLoss": 30.7951,
+        "mostPts": "Gabriel",
+        "mostPtsVal": 155,
+        "mostCap": "Gabriel",
+        "mostCapVal": 2,
+        "mostStart": "Virgil",
+        "mostStartVal": 27,
+        "mostBench": "Dewsbury-Hall",
+        "mostBenchVal": 19
+      },
+      {
+        "helper": "Thiago",
+        "helperGain": 54.4185,
+        "hurter": "Rogers",
+        "hurterLoss": 29.6352,
+        "mostPts": "Semenyo",
+        "mostPtsVal": 136,
+        "mostCap": "Palmer",
+        "mostCapVal": 1,
+        "mostStart": "Semenyo",
+        "mostStartVal": 22,
+        "mostBench": "Estève",
+        "mostBenchVal": 17
+      },
+      {
+        "helper": "Eze",
+        "helperGain": 51.993,
+        "hurter": "M.Salah",
+        "hurterLoss": 26.6223,
+        "mostPts": "Raya",
+        "mostPtsVal": 118,
+        "mostCap": "Saka",
+        "mostCapVal": 1,
+        "mostStart": "Gabriel",
+        "mostStartVal": 21,
+        "mostBench": "Justin",
+        "mostBenchVal": 4
+      }
+    ],
+    "mostStarted": "Haaland 31",
+    "mostBenched": "Dúbravka 29"
+  },
+  "leagueStats": {
+    "weeklyTopScorerCounts": {
+      "VeB": 4,
+      "Kapcie Kłapcia": 4,
+      "MQUC": 1,
+      "Boom Saka Laka": 2,
+      "C30-C39": 1,
+      "świnie Pepa": 4,
+      "Furiosa FC Morfeusza": 2,
+      "Wirtz Team Ever": 2,
+      "Pusan": 2,
+      "Jarząbki": 3,
+      "Bolesławiec King": 3,
+      "Scuderia Blaugrana": 2,
+      "Pewniaczki": 2,
+      "FcpoNalewce": 2,
+      "Bad Kompany": 2,
+      "Ulane Warchlaki": 1,
+      "MnstrNaf": 1
+    },
+    "weeksTopComputed": {
+      "Bad Kompany": 6,
+      "Bolesławiec King": 0,
+      "Boom Saka Laka": 0,
+      "C30-C39": 0,
+      "FC Defconiarze": 0,
+      "FcpoNalewce": 0,
+      "Furiosa FC Morfeusza": 0,
+      "Jarząbki": 0,
+      "Kapcie Kłapcia": 15,
+      "MQUC": 0,
+      "MnstrNaf": 0,
+      "Pewniaczki": 7,
+      "Przemsza Klucze": 0,
+      "Pusan": 0,
+      "Scuderia Blaugrana": 0,
+      "Ulane Warchlaki": 0,
+      "VeB": 4,
+      "Wirtz Team Ever": 0,
+      "immigrants fc": 0,
+      "świnie Pepa": 6
+    },
+    "weeksBottomComputed": {
+      "Bad Kompany": 0,
+      "Bolesławiec King": 4,
+      "Boom Saka Laka": 0,
+      "C30-C39": 0,
+      "FC Defconiarze": 0,
+      "FcpoNalewce": 0,
+      "Furiosa FC Morfeusza": 0,
+      "Jarząbki": 7,
+      "Kapcie Kłapcia": 0,
+      "MQUC": 8,
+      "MnstrNaf": 18,
+      "Pewniaczki": 0,
+      "Przemsza Klucze": 0,
+      "Pusan": 0,
+      "Scuderia Blaugrana": 0,
+      "Ulane Warchlaki": 1,
+      "VeB": 0,
+      "Wirtz Team Ever": 0,
+      "immigrants fc": 0,
+      "świnie Pepa": 0
+    },
+    "avgPositionComputed": {
+      "Bad Kompany": 3.63,
+      "Bolesławiec King": 12.13,
+      "Boom Saka Laka": 11.47,
+      "C30-C39": 12.21,
+      "FC Defconiarze": 11.32,
+      "FcpoNalewce": 16.0,
+      "Furiosa FC Morfeusza": 6.11,
+      "Jarząbki": 18.08,
+      "Kapcie Kłapcia": 3.74,
+      "MQUC": 16.13,
+      "MnstrNaf": 19.03,
+      "Pewniaczki": 3.68,
+      "Przemsza Klucze": 11.55,
+      "Pusan": 9.42,
+      "Scuderia Blaugrana": 6.68,
+      "Ulane Warchlaki": 17.66,
+      "VeB": 5.66,
+      "Wirtz Team Ever": 12.74,
+      "immigrants fc": 10.05,
+      "świnie Pepa": 2.71
+    },
+    "winLossStreaks": {
+      "immigrants fc": {
+        "winStreak": [
+          3,
+          22,
+          24
+        ],
+        "lossStreak": [
+          2,
+          6,
+          7
+        ]
+      },
+      "Kapcie Kłapcia": {
+        "winStreak": [
+          12,
+          24,
+          35
+        ],
+        "lossStreak": [
+          2,
+          14,
+          15
+        ]
+      },
+      "VeB": {
+        "winStreak": [
+          5,
+          17,
+          21
+        ],
+        "lossStreak": [
+          3,
+          9,
+          11
+        ]
+      },
+      "Przemsza Klucze": {
+        "winStreak": [
+          3,
+          7,
+          9
+        ],
+        "lossStreak": [
+          3,
+          1,
+          3
+        ]
+      },
+      "Ulane Warchlaki": {
+        "winStreak": [
+          5,
+          32,
+          36
+        ],
+        "lossStreak": [
+          4,
+          14,
+          17
+        ]
+      },
+      "FC Defconiarze": {
+        "winStreak": [
+          4,
+          32,
+          35
+        ],
+        "lossStreak": [
+          5,
+          10,
+          14
+        ]
+      },
+      "Scuderia Blaugrana": {
+        "winStreak": [
+          5,
+          17,
+          21
+        ],
+        "lossStreak": [
+          3,
+          31,
+          33
+        ]
+      },
+      "MnstrNaf": {
+        "winStreak": [
+          2,
+          13,
+          14
+        ],
+        "lossStreak": [
+          8,
+          3,
+          10
+        ]
+      },
+      "Boom Saka Laka": {
+        "winStreak": [
+          3,
+          20,
+          22
+        ],
+        "lossStreak": [
+          7,
+          13,
+          19
+        ]
+      },
+      "FcpoNalewce": {
+        "winStreak": [
+          2,
+          18,
+          19
+        ],
+        "lossStreak": [
+          9,
+          30,
+          38
+        ]
+      },
+      "MQUC": {
+        "winStreak": [
+          2,
+          5,
+          6
+        ],
+        "lossStreak": [
+          17,
+          20,
+          36
+        ]
+      },
+      "Wirtz Team Ever": {
+        "winStreak": [
+          2,
+          16,
+          17
+        ],
+        "lossStreak": [
+          3,
+          25,
+          27
+        ]
+      },
+      "Bad Kompany": {
+        "winStreak": [
+          5,
+          3,
+          7
+        ],
+        "lossStreak": [
+          3,
+          22,
+          24
+        ]
+      },
+      "Jarząbki": {
+        "winStreak": [
+          2,
+          14,
+          15
+        ],
+        "lossStreak": [
+          6,
+          3,
+          8
+        ]
+      },
+      "Pusan": {
+        "winStreak": [
+          3,
+          4,
+          6
+        ],
+        "lossStreak": [
+          3,
+          11,
+          13
+        ]
+      },
+      "Furiosa FC Morfeusza": {
+        "winStreak": [
+          6,
+          2,
+          7
+        ],
+        "lossStreak": [
+          6,
+          18,
+          23
+        ]
+      },
+      "świnie Pepa": {
+        "winStreak": [
+          7,
+          19,
+          25
+        ],
+        "lossStreak": [
+          2,
+          17,
+          18
+        ]
+      },
+      "Pewniaczki": {
+        "winStreak": [
+          4,
+          7,
+          10
+        ],
+        "lossStreak": [
+          3,
+          20,
+          22
+        ]
+      },
+      "Bolesławiec King": {
+        "winStreak": [
+          3,
+          6,
+          8
+        ],
+        "lossStreak": [
+          3,
+          1,
+          3
+        ]
+      },
+      "C30-C39": {
+        "winStreak": [
+          5,
+          15,
+          19
+        ],
+        "lossStreak": [
+          4,
+          6,
+          9
+        ]
+      }
+    },
+    "topWeeklyScorers": [
+      [
+        "VeB",
+        4
+      ],
+      [
+        "Kapcie Kłapcia",
+        4
+      ],
+      [
+        "świnie Pepa",
+        4
+      ],
+      [
+        "Jarząbki",
+        3
+      ],
+      [
+        "Bolesławiec King",
+        3
+      ]
+    ]
+  },
+  "discrepancies": [
+    {
+      "id": 22952,
+      "field": "superStar",
+      "players.ts": "Semenyo (+70.9 pkt)",
+      "history": "Virgil 84.21 pts gaind",
+      "note": "Different source/metric possible"
+    },
+    {
+      "id": 49321,
+      "field": "score/totalPoints",
+      "players.ts": 2329,
+      "history": 2345.0,
+      "note": "H2H score vs FPL season sum (expected to differ slightly)"
+    },
+    {
+      "id": 49321,
+      "field": "superStar",
+      "players.ts": "Haaland (+113.6 pkt)",
+      "history": "B.Fernandes 129.9 pts gaind",
+      "note": "Different source/metric possible"
+    },
+    {
+      "id": 43986,
+      "field": "score/totalPoints",
+      "players.ts": 2271,
+      "history": 2299.0,
+      "note": "H2H score vs FPL season sum (expected to differ slightly)"
+    },
+    {
+      "id": 43986,
+      "field": "superStar",
+      "players.ts": "Haaland (+99.6 pkt)",
+      "history": "Haaland 73.76 pts gaind",
+      "note": "Different source/metric possible"
+    },
+    {
+      "id": 298030,
+      "field": "winStreak",
+      "players.ts": "5 (GW10 - GW14)",
+      "computed": "4 (GW7-GW10)"
+    },
+    {
+      "id": 298030,
+      "field": "superStar",
+      "players.ts": "Rogers (+91.3 pkt)",
+      "history": "B.Fernandes 115.64 pts gaind",
+      "note": "Different source/metric possible"
+    },
+    {
+      "id": 425158,
+      "field": "superStar",
+      "players.ts": "João Pedro (+120.1 pkt)",
+      "history": "Richards 94.83 pts gaind",
+      "note": "Different source/metric possible"
+    },
+    {
+      "id": 418929,
+      "field": "winStreak",
+      "players.ts": "4 (GW30 - GW33)",
+      "computed": "3 (GW4-GW6)"
+    },
+    {
+      "id": 418929,
+      "field": "superStar",
+      "players.ts": "Chalobah (+75.9 pkt)",
+      "history": "Petrović 72.82 pts gaind",
+      "note": "Different source/metric possible"
+    },
+    {
+      "id": 3804416,
+      "field": "weeksTop",
+      "players.ts": 0,
+      "computed": 4
+    },
+    {
+      "id": 3804416,
+      "field": "superStar",
+      "players.ts": "Rogers (+108.3 pkt)",
+      "history": "Thiago 99.1 pts gaind",
+      "note": "Different source/metric possible"
+    },
+    {
+      "id": 55981,
+      "field": "score/totalPoints",
+      "players.ts": 2262,
+      "history": 2278.0,
+      "note": "H2H score vs FPL season sum (expected to differ slightly)"
+    },
+    {
+      "id": 55981,
+      "field": "superStar",
+      "players.ts": "Mbeumo (+100 pkt)",
+      "history": "Mbeumo 97.07 pts gaind",
+      "note": "Different source/metric possible"
+    },
+    {
+      "id": 4002,
+      "field": "score/totalPoints",
+      "players.ts": 2150,
+      "history": 2250.0,
+      "note": "H2H score vs FPL season sum (expected to differ slightly)"
+    },
+    {
+      "id": 4002,
+      "field": "superStar",
+      "players.ts": "João Pedro (+86.1 pkt)",
+      "history": "Saka 70.92 pts gaind",
+      "note": "Different source/metric possible"
+    },
+    {
+      "id": 1109898,
+      "field": "score/totalPoints",
+      "players.ts": 2116,
+      "history": 2172.0,
+      "note": "H2H score vs FPL season sum (expected to differ slightly)"
+    },
+    {
+      "id": 1109898,
+      "field": "superStar",
+      "players.ts": "Guéhi (+113.8 pkt)",
+      "history": "B.Fernandes 111.78 pts gaind",
+      "note": "Different source/metric possible"
+    },
+    {
+      "id": 126745,
+      "field": "score/totalPoints",
+      "players.ts": 2217,
+      "history": 2301.0,
+      "note": "H2H score vs FPL season sum (expected to differ slightly)"
+    },
+    {
+      "id": 126745,
+      "field": "winStreak",
+      "players.ts": "4 (GW16 - GW19)",
+      "computed": "3 (GW7-GW9)"
+    },
+    {
+      "id": 126745,
+      "field": "superStar",
+      "players.ts": "Haaland (+99.6 pkt)",
+      "history": "Haaland 82.25 pts gaind",
+      "note": "Different source/metric possible"
+    },
+    {
+      "id": 248187,
+      "field": "score/totalPoints",
+      "players.ts": 2182,
+      "history": 2210.0,
+      "note": "H2H score vs FPL season sum (expected to differ slightly)"
+    },
+    {
+      "id": 248187,
+      "field": "winStreak",
+      "players.ts": "4 (GW3 - GW6)",
+      "computed": "5 (GW15-GW19)"
+    },
+    {
+      "id": 248187,
+      "field": "superStar",
+      "players.ts": "Rice (+92.9 pkt)",
+      "history": "Rice 83.13 pts gaind",
+      "note": "Different source/metric possible"
+    },
+    {
+      "id": 2953280,
+      "field": "score/totalPoints",
+      "players.ts": 1984,
+      "history": 2020.0,
+      "note": "H2H score vs FPL season sum (expected to differ slightly)"
+    },
+    {
+      "id": 2953280,
+      "field": "weeksBottom",
+      "players.ts": 0,
+      "computed": 4
+    },
+    {
+      "id": 2953280,
+      "field": "winStreak",
+      "players.ts": "4 (GW14 - GW17)",
+      "computed": "3 (GW6-GW8)"
+    },
+    {
+      "id": 2953280,
+      "field": "superStar",
+      "players.ts": "Pickford (+120.2 pkt)",
+      "history": "Pickford 114.3 pts gaind",
+      "note": "Different source/metric possible"
+    },
+    {
+      "id": 9084,
+      "field": "winStreak",
+      "players.ts": "3 (GW10 - GW12)",
+      "computed": "2 (GW16-GW17)"
+    },
+    {
+      "id": 9084,
+      "field": "superStar",
+      "players.ts": "Semenyo (+117.9 pkt)",
+      "history": "Semenyo 90.0 pts gaind",
+      "note": "Different source/metric possible"
+    },
+    {
+      "id": 1178442,
+      "field": "score/totalPoints",
+      "players.ts": 2185,
+      "history": 2207.0,
+      "note": "H2H score vs FPL season sum (expected to differ slightly)"
+    },
+    {
+      "id": 1178442,
+      "field": "avgPosition",
+      "players.ts": 11.53,
+      "computed": 11.47
+    },
+    {
+      "id": 1178442,
+      "field": "superStar",
+      "players.ts": "Semenyo (+65.9 pkt)",
+      "history": "Semenyo 65.12 pts gaind",
+      "note": "Different source/metric possible"
+    },
+    {
+      "id": 546068,
+      "field": "score/totalPoints",
+      "players.ts": 1978,
+      "history": 1870.0,
+      "note": "H2H score vs FPL season sum (expected to differ slightly)"
+    },
+    {
+      "id": 546068,
+      "field": "superStar",
+      "players.ts": "Van de Ven (+92.4 pkt)",
+      "history": "B.Fernandes 110.09 pts gaind",
+      "note": "Different source/metric possible"
+    },
+    {
+      "id": 68435,
+      "field": "score/totalPoints",
+      "players.ts": 1913,
+      "history": 1810.0,
+      "note": "H2H score vs FPL season sum (expected to differ slightly)"
+    },
+    {
+      "id": 68435,
+      "field": "winStreak",
+      "players.ts": "3 (GW21 - GW23)",
+      "computed": "2 (GW18-GW19)"
+    },
+    {
+      "id": 68435,
+      "field": "superStar",
+      "players.ts": "João Pedro (+287.1 pkt)",
+      "history": "João Pedro 250.03 pts gaind",
+      "note": "Different source/metric possible"
+    },
+    {
+      "id": 24962,
+      "field": "score/totalPoints",
+      "players.ts": 1993,
+      "history": 2104.0,
+      "note": "H2H score vs FPL season sum (expected to differ slightly)"
+    },
+    {
+      "id": 24962,
+      "field": "weeksBottom",
+      "players.ts": 0,
+      "computed": 1
+    },
+    {
+      "id": 24962,
+      "field": "winStreak",
+      "players.ts": "3 (GW31 - GW33)",
+      "computed": "5 (GW32-GW36)"
+    },
+    {
+      "id": 24962,
+      "field": "superStar",
+      "players.ts": "Semenyo (+90.9 pkt)",
+      "history": "Andersen 73.54 pts gaind",
+      "note": "Different source/metric possible"
+    },
+    {
+      "id": 3873739,
+      "field": "score/totalPoints",
+      "players.ts": 1923,
+      "history": 1931.0,
+      "note": "H2H score vs FPL season sum (expected to differ slightly)"
+    },
+    {
+      "id": 3873739,
+      "field": "superStar",
+      "players.ts": "Guéhi (+163.8 pkt)",
+      "history": "B.Fernandes 129.98 pts gaind",
+      "note": "Different source/metric possible"
+    },
+    {
+      "id": 3749264,
+      "field": "score/totalPoints",
+      "players.ts": 1980,
+      "history": 1965.0,
+      "note": "H2H score vs FPL season sum (expected to differ slightly)"
+    },
+    {
+      "id": 3749264,
+      "field": "superStar",
+      "players.ts": "Watkins (+91.2 pkt)",
+      "history": "Watkins 98.32 pts gaind",
+      "note": "Different source/metric possible"
+    }
+  ],
+  "newMetrics": {
+    "fromHistoryNotInUI": [
+      "avgVsTop10k (season average vs elite managers)",
+      "weeksAboveTop10k / weeksBelowTop10k",
+      "bestGwRank / worstGwRank (best single-GW global rank)",
+      "mostStarted player",
+      "mostBenched player (count, not points)",
+      "per-GW Captain, Main Gain, Main Damage",
+      "Team Value progression",
+      "Player Analysis ranked lists (top 5 helpers/hurters)"
+    ],
+    "fromScreenshotNotInUI": [
+      "weeklyTopScorerCounts (how many GWs as league top scorer)",
+      "weeksTop / weeksBottom leaderboards",
+      "avgPosition ranking board",
+      "Manager of Month detailed W/D/L (only month names in profiles)"
+    ]
+  },
+  "historySummaryFields": [
+    "Manager",
+    "Team",
+    "Points",
+    "OR",
+    "Transfers",
+    "Hits",
+    "Green Arrows",
+    "Captain Points",
+    "Most Captained",
+    "Most Points",
+    "Super Star",
+    "Rank Killer",
+    "Most started",
+    "Most Benched",
+    "Points Benched"
+  ]
+}
