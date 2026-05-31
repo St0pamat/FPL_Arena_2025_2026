@@ -131,13 +131,19 @@ export const HUB_CONFIG: Record<
   },
   media: {
     title: "Media",
-    lead: "Prezentacje wideo uczestników oraz logotypy ligi i klubów do pobrania.",
+    lead: "Prezentacje wideo, soundtrack zapowiedzi Gladiatorów oraz logotypy ligi i klubów do pobrania.",
     sections: [
       {
         id: "prezentacje",
         title: "Prezentacje",
         icon: "🎬",
         description: "Filmy podsumowujące sezon od menedżerów.",
+      },
+      {
+        id: "soundtrack",
+        title: "Soundtrack",
+        icon: "🎵",
+        description: "Playlista SoundCloud oraz pobieranie utworów WAV (pojedynczo i ZIP).",
       },
       {
         id: "logotypy",

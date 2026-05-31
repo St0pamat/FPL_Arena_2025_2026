@@ -17,6 +17,7 @@ import {
   type H2HRow,
 } from "./stats";
 import { buildStandingsHistory } from "@/features/standings/lib/standings";
+import { playerDisplayName } from "@/lib/playerDisplay";
 
 type RawRow = {
   playerId: number;
@@ -37,7 +38,7 @@ const toEntries = (rows: RawRow[], players: Player[]): TopEntry[] => {
       const p = byId[r.playerId];
       return {
         playerId: r.playerId,
-        manager: r.manager ?? p?.manager ?? "—",
+        manager: p ? playerDisplayName(p) : (r.manager ?? "—"),
         team: r.team ?? p?.team ?? "—",
         value: r.value,
         details: r.details,

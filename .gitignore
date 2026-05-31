@@ -19,8 +19,14 @@ Thumbs.db
 .vscode/
 .idea/
 
+# Duże pliki audio (kopiowane do public/ przez sync-public.ps1)
+soundtracks/*.wav
+public/soundtracks/
+public/FPL-Arena-Soundtrack-Sezon-2025-26.zip
+
 # Kopia robocza danych w public/ (źródło: pliki JSON w katalogu głównym + sync-public.ps1)
 public/player_highlights.json
+public/player_season_history.json
 public/wyniki_meczy.json
 public/gladiator_or.json
 

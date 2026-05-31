@@ -3,6 +3,7 @@ import type { GwMatchesBlock } from "@/types/match";
 import { TEAM_BY_NAME } from "@/config/playersIndex";
 import { getMatchOutcome } from "@/lib/match";
 import { TeamCrest } from "@/components/branding";
+import { playerDisplayName, shouldShowPlayerName } from "@/lib/playerDisplay";
 import { PageContainer, PageHeader, GwNavigator } from "@/components/layout";
 import { EmptyState, StatPill } from "@/components/ui";
 import { H2H_PL } from "@/features/fpl/constants";
@@ -124,8 +125,8 @@ export function WynikiView({
                         >
                           {m.teamA}
                         </div>
-                        {playerA && (
-                          <div className="text-fluid-sm text-slate-500 break-words leading-snug mt-0.5">{playerA.manager}</div>
+                        {playerA && shouldShowPlayerName(playerA) && (
+                          <div className="text-fluid-sm text-slate-500 break-words leading-snug mt-0.5">{playerDisplayName(playerA)}</div>
                         )}
                       </div>
                     </div>
@@ -143,8 +144,8 @@ export function WynikiView({
                         >
                           {m.teamB}
                         </div>
-                        {playerB && (
-                          <div className="text-fluid-sm text-slate-500 break-words leading-snug mt-0.5">{playerB.manager}</div>
+                        {playerB && shouldShowPlayerName(playerB) && (
+                          <div className="text-fluid-sm text-slate-500 break-words leading-snug mt-0.5">{playerDisplayName(playerB)}</div>
                         )}
                       </div>
                       <TeamCrest fplId={playerB?.id} size="lg" className="shrink-0" />

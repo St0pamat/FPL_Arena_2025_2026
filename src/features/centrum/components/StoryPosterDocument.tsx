@@ -1,5 +1,6 @@
 import { LEAGUE_LOGO_SRC, teamLogoSrc } from "@/config/branding";
 import type { Player } from "@/types/player";
+import { playerDisplayName } from "@/lib/playerDisplay";
 import { buildStoryPosterLines } from "@/features/centrum/lib/cardContent";
 import type { PlayerHighlights } from "@/types/highlights";
 
@@ -85,7 +86,7 @@ export const StoryPosterDocument = ({
             >
               {player.team}
             </h1>
-            <p style={{ fontSize: 28, color: "#94a3b8", marginTop: 10 }}>{player.manager}</p>
+            <p style={{ fontSize: 28, color: "#94a3b8", marginTop: 10 }}>{playerDisplayName(player)}</p>
             <p style={{ fontSize: 24, color: "#64748b", marginTop: 8, letterSpacing: "0.08em" }}>{d.wdl}</p>
           </div>
         </div>

@@ -2,6 +2,7 @@ import type { GwMatchesBlock } from "@/types/match";
 import type { PlayerHighlightsMap } from "@/types/highlights";
 import { buildStandingsHistory } from "@/features/standings/lib/standings";
 import { PLAYER_BY_ID, TEAM_BY_NAME } from "@/config/playersIndex";
+import { playerDisplayName } from "@/lib/playerDisplay";
 
 export type TimelinePerson = {
   playerId: number | null;
@@ -22,7 +23,7 @@ function personFromTeam(team: string): TimelinePerson {
   return {
     playerId: p?.id ?? null,
     team,
-    manager: p?.manager ?? "",
+    manager: p ? playerDisplayName(p) : "",
   };
 }
 
@@ -31,7 +32,7 @@ function personFromId(playerId: number, team: string): TimelinePerson {
   return {
     playerId,
     team: p?.team ?? team,
-    manager: p?.manager ?? "",
+    manager: p ? playerDisplayName(p) : "",
   };
 }
 

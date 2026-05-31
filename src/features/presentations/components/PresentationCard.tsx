@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { Player } from "@/types/player";
+import { playerDisplayName } from "@/lib/playerDisplay";
 import type { GladiatorPresentation } from "@/data/presentations";
 import { TeamCrest } from "@/components/branding";
 
@@ -37,7 +38,7 @@ export const PresentationCard = ({
             <h3 className="text-fluid-base font-athletic font-bold text-white leading-snug break-words">
               {player.team}
             </h3>
-            <p className="text-fluid-sm text-slate-400 mt-0.5 break-words">{player.manager}</p>
+            <p className="text-fluid-sm text-slate-400 mt-0.5 break-words">{playerDisplayName(player)}</p>
             <p className="text-fluid-xs text-slate-500 mt-1 break-words">{presentation.scriptTitle.replace(/^\d+\.\s*/, "")}</p>
           </div>
         </div>

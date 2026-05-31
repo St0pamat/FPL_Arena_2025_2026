@@ -1,4 +1,5 @@
 import type { Player } from "@/types/player";
+import { playerDisplayName } from "@/lib/playerDisplay";
 import type { PlayerHighlights } from "@/types/highlights";
 import { getDifferentialPicks } from "@/features/profiles/lib/differentialPicks";
 
@@ -31,7 +32,7 @@ export function buildCardContent(
         badge: "MVP kolejki",
         headline: player.team,
         statLine: best ? `${pts} pkt · GW${gw}` : player.bestGw.split("(")[0].trim(),
-        subLine: `${player.manager} · ${player.rank}. miejsce H2H`,
+        subLine: `${playerDisplayName(player)} · ${player.rank}. miejsce H2H`,
         quote: player.quote,
         accent: "amber",
       };

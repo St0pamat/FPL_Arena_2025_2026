@@ -7,6 +7,7 @@ import {
 } from "@/features/centrum/lib/cardContent";
 import { ShareCardDocument } from "@/features/centrum/components/ShareCardDocument";
 import { ImageExportModal } from "@/features/centrum/components/ImageExportModal";
+import { playerDisplayName } from "@/lib/playerDisplay";
 
 const CARD_PX = 1080;
 const PREVIEW_SCALE = 0.36;
@@ -71,7 +72,7 @@ export const CardGeneratorPanel = ({
             >
               {players.map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.team} — {p.manager}
+                  {p.team} — {playerDisplayName(p)}
                 </option>
               ))}
             </select>

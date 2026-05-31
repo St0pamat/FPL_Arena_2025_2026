@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import type { Player } from "@/types/player";
+import { playerDisplayName } from "@/lib/playerDisplay";
 import type { PlayerSeasonHistoryMap } from "@/types/seasonHistory";
 import { TeamCrest } from "@/components/branding";
 
@@ -69,7 +70,7 @@ export const ElitePanel = ({
                       <TeamCrest fplId={r.player.id} size="lg" className="shrink-0" />
                       <div className="min-w-0">
                         <p className="font-semibold text-white break-words leading-snug">{r.player.team}</p>
-                        <p className="text-xs text-slate-500 break-words mt-0.5">{r.player.manager}</p>
+                        <p className="text-xs text-slate-500 break-words mt-0.5">{playerDisplayName(r.player)}</p>
                       </div>
                     </div>
                   </td>

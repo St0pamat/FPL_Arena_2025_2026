@@ -112,13 +112,10 @@ export const AppFooter = ({ onTabChange }: { onTabChange: (tab: AppTab) => void 
         </div>
 
         <div className="footer-bottom mt-10 pt-6 border-t border-slate-800/80">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 text-fluid-xs text-slate-500 leading-relaxed">
-            <p>
-              © {year} FPL Arena · Skarb Kibica · Sezon 2025/26. Niezależny projekt fanowski — niepowiązany z
-              Premier League ani Fantasy Premier League.
-            </p>
-            <p className="shrink-0 font-mono text-slate-600">Ostateczny Raport · Wersja posezonowa</p>
-          </div>
+          <p className="text-fluid-xs text-slate-500 leading-relaxed">
+            © {year} FPL Arena · Skarb Kibica · Sezon 2025/26. Niezależny projekt fanowski — niepowiązany z
+            Premier League ani Fantasy Premier League.
+          </p>
         </div>
       </div>
     </footer>

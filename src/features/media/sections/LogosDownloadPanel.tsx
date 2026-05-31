@@ -1,6 +1,7 @@
 import { LEAGUE_LOGO_SRC, teamLogoSrc } from "@/config/branding";
 import type { Player } from "@/types/player";
 import { TeamCrest } from "@/components/branding";
+import { playerDisplayName } from "@/lib/playerDisplay";
 import { useState } from "react";
 
 export type SocialLogoFormat = {
@@ -208,7 +209,7 @@ export const LogosDownloadPanel = ({ players }: { players: Player[] }) => (
           <LogoAssetCard
             key={p.id}
             title={p.team}
-            subtitle={p.manager}
+            subtitle={playerDisplayName(p)}
             src={teamLogoSrc(p.id)}
             fileBase={`FPL-Arena-${slugify(p.team) || p.id}`}
             fplId={p.id}

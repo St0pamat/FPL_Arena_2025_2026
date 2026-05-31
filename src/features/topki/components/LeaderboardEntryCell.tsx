@@ -1,6 +1,8 @@
+import type { Player } from "@/types/player";
 import type { ReactNode } from "react";
-import { PLAYER_BY_ID } from "@/config/playersIndex";
+import { PLAYER_BY_ID, TEAM_BY_NAME } from "@/config/playersIndex";
 import { TeamCrest } from "@/components/branding";
+import { playerDisplayName, shouldShowPlayerName } from "@/lib/playerDisplay";
 import { resolveTeamFplId } from "../lib/teamResolve";
 import type { TopEntry } from "../types";
 
@@ -36,9 +38,13 @@ const NameBlock = ({
   </div>
 );
 
+const playerLine = (player: Player) =>
+  shouldShowPlayerName(player) ? playerDisplayName(player) : undefined;
+
 export const LeaderboardEntryCell = ({ entry }: { entry: TopEntry }) => {
   const player = entry.playerId ? PLAYER_BY_ID[entry.playerId] : null;
   const oppId = entry.opponentTeam ? resolveTeamFplId(entry.opponentTeam) : null;
+  const opponentPlayer = entry.opponentTeam ? TEAM_BY_NAME[entry.opponentTeam] : null;
 
   if (entry.matchupTeams) {
     const [a, b] = entry.matchupTeams;
@@ -51,6 +57,7 @@ export const LeaderboardEntryCell = ({ entry }: { entry: TopEntry }) => {
   }
 
   if (player && oppId) {
+    const line = playerLine(player);
     return (
       <div className="flex flex-col gap-2.5 min-w-0">
         <div className="flex items-center gap-1.5 shrink-0">
@@ -61,11 +68,15 @@ export const LeaderboardEntryCell = ({ entry }: { entry: TopEntry }) => {
         <NameBlock
           primary={player.team}
           secondary={
-            <>
-              {entry.manager}
-              <span className="text-slate-500"> · </span>
+            line ? (
+              <>
+                {line}
+                <span className="text-slate-500"> · </span>
+                <span className="text-slate-300">vs {entry.opponentTeam}</span>
+              </>
+            ) : (
               <span className="text-slate-300">vs {entry.opponentTeam}</span>
-            </>
+            )
           }
         />
       </div>
@@ -76,16 +87,17 @@ export const LeaderboardEntryCell = ({ entry }: { entry: TopEntry }) => {
     return (
       <div className="flex flex-col gap-2.5 min-w-0 sm:flex-row sm:items-start sm:gap-3">
         <TeamCrest fplId={player.id} size="md" className="shrink-0" />
-        <NameBlock primary={player.team} secondary={entry.manager} />
+        <NameBlock primary={player.team} secondary={playerLine(player)} />
       </div>
     );
   }
 
   if (entry.opponentTeam && oppId) {
+    const line = opponentPlayer ? playerLine(opponentPlayer) : undefined;
     return (
       <div className="flex flex-col gap-2.5 min-w-0 sm:flex-row sm:items-start sm:gap-3">
         <TeamCrest fplId={oppId} size="md" className="shrink-0" />
-        <NameBlock primary={entry.opponentTeam} secondary={entry.manager} />
+        <NameBlock primary={entry.opponentTeam} secondary={line} />
       </div>
     );
   }
@@ -99,10 +111,13 @@ export const LeaderboardEntryCell = ({ entry }: { entry: TopEntry }) => {
     );
   }
 
+  const resolved = entry.team ? TEAM_BY_NAME[entry.team] : undefined;
+  const line = resolved ? playerLine(resolved) : entry.manager;
+
   return (
     <NameBlock
       primary={entry.team || entry.manager || "—"}
-      secondary={entry.team && entry.manager !== entry.team ? entry.manager : undefined}
+      secondary={line && line !== entry.team ? line : undefined}
     />
   );
 };

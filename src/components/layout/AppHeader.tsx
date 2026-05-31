@@ -18,11 +18,8 @@ export const AppHeader = ({
               <LeagueLogo size="lg" />
             </div>
             <div className="min-w-0">
-              <h1 className="text-fluid-xl lg:text-fluid-2xl font-bold tracking-tight text-white flex flex-wrap items-center gap-2">
-                <span className="break-words leading-snug">Igrzyska Kapci Kłapcia</span>
-                <span className="badge-pill bg-emerald-500/10 text-emerald-400 border-emerald-500/30 shrink-0">
-                  Ostateczny Raport
-                </span>
+              <h1 className="text-fluid-xl lg:text-fluid-2xl font-bold tracking-tight text-white break-words leading-snug">
+                Igrzyska Kapci Kłapcia
               </h1>
               <p className="text-fluid-sm text-slate-400 mt-1">
                 Oficjalny, interaktywny Skarb Kibica (Sezon 2025/26)
@@ -34,30 +31,29 @@ export const AppHeader = ({
         </div>
 
         <nav
-          className="nav-bar flex flex-nowrap items-center gap-1 bg-[#020617]/90 p-1.5 rounded-2xl border border-slate-800 overflow-x-auto"
+          className="nav-bar flex flex-nowrap items-stretch gap-2 sm:gap-3 bg-[#020617]/90 px-2 py-2 sm:px-2.5 sm:py-2.5 rounded-2xl border border-slate-800 overflow-x-auto"
           aria-label="Główna nawigacja"
         >
           {NAV_GROUPS.map((group, groupIndex) => (
-            <div key={group.label ?? `group-${groupIndex}`} className="flex items-center gap-1 shrink-0">
-              {groupIndex > 0 && (
-                <span
-                  className="hidden sm:block w-px h-7 bg-slate-700/80 mx-1 shrink-0"
-                  aria-hidden
-                />
-              )}
-              {group.items.map(({ id, label, icon }) => (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => onTabChange(id)}
-                  className={`nav-tab shrink-0 ${activeTab === id ? "nav-tab-active" : "nav-tab-inactive"}`}
-                >
-                  <span className="text-base leading-none" aria-hidden>
-                    {icon}
-                  </span>
-                  {label}
-                </button>
-              ))}
+            <div key={group.label ?? `group-${groupIndex}`} className="nav-bar-group">
+              <span className="nav-group-label" aria-hidden={!group.label}>
+                {group.label ?? "\u00a0"}
+              </span>
+              <div className="flex items-center gap-1">
+                {group.items.map(({ id, label, icon }) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => onTabChange(id)}
+                    className={`nav-tab shrink-0 ${activeTab === id ? "nav-tab-active" : "nav-tab-inactive"}`}
+                  >
+                    <span className="text-base leading-none" aria-hidden>
+                      {icon}
+                    </span>
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
           ))}
         </nav>

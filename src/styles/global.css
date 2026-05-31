@@ -132,6 +132,23 @@
     @apply text-slate-400 hover:text-white hover:bg-slate-800/60;
   }
 
+  .nav-bar-group {
+    @apply flex flex-col items-center gap-1.5 shrink-0 self-stretch justify-center py-0.5;
+    @apply border-l border-slate-700/80 pl-3 pr-3 sm:pl-4 sm:pr-4;
+  }
+
+  .nav-bar-group:first-child {
+    @apply border-l-0 pl-0;
+  }
+
+  .nav-bar-group:last-child {
+    @apply border-r border-slate-700/80;
+  }
+
+  .nav-group-label {
+    @apply block w-full min-h-[10px] text-center text-[10px] font-mono font-bold uppercase tracking-widest text-slate-500 leading-none;
+  }
+
   .header-social-link {
     @apply inline-flex items-center gap-2 px-3 py-2 rounded-xl border text-fluid-xs font-semibold transition-all shrink-0;
   }

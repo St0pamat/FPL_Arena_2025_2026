@@ -7,6 +7,7 @@ import type { GladiatorOrMap } from "@/types/or";
 import { TEAM_BY_NAME } from "@/config/playersIndex";
 import { getMatchOutcome } from "@/lib/match";
 import { TeamCrest } from "@/components/branding";
+import { playerDisplayName, shouldShowPlayerName } from "@/lib/playerDisplay";
 import { PageContainer } from "@/components/layout";
 import {
   buildPredictedStandings,
@@ -209,7 +210,9 @@ export const ProfilesView = ({
                       >
                         {p.team}
                       </h4>
-                      <p className="text-fluid-sm text-slate-500 break-words leading-snug mt-0.5">{p.manager}</p>
+                      {shouldShowPlayerName(p) && (
+                        <p className="text-fluid-sm text-slate-500 break-words leading-snug mt-0.5">{playerDisplayName(p)}</p>
+                      )}
                     </div>
                   </button>
                 );
@@ -259,9 +262,8 @@ export const ProfilesView = ({
                     {currentPlayer.team}
                   </h2>
                   <p className="text-fluid-base text-slate-400">
-                    Menedżer:{" "}
-                    <span className="text-white font-semibold">{currentPlayer.manager}</span>{" "}
-                    <span className="text-slate-500">({currentPlayer.discord})</span>
+                    Gladiator:{" "}
+                    <span className="text-white font-semibold">{playerDisplayName(currentPlayer)}</span>
                   </p>
                   <DiplomaGenerator player={currentPlayer} highlights={currentHighlights} />
                 </div>

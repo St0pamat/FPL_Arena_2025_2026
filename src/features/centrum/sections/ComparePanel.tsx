@@ -7,6 +7,7 @@ import type { GladiatorOrMap } from "@/types/or";
 import { comparePlayers } from "@/features/centrum/lib/comparePlayers";
 import { formatOrDisplay } from "@/features/profiles/lib/or";
 import { TeamCrest } from "@/components/branding";
+import { playerDisplayName, shouldShowPlayerName } from "@/lib/playerDisplay";
 
 export const ComparePanel = ({
   players,
@@ -45,7 +46,7 @@ export const ComparePanel = ({
             >
               {players.map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.team}
+                  {p.team} — {playerDisplayName(p)}
                 </option>
               ))}
             </select>
@@ -59,6 +60,9 @@ export const ComparePanel = ({
             <div className="glass-panel panel-pad rounded-2xl border border-emerald-500/30 text-center">
               <TeamCrest fplId={result.playerA.id} size="lg" className="mx-auto mb-3" />
               <p className="font-bold text-white text-fluid-lg break-words">{result.playerA.team}</p>
+              {shouldShowPlayerName(result.playerA) && (
+                <p className="text-fluid-sm text-slate-500 mt-0.5 break-words">{playerDisplayName(result.playerA)}</p>
+              )}
               <p className="text-3xl font-athletic text-emerald-400 mt-2">{result.record.winsA}</p>
               <p className="text-xs text-slate-500 uppercase">wygrane H2H</p>
             </div>
@@ -73,6 +77,9 @@ export const ComparePanel = ({
             <div className="glass-panel panel-pad rounded-2xl border border-blue-500/30 text-center">
               <TeamCrest fplId={result.playerB.id} size="lg" className="mx-auto mb-3" />
               <p className="font-bold text-white text-fluid-lg break-words">{result.playerB.team}</p>
+              {shouldShowPlayerName(result.playerB) && (
+                <p className="text-fluid-sm text-slate-500 mt-0.5 break-words">{playerDisplayName(result.playerB)}</p>
+              )}
               <p className="text-3xl font-athletic text-blue-400 mt-2">{result.record.winsB}</p>
               <p className="text-xs text-slate-500 uppercase">wygrane H2H</p>
             </div>
@@ -84,7 +91,11 @@ export const ComparePanel = ({
               { p: result.playerB, or: result.orB, avg: result.avgVsTop10kB, score: result.totalFplB },
             ].map(({ p, or, avg, score }) => (
               <div key={p.id} className="glass-panel panel-pad rounded-xl border border-slate-800">
-                <p className="font-semibold text-white mb-3">{p.team}</p>
+                <p className="font-semibold text-white mb-1">{p.team}</p>
+                {shouldShowPlayerName(p) && (
+                  <p className="text-fluid-sm text-slate-500 mb-3 break-words">{playerDisplayName(p)}</p>
+                )}
+                {!shouldShowPlayerName(p) && <div className="mb-3" />}
                 <dl className="space-y-2 text-fluid-sm">
                   <div className="flex justify-between">
                     <dt className="text-slate-500">Score sezonu</dt>

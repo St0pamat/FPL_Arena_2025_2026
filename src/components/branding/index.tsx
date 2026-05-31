@@ -1,5 +1,6 @@
 import { LEAGUE_LOGO_SRC, teamLogoSrc } from "@/config/branding";
 import type { Player } from "@/types/player";
+import { playerDisplayName, shouldShowPlayerName } from "@/lib/playerDisplay";
 
 export const CREST_SIZES = {
     xs: { box: "w-8 h-8" },
@@ -53,8 +54,10 @@ export const TeamBrand = ({ player, crestSize = "sm", nameClassName = "text-slat
             <TeamCrest fplId={player.id} size={crestSize} className="shrink-0" />
             <div className={`min-w-0 ${isCol ? "w-full" : "flex-1"}`}>
                 <div className={`font-bold leading-snug break-words ${nameClassName}`}>{player.team}</div>
-                {player.manager ? (
-                    <div className={`text-xs text-slate-500 leading-snug break-words mt-0.5 ${subClassName}`}>{player.manager}</div>
+                {shouldShowPlayerName(player) ? (
+                    <div className={`text-xs text-slate-500 leading-snug break-words mt-0.5 ${subClassName}`}>
+                        {playerDisplayName(player)}
+                    </div>
                 ) : null}
             </div>
         </div>

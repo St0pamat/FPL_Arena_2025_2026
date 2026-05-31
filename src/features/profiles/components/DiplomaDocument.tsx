@@ -1,5 +1,6 @@
 import { LEAGUE_LOGO_SRC, teamLogoSrc } from "@/config/branding";
 import type { Player } from "@/types/player";
+import { playerDisplayName } from "@/lib/playerDisplay";
 import type { DiplomaContent } from "@/features/profiles/lib/diplomaContent";
 
 export const DiplomaDocument = ({
@@ -76,10 +77,7 @@ export const DiplomaDocument = ({
           >
             {player.team}
           </h2>
-          <p className="text-[11pt] text-slate-300">
-            {player.manager}{" "}
-            <span className="text-slate-500">({player.discord})</span>
-          </p>
+          <p className="text-[11pt] text-slate-300">{playerDisplayName(player)}</p>
         </div>
         <div className="shrink-0 text-center rounded-xl border border-amber-400/40 bg-gradient-to-b from-amber-500/20 to-amber-600/5 px-[5mm] py-[4mm] min-w-[32mm]">
           <p className="text-[8pt] uppercase tracking-wider text-amber-200/80">Miejsce</p>
