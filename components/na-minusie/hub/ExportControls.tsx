@@ -40,6 +40,8 @@ export function ExportControls({
   discordMessage,
   showDiscordSend = false,
   hasWebhook = false,
+  compact = false,
+  hideWebhookHint = false,
 }: {
   targetRef: RefObject<HTMLElement | null>;
   fileName: string;
@@ -48,6 +50,9 @@ export function ExportControls({
   /** Tylko zalogowany admin widzi „Wyślij na Discord” */
   showDiscordSend?: boolean;
   hasWebhook?: boolean;
+  /** Mniejsze przyciski w jednym rzędzie (Centrum Kolejki) */
+  compact?: boolean;
+  hideWebhookHint?: boolean;
 }) {
   const [dlBusy, setDlBusy] = useState(false);
   const [sendBusy, setSendBusy] = useState(false);
@@ -101,23 +106,28 @@ export function ExportControls({
     }
   }, [discordMessage, divisionId, fileName, sendBusy, targetRef]);
 
+  const iconClass = compact ? "h-3 w-3" : "h-3.5 w-3.5";
+  const btnBase = compact
+    ? "inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[10px] font-black uppercase tracking-wide transition disabled:opacity-50"
+    : "inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-black uppercase tracking-wider transition disabled:opacity-50";
+
   return (
-    <div className="space-y-2">
-      <div className="flex flex-wrap items-center gap-2">
+    <div className={compact ? "min-w-0" : "space-y-2"}>
+      <div className={`flex items-center ${compact ? "flex-nowrap gap-1" : "flex-wrap gap-2"}`}>
         <button
           type="button"
           onClick={onDownload}
           disabled={dlBusy || sendBusy}
-          className="inline-flex items-center gap-2 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-3.5 py-2 text-xs font-black uppercase tracking-wider text-emerald-300 transition hover:bg-emerald-500/20 disabled:opacity-50"
+          className={`${btnBase} border border-emerald-500/40 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20`}
         >
           {dlBusy ? (
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            <Loader2 className={`${iconClass} animate-spin`} />
           ) : dlDone ? (
-            <Check className="h-3.5 w-3.5" />
+            <Check className={iconClass} />
           ) : (
-            <Download className="h-3.5 w-3.5" />
+            <Download className={iconClass} />
           )}
-          {dlBusy ? "Generuję…" : dlDone ? "Pobrano!" : "Pobierz PNG"}
+          {dlBusy ? "…" : dlDone ? "OK" : compact ? "PNG" : "Pobierz PNG"}
         </button>
 
         {showDiscordSend ? (
@@ -130,26 +140,26 @@ export function ExportControls({
                 ? "Wyślij grafikę na kanał Discord tej dywizji"
                 : "Brak webhooka — ustaw w panelu Struktura Ligi"
             }
-            className="inline-flex items-center gap-2 rounded-xl border border-sky-500/40 bg-sky-500/10 px-3.5 py-2 text-xs font-black uppercase tracking-wider text-sky-300 transition hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-40"
+            className={`${btnBase} border border-sky-500/40 bg-sky-500/10 text-sky-300 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-40`}
           >
             {sendBusy ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              <Loader2 className={`${iconClass} animate-spin`} />
             ) : sendDone ? (
-              <Check className="h-3.5 w-3.5" />
+              <Check className={iconClass} />
             ) : (
-              <Send className="h-3.5 w-3.5" />
+              <Send className={iconClass} />
             )}
-            {sendBusy ? "Wysyłam…" : sendDone ? "Wysłano!" : "Wyślij na Discord"}
+            {sendBusy ? "…" : sendDone ? "OK" : compact ? "Discord" : "Wyślij na Discord"}
           </button>
         ) : null}
       </div>
       {sendError ? (
-        <p className="text-xs text-rose-300" role="alert">
+        <p className="mt-1 text-[10px] text-rose-300" role="alert">
           {sendError}
         </p>
       ) : null}
-      {showDiscordSend && !hasWebhook ? (
-        <p className="text-[10px] text-amber-400/80">
+      {!hideWebhookHint && showDiscordSend && !hasWebhook ? (
+        <p className="mt-1 text-[10px] text-amber-400/80">
           Ustaw Discord Webhook URL dla tej dywizji w adminie → Struktura Ligi.
         </p>
       ) : null}

@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { HubShell } from "@/components/na-minusie/hub/HubShell";
 import { HubUnderConstruction } from "@/components/na-minusie/hub/HubUnderConstruction";
-import { getPublicClubLogos, getPublicStructure } from "@/lib/public/actions";
+import { getPublicClubLogos, getPublicStructure, getPublicTierLogos } from "@/lib/public/actions";
 import type { ClubLogoRecord } from "@/lib/admin/clubLogos";
+import type { TierLogoRecord } from "@/lib/admin/tierLogos";
 import type { PublicStructure } from "@/lib/public/types";
 import { NA_MINUSIE_BRAND } from "@/lib/na-minusie";
 import { createClient } from "@/lib/supabase/server";
@@ -36,15 +37,18 @@ export default async function PublicHubPage() {
 
   let structure: PublicStructure = { seasons: [], pyramids: [], divisions: [] };
   let logos: ClubLogoRecord[] = [];
+  let tierLogos: TierLogoRecord[] = [];
   let loadError: string | null = null;
 
   try {
-    const [structureResult, logosResult] = await Promise.all([
+    const [structureResult, logosResult, tierLogosResult] = await Promise.all([
       getPublicStructure(),
       getPublicClubLogos(),
+      getPublicTierLogos(),
     ]);
     structure = structureResult;
     logos = logosResult;
+    tierLogos = tierLogosResult;
   } catch (e) {
     loadError = e instanceof Error ? e.message : "Nie udało się wczytać danych huba.";
   }
@@ -72,7 +76,7 @@ export default async function PublicHubPage() {
             </p>
           </div>
         ) : null}
-        <HubShell structure={structure} logos={logos} isAdmin />
+        <HubShell structure={structure} logos={logos} tierLogos={tierLogos} isAdmin />
       </div>
     </main>
   );

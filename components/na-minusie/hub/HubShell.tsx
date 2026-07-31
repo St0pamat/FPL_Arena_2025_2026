@@ -4,18 +4,21 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import {
   Activity,
-  Crown,
+  CalendarRange,
   LayoutList,
   Loader2,
-  CalendarRange,
+  Shuffle,
   Swords,
   Trophy,
+  UserCircle,
+  Users,
 } from "lucide-react";
 import {
   getDivisionStandings,
   getGameweekDetails,
 } from "@/lib/public/actions";
 import type { ClubLogoRecord } from "@/lib/admin/clubLogos";
+import type { TierLogoRecord } from "@/lib/admin/tierLogos";
 import type {
   DivisionStandingsPayload,
   GameweekDetailsPayload,
@@ -25,56 +28,55 @@ import { NA_MINUSIE_PATHS } from "@/lib/na-minusie/links";
 import { StandingsTable } from "@/components/na-minusie/hub/StandingsTable";
 import { GameweekCenter } from "@/components/na-minusie/hub/GameweekCenter";
 import { ScheduleView } from "@/components/na-minusie/hub/ScheduleView";
+import {
+  resolveTierLogoName,
+  TierCrest,
+} from "@/components/na-minusie/TierCrest";
 
-type TabId = "table" | "gw" | "schedule";
+type HubTab = "tabela" | "kolejki" | "terminarz" | "profile";
 
-const selectClass =
-  "w-full rounded-xl border border-slate-700/70 bg-slate-950/80 px-3 py-2.5 text-sm text-white outline-none focus:border-emerald-400 disabled:opacity-50";
+const SECTION_TABS: {
+  id: HubTab;
+  label: string;
+  icon: typeof Trophy;
+}[] = [
+  { id: "tabela", label: "Tabela", icon: Trophy },
+  { id: "kolejki", label: "Centrum kolejki", icon: Swords },
+  { id: "terminarz", label: "Terminarz", icon: CalendarRange },
+  { id: "profile", label: "Uczestnicy", icon: Users },
+];
 
 export function HubShell({
   structure,
   logos,
+  tierLogos = [],
   isAdmin = false,
 }: {
   structure: PublicStructure;
   logos: ClubLogoRecord[];
+  tierLogos?: TierLogoRecord[];
   isAdmin?: boolean;
 }) {
   const defaultSeasonId = structure.seasons[0]?.id ?? "";
   const [seasonId, setSeasonId] = useState(defaultSeasonId);
 
-  const pyramidsForSeason = useMemo(() => {
-    const ids = new Set(
-      structure.divisions.filter((d) => d.season_id === seasonId).map((d) => d.pyramid_id),
-    );
-    return structure.pyramids.filter((p) => ids.has(p.id));
-  }, [structure, seasonId]);
-
-  const [pyramidId, setPyramidId] = useState(pyramidsForSeason[0]?.id ?? "");
-
-  useEffect(() => {
-    if (!pyramidsForSeason.find((p) => p.id === pyramidId)) {
-      setPyramidId(pyramidsForSeason[0]?.id ?? "");
-    }
-  }, [pyramidsForSeason, pyramidId]);
-
   const divisions = useMemo(
     () =>
       structure.divisions
-        .filter((d) => d.season_id === seasonId && d.pyramid_id === pyramidId)
-        .sort((a, b) => a.tier - b.tier),
-    [structure, seasonId, pyramidId],
+        .filter((d) => d.season_id === seasonId)
+        .sort((a, b) => a.tier - b.tier || a.name.localeCompare(b.name, "pl")),
+    [structure.divisions, seasonId],
   );
 
-  const [divisionId, setDivisionId] = useState(divisions[0]?.id ?? "");
+  const [activeDivisionId, setActiveDivisionId] = useState(divisions[0]?.id ?? "");
+  const [activeTab, setActiveTab] = useState<HubTab>("tabela");
 
   useEffect(() => {
-    if (!divisions.find((d) => d.id === divisionId)) {
-      setDivisionId(divisions[0]?.id ?? "");
+    if (!divisions.find((d) => d.id === activeDivisionId)) {
+      setActiveDivisionId(divisions[0]?.id ?? "");
     }
-  }, [divisions, divisionId]);
+  }, [divisions, activeDivisionId]);
 
-  const [tab, setTab] = useState<TabId>("table");
   const [bundle, setBundle] = useState<DivisionStandingsPayload | null>(null);
   const [gwDetails, setGwDetails] = useState<GameweekDetailsPayload | null>(null);
   const [selectedGw, setSelectedGw] = useState(1);
@@ -83,7 +85,7 @@ export function HubShell({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!divisionId) {
+    if (!activeDivisionId) {
       setBundle(null);
       setGwDetails(null);
       return;
@@ -91,50 +93,47 @@ export function HubShell({
     setError(null);
     startTransition(async () => {
       try {
-        const data = await getDivisionStandings(divisionId);
+        const data = await getDivisionStandings(activeDivisionId);
         setBundle(data);
-        const firstGw = data.finishedGameweeks[data.finishedGameweeks.length - 1]
-          ?? data.finishedGameweeks[0]
-          ?? 1;
+        const firstGw =
+          data.finishedGameweeks[data.finishedGameweeks.length - 1] ??
+          data.finishedGameweeks[0] ??
+          1;
         setSelectedGw(firstGw);
       } catch (e) {
         setBundle(null);
         setError(e instanceof Error ? e.message : "Błąd ładowania tabeli");
       }
     });
-  }, [divisionId]);
+  }, [activeDivisionId]);
 
   useEffect(() => {
-    if (!divisionId || tab !== "gw") return;
+    if (!activeDivisionId || activeTab !== "kolejki") return;
     if (!bundle?.finishedGameweeks.includes(selectedGw)) {
       setGwDetails(null);
       return;
     }
     startGwTransition(async () => {
       try {
-        const data = await getGameweekDetails(divisionId, selectedGw);
+        const data = await getGameweekDetails(activeDivisionId, selectedGw);
         setGwDetails(data);
       } catch {
         setGwDetails(null);
       }
     });
-  }, [divisionId, selectedGw, tab, bundle?.finishedGameweeks]);
+  }, [activeDivisionId, selectedGw, activeTab, bundle?.finishedGameweeks]);
 
-  const seasonName =
-    structure.seasons.find((s) => s.id === seasonId)?.name ?? "—";
-  const divisionName = divisions.find((d) => d.id === divisionId)?.name ?? "—";
-  const pyramidName = pyramidsForSeason.find((p) => p.id === pyramidId)?.name ?? "—";
+  const seasonName = structure.seasons.find((s) => s.id === seasonId)?.name ?? "—";
+  const activeDivision = divisions.find((d) => d.id === activeDivisionId);
+  const divisionName = activeDivision?.name ?? "—";
+  const pyramidName =
+    structure.pyramids.find((p) => p.id === activeDivision?.pyramid_id)?.name ?? "—";
+
   const exportMeta = {
     season: seasonName !== "—" ? seasonName : undefined,
     pyramid: pyramidName !== "—" ? pyramidName : undefined,
     division: divisionName !== "—" ? divisionName : undefined,
   };
-
-  const tabs: { id: TabId; label: string; icon: typeof Trophy }[] = [
-    { id: "table", label: "Tabela ogólna", icon: Trophy },
-    { id: "gw", label: "Centrum kolejki", icon: Swords },
-    { id: "schedule", label: "Pełny terminarz", icon: CalendarRange },
-  ];
 
   if (!structure.seasons.length) {
     return (
@@ -157,202 +156,191 @@ export function HubShell({
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
-      <header className="mb-6 flex flex-col gap-4 sm:mb-8 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-[10px] font-black uppercase tracking-[0.35em] text-emerald-400">
-            Strefa Gracza · Mediana 2+1
-          </p>
-          <h1 className="mt-1 font-athletic text-3xl uppercase tracking-wide text-white sm:text-4xl">
-            Strefa Gracza
-          </h1>
-          <p className="mt-1 text-sm text-slate-400">
-            Tabele, H2H, progi mediany i herby klubów — Twoje centrum dowodzenia.
-          </p>
+      {/* Header */}
+      <header className="mb-6 sm:mb-8">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <p className="text-[10px] font-black uppercase tracking-[0.35em] text-emerald-400">
+              Centrum Dowodzenia
+            </p>
+            <h1 className="mt-1 font-athletic text-3xl uppercase tracking-wide text-white sm:text-4xl">
+              Strefa Gracza
+            </h1>
+
+            <div className="mt-4 flex flex-wrap items-center gap-2.5">
+              {structure.seasons.length > 1 ? (
+                <label className="inline-flex items-center gap-2">
+                  <span className="sr-only">Sezon</span>
+                  <select
+                    value={seasonId}
+                    onChange={(e) => setSeasonId(e.target.value)}
+                    className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-4 py-1.5 text-sm font-bold text-emerald-300 outline-none focus:border-emerald-400"
+                  >
+                    {structure.seasons.map((s) => (
+                      <option key={s.id} value={s.id} className="bg-slate-950 text-white">
+                        {s.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : (
+                <span className="inline-flex items-center rounded-full border border-emerald-500/40 bg-emerald-500/10 px-4 py-1.5 text-sm font-bold text-emerald-300">
+                  {seasonName}
+                </span>
+              )}
+
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-700 bg-slate-900/80 px-3 py-1.5 text-xs font-semibold text-slate-300">
+                <Activity className="h-3.5 w-3.5 text-emerald-400" aria-hidden />
+                Kolejka {bundle ? `${bundle.playedGwCount}/${bundle.maxGameweek}` : "—"}
+              </span>
+            </div>
+          </div>
         </div>
-        <Link
-          href={NA_MINUSIE_PATHS.home}
-          className="text-xs font-bold uppercase tracking-wider text-slate-500 hover:text-emerald-400"
-        >
-          ← Na Minusie
-        </Link>
+
+        {/* Compact stats */}
+        <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3">
+          <StatChip
+            label="Śr. FPL"
+            value={bundle?.averageFpl != null ? String(bundle.averageFpl) : "—"}
+          />
+          <StatChip
+            label="Lider"
+            value={
+              bundle?.leader
+                ? bundle.leader.team.chosen_club ||
+                  bundle.leader.team.fpl_team_name?.trim() ||
+                  "—"
+                : "—"
+            }
+          />
+          <StatChip
+            label="Dywizja"
+            value={divisionName}
+            className="col-span-2 sm:col-span-1"
+          />
+        </div>
       </header>
 
-      {/* Selectors */}
-      <section className="mb-4 grid gap-3 rounded-2xl border border-slate-800 bg-slate-900/80 p-4 backdrop-blur-md sm:grid-cols-3 sm:p-5">
-        {structure.seasons.length > 1 ? (
-          <div>
-            <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">
-              Sezon
-            </label>
-            <select
-              value={seasonId}
-              onChange={(e) => setSeasonId(e.target.value)}
-              className={selectClass}
-            >
-              {structure.seasons.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        ) : (
-          <div className="flex flex-col justify-center rounded-xl border border-slate-800 bg-slate-950/50 px-3 py-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-              Sezon
-            </span>
-            <span className="font-athletic text-sm uppercase text-white">{seasonName}</span>
-          </div>
-        )}
-        <div>
-          <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">
-            Piramida
-          </label>
-          <select
-            value={pyramidId}
-            onChange={(e) => setPyramidId(e.target.value)}
-            className={selectClass}
-            disabled={!pyramidsForSeason.length}
-          >
-            {!pyramidsForSeason.length ? (
-              <option value="">Brak</option>
-            ) : (
-              pyramidsForSeason.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))
-            )}
-          </select>
-        </div>
-        <div>
-          <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">
-            Dywizja
-          </label>
-          <select
-            value={divisionId}
-            onChange={(e) => setDivisionId(e.target.value)}
-            className={selectClass}
-            disabled={!divisions.length}
-          >
-            {!divisions.length ? (
-              <option value="">Brak</option>
-            ) : (
-              divisions.map((d) => (
-                <option key={d.id} value={d.id}>
-                  T{d.tier} — {d.name}
-                </option>
-              ))
-            )}
-          </select>
-        </div>
-      </section>
-
-      {/* Quick stats */}
-      <section className="mb-6 grid gap-3 sm:grid-cols-3">
-        <StatCard
-          icon={Activity}
-          label="Rozegrane GW"
-          value={bundle ? String(bundle.playedGwCount) : "—"}
-        />
-        <StatCard
-          icon={LayoutList}
-          label="Śr. punkty FPL"
-          value={bundle?.averageFpl != null ? String(bundle.averageFpl) : "—"}
-        />
-        <StatCard
-          icon={Crown}
-          label="Lider"
-          value={
-            bundle?.leader
-              ? bundle.leader.team.chosen_club ||
-                bundle.leader.team.fpl_team_name?.trim() ||
-                "—"
-              : "—"
-          }
-          sub={
-            bundle?.leader
-              ? [
-                  bundle.leader.team.fpl_team_name?.trim(),
-                  `${bundle.leader.totalPoints} pkt`,
-                  divisionName,
-                ]
-                  .filter(Boolean)
-                  .join(" · ")
-              : seasonName
-          }
-        />
-      </section>
-
-      {/* Tabs */}
-      <nav className="mb-6 flex flex-wrap gap-2" aria-label="Zakładki huba">
-        {tabs.map(({ id, label, icon: Icon }) => (
-          <button
-            key={id}
-            type="button"
-            onClick={() => setTab(id)}
-            className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-black uppercase tracking-wider transition ${
-              tab === id
-                ? "bg-emerald-400 text-black shadow-lg shadow-emerald-500/20"
-                : "border border-slate-800 bg-slate-900/60 text-slate-400 hover:text-white"
-            }`}
-          >
-            <Icon className="h-3.5 w-3.5" />
-            {label}
-          </button>
-        ))}
-      </nav>
-
-      {error && (
-        <p className="mb-4 rounded-xl border border-rose-500/30 bg-rose-950/40 px-4 py-3 text-sm text-rose-200">
-          {error}
-        </p>
-      )}
-
-      {pending && !bundle ? (
-        <div className="flex items-center justify-center gap-2 rounded-2xl border border-slate-800 bg-slate-900/60 py-20 text-slate-400">
-          <Loader2 className="h-5 w-5 animate-spin text-emerald-400" />
-          Ładowanie dywizji…
-        </div>
-      ) : !bundle ? (
-        <div className="rounded-2xl border border-dashed border-slate-700 px-6 py-16 text-center text-sm text-slate-500">
-          Wybierz piramidę i dywizję.
+      {/* Division pills */}
+      {divisions.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-slate-700 px-6 py-12 text-center text-sm text-slate-500">
+          Brak dywizji w tym sezonie.
         </div>
       ) : (
         <>
-          {tab === "table" && (
-            <StandingsTable
-              rows={bundle.standings}
-              logos={logos}
-              tier={bundle.tier}
-              exportMeta={exportMeta}
-              divisionId={bundle.divisionId}
-              showDiscordSend={isAdmin}
-              hasWebhook={bundle.hasDiscordWebhook}
-            />
-          )}
-          {tab === "gw" && (
-            <GameweekCenter
-              maxGameweek={bundle.maxGameweek}
-              finishedGameweeks={bundle.finishedGameweeks}
-              selectedGw={selectedGw}
-              onSelectGw={setSelectedGw}
-              details={gwDetails}
-              loading={gwPending}
-              logos={logos}
-              exportMeta={exportMeta}
-              fixtures={bundle.fixtures}
-              divisionId={bundle.divisionId}
-              showDiscordSend={isAdmin}
-              hasWebhook={bundle.hasDiscordWebhook}
-            />
-          )}
-          {tab === "schedule" && (
-            <ScheduleView
-              teams={bundle.teams}
-              fixtures={bundle.fixtures}
-              logos={logos}
-            />
+          <nav
+            className="-mx-1 mb-5 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            aria-label="Wybór dywizji"
+          >
+            {divisions.map((d) => {
+              const active = d.id === activeDivisionId;
+              const crestName = resolveTierLogoName(d.name, d.tier);
+              return (
+                <button
+                  key={d.id}
+                  type="button"
+                  onClick={() => setActiveDivisionId(d.id)}
+                  className={`inline-flex shrink-0 items-center gap-2.5 rounded-full border px-3.5 py-2 text-sm font-bold transition-all ${
+                    active
+                      ? "border-emerald-500 bg-emerald-600/20 text-white shadow-[0_0_20px_rgba(16,185,129,0.15)]"
+                      : "border-slate-700/80 bg-slate-800/50 text-slate-400 hover:border-slate-600 hover:text-slate-200"
+                  }`}
+                >
+                  <TierCrest tierName={crestName} logos={tierLogos} size="sm" />
+                  <span className="whitespace-nowrap">{d.name}</span>
+                </button>
+              );
+            })}
+          </nav>
+
+          {/* Section sub-nav */}
+          <nav
+            className="mb-6 flex gap-1 overflow-x-auto border-b border-slate-800 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            aria-label="Sekcje dywizji"
+          >
+            {SECTION_TABS.map(({ id, label, icon: Icon }) => {
+              const active = activeTab === id;
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setActiveTab(id)}
+                  className={`inline-flex shrink-0 items-center gap-2 border-b-2 px-3 py-3 text-xs font-black uppercase tracking-wider transition-colors sm:px-4 ${
+                    active
+                      ? "border-emerald-500 text-white"
+                      : "border-transparent text-slate-500 hover:text-slate-300"
+                  }`}
+                >
+                  <Icon className="h-3.5 w-3.5" aria-hidden />
+                  {label}
+                </button>
+              );
+            })}
+          </nav>
+
+          {error ? (
+            <p className="mb-4 rounded-xl border border-rose-500/30 bg-rose-950/40 px-4 py-3 text-sm text-rose-200">
+              {error}
+            </p>
+          ) : null}
+
+          {pending && !bundle ? (
+            <div className="flex items-center justify-center gap-2 rounded-2xl border border-slate-800 bg-slate-900/60 py-20 text-slate-400">
+              <Loader2 className="h-5 w-5 animate-spin text-emerald-400" />
+              Ładowanie dywizji…
+            </div>
+          ) : !bundle && activeTab !== "profile" ? (
+            <div className="rounded-2xl border border-dashed border-slate-700 px-6 py-16 text-center text-sm text-slate-500">
+              Wybierz dywizję.
+            </div>
+          ) : (
+            <div key={`${activeDivisionId}-${activeTab}`} className="nm-hub-panel min-h-[20rem]">
+              {/* Dane scoped: getDivisionStandings(activeDivisionId) → tylko aktywna dywizja */}
+              {activeTab === "tabela" && bundle ? (
+                <StandingsTable
+                  rows={bundle.standings}
+                  logos={logos}
+                  tier={bundle.tier}
+                  exportMeta={exportMeta}
+                  divisionId={bundle.divisionId}
+                  showDiscordSend={isAdmin}
+                  hasWebhook={bundle.hasDiscordWebhook}
+                />
+              ) : null}
+
+              {activeTab === "kolejki" && bundle ? (
+                <GameweekCenter
+                  maxGameweek={bundle.maxGameweek}
+                  finishedGameweeks={bundle.finishedGameweeks}
+                  selectedGw={selectedGw}
+                  onSelectGw={setSelectedGw}
+                  details={gwDetails}
+                  loading={gwPending}
+                  logos={logos}
+                  exportMeta={exportMeta}
+                  fixtures={bundle.fixtures}
+                  divisionId={bundle.divisionId}
+                  showDiscordSend={isAdmin}
+                  hasWebhook={bundle.hasDiscordWebhook}
+                />
+              ) : null}
+
+              {activeTab === "terminarz" && bundle ? (
+                bundle.fixtures.length === 0 ? (
+                  <SchedulePlaceholder divisionName={divisionName} />
+                ) : (
+                  <ScheduleView
+                    teams={bundle.teams}
+                    fixtures={bundle.fixtures}
+                    logos={logos}
+                  />
+                )
+              ) : null}
+
+              {activeTab === "profile" ? (
+                <ProfilesPlaceholder divisionName={divisionName} />
+              ) : null}
+            </div>
           )}
         </>
       )}
@@ -360,27 +348,52 @@ export function HubShell({
   );
 }
 
-function StatCard({
-  icon: Icon,
+function StatChip({
   label,
   value,
-  sub,
+  className = "",
 }: {
-  icon: typeof Crown;
   label: string;
   value: string;
-  sub?: string;
+  className?: string;
 }) {
   return (
-    <div className="rounded-2xl border border-slate-800 bg-slate-900/80 px-4 py-3 backdrop-blur-md">
-      <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">
-        <Icon className="h-3.5 w-3.5 text-emerald-400" />
-        {label}
-      </div>
-      <p className="mt-1 truncate font-athletic text-xl uppercase tracking-wide text-white">
-        {value}
+    <div
+      className={`rounded-xl border border-slate-800 bg-slate-900/70 px-3 py-2.5 ${className}`.trim()}
+    >
+      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{label}</p>
+      <p className="mt-0.5 truncate text-sm font-bold text-white">{value}</p>
+    </div>
+  );
+}
+
+function ProfilesPlaceholder({ divisionName }: { divisionName: string }) {
+  return (
+    <div className="flex min-h-[40vh] flex-col items-center justify-center rounded-xl border border-slate-800 bg-slate-900/30 px-6 py-16 text-center">
+      <UserCircle className="mb-5 h-16 w-16 text-emerald-500/50" strokeWidth={1.25} aria-hidden />
+      <h2 className="font-athletic text-2xl uppercase tracking-wide text-white sm:text-3xl">
+        Profile i Statystyki Menedżerów
+      </h2>
+      <p className="mt-3 max-w-lg text-sm leading-relaxed text-slate-400 sm:text-base">
+        Karty zawodników, historia transferów i osiągnięcia w budowie. Zbieramy dane do pierwszych
+        statystyk
+        {divisionName !== "—" ? ` · ${divisionName}` : ""}.
       </p>
-      {sub ? <p className="truncate text-[11px] text-slate-500">{sub}</p> : null}
+    </div>
+  );
+}
+
+function SchedulePlaceholder({ divisionName }: { divisionName: string }) {
+  return (
+    <div className="flex min-h-[40vh] flex-col items-center justify-center rounded-xl border border-slate-800 bg-slate-900/30 px-6 py-16 text-center">
+      <Shuffle className="mb-5 h-14 w-14 text-emerald-500/50" strokeWidth={1.25} aria-hidden />
+      <h2 className="font-athletic text-2xl uppercase tracking-wide text-white sm:text-3xl">
+        Terminarz
+      </h2>
+      <p className="mt-3 max-w-lg text-sm leading-relaxed text-slate-400 sm:text-base">
+        Terminarz {divisionName !== "—" ? `dla ${divisionName}` : "tej dywizji"} pojawi się po
+        oficjalnym losowaniu meczów. Wróć tutaj po maszynie losującej.
+      </p>
     </div>
   );
 }

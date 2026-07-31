@@ -110,12 +110,14 @@ export function StickyNavbar() {
             );
           })}
           {isAdmin ? (
-            <Link
+            <a
               href={NA_MINUSIE_PATHS.admin}
+              target="_blank"
+              rel="noopener noreferrer"
               className={navLinkClass(pathname.startsWith("/admin"))}
             >
               Panel Admina
-            </Link>
+            </a>
           ) : null}
         </nav>
       </div>

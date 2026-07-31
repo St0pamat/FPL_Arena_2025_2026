@@ -4,18 +4,36 @@ import { useEffect, useState } from "react";
 import { Shield } from "lucide-react";
 import {
   findTierLogo,
+  PYRAMID_TIER_NAMES,
   tierLogoPublicUrl,
   type TierLogoRecord,
 } from "@/lib/admin/tierLogos";
 
-/** Herb / logo dywizji na piramidzie — fallback: zielona tarcza. */
+/** Mapuje nazwę/tier dywizji z bazy na klucz logo piramidy. */
+export function resolveTierLogoName(divisionName: string, tier?: number): string {
+  const raw = divisionName.trim();
+  const lower = raw.toLowerCase();
+
+  if (lower.includes("premier")) return PYRAMID_TIER_NAMES[0];
+  if (lower.includes("championship")) return PYRAMID_TIER_NAMES[1];
+  if (lower.includes("league one") || lower.includes("league 1")) return PYRAMID_TIER_NAMES[2];
+  if (lower.includes("league two") || lower.includes("league 2")) return PYRAMID_TIER_NAMES[3];
+  if (lower.includes("national")) return PYRAMID_TIER_NAMES[4];
+
+  if (tier && tier >= 1 && tier <= 5) return PYRAMID_TIER_NAMES[tier - 1];
+  return raw;
+}
+
+/** Herb / logo dywizji — fallback: zielona tarcza. */
 export function TierCrest({
   tierName,
   logos = [],
+  size = "md",
   className = "",
 }: {
   tierName: string;
   logos?: TierLogoRecord[];
+  size?: "sm" | "md" | "lg";
   className?: string;
 }) {
   const hit = findTierLogo(logos, tierName);
@@ -26,19 +44,26 @@ export function TierCrest({
     setFailed(false);
   }, [src, tierName]);
 
+  const box =
+    size === "sm"
+      ? "h-7 w-7 rounded-lg p-0.5"
+      : "h-12 w-12 rounded-xl p-1 sm:h-14 sm:w-14";
+
+  const icon = size === "sm" ? "h-3.5 w-3.5" : "h-5 w-5 sm:h-6 sm:w-6";
+
   if (!src || failed) {
     return (
       <div
-        className={`inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#39FF14]/10 ring-1 ring-[#39FF14]/20 sm:h-14 sm:w-14 ${className}`.trim()}
+        className={`inline-flex shrink-0 items-center justify-center bg-[#39FF14]/10 ring-1 ring-[#39FF14]/20 ${box} ${className}`.trim()}
       >
-        <Shield className="h-5 w-5 text-[#39FF14] sm:h-6 sm:w-6" strokeWidth={1.75} aria-hidden />
+        <Shield className={`${icon} text-[#39FF14]`} strokeWidth={1.75} aria-hidden />
       </div>
     );
   }
 
   return (
     <div
-      className={`inline-flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white/95 p-1 ring-1 ring-slate-700/60 sm:h-14 sm:w-14 ${className}`.trim()}
+      className={`inline-flex shrink-0 items-center justify-center overflow-hidden bg-white/95 ring-1 ring-slate-700/60 ${box} ${className}`.trim()}
       title={tierName}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}

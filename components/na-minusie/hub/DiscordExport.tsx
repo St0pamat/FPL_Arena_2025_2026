@@ -17,18 +17,20 @@ export function DiscordExportFrame({
   discordMessage,
   showDiscordSend = false,
   hasWebhook = false,
+  /** Bez sztywnego min-width — do wąskich kolumn (Centrum Kolejki) */
+  fluid = false,
 }: {
   fileName: string;
   title: string;
   subtitle?: string;
   children: ReactNode;
   className?: string;
-  /** Stabilne id węzła (export-standings / export-gw-results / export-gw-next) */
   exportId?: string;
   divisionId?: string;
   discordMessage?: string;
   showDiscordSend?: boolean;
   hasWebhook?: boolean;
+  fluid?: boolean;
 }) {
   const nodeRef = useRef<HTMLDivElement>(null);
   const id =
@@ -37,10 +39,7 @@ export function DiscordExportFrame({
 
   return (
     <div className={`space-y-3 ${className}`.trim()}>
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-600">
-          Export Discord · PNG Retina
-        </p>
+      <div className="flex flex-wrap items-center justify-end gap-2">
         <ExportControls
           targetRef={nodeRef}
           fileName={fileName}
@@ -54,11 +53,16 @@ export function DiscordExportFrame({
       <div
         ref={nodeRef}
         id={id}
-        className="overflow-x-auto rounded-2xl border border-slate-800 shadow-2xl shadow-black/50"
+        className={`rounded-2xl border border-slate-800 shadow-2xl shadow-black/50 ${
+          fluid ? "overflow-hidden" : "overflow-x-auto"
+        }`}
         style={{ backgroundColor: EXPORT_BG }}
       >
-        <div className="min-w-[880px] p-6 sm:p-8" style={{ backgroundColor: EXPORT_BG }}>
-          <header className="mb-5 flex items-end justify-between gap-4 border-b border-emerald-500/30 pb-4">
+        <div
+          className={`p-4 sm:p-6 ${fluid ? "w-full min-w-0" : "min-w-[880px] sm:p-8"}`}
+          style={{ backgroundColor: EXPORT_BG }}
+        >
+          <header className="mb-5 border-b border-emerald-500/30 pb-4">
             <div>
               <p className="text-[10px] font-black uppercase tracking-[0.35em] text-emerald-400">
                 {NA_MINUSIE_BRAND}
@@ -68,9 +72,6 @@ export function DiscordExportFrame({
               </h2>
               {subtitle ? <p className="mt-1 text-xs text-slate-400">{subtitle}</p> : null}
             </div>
-            <p className="shrink-0 text-[10px] font-bold uppercase tracking-wider text-slate-600">
-              Mediana 2+1
-            </p>
           </header>
           {children}
         </div>

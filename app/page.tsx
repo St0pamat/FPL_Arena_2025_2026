@@ -1,10 +1,12 @@
 import { PortalCard } from "@/components/platform/PortalCard";
+import { SplashAdminLink } from "@/components/platform/SplashAdminLink";
 import { ARENA_PORTAL_ALT, ARENA_PORTAL_LOGO } from "@/lib/arena";
 import { NA_MINUSIE_LOGO, NA_MINUSIE_LOGO_ALT } from "@/lib/na-minusie";
 
 export default function HomePage() {
   return (
     <main className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-[#0B0F19] px-4 py-14 sm:px-6 sm:py-16 lg:px-8">
+      <SplashAdminLink />
       <div className="splash-grid pointer-events-none absolute inset-0" aria-hidden />
 
       <div className="relative z-10 mb-10 max-w-2xl text-center sm:mb-14">

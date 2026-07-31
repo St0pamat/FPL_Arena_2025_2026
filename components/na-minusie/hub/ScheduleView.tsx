@@ -17,13 +17,24 @@ export function ScheduleView({
   logos?: ClubLogoRecord[];
 }) {
   const [filterTeamId, setFilterTeamId] = useState("");
+  const [filterGw, setFilterGw] = useState("");
+
+  const availableGws = useMemo(() => {
+    const set = new Set(fixtures.map((f) => f.gameweek));
+    return [...set].sort((a, b) => a - b);
+  }, [fixtures]);
 
   const byGw = useMemo(() => {
-    const filtered = filterTeamId
-      ? fixtures.filter(
-          (f) => f.home_team_id === filterTeamId || f.away_team_id === filterTeamId,
-        )
-      : fixtures;
+    let filtered = fixtures;
+    if (filterTeamId) {
+      filtered = filtered.filter(
+        (f) => f.home_team_id === filterTeamId || f.away_team_id === filterTeamId,
+      );
+    }
+    if (filterGw) {
+      const gw = Number(filterGw);
+      filtered = filtered.filter((f) => f.gameweek === gw);
+    }
     const map = new Map<number, PublicFixture[]>();
     for (const f of filtered) {
       const list = map.get(f.gameweek) ?? [];
@@ -31,7 +42,7 @@ export function ScheduleView({
       map.set(f.gameweek, list);
     }
     return [...map.entries()].sort((a, b) => a[0] - b[0]);
-  }, [fixtures, filterTeamId]);
+  }, [fixtures, filterTeamId, filterGw]);
 
   return (
     <div className="space-y-6">
@@ -44,30 +55,54 @@ export function ScheduleView({
             </h2>
           </div>
           <p className="text-xs text-slate-500">
-            Filtruj po swojej drużynie, aby zobaczyć kalendarz na cały sezon.
+            Filtruj po drużynie i kolejce (GW).
           </p>
         </div>
-        <label className="relative block w-full sm:max-w-xs">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
-          <select
-            value={filterTeamId}
-            onChange={(e) => setFilterTeamId(e.target.value)}
-            className="w-full appearance-none rounded-xl border border-slate-700 bg-slate-950 py-2.5 pl-10 pr-4 text-sm text-white outline-none focus:border-emerald-400"
-          >
-            <option value="">Wszystkie drużyny</option>
-            {teams.map((t) => (
-              <option key={t.id} value={t.id}>
-                {teamPrimaryLabel(t)}
-                {t.fpl_team_name?.trim() ? ` · ${t.fpl_team_name.trim()}` : ""} ({t.discord_nick})
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="flex w-full flex-col gap-2 sm:max-w-md sm:flex-row">
+          <label className="relative block min-w-0 flex-1">
+            <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              Kolejka
+            </span>
+            <select
+              value={filterGw}
+              onChange={(e) => setFilterGw(e.target.value)}
+              className="w-full appearance-none rounded-xl border border-slate-700 bg-slate-950 py-2.5 px-3 text-sm text-white outline-none focus:border-emerald-400"
+            >
+              <option value="">Wszystkie GW</option>
+              {availableGws.map((gw) => (
+                <option key={gw} value={String(gw)}>
+                  GW{gw}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="relative block min-w-0 flex-[1.4]">
+            <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              Drużyna
+            </span>
+            <Search className="pointer-events-none absolute left-3 bottom-3 h-4 w-4 text-slate-500" />
+            <select
+              value={filterTeamId}
+              onChange={(e) => setFilterTeamId(e.target.value)}
+              className="w-full appearance-none rounded-xl border border-slate-700 bg-slate-950 py-2.5 pl-10 pr-4 text-sm text-white outline-none focus:border-emerald-400"
+            >
+              <option value="">Wszystkie drużyny</option>
+              {teams.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {teamPrimaryLabel(t)}
+                  {t.fpl_team_name?.trim() ? ` · ${t.fpl_team_name.trim()}` : ""} ({t.discord_nick})
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
       </div>
 
       {!byGw.length ? (
         <div className="rounded-2xl border border-dashed border-slate-700 px-6 py-12 text-center text-sm text-slate-500">
-          Brak meczów w terminarzu.
+          {filterTeamId || filterGw
+            ? "Brak meczów dla wybranych filtrów."
+            : "Brak meczów w terminarzu."}
         </div>
       ) : (
         <div className="space-y-5">

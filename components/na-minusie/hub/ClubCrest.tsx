@@ -6,18 +6,19 @@ import type { ClubLogoRecord } from "@/lib/admin/clubLogos";
 import { resolvePublicCrestSrc } from "@/lib/public/clubCrest";
 
 /**
- * Herb wypełnia wysokość kafelka (self-stretch + aspect-square).
- * Margines góra/dół ≈ 1–2px — logo zawsze max. duże w wierszu.
+ * Herb w kafelku.
+ * `fill` = rozciąga się z wierszem (tabele).
+ * `md` / `lg` = stały kwadrat (pojedynki H2H).
  */
 export function ClubCrest({
   clubName,
   logos = [],
+  size = "fill",
   className = "",
 }: {
   clubName?: string | null;
   logos?: ClubLogoRecord[];
-  /** @deprecated — herby zawsze fill; prop ignorowany */
-  size?: string;
+  size?: "fill" | "md" | "lg";
   className?: string;
 }) {
   const resolved = resolvePublicCrestSrc(clubName, logos);
@@ -29,18 +30,22 @@ export function ClubCrest({
   }, [resolved, clubName]);
 
   const shell =
-    `relative aspect-square h-auto w-auto min-h-[3rem] shrink-0 self-stretch py-px ${className}`.trim();
+    size === "lg"
+      ? `relative h-16 w-16 shrink-0 sm:h-20 sm:w-20 ${className}`.trim()
+      : size === "md"
+        ? `relative h-12 w-12 shrink-0 sm:h-14 sm:w-14 ${className}`.trim()
+        : `relative aspect-square h-auto w-auto min-h-[3rem] shrink-0 self-stretch py-px ${className}`.trim();
 
   if (!resolved || failed) {
     return (
       <span
-        className={`inline-flex items-center justify-center rounded-md bg-slate-800/60 text-slate-400 ${shell}`}
+        className={`inline-flex items-center justify-center rounded-lg bg-slate-800/60 text-slate-400 ${shell}`}
         title={clubName ?? undefined}
       >
         {clubName ? (
-          <span className="text-sm font-black">{initial}</span>
+          <span className={`font-black ${size === "lg" ? "text-xl" : "text-sm"}`}>{initial}</span>
         ) : (
-          <Shield className="h-5 w-5" />
+          <Shield className={size === "lg" ? "h-8 w-8" : "h-5 w-5"} />
         )}
       </span>
     );
@@ -52,7 +57,7 @@ export function ClubCrest({
       <img
         src={resolved}
         alt={clubName ? `Herb ${clubName}` : ""}
-        className="absolute inset-0 m-auto box-border h-full w-full object-contain p-px"
+        className="absolute inset-0 m-auto box-border h-full w-full object-contain p-0.5"
         loading="eager"
         crossOrigin="anonymous"
         decoding="async"

@@ -43,3 +43,19 @@
 .nm-page .nm-cta-glow {
   background: radial-gradient(ellipse 80% 60% at 50% 100%, rgba(57, 255, 20, 0.12), transparent 70%);
 }
+
+@keyframes nm-hub-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.nm-page .nm-hub-panel {
+  animation: nm-hub-fade-in 0.3s ease-out both;
+}
+

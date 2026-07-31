@@ -1,23 +1,16 @@
 "use client";
 
+import { useRef } from "react";
 import { Loader2, Target } from "lucide-react";
 import type { ClubLogoRecord } from "@/lib/admin/clubLogos";
 import type { GameweekDetailsPayload, PublicFixture } from "@/lib/public/types";
 import { ClubCrest } from "@/components/na-minusie/hub/ClubCrest";
 import { TeamIdentity } from "@/components/na-minusie/hub/TeamIdentity";
-import {
-  DiscordExportFrame,
-  slugForExport,
-} from "@/components/na-minusie/hub/DiscordExport";
+import { ExportControls } from "@/components/na-minusie/hub/ExportControls";
+import { NA_MINUSIE_BRAND } from "@/lib/na-minusie";
+import { slugForExport } from "@/components/na-minusie/hub/DiscordExport";
 
-function MedianBadge({ show }: { show: boolean }) {
-  if (!show) return null;
-  return (
-    <span className="inline-flex items-center rounded-md bg-emerald-500/20 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-emerald-300 ring-1 ring-emerald-400/40">
-      +1 Mediana
-    </span>
-  );
-}
+const EXPORT_BG = "#0B0F19";
 
 function MatchCard({
   match,
@@ -27,10 +20,12 @@ function MatchCard({
   logos: ClubLogoRecord[];
 }) {
   const { fixture, homeWon, awayWon, draw } = match;
+  const homeMed = fixture.home_median_bonus === 1 ? 1 : 0;
+  const awayMed = fixture.away_median_bonus === 1 ? 1 : 0;
 
   return (
     <article
-      className={`rounded-2xl border bg-slate-900 p-4 ${
+      className={`rounded-2xl border bg-slate-900 px-4 py-3 sm:px-5 sm:py-3.5 ${
         draw
           ? "border-amber-500/30"
           : homeWon || awayWon
@@ -38,32 +33,42 @@ function MatchCard({
             : "border-slate-800"
       }`}
     >
-      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 sm:gap-3">
+      <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 sm:gap-4">
         <div
-          className={`flex min-w-0 flex-col items-end gap-1 ${
+          className={`flex min-w-0 items-center justify-end gap-2.5 sm:gap-3 ${
             homeWon ? "opacity-100" : awayWon ? "opacity-50" : "opacity-90"
           }`}
         >
-          <div className="flex min-h-[4rem] items-stretch gap-2">
-            <TeamIdentity team={fixture.home_team} align="right" size="sm" />
-            <ClubCrest
-              clubName={fixture.home_team?.chosen_club}
-              logos={logos}
+          <div className="min-w-0 flex-1">
+            <TeamIdentity
+              team={fixture.home_team}
+              align="right"
+              size="sm"
+              truncate={false}
             />
           </div>
-          <MedianBadge show={fixture.home_median_bonus === 1} />
+          <ClubCrest
+            clubName={fixture.home_team?.chosen_club}
+            logos={logos}
+            size="lg"
+          />
         </div>
 
-        <div className="flex flex-col items-center gap-1 px-1">
-          <span className="font-athletic text-2xl font-bold tabular-nums text-white">
+        <div className="flex shrink-0 flex-col items-center gap-1 px-1">
+          <span className="font-athletic text-xl font-bold tabular-nums text-white sm:text-2xl">
             {fixture.is_finished
               ? `${fixture.home_fpl_points ?? 0} : ${fixture.away_fpl_points ?? 0}`
               : "vs"}
           </span>
           {fixture.is_finished ? (
-            <span className="rounded bg-black/50 px-2 py-0.5 font-mono text-[10px] font-bold text-emerald-400">
-              H2H {fixture.home_h2h_points}-{fixture.away_h2h_points}
-            </span>
+            <>
+              <span className="rounded bg-black/50 px-2 py-0.5 font-mono text-[10px] font-bold text-emerald-400">
+                H2H {fixture.home_h2h_points}-{fixture.away_h2h_points}
+              </span>
+              <span className="rounded bg-emerald-500/15 px-2 py-0.5 font-mono text-[10px] font-bold text-emerald-300 ring-1 ring-emerald-500/30">
+                M {homeMed}-{awayMed}
+              </span>
+            </>
           ) : (
             <span className="text-[10px] uppercase tracking-wider text-slate-600">
               Zaplanowany
@@ -72,21 +77,65 @@ function MatchCard({
         </div>
 
         <div
-          className={`flex min-w-0 flex-col items-start gap-1 ${
+          className={`flex min-w-0 items-center justify-start gap-2.5 sm:gap-3 ${
             awayWon ? "opacity-100" : homeWon ? "opacity-50" : "opacity-90"
           }`}
         >
-          <div className="flex min-h-[4rem] items-stretch gap-2">
-            <ClubCrest
-              clubName={fixture.away_team?.chosen_club}
-              logos={logos}
+          <ClubCrest
+            clubName={fixture.away_team?.chosen_club}
+            logos={logos}
+            size="lg"
+          />
+          <div className="min-w-0 flex-1">
+            <TeamIdentity
+              team={fixture.away_team}
+              align="left"
+              size="sm"
+              truncate={false}
             />
-            <TeamIdentity team={fixture.away_team} align="left" size="sm" />
           </div>
-          <MedianBadge show={fixture.away_median_bonus === 1} />
         </div>
       </div>
     </article>
+  );
+}
+
+function FplMedianRanking({
+  details,
+  logos,
+}: {
+  details: GameweekDetailsPayload;
+  logos: ClubLogoRecord[];
+}) {
+  return (
+    <ul className="flex min-h-0 flex-1 flex-col gap-2">
+      {details.fplRanking.map((row) => (
+        <li
+          key={row.team.id}
+          className={`grid min-h-0 flex-1 grid-cols-[1.75rem_minmax(0,1fr)_auto] items-center gap-2.5 rounded-xl border px-2.5 py-2 sm:gap-3 sm:px-3 sm:py-2.5 ${
+            row.position === 5 ? "border-emerald-500/50" : "border-slate-800"
+          } ${row.inMedianZone ? "bg-emerald-500/5" : "bg-slate-950/40"}`}
+        >
+          <span className="font-mono text-sm font-bold tabular-nums text-slate-400">
+            {row.position}
+          </span>
+          <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
+            <ClubCrest clubName={row.team.chosen_club} logos={logos} size="lg" />
+            <TeamIdentity team={row.team} size="md" truncate />
+          </div>
+          <div className="flex shrink-0 flex-col items-end gap-1">
+            <span className="font-athletic text-2xl font-bold tabular-nums leading-none text-white sm:text-3xl">
+              {row.fplPoints}
+            </span>
+            {row.medianBonus ? (
+              <span className="rounded-md bg-emerald-500/20 px-2 py-0.5 text-[10px] font-black uppercase text-emerald-300">
+                +1
+              </span>
+            ) : null}
+          </div>
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -117,6 +166,10 @@ export function GameweekCenter({
   showDiscordSend?: boolean;
   hasWebhook?: boolean;
 }) {
+  const resultsRef = useRef<HTMLDivElement>(null);
+  const previewRef = useRef<HTMLDivElement>(null);
+  const rankingRef = useRef<HTMLDivElement>(null);
+
   const finishedSet = new Set(finishedGameweeks);
   const total = Math.max(maxGameweek, 18);
   const metaBits = [exportMeta?.season, exportMeta?.pyramid, exportMeta?.division]
@@ -125,6 +178,27 @@ export function GameweekCenter({
 
   const nextGw = details ? details.gameweek + 1 : selectedGw + 1;
   const nextFixtures = fixtures.filter((f) => f.gameweek === nextGw);
+
+  const resultsFile = `${slugForExport([
+    "wyniki",
+    details ? `gw${details.gameweek}` : "gw",
+    exportMeta?.division,
+    exportMeta?.pyramid,
+  ]) || "wyniki"}.png`;
+
+  const previewFile = `${slugForExport([
+    "zapowiedz",
+    `gw${nextGw}`,
+    exportMeta?.division,
+    exportMeta?.pyramid,
+  ]) || `zapowiedz-gw${nextGw}`}.png`;
+
+  const rankingFile = `${slugForExport([
+    "tabela-mediany",
+    details ? `gw${details.gameweek}` : "gw",
+    exportMeta?.division,
+    exportMeta?.pyramid,
+  ]) || "tabela-mediany"}.png`;
 
   return (
     <div className="space-y-6">
@@ -167,125 +241,166 @@ export function GameweekCenter({
           Wybierz rozliczoną kolejkę, aby zobaczyć medianę i wyniki H2H.
         </div>
       ) : (
-        <>
-          <DiscordExportFrame
-            exportId="export-gw-results"
-            fileName={`${slugForExport([
-              "wyniki",
-              `gw${details.gameweek}`,
-              exportMeta?.division,
-              exportMeta?.pyramid,
-            ]) || `wyniki-gw${details.gameweek}`}.png`}
-            title={`Wyniki · GW${details.gameweek}`}
-            subtitle={metaBits || undefined}
-            divisionId={divisionId}
-            discordMessage={`🔥 Wyniki i Mediana za GW${details.gameweek}!`}
-            showDiscordSend={showDiscordSend}
-            hasWebhook={hasWebhook}
-          >
-            <div className="mb-5 rounded-2xl border border-emerald-500/40 bg-gradient-to-br from-emerald-500/15 via-slate-900 to-slate-950 p-5">
-              <div className="flex items-center gap-4">
-                <div className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-400/20 text-emerald-300">
-                  <Target className="h-5 w-5" />
-                </div>
-                <div>
-                  <p className="font-athletic text-xl uppercase tracking-wide text-white">
-                    Mediana:{" "}
-                    <span className="text-emerald-400">
-                      {details.medianThreshold ?? "—"} pkt
-                    </span>
-                  </p>
-                  <p className="mt-0.5 text-xs text-slate-400">
-                    TOP 5 (≥ {details.medianThreshold ?? "—"} pkt) → bonus +1 do tabeli
-                  </p>
-                </div>
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-emerald-500/40 bg-gradient-to-br from-emerald-500/15 via-slate-900 to-slate-950 p-5">
+            <div className="flex items-center gap-4">
+              <div className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-400/20 text-emerald-300">
+                <Target className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="font-athletic text-xl uppercase tracking-wide text-white">
+                  Mediana:{" "}
+                  <span className="text-emerald-400">
+                    {details.medianThreshold ?? "—"} pkt
+                  </span>
+                </p>
+                <p className="mt-0.5 text-xs text-slate-400">
+                  TOP 5 (≥ {details.medianThreshold ?? "—"} pkt) → bonus +1 do tabeli
+                </p>
               </div>
             </div>
+          </div>
 
-            <h3 className="mb-3 font-athletic text-sm uppercase tracking-wide text-slate-300">
-              Pojedynki H2H
-            </h3>
-            <div className="mb-6 grid gap-3 lg:grid-cols-2">
-              {details.matches.map((m) => (
-                <MatchCard key={m.fixture.id} match={m} logos={logos} />
-              ))}
-            </div>
+          {/*
+            Lewa: H2H + Zapowiedź | Prawa: Ranking (stretch).
+            Eksport: 3 osobne grafiki (wyniki / zapowiedź / tabela mediany).
+          */}
+          <div
+            className="overflow-hidden rounded-2xl border border-slate-800 shadow-2xl shadow-black/50"
+            style={{ backgroundColor: EXPORT_BG }}
+          >
+            <div className="p-4 sm:p-6" style={{ backgroundColor: EXPORT_BG }}>
+              <header className="mb-5 border-b border-emerald-500/30 pb-4">
+                <p className="text-[10px] font-black uppercase tracking-[0.35em] text-emerald-400">
+                  {NA_MINUSIE_BRAND}
+                </p>
+                {metaBits ? (
+                  <p className="mt-2 text-xs text-slate-400">{metaBits}</p>
+                ) : null}
+              </header>
 
-            <h3 className="mb-3 font-athletic text-sm uppercase tracking-wide text-slate-300">
-              Ranking FPL · linia po 5. = mediana
-            </h3>
-            <ul className="divide-y divide-slate-800 overflow-hidden rounded-xl border border-slate-800">
-              {details.fplRanking.map((row) => (
-                <li
-                  key={row.team.id}
-                  className={`flex items-stretch gap-3 px-4 py-2 ${
-                    row.position === 5 ? "border-b-2 border-b-emerald-500/50" : ""
-                  } ${row.inMedianZone ? "bg-emerald-500/5" : ""}`}
-                >
-                  <span className="flex w-6 items-center font-mono text-xs font-bold text-slate-500">
-                    {row.position}
-                  </span>
-                  <div className="flex min-h-[3.25rem] min-w-0 flex-1 items-stretch gap-2.5">
-                    <ClubCrest clubName={row.team.chosen_club} logos={logos} />
-                    <div className="flex min-w-0 flex-col justify-center">
-                      <TeamIdentity team={row.team} size="sm" />
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.55fr)_minmax(280px,0.9fr)] lg:items-stretch">
+                <div className="flex min-w-0 flex-col gap-3">
+                  <div
+                    ref={resultsRef}
+                    id="export-gw-results"
+                    className="rounded-xl p-1"
+                    style={{ backgroundColor: EXPORT_BG }}
+                  >
+                    <h3 className="mb-3 text-center font-athletic text-sm uppercase tracking-wide text-slate-300">
+                      Wyniki · GW{details.gameweek}
+                    </h3>
+                    <div className="flex w-full flex-col gap-2.5">
+                      {details.matches.map((m) => (
+                        <MatchCard key={m.fixture.id} match={m} logos={logos} />
+                      ))}
                     </div>
                   </div>
-                  <span className="flex items-center font-athletic text-lg font-bold tabular-nums text-white">
-                    {row.fplPoints}
-                  </span>
-                  {row.medianBonus ? (
-                    <span className="flex items-center rounded-md bg-emerald-500/20 px-2 py-1 text-[10px] font-black uppercase text-emerald-300">
-                      +1
-                    </span>
-                  ) : (
-                    <span className="flex w-8 items-center" />
-                  )}
-                </li>
-              ))}
-            </ul>
-          </DiscordExportFrame>
 
-          {nextFixtures.length > 0 ? (
-            <DiscordExportFrame
-              exportId="export-gw-next"
-              fileName={`${slugForExport([
-                "zapowiedz",
-                `gw${nextGw}`,
-                exportMeta?.division,
-                exportMeta?.pyramid,
-              ]) || `zapowiedz-gw${nextGw}`}.png`}
-              title={`Zapowiedź · GW${nextGw}`}
-              subtitle={metaBits || undefined}
-              divisionId={divisionId}
-              discordMessage={`👀 Z kim grasz w następnej kolejce? Zapowiedź GW${nextGw}!`}
-              showDiscordSend={showDiscordSend}
-              hasWebhook={hasWebhook}
-            >
-              <p className="mb-4 text-sm text-slate-400">
-                🔜 Mecze w następnej kolejce — zapowiedź H2H
-              </p>
-              <div className="grid gap-3 lg:grid-cols-2">
-                {nextFixtures.map((f) => (
-                  <MatchCard
-                    key={f.id}
-                    match={{
-                      fixture: f,
-                      homeWon: false,
-                      awayWon: false,
-                      draw: false,
-                    }}
-                    logos={logos}
-                  />
-                ))}
+                  {nextFixtures.length > 0 ? (
+                    <div
+                      ref={previewRef}
+                      id="export-gw-next"
+                      className="rounded-xl p-1"
+                      style={{ backgroundColor: EXPORT_BG }}
+                    >
+                      <p className="mb-3 text-center text-sm text-slate-400">
+                        Zapowiedź · GW{nextGw}
+                      </p>
+                      <div className="flex w-full flex-col gap-2.5">
+                        {nextFixtures.map((f) => (
+                          <MatchCard
+                            key={f.id}
+                            match={{
+                              fixture: f,
+                              homeWon: false,
+                              awayWon: false,
+                              draw: false,
+                            }}
+                            logos={logos}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="rounded-2xl border border-dashed border-slate-700 px-6 py-8 text-center text-sm text-slate-500">
+                      Brak zaplanowanych meczów dla GW{nextGw}.
+                    </div>
+                  )}
+                </div>
+
+                <div
+                  ref={rankingRef}
+                  id="export-gw-ranking"
+                  className="flex h-full min-h-0 min-w-0 flex-col self-stretch rounded-xl p-1"
+                  style={{ backgroundColor: EXPORT_BG }}
+                >
+                  <h3 className="mb-3 font-athletic text-sm uppercase tracking-wide text-slate-300">
+                    Tabela Mediany
+                  </h3>
+                  <FplMedianRanking details={details} logos={logos} />
+                </div>
               </div>
-            </DiscordExportFrame>
-          ) : (
-            <div className="rounded-2xl border border-dashed border-slate-700 px-6 py-8 text-center text-sm text-slate-500">
-              Brak zaplanowanych meczów dla GW{nextGw} (koniec sezonu lub brak terminarza).
             </div>
-          )}
-        </>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2 sm:gap-3">
+            <div className="flex min-w-0 flex-col items-center gap-1">
+              <span className="text-center text-[9px] font-bold uppercase tracking-wider text-slate-500 sm:text-[10px]">
+                Wyniki · GW{details.gameweek}
+              </span>
+              <ExportControls
+                targetRef={resultsRef}
+                fileName={resultsFile}
+                divisionId={divisionId}
+                discordMessage={`🔥 Wyniki H2H za GW${details.gameweek}!`}
+                showDiscordSend={showDiscordSend}
+                hasWebhook={hasWebhook}
+                compact
+                hideWebhookHint
+              />
+            </div>
+            <div className="flex min-w-0 flex-col items-center gap-1">
+              <span className="text-center text-[9px] font-bold uppercase tracking-wider text-slate-500 sm:text-[10px]">
+                Zapowiedź · GW{nextGw}
+              </span>
+              {nextFixtures.length > 0 ? (
+                <ExportControls
+                  targetRef={previewRef}
+                  fileName={previewFile}
+                  divisionId={divisionId}
+                  discordMessage={`👀 Z kim grasz w następnej kolejce? Zapowiedź GW${nextGw}!`}
+                  showDiscordSend={showDiscordSend}
+                  hasWebhook={hasWebhook}
+                  compact
+                  hideWebhookHint
+                />
+              ) : (
+                <p className="text-[10px] text-slate-600">Brak meczów</p>
+              )}
+            </div>
+            <div className="flex min-w-0 flex-col items-center gap-1">
+              <span className="text-center text-[9px] font-bold uppercase tracking-wider text-slate-500 sm:text-[10px]">
+                Tabela Mediany
+              </span>
+              <ExportControls
+                targetRef={rankingRef}
+                fileName={rankingFile}
+                divisionId={divisionId}
+                discordMessage={`📊 Tabela Mediany — GW${details.gameweek}`}
+                showDiscordSend={showDiscordSend}
+                hasWebhook={hasWebhook}
+                compact
+                hideWebhookHint
+              />
+            </div>
+          </div>
+          {showDiscordSend && !hasWebhook ? (
+            <p className="text-center text-[10px] text-amber-400/80">
+              Ustaw Discord Webhook URL dla tej dywizji w adminie → Struktura Ligi.
+            </p>
+          ) : null}
+        </div>
       )}
     </div>
   );

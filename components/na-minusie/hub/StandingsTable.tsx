@@ -137,17 +137,10 @@ function rowTone(zone: TableZone): string {
   }
 }
 
-function legendForTier(tier: number): string {
-  if (tier === 1) {
-    return "Tier 1: 1 złoto · 2 srebro · 3 brąz · 3. od końca baraż · bottom 2 spadek";
-  }
-  return "Tier 2+: top 2 awans · 3. baraż · 3. od końca baraż · bottom 2 spadek";
-}
-
 export function StandingsTable({
   rows,
   logos = [],
-  tier = 2,
+  tier: _tier = 2,
   exportMeta,
   divisionId = "",
   showDiscordSend = false,
@@ -176,12 +169,7 @@ export function StandingsTable({
     exportMeta?.season,
   ]) || "tabela-ogolna"}.png`;
 
-  const subtitle = [
-    exportMeta?.season,
-    exportMeta?.pyramid,
-    exportMeta?.division ? `T${tier} · ${exportMeta.division}` : `Tier ${tier}`,
-    legendForTier(tier),
-  ]
+  const subtitle = [exportMeta?.season, exportMeta?.pyramid, exportMeta?.division]
     .filter(Boolean)
     .join(" · ");
 

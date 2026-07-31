@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { ExternalLink, Home } from "lucide-react";
 import { ADMIN_BRAND, ADMIN_NAV } from "@/lib/admin/navigation";
 import { LogoutButton } from "@/components/admin/LogoutButton";
 
@@ -21,6 +22,17 @@ export function AdminSidebar({ userEmail }: { userEmail: string }) {
       </div>
 
       <nav className="flex-1 space-y-1 p-3" aria-label="Menu administratora">
+        <a
+          href="/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mb-2 flex items-center gap-3 rounded-lg border border-[#39FF14]/25 bg-[#39FF14]/5 px-3 py-2.5 text-sm font-semibold text-[#39FF14] transition-colors hover:bg-[#39FF14]/10"
+        >
+          <Home className="h-4 w-4 shrink-0" strokeWidth={1.75} />
+          <span className="leading-tight">Strona startowa</span>
+          <ExternalLink className="ml-auto h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden />
+        </a>
+
         {ADMIN_NAV.map(({ href, label, icon: Icon }) => {
           const isActive = pathname === href || pathname.startsWith(`${href}/`);
           return (
