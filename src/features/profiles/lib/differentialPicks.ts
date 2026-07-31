@@ -1,5 +1,5 @@
-import type { Player } from "@/types/player";
-import type { PlayerHighlights } from "@/types/highlights";
+﻿import type { Player } from "@arena/types/player";
+import type { PlayerHighlights } from "@arena/types/highlights";
 
 export type DifferentialPick = {
   playerName: string;

@@ -49,6 +49,29 @@ if (fs.existsSync(path.join(root, "logo"))) {
   console.log("Copied logo/");
 }
 
+const imagesDir = path.join(publicDir, "images");
+fs.mkdirSync(imagesDir, { recursive: true });
+
+const portalLogos = [
+  {
+    src: path.join(root, "logo", "FPL Arena.png"),
+    dest: path.join(imagesDir, "fpl-arena-logo.png"),
+  },
+  {
+    src: path.join(root, "logo", "Na Minusie.png"),
+    dest: path.join(imagesDir, "na-minusie-logo.png"),
+  },
+];
+
+for (const { src, dest } of portalLogos) {
+  if (fs.existsSync(src)) {
+    copyFile(src, dest);
+    console.log(`Copied portal logo → ${path.relative(publicDir, dest)}`);
+  } else {
+    console.warn(`WARN: Brak pliku ${path.relative(root, src)} — pominięto kopiowanie logotypu portalu.`);
+  }
+}
+
 const soundtrackDir = path.join(publicDir, "soundtracks");
 const wavInPublic = fs.existsSync(soundtrackDir)
   ? fs.readdirSync(soundtrackDir).filter((f) => f.endsWith(".wav")).length

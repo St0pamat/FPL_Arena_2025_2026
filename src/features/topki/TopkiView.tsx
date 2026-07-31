@@ -1,10 +1,10 @@
-import { useMemo, useState } from "react";
-import type { Player } from "@/types/player";
-import type { PlayerHighlightsMap } from "@/types/highlights";
-import type { PlayerSeasonHistoryMap } from "@/types/seasonHistory";
-import type { GwMatchesBlock } from "@/types/match";
-import { PageContainer, PageHeader } from "@/components/layout";
-import { EmptyState } from "@/components/ui";
+﻿import { useMemo, useState } from "react";
+import type { Player } from "@arena/types/player";
+import type { PlayerHighlightsMap } from "@arena/types/highlights";
+import type { PlayerSeasonHistoryMap } from "@arena/types/seasonHistory";
+import type { GwMatchesBlock } from "@arena/types/match";
+import { PageContainer, PageHeader } from "@arena/components/layout";
+import { EmptyState } from "@arena/components/ui";
 import { LeaderboardCard } from "./components/LeaderboardCard";
 import { computeAllTopki } from "./lib/computeLeaderboards";
 

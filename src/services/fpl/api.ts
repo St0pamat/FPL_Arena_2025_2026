@@ -1,4 +1,4 @@
-import type { DreamTeamPlayer, SquadPlayer } from "@/types/highlights";
+﻿import type { DreamTeamPlayer, SquadPlayer } from "@arena/types/highlights";
 
 export const mapDreamTeamPlayer = (player: DreamTeamPlayer | SquadPlayer) => ({
   ...player,

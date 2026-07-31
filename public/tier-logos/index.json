@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "logos": [
+    {
+      "tierKey": "premier-division",
+      "tierName": "Premier Division",
+      "fileName": "premier-division.png",
+      "updatedAt": "2026-07-31T10:09:20.359Z"
+    },
+    {
+      "tierKey": "championship",
+      "tierName": "Championship",
+      "fileName": "championship.png",
+      "updatedAt": "2026-07-31T10:10:13.997Z"
+    },
+    {
+      "tierKey": "league-one",
+      "tierName": "League One",
+      "fileName": "league-one.png",
+      "updatedAt": "2026-07-31T10:10:42.086Z"
+    },
+    {
+      "tierKey": "league-two",
+      "tierName": "League Two",
+      "fileName": "league-two.png",
+      "updatedAt": "2026-07-31T10:10:49.246Z"
+    },
+    {
+      "tierKey": "national-league",
+      "tierName": "National League",
+      "fileName": "national-league.png",
+      "updatedAt": "2026-07-31T10:12:18.241Z"
+    }
+  ]
+}

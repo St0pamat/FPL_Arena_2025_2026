@@ -1,4 +1,4 @@
-import { SOCIAL_LINKS } from "@/config/socialLinks";
+﻿import { SOCIAL_LINKS } from "@arena/config/socialLinks";
 
 const DiscordIcon = () => (
   <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor" aria-hidden>

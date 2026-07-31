@@ -1,13 +1,13 @@
-import { useMemo, useState } from "react";
-import type { Player } from "@/types/player";
-import { PLAYER_BY_ID } from "@/config/playersIndex";
-import { TeamCrest } from "@/components/branding";
-import { playerDisplayName, shouldShowPlayerName } from "@/lib/playerDisplay";
+﻿import { useMemo, useState } from "react";
+import type { Player } from "@arena/types/player";
+import { PLAYER_BY_ID } from "@arena/config/playersIndex";
+import { TeamCrest } from "@arena/components/branding";
+import { playerDisplayName, shouldShowPlayerName } from "@arena/lib/playerDisplay";
 import {
   downloadAllSoundtracks,
   soundtrackWavDownloadName,
-} from "@/lib/downloadAllSoundtracks";
-import { SOUNDTRACK_TRACKS, soundtrackFileUrl } from "@/data/soundtrackTracks";
+} from "@arena/lib/downloadAllSoundtracks";
+import { SOUNDTRACK_TRACKS, soundtrackFileUrl } from "@arena/data/soundtrackTracks";
 
 const TrackCard = ({
   order,

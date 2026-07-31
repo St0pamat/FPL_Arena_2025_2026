@@ -1,13 +1,13 @@
-import { useMemo, useState } from "react";
-import type { Player } from "@/types/player";
-import type { PlayerHighlightsMap } from "@/types/highlights";
-import type { PlayerSeasonHistoryMap } from "@/types/seasonHistory";
-import type { GwMatchesBlock } from "@/types/match";
-import type { GladiatorOrMap } from "@/types/or";
-import { comparePlayers } from "@/features/centrum/lib/comparePlayers";
-import { formatOrDisplay } from "@/features/profiles/lib/or";
-import { TeamCrest } from "@/components/branding";
-import { playerDisplayName, shouldShowPlayerName } from "@/lib/playerDisplay";
+﻿import { useMemo, useState } from "react";
+import type { Player } from "@arena/types/player";
+import type { PlayerHighlightsMap } from "@arena/types/highlights";
+import type { PlayerSeasonHistoryMap } from "@arena/types/seasonHistory";
+import type { GwMatchesBlock } from "@arena/types/match";
+import type { GladiatorOrMap } from "@arena/types/or";
+import { comparePlayers } from "@arena/features/centrum/lib/comparePlayers";
+import { formatOrDisplay } from "@arena/features/profiles/lib/or";
+import { TeamCrest } from "@arena/components/branding";
+import { playerDisplayName, shouldShowPlayerName } from "@arena/lib/playerDisplay";
 
 export const ComparePanel = ({
   players,

@@ -1,7 +1,7 @@
-import { useMemo, useState } from "react";
-import type { DreamTeamPlayer, SquadPlayer } from "@/types/highlights";
-import { POSITION_COLORS, POSITION_SECTIONS } from "@/features/fpl/constants";
-import { inferFormation, mapDreamTeamPlayer } from "@/services/fpl/api";
+﻿import { useMemo, useState } from "react";
+import type { DreamTeamPlayer, SquadPlayer } from "@arena/types/highlights";
+import { POSITION_COLORS, POSITION_SECTIONS } from "@arena/features/fpl/constants";
+import { inferFormation, mapDreamTeamPlayer } from "@arena/services/fpl/api";
 
 type PointBreakdown = {
   points: number;

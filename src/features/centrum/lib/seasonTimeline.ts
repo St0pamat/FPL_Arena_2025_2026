@@ -1,8 +1,8 @@
-import type { GwMatchesBlock } from "@/types/match";
-import type { PlayerHighlightsMap } from "@/types/highlights";
-import { buildStandingsHistory } from "@/features/standings/lib/standings";
-import { PLAYER_BY_ID, TEAM_BY_NAME } from "@/config/playersIndex";
-import { playerDisplayName } from "@/lib/playerDisplay";
+﻿import type { GwMatchesBlock } from "@arena/types/match";
+import type { PlayerHighlightsMap } from "@arena/types/highlights";
+import { buildStandingsHistory } from "@arena/features/standings/lib/standings";
+import { PLAYER_BY_ID, TEAM_BY_NAME } from "@arena/config/playersIndex";
+import { playerDisplayName } from "@arena/lib/playerDisplay";
 
 export type TimelinePerson = {
   playerId: number | null;

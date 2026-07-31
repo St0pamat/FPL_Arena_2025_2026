@@ -1,5 +1,5 @@
-import type { ReactNode } from "react";
-import { CONTAINER_CLASS } from "@/config/layout";
+﻿import type { ReactNode } from "react";
+import { CONTAINER_CLASS } from "@arena/config/layout";
 
 type Width = keyof typeof CONTAINER_CLASS;
 

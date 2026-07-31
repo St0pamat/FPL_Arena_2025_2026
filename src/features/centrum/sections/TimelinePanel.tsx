@@ -1,9 +1,9 @@
-import { useMemo, type ReactNode } from "react";
-import type { GwMatchesBlock } from "@/types/match";
-import type { PlayerHighlightsMap } from "@/types/highlights";
-import { buildSeasonTimeline } from "@/features/centrum/lib/seasonTimeline";
-import type { TimelinePerson } from "@/features/centrum/lib/seasonTimeline";
-import { TeamCrest } from "@/components/branding";
+﻿import { useMemo, type ReactNode } from "react";
+import type { GwMatchesBlock } from "@arena/types/match";
+import type { PlayerHighlightsMap } from "@arena/types/highlights";
+import { buildSeasonTimeline } from "@arena/features/centrum/lib/seasonTimeline";
+import type { TimelinePerson } from "@arena/features/centrum/lib/seasonTimeline";
+import { TeamCrest } from "@arena/components/branding";
 
 const TimelineTile = ({
   label,

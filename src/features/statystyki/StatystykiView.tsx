@@ -1,14 +1,14 @@
-import { HubShell } from "@/components/layout/HubShell";
-import { HUB_CONFIG } from "@/config/navigation";
-import { TopkiView } from "@/features/topki/TopkiView";
-import { HallOfFameView } from "@/features/hall/HallOfFameView";
-import { ComparePanel } from "@/features/centrum/sections/ComparePanel";
-import { ElitePanel } from "@/features/centrum/sections/ElitePanel";
-import type { Player } from "@/types/player";
-import type { PlayerHighlightsMap } from "@/types/highlights";
-import type { PlayerSeasonHistoryMap } from "@/types/seasonHistory";
-import type { GwMatchesBlock } from "@/types/match";
-import type { GladiatorOrMap } from "@/types/or";
+﻿import { HubShell } from "@arena/components/layout/HubShell";
+import { HUB_CONFIG } from "@arena/config/navigation";
+import { TopkiView } from "@arena/features/topki/TopkiView";
+import { HallOfFameView } from "@arena/features/hall/HallOfFameView";
+import { ComparePanel } from "@arena/features/centrum/sections/ComparePanel";
+import { ElitePanel } from "@arena/features/centrum/sections/ElitePanel";
+import type { Player } from "@arena/types/player";
+import type { PlayerHighlightsMap } from "@arena/types/highlights";
+import type { PlayerSeasonHistoryMap } from "@arena/types/seasonHistory";
+import type { GwMatchesBlock } from "@arena/types/match";
+import type { GladiatorOrMap } from "@arena/types/or";
 
 const HUB = HUB_CONFIG.statystyki;
 

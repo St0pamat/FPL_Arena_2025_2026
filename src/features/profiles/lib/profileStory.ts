@@ -1,8 +1,8 @@
-import type { Player } from "@/types/player";
-import type { PlayerHighlights } from "@/types/highlights";
-import type { OrBundle } from "@/features/profiles/lib/or";
-import type { PredictedStandingEntry } from "@/features/profiles/lib/or";
-import { formatOrDisplay, orTierLabel } from "@/features/profiles/lib/or";
+﻿import type { Player } from "@arena/types/player";
+import type { PlayerHighlights } from "@arena/types/highlights";
+import type { OrBundle } from "@arena/features/profiles/lib/or";
+import type { PredictedStandingEntry } from "@arena/features/profiles/lib/or";
+import { formatOrDisplay, orTierLabel } from "@arena/features/profiles/lib/or";
 
 export const buildProfileSeasonStory = (player, highlights, orBundle, prediction) => {
     const positives = [];

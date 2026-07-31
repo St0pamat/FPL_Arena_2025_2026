@@ -1,5 +1,5 @@
-import type { PlayerSeasonHistory } from "@/types/seasonHistory";
-import { StatPill } from "@/components/ui";
+﻿import type { PlayerSeasonHistory } from "@arena/types/seasonHistory";
+import { StatPill } from "@arena/components/ui";
 
 const fmtRank = (n: number | null | undefined) =>
   n != null ? n.toLocaleString("pl-PL") : "—";

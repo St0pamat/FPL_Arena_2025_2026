@@ -1,11 +1,11 @@
-import type { Player } from "@/types/player";
-import type { PlayerHighlights } from "@/types/highlights";
+﻿import type { Player } from "@arena/types/player";
+import type { PlayerHighlights } from "@arena/types/highlights";
 import {
   DIFFERENTIAL_GAIN,
   DIFFERENTIAL_LOSS,
   formatDifferentialPick,
   getDifferentialPicks,
-} from "@/features/profiles/lib/differentialPicks";
+} from "@arena/features/profiles/lib/differentialPicks";
 
 export type DiplomaFact = {
   emoji: string;

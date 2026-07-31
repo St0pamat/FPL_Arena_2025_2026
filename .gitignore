@@ -1,6 +1,7 @@
 # Dependencies & build
 node_modules/
 dist/
+.next/
 .vite/
 *.tsbuildinfo
 

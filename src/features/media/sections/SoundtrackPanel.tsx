@@ -1,10 +1,10 @@
-import {
+﻿import {
   SOUNDCLOUD_EMBED_SRC,
   SOUNDCLOUD_PLAYLIST_TITLE,
   SOUNDCLOUD_PLAYLIST_URL,
   SOUNDCLOUD_PROFILE_URL,
-} from "@/config/soundtrack";
-import { SoundtrackDownloadList } from "@/features/media/components/SoundtrackDownloadList";
+} from "@arena/config/soundtrack";
+import { SoundtrackDownloadList } from "@arena/features/media/components/SoundtrackDownloadList";
 
 export const SoundtrackPanel = () => (
   <div className="space-y-10">

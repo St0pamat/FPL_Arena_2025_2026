@@ -1,9 +1,9 @@
-import { HubShell } from "@/components/layout/HubShell";
-import { HUB_CONFIG } from "@/config/navigation";
-import { PresentationsView } from "@/features/presentations/PresentationsView";
-import { LogosDownloadPanel } from "@/features/media/sections/LogosDownloadPanel";
-import { SoundtrackPanel } from "@/features/media/sections/SoundtrackPanel";
-import type { Player } from "@/types/player";
+﻿import { HubShell } from "@arena/components/layout/HubShell";
+import { HUB_CONFIG } from "@arena/config/navigation";
+import { PresentationsView } from "@arena/features/presentations/PresentationsView";
+import { LogosDownloadPanel } from "@arena/features/media/sections/LogosDownloadPanel";
+import { SoundtrackPanel } from "@arena/features/media/sections/SoundtrackPanel";
+import type { Player } from "@arena/types/player";
 
 const HUB = HUB_CONFIG.media;
 

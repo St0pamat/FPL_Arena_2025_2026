@@ -1,10 +1,10 @@
-import { useMemo } from "react";
-import type { Player } from "@/types/player";
-import type { PlayerHighlights } from "@/types/highlights";
-import type { OrBundle, PredictedStandingEntry } from "@/features/profiles/lib/or";
-import { buildProfileSeasonStory } from "@/features/profiles/lib/profileStory";
-import { formatOrDisplay, orTierLabel } from "@/features/profiles/lib/or";
-import { PLAYER_BY_ID } from "@/config/playersIndex";
+﻿import { useMemo } from "react";
+import type { Player } from "@arena/types/player";
+import type { PlayerHighlights } from "@arena/types/highlights";
+import type { OrBundle, PredictedStandingEntry } from "@arena/features/profiles/lib/or";
+import { buildProfileSeasonStory } from "@arena/features/profiles/lib/profileStory";
+import { formatOrDisplay, orTierLabel } from "@arena/features/profiles/lib/or";
+import { PLAYER_BY_ID } from "@arena/config/playersIndex";
 
 export const ProfileExpectationsPanel = ({ player, highlights, orBundle, prediction, predictedStandings, preSeasonFavorite }) => {
     const story = useMemo(

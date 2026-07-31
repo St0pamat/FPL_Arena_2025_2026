@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
-import type { GwMatchesBlock } from "@/types/match";
-import type { PlayerHighlightsMap } from "@/types/highlights";
-import type { PlayerSeasonHistoryMap } from "@/types/seasonHistory";
-import type { GladiatorOrMap } from "@/types/or";
+﻿import { useEffect, useState } from "react";
+import type { GwMatchesBlock } from "@arena/types/match";
+import type { PlayerHighlightsMap } from "@arena/types/highlights";
+import type { PlayerSeasonHistoryMap } from "@arena/types/seasonHistory";
+import type { GladiatorOrMap } from "@arena/types/or";
 
 export function useLeagueData() {
   const [matchesByGw, setMatchesByGw] = useState<GwMatchesBlock[]>([]);

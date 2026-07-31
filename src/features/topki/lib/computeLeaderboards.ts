@@ -1,7 +1,7 @@
-import type { Player } from "@/types/player";
-import type { PlayerHighlightsMap } from "@/types/highlights";
-import type { PlayerSeasonHistoryMap } from "@/types/seasonHistory";
-import type { GwMatchesBlock } from "@/types/match";
+﻿import type { Player } from "@arena/types/player";
+import type { PlayerHighlightsMap } from "@arena/types/highlights";
+import type { PlayerSeasonHistoryMap } from "@arena/types/seasonHistory";
+import type { GwMatchesBlock } from "@arena/types/match";
 import type { LeaderboardBadge, LeaderboardResult, TopEntry, TopkiSection } from "../types";
 import {
   buildManagerContexts,
@@ -16,8 +16,8 @@ import {
   sumLastN,
   type H2HRow,
 } from "./stats";
-import { buildStandingsHistory } from "@/features/standings/lib/standings";
-import { playerDisplayName } from "@/lib/playerDisplay";
+import { buildStandingsHistory } from "@arena/features/standings/lib/standings";
+import { playerDisplayName } from "@arena/lib/playerDisplay";
 
 type RawRow = {
   playerId: number;

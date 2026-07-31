@@ -1,4 +1,4 @@
-import type { MatchOutcome } from "@/types/match";
+﻿import type { MatchOutcome } from "@arena/types/match";
 
 export const getMatchOutcome = (goalsFor: number, goalsAgainst: number): MatchOutcome => {
     if (goalsFor > goalsAgainst) return "W";

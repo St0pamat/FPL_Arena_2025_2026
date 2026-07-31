@@ -1,13 +1,13 @@
-import { useMemo, useState } from "react";
-import type { Player } from "@/types/player";
-import type { PlayerHighlightsMap } from "@/types/highlights";
+﻿import { useMemo, useState } from "react";
+import type { Player } from "@arena/types/player";
+import type { PlayerHighlightsMap } from "@arena/types/highlights";
 import {
   buildCardContent,
   type CardTemplateId,
-} from "@/features/centrum/lib/cardContent";
-import { ShareCardDocument } from "@/features/centrum/components/ShareCardDocument";
-import { ImageExportModal } from "@/features/centrum/components/ImageExportModal";
-import { playerDisplayName } from "@/lib/playerDisplay";
+} from "@arena/features/centrum/lib/cardContent";
+import { ShareCardDocument } from "@arena/features/centrum/components/ShareCardDocument";
+import { ImageExportModal } from "@arena/features/centrum/components/ImageExportModal";
+import { playerDisplayName } from "@arena/lib/playerDisplay";
 
 const CARD_PX = 1080;
 const PREVIEW_SCALE = 0.36;

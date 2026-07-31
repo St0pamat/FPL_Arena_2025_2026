@@ -1,8 +1,8 @@
-import { useMemo } from "react";
-import type { Player } from "@/types/player";
-import { playerDisplayName } from "@/lib/playerDisplay";
-import type { PlayerSeasonHistoryMap } from "@/types/seasonHistory";
-import { TeamCrest } from "@/components/branding";
+﻿import { useMemo } from "react";
+import type { Player } from "@arena/types/player";
+import { playerDisplayName } from "@arena/lib/playerDisplay";
+import type { PlayerSeasonHistoryMap } from "@arena/types/seasonHistory";
+import { TeamCrest } from "@arena/components/branding";
 
 export const ElitePanel = ({
   players,

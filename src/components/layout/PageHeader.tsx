@@ -1,5 +1,5 @@
-import type { ReactNode } from "react";
-import { LeagueLogo } from "@/components/branding";
+﻿import type { ReactNode } from "react";
+import { LeagueLogo } from "@arena/components/branding";
 
 export const PageHeader = ({
   title,

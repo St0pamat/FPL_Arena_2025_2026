@@ -1,11 +1,11 @@
 ﻿import { useEffect, useMemo, useState } from "react";
-import type { GwMatchesBlock } from "@/types/match";
-import { TEAM_BY_NAME } from "@/config/playersIndex";
-import { TeamBrand } from "@/components/branding";
-import { PageContainer, PageHeader, GwNavigator } from "@/components/layout";
-import { EmptyState } from "@/components/ui";
-import { buildStandingsHistory } from "@/features/standings/lib/standings";
-import { RankChangeBadge } from "@/features/standings/components/RankChangeBadge";
+import type { GwMatchesBlock } from "@arena/types/match";
+import { TEAM_BY_NAME } from "@arena/config/playersIndex";
+import { TeamBrand } from "@arena/components/branding";
+import { PageContainer, PageHeader, GwNavigator } from "@arena/components/layout";
+import { EmptyState } from "@arena/components/ui";
+import { buildStandingsHistory } from "@arena/features/standings/lib/standings";
+import { RankChangeBadge } from "@arena/features/standings/components/RankChangeBadge";
 
 export const StandingsView = ({
   matchesByGw,

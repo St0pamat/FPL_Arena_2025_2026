@@ -1,8 +1,8 @@
-import type { Player } from "@/types/player";
+﻿import type { Player } from "@arena/types/player";
 import type { ReactNode } from "react";
-import { PLAYER_BY_ID, TEAM_BY_NAME } from "@/config/playersIndex";
-import { TeamCrest } from "@/components/branding";
-import { playerDisplayName, shouldShowPlayerName } from "@/lib/playerDisplay";
+import { PLAYER_BY_ID, TEAM_BY_NAME } from "@arena/config/playersIndex";
+import { TeamCrest } from "@arena/components/branding";
+import { playerDisplayName, shouldShowPlayerName } from "@arena/lib/playerDisplay";
 import { resolveTeamFplId } from "../lib/teamResolve";
 import type { TopEntry } from "../types";
 

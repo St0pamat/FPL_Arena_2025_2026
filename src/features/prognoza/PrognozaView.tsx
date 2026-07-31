@@ -1,21 +1,21 @@
-import { useMemo } from "react";
-import type { Player } from "@/types/player";
-import type { GladiatorOrMap } from "@/types/or";
-import { PLAYER_BY_ID } from "@/config/playersIndex";
-import { TeamBrand } from "@/components/branding";
-import { PageContainer, PageHeader } from "@/components/layout";
+﻿import { useMemo } from "react";
+import type { Player } from "@arena/types/player";
+import type { GladiatorOrMap } from "@arena/types/or";
+import { PLAYER_BY_ID } from "@arena/config/playersIndex";
+import { TeamBrand } from "@arena/components/branding";
+import { PageContainer, PageHeader } from "@arena/components/layout";
 import {
   buildPredictedStandings,
   formatOrDisplay,
   getPlayerOrBundle,
   orTierLabel,
-} from "@/features/profiles/lib/or";
+} from "@arena/features/profiles/lib/or";
 import {
   buildPredictionComment,
   getOutcomeLabel,
   getPredictionOutcome,
-} from "@/features/prognoza/lib/predictionCommentary";
-import { PredictionTopCard } from "@/features/prognoza/components/PredictionTopCard";
+} from "@arena/features/prognoza/lib/predictionCommentary";
+import { PredictionTopCard } from "@arena/features/prognoza/components/PredictionTopCard";
 
 const PredictionStatCell = ({
   label,

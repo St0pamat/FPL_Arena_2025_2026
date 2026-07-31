@@ -1,6 +1,6 @@
-import { LeagueLogo } from "@/components/branding";
-import { NAV_GROUPS, type AppTab } from "@/config/tabs";
-import { SocialLinks } from "@/components/layout/SocialLinks";
+﻿import { LeagueLogo } from "@arena/components/branding";
+import { NAV_GROUPS, type AppTab } from "@arena/config/tabs";
+import { SocialLinks } from "@arena/components/layout/SocialLinks";
 
 const LEAGUE_FACTS = [
   { label: "Format", value: "H2H · 20 menedżerów" },

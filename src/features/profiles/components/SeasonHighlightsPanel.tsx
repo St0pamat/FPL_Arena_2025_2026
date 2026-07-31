@@ -1,15 +1,15 @@
-import { useMemo } from "react";
-import type { PlayerHighlights } from "@/types/highlights";
-import type { SeasonGwDetail } from "@/types/seasonHistory";
+﻿import { useMemo } from "react";
+import type { PlayerHighlights } from "@arena/types/highlights";
+import type { SeasonGwDetail } from "@arena/types/seasonHistory";
 import {
   EVENT_TYPE_ICONS,
   EVENT_TYPE_LABELS,
   H2H_ICON,
   H2H_PL,
   POSITION_COLORS,
-} from "@/features/fpl/constants";
-import { StatPill, InsightCard } from "@/components/ui";
-import { TeamOfSeasonPanel } from "@/features/pitch/components/TeamOfSeasonPanel";
+} from "@arena/features/fpl/constants";
+import { StatPill, InsightCard } from "@arena/components/ui";
+import { TeamOfSeasonPanel } from "@arena/features/pitch/components/TeamOfSeasonPanel";
 
 export const SeasonHighlightsPanel = ({
   highlights,

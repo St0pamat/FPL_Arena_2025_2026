@@ -1,7 +1,7 @@
-import type { Player } from "@/types/player";
-import { PLAYER_BY_ID } from "@/config/playersIndex";
-import { PRESENTATION_COLUMNS } from "@/data/presentations";
-import { PageContainer, PageHeader } from "@/components/layout";
+﻿import type { Player } from "@arena/types/player";
+import { PLAYER_BY_ID } from "@arena/config/playersIndex";
+import { PRESENTATION_COLUMNS } from "@arena/data/presentations";
+import { PageContainer, PageHeader } from "@arena/components/layout";
 import { PresentationCard } from "./components/PresentationCard";
 
 export const PresentationsView = ({ players, embedded = false }: { players: Player[]; embedded?: boolean }) => {

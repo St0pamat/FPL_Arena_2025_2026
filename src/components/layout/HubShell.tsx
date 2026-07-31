@@ -1,6 +1,6 @@
-import { useState, type ReactNode } from "react";
-import { PageContainer, PageHeader } from "@/components/layout";
-import type { HubSection } from "@/config/navigation";
+﻿import { useState, type ReactNode } from "react";
+import { PageContainer, PageHeader } from "@arena/components/layout";
+import type { HubSection } from "@arena/config/navigation";
 
 export const HubShell = ({
   title,

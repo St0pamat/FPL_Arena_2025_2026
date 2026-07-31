@@ -1,7 +1,7 @@
-import { LEAGUE_LOGO_SRC, teamLogoSrc } from "@/config/branding";
-import type { Player } from "@/types/player";
-import { playerDisplayName } from "@/lib/playerDisplay";
-import type { DiplomaContent } from "@/features/profiles/lib/diplomaContent";
+﻿import { LEAGUE_LOGO_SRC, teamLogoSrc } from "@arena/config/branding";
+import type { Player } from "@arena/types/player";
+import { playerDisplayName } from "@arena/lib/playerDisplay";
+import type { DiplomaContent } from "@arena/features/profiles/lib/diplomaContent";
 
 export const DiplomaDocument = ({
   player,

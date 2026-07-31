@@ -1,18 +1,18 @@
-import { useMemo } from "react";
+﻿import { useMemo } from "react";
 
-import type { Player } from "@/types/player";
+import type { Player } from "@arena/types/player";
 
-import type { PlayerHighlightsMap } from "@/types/highlights";
+import type { PlayerHighlightsMap } from "@arena/types/highlights";
 
-import type { PlayerSeasonHistoryMap } from "@/types/seasonHistory";
+import type { PlayerSeasonHistoryMap } from "@arena/types/seasonHistory";
 
-import { PageContainer, PageHeader } from "@/components/layout";
+import { PageContainer, PageHeader } from "@arena/components/layout";
 
-import { HallFameCard } from "@/features/hall/components/HallFameCard";
+import { HallFameCard } from "@arena/features/hall/components/HallFameCard";
 
-import { buildExtraHallAwards } from "@/features/hall/lib/awards";
+import { buildExtraHallAwards } from "@arena/features/hall/lib/awards";
 
-import { buildPantheonEncyclopediaSections } from "@/features/hall/lib/pantheonRecords";
+import { buildPantheonEncyclopediaSections } from "@arena/features/hall/lib/pantheonRecords";
 
 
 

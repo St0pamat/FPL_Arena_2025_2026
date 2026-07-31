@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+﻿import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { toPng } from "html-to-image";
-import type { Player } from "@/types/player";
-import type { PlayerHighlights } from "@/types/highlights";
-import { buildDiplomaContent } from "@/features/profiles/lib/diplomaContent";
-import { DiplomaDocument } from "@/features/profiles/components/DiplomaDocument";
+import type { Player } from "@arena/types/player";
+import type { PlayerHighlights } from "@arena/types/highlights";
+import { buildDiplomaContent } from "@arena/features/profiles/lib/diplomaContent";
+import { DiplomaDocument } from "@arena/features/profiles/components/DiplomaDocument";
 
 function slugify(text: string) {
   return text

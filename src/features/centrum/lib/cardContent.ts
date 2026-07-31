@@ -1,7 +1,7 @@
-import type { Player } from "@/types/player";
-import { playerDisplayName } from "@/lib/playerDisplay";
-import type { PlayerHighlights } from "@/types/highlights";
-import { getDifferentialPicks } from "@/features/profiles/lib/differentialPicks";
+﻿import type { Player } from "@arena/types/player";
+import { playerDisplayName } from "@arena/lib/playerDisplay";
+import type { PlayerHighlights } from "@arena/types/highlights";
+import { getDifferentialPicks } from "@arena/features/profiles/lib/differentialPicks";
 
 export type CardTemplateId = "mvp" | "pechowiec" | "milestone" | "cytat";
 

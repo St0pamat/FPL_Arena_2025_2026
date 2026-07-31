@@ -1,7 +1,7 @@
-import { LEAGUE_LOGO_SRC, teamLogoSrc } from "@/config/branding";
-import type { Player } from "@/types/player";
-import { TeamCrest } from "@/components/branding";
-import { playerDisplayName } from "@/lib/playerDisplay";
+﻿import { LEAGUE_LOGO_SRC, teamLogoSrc } from "@arena/config/branding";
+import type { Player } from "@arena/types/player";
+import { TeamCrest } from "@arena/components/branding";
+import { playerDisplayName } from "@arena/lib/playerDisplay";
 import { useState } from "react";
 
 export type SocialLogoFormat = {

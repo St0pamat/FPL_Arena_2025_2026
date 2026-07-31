@@ -1,8 +1,8 @@
-import { useState } from "react";
-import type { Player } from "@/types/player";
-import { playerDisplayName } from "@/lib/playerDisplay";
-import type { GladiatorPresentation } from "@/data/presentations";
-import { TeamCrest } from "@/components/branding";
+﻿import { useState } from "react";
+import type { Player } from "@arena/types/player";
+import { playerDisplayName } from "@arena/lib/playerDisplay";
+import type { GladiatorPresentation } from "@arena/data/presentations";
+import { TeamCrest } from "@arena/components/branding";
 
 const ACCENT_BY_RANK = (rank: number) => {
   if (rank <= 5) return { border: "border-t-amber-400", glow: "shadow-[0_0_24px_rgba(251,191,36,0.12)]", badge: "bg-amber-500/15 text-amber-300 border-amber-500/30" };

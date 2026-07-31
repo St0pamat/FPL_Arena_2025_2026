@@ -1,0 +1,93 @@
+.admin-theme {
+  --admin-bg: #050505;
+  --admin-surface: #111111;
+  --admin-border: #1a1a1a;
+  --admin-green: #39ff14;
+  --admin-muted: #888888;
+  background-color: var(--admin-bg);
+  color: #ffffff;
+  min-height: 100vh;
+}
+
+.admin-theme .admin-input {
+  @apply w-full rounded-xl border border-[#2a2a2a] bg-[#0a0a0a] px-4 py-3 text-sm text-white outline-none transition-colors placeholder:text-[#555] focus:border-[#39FF14] focus:ring-1 focus:ring-[#39FF14]/30;
+}
+
+.admin-theme .admin-btn-primary {
+  @apply inline-flex w-full items-center justify-center rounded-xl bg-[#39FF14] px-6 py-3 text-sm font-black uppercase tracking-wider text-black transition-all hover:bg-white hover:shadow-[0_0_24px_rgba(57,255,20,0.35)] disabled:cursor-not-allowed disabled:opacity-50;
+}
+
+.admin-theme .admin-card {
+  @apply rounded-2xl border border-[#1a1a1a] bg-[#111111] p-6;
+}
+
+@keyframes nm-draw-fade {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes nm-draw-slot-pop {
+  0% {
+    opacity: 0.35;
+    transform: scale(0.92);
+    filter: brightness(0.7);
+  }
+  45% {
+    opacity: 1;
+    transform: scale(1.04);
+    filter: brightness(1.25);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    filter: brightness(1);
+  }
+}
+
+@keyframes nm-draw-vs-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(57, 255, 20, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(57, 255, 20, 0);
+  }
+}
+
+@keyframes nm-draw-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.admin-theme .nm-draw-fade {
+  animation: nm-draw-fade 0.95s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.admin-theme .nm-draw-slot-pop {
+  animation: nm-draw-slot-pop 0.9s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.admin-theme .nm-draw-vs-pulse {
+  animation: nm-draw-vs-pulse 1.4s ease-in-out infinite;
+}
+
+.admin-theme .nm-draw-locked {
+  background-image: linear-gradient(
+    110deg,
+    rgba(15, 23, 42, 0.4) 0%,
+    rgba(57, 255, 20, 0.08) 45%,
+    rgba(15, 23, 42, 0.4) 90%
+  );
+  background-size: 200% 100%;
+  animation: nm-draw-shimmer 2.4s linear infinite;
+}

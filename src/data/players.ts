@@ -1,4 +1,4 @@
-import type { Player } from "@/types/player";
+﻿import type { Player } from "@arena/types/player";
 
 export const PLAYERS_DATA: Player[] = [
     {
@@ -23,7 +23,7 @@ export const PLAYERS_DATA: Player[] = [
         transfers: 44, hits: -28, greenArrows: 18, captainPts: 601, mostCaptained: "Haaland (22 razy)", mostPointsPlayer: "Haaland (431 pkt)", superStar: "Haaland (+99.6 pkt)", rankKiller: "B.Fernandes (-58.3 pkt)", pointsBenched: 316, winStreak: "5 (GW3 - GW7)", monthlyWins: "Brak", bestGw: "GW34 (81 pkt)", weeksTop: 6, weeksBottom: 0
     },
     {
-        id: 298030, manager: "Bartosz Bernard", discord: "SZYBKIOR47", team: "Pewniaczki", rank: 4, gw19Rank: 1, w: 22, d: 2, l: 14, score: 2313, pts: 68, seasons: 7, bestOr: "150 070", bestOrSeason: "2024/25", avgPosition: 3.68,
+        id: 298030, manager: "Bartosz Bernard", discord: "SZYBCIOR47", team: "Pewniaczki", rank: 4, gw19Rank: 1, w: 22, d: 2, l: 14, score: 2313, pts: 68, seasons: 7, bestOr: "150 070", bestOrSeason: "2024/25", avgPosition: 3.68,
         likes: "FC Barcelona, Andrés Iniesta, podcast 'Tetrycy', Chris Wood", dislikes: "Manchester United, pośpieszne transfery, brak rzetelności", quote: "Na Discordzie najszybszy rewolwerowiec, przy transferach – paraliż decyzyjny.",
         videoScript: "Znany jako szybcior47. Bartek jest najszybszym rewolwerowcem na Discordzie, ale jego palec nad przyciskiem 'Confirm Transfer' zastyga w urzędniczym paraliżu. Nienawidzi pośpiechu, co dało mu miano 'Mistrza Jesieni' (lider w GW19 z 43 pkt!). Jego Pewniaczki szły po tytuł jak walec. Wiosna przyniosła jednak taktyczny paraliż. Podczas gdy rywale ryzykowali, Bartek kurczowo trzymał się szablonu (tylko 1 hit przez cały sezon!). Koszmarny zjazd formy Thiago zepchnął go na bolesne 4. miejsce – tuż pod podium. Ochroniła go genialna forma Bruno Fernandesa (+115.64 pkt).",
         presentationVideoUrl: "https://youtu.be/jdi94-Hdwi8?si=ZHGHN_JSNXNxLzNA",

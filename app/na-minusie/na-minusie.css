@@ -1,0 +1,45 @@
+/* Na Minusie ™ — 2026 premium dark */
+
+.nm-page {
+  background-color: #0b0f19;
+  color: #ffffff;
+  scroll-behavior: smooth;
+}
+
+/* Główny header (~4.5rem) + sticky sub-nav (~2.75rem) na landingu */
+.nm-page .nm-section {
+  scroll-margin-top: 8rem;
+}
+
+.nm-page .nm-headline {
+  @apply font-black uppercase tracking-tight text-white;
+  letter-spacing: -0.03em;
+}
+
+.nm-page .nm-green {
+  color: #39ff14;
+}
+
+.nm-page .nm-glow {
+  text-shadow: 0 0 40px rgba(57, 255, 20, 0.35);
+}
+
+.nm-page .nm-card {
+  @apply rounded-2xl border border-[#1a1a1a] bg-[#111111] transition-colors duration-300;
+}
+
+.nm-page .nm-card:hover {
+  @apply border-[#2a2a2a] bg-[#161616];
+}
+
+.nm-page .nm-btn-primary {
+  @apply inline-flex items-center justify-center rounded-xl bg-[#39FF14] px-8 py-4 text-sm font-black uppercase tracking-wider text-black transition-all duration-300 hover:bg-white hover:shadow-[0_0_30px_rgba(57,255,20,0.4)];
+}
+
+.nm-page .nm-btn-secondary {
+  @apply inline-flex items-center justify-center rounded-xl border border-[#333] bg-transparent px-8 py-4 text-sm font-black uppercase tracking-wider text-white transition-all duration-300 hover:border-[#39FF14] hover:text-[#39FF14];
+}
+
+.nm-page .nm-cta-glow {
+  background: radial-gradient(ellipse 80% 60% at 50% 100%, rgba(57, 255, 20, 0.12), transparent 70%);
+}

@@ -1,6 +1,6 @@
-import { LEAGUE_LOGO_SRC, teamLogoSrc } from "@/config/branding";
-import type { Player } from "@/types/player";
-import type { CardContent } from "@/features/centrum/lib/cardContent";
+﻿import { LEAGUE_LOGO_SRC, teamLogoSrc } from "@arena/config/branding";
+import type { Player } from "@arena/types/player";
+import type { CardContent } from "@arena/features/centrum/lib/cardContent";
 
 const ACCENT: Record<CardContent["accent"], string> = {
   emerald: "#10b981",

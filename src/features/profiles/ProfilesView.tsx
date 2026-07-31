@@ -1,31 +1,31 @@
-import { useMemo } from "react";
-import type { Player } from "@/types/player";
-import type { PlayerHighlightsMap } from "@/types/highlights";
-import type { PlayerSeasonHistoryMap } from "@/types/seasonHistory";
-import type { GwMatchesBlock } from "@/types/match";
-import type { GladiatorOrMap } from "@/types/or";
-import { TEAM_BY_NAME } from "@/config/playersIndex";
-import { getMatchOutcome } from "@/lib/match";
-import { TeamCrest } from "@/components/branding";
-import { playerDisplayName, shouldShowPlayerName } from "@/lib/playerDisplay";
-import { PageContainer } from "@/components/layout";
+﻿import { useMemo } from "react";
+import type { Player } from "@arena/types/player";
+import type { PlayerHighlightsMap } from "@arena/types/highlights";
+import type { PlayerSeasonHistoryMap } from "@arena/types/seasonHistory";
+import type { GwMatchesBlock } from "@arena/types/match";
+import type { GladiatorOrMap } from "@arena/types/or";
+import { TEAM_BY_NAME } from "@arena/config/playersIndex";
+import { getMatchOutcome } from "@arena/lib/match";
+import { TeamCrest } from "@arena/components/branding";
+import { playerDisplayName, shouldShowPlayerName } from "@arena/lib/playerDisplay";
+import { PageContainer } from "@arena/components/layout";
 import {
   buildPredictedStandings,
   formatOrDisplay,
   getPlayerOrBundle,
   getPredictionForPlayer,
-} from "@/features/profiles/lib/or";
-import { ProfileExpectationsPanel } from "@/features/profiles/components/ProfileExpectationsPanel";
-import { ProfileSeasonEditorial } from "@/features/profiles/components/ProfileSeasonEditorial";
-import { SeasonHighlightsPanel } from "@/features/profiles/components/SeasonHighlightsPanel";
-import { FplElitePanel } from "@/features/profiles/components/FplElitePanel";
-import { DiplomaGenerator } from "@/features/profiles/components/DiplomaGenerator";
+} from "@arena/features/profiles/lib/or";
+import { ProfileExpectationsPanel } from "@arena/features/profiles/components/ProfileExpectationsPanel";
+import { ProfileSeasonEditorial } from "@arena/features/profiles/components/ProfileSeasonEditorial";
+import { SeasonHighlightsPanel } from "@arena/features/profiles/components/SeasonHighlightsPanel";
+import { FplElitePanel } from "@arena/features/profiles/components/FplElitePanel";
+import { DiplomaGenerator } from "@arena/features/profiles/components/DiplomaGenerator";
 import {
   DIFFERENTIAL_GAIN,
   DIFFERENTIAL_LOSS,
   formatDifferentialNet,
   getDifferentialPicks,
-} from "@/features/profiles/lib/differentialPicks";
+} from "@arena/features/profiles/lib/differentialPicks";
 
 export const ProfilesView = ({
   players,

@@ -1,45 +1,53 @@
-{
-  "name": "fpl-arena-skarb-kibica",
-  "version": "1.0.0",
-  "private": true,
-  "description": "FPL Arena — interaktywny Skarb Kibica (sezon 2025/26)",
-  "type": "module",
-  "scripts": {
-    "predev": "node scripts/sync-public.mjs",
-    "prebuild": "node scripts/sync-public.mjs",
-    "dev": "vite",
-    "build": "vite build",
-    "postbuild": "node scripts/verify-dist.mjs",
-    "build:prod": "node scripts/verify-public.mjs --strict && npm run build",
-    "verify-public": "node scripts/verify-public.mjs",
-    "verify-dist": "node scripts/verify-dist.mjs",
-    "typecheck": "tsc -p tsconfig.app.json --noEmit",
-    "preview": "vite preview",
-    "start": "node server/index.js",
-    "lint": "eslint .",
-    "format": "prettier --write \"src/**/*.{ts,tsx,css}\""
-  },
-  "dependencies": {
-    "html-to-image": "^1.11.13",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1"
-  },
-  "devDependencies": {
-    "@eslint/js": "^9.17.0",
-    "@types/react": "^18.3.18",
-    "@types/react-dom": "^18.3.5",
-    "@vitejs/plugin-react": "^4.3.4",
-    "autoprefixer": "^10.4.20",
-    "eslint": "^9.17.0",
-    "eslint-plugin-react-hooks": "^5.1.0",
-    "eslint-plugin-react-refresh": "^0.4.16",
-    "globals": "^15.14.0",
-    "postcss": "^8.4.49",
-    "prettier": "^3.4.2",
-    "tailwindcss": "^3.4.17",
-    "typescript": "~5.7.2",
-    "typescript-eslint": "^8.18.2",
-    "vite": "^6.0.6"
-  }
-}
-
+{
+  "name": "fpl-arena-skarb-kibica",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Platforma FPL — FPL Arena (archiwum) + Na Minusie ™ (liga H2H)",
+  "type": "module",
+  "scripts": {
+    "predev": "node scripts/sync-public.mjs",
+    "prebuild": "node scripts/sync-public.mjs",
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "dev:arena": "node scripts/sync-public.mjs && vite",
+    "build:arena": "node scripts/sync-public.mjs && vite build && node scripts/verify-dist.mjs",
+    "build:arena:prod": "node scripts/verify-public.mjs --strict && npm run build:arena",
+    "verify-public": "node scripts/verify-public.mjs",
+    "verify-dist": "node scripts/verify-dist.mjs",
+    "preview:arena": "vite preview",
+    "start:arena": "node server/index.js",
+    "lint": "eslint .",
+    "format": "prettier --write \"{app,components,lib,src}/**/*.{ts,tsx,css}\""
+  },
+  "dependencies": {
+    "@supabase/ssr": "^0.12.4",
+    "@supabase/supabase-js": "^2.111.0",
+    "html-to-image": "^1.11.13",
+    "lucide-react": "^1.27.0",
+    "next": "^14.2.35",
+    "papaparse": "^5.5.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.17.0",
+    "@types/node": "^26.1.2",
+    "@types/papaparse": "^5.5.2",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.4.20",
+    "eslint": "^9.17.0",
+    "eslint-plugin-react-hooks": "^5.1.0",
+    "eslint-plugin-react-refresh": "^0.4.16",
+    "globals": "^15.14.0",
+    "postcss": "^8.4.49",
+    "prettier": "^3.4.2",
+    "tailwindcss": "^3.4.17",
+    "typescript": "~5.7.2",
+    "typescript-eslint": "^8.18.2",
+    "vite": "^6.0.6"
+  }
+}

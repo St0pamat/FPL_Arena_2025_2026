@@ -1,28 +1,28 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 
-import { PLAYERS_DATA } from "@/data/players";
+import { PLAYERS_DATA } from "@arena/data/players";
 
-import { useLeagueData } from "@/hooks/useLeagueData";
+import { useLeagueData } from "@arena/hooks/useLeagueData";
 
-import { AppHeader, AppFooter } from "@/components/layout";
+import { AppHeader, AppFooter } from "@arena/components/layout";
 
-import { CONTAINER_BY_TAB, CONTAINER_CLASS } from "@/config/layout";
+import { CONTAINER_BY_TAB, CONTAINER_CLASS } from "@arena/config/layout";
 
-import { HomeView } from "@/features/home/HomeView";
+import { HomeView } from "@arena/features/home/HomeView";
 
-import { ProfilesView } from "@/features/profiles/ProfilesView";
+import { ProfilesView } from "@arena/features/profiles/ProfilesView";
 
-import { SezonView } from "@/features/sezon/SezonView";
+import { SezonView } from "@arena/features/sezon/SezonView";
 
-import { StatystykiView } from "@/features/statystyki/StatystykiView";
+import { StatystykiView } from "@arena/features/statystyki/StatystykiView";
 
-import { UdostepnijView } from "@/features/udostepnij/UdostepnijView";
+import { UdostepnijView } from "@arena/features/udostepnij/UdostepnijView";
 
-import { MediaView } from "@/features/media/MediaView";
+import { MediaView } from "@arena/features/media/MediaView";
 
-import type { AppTab } from "@/config/tabs";
+import type { AppTab } from "@arena/config/tabs";
 
-import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { ErrorBoundary } from "@arena/components/ErrorBoundary";
 
 
 

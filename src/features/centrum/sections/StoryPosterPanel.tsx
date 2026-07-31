@@ -1,8 +1,8 @@
-import { useState } from "react";
-import type { Player } from "@/types/player";
-import type { PlayerHighlightsMap } from "@/types/highlights";
-import { StoryPosterDocument } from "@/features/centrum/components/StoryPosterDocument";
-import { ImageExportModal } from "@/features/centrum/components/ImageExportModal";
+﻿import { useState } from "react";
+import type { Player } from "@arena/types/player";
+import type { PlayerHighlightsMap } from "@arena/types/highlights";
+import { StoryPosterDocument } from "@arena/features/centrum/components/StoryPosterDocument";
+import { ImageExportModal } from "@arena/features/centrum/components/ImageExportModal";
 
 const POSTER_W = 1080;
 const POSTER_H = 1920;

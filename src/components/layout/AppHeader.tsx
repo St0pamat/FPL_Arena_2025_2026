@@ -1,6 +1,7 @@
-import { LeagueLogo } from "@/components/branding";
-import { NAV_GROUPS, type AppTab } from "@/config/tabs";
-import { SocialLinks } from "@/components/layout/SocialLinks";
+﻿import { LeagueLogo } from "@arena/components/branding";
+import { NAV_GROUPS, type AppTab } from "@arena/config/tabs";
+import { SocialLinks } from "@arena/components/layout/SocialLinks";
+import { ArenaHomeLink } from "@/components/arena/ArenaHomeLink";
 
 export const AppHeader = ({
   activeTab,
@@ -10,7 +11,11 @@ export const AppHeader = ({
   onTabChange: (tab: AppTab) => void;
 }) => (
   <header className="sticky top-0 z-50 border-b border-emerald-500/20 bg-[#0b0f19]/95 backdrop-blur-md shadow-2xl">
-    <div className="w-full max-w-app-full mx-auto px-4 sm:px-6 lg:px-8 xl:px-10 py-4 lg:py-5">
+    <div className="w-full max-w-app-full mx-auto px-4 sm:px-6 lg:px-8 xl:px-10 py-3 lg:py-4">
+      <div className="mb-3 border-b border-slate-800/50 pb-3">
+        <ArenaHomeLink />
+      </div>
+
       <div className="flex flex-col gap-3 lg:gap-4">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div className="flex items-center gap-4 min-w-0">

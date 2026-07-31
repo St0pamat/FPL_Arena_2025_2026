@@ -1,9 +1,9 @@
-import type { Player } from "@/types/player";
-import type { PlayerHighlightsMap } from "@/types/highlights";
-import type { PlayerSeasonHistoryMap } from "@/types/seasonHistory";
-import type { GwMatchesBlock } from "@/types/match";
-import { getPlayerOrBundle } from "@/features/profiles/lib/or";
-import type { GladiatorOrMap } from "@/types/or";
+﻿import type { Player } from "@arena/types/player";
+import type { PlayerHighlightsMap } from "@arena/types/highlights";
+import type { PlayerSeasonHistoryMap } from "@arena/types/seasonHistory";
+import type { GwMatchesBlock } from "@arena/types/match";
+import { getPlayerOrBundle } from "@arena/features/profiles/lib/or";
+import type { GladiatorOrMap } from "@arena/types/or";
 
 export type CompareResult = {
   playerA: Player;

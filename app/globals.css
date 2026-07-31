@@ -1,0 +1,68 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: #0b0f19;
+    --foreground: #f8fafc;
+    --muted: #94a3b8;
+    --accent-arena: #c084fc;
+    --accent-na-minusie: #34d399;
+  }
+
+  html {
+    font-size: 100%;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    @apply bg-[#0B0F19] text-slate-50 antialiased;
+    font-family: "Inter", system-ui, "Segoe UI", Roboto, sans-serif;
+    background-image:
+      radial-gradient(ellipse 80% 50% at 50% -20%, rgba(120, 53, 220, 0.15), transparent),
+      radial-gradient(ellipse 60% 40% at 100% 100%, rgba(16, 185, 129, 0.08), transparent),
+      radial-gradient(ellipse 50% 30% at 0% 80%, rgba(168, 85, 247, 0.06), transparent);
+    background-attachment: fixed;
+    min-height: 100vh;
+  }
+
+  ::selection {
+    @apply bg-emerald-500/40 text-white;
+  }
+}
+
+@layer components {
+  .font-athletic {
+    font-family: "Oswald", "Inter", sans-serif;
+    letter-spacing: 0.02em;
+  }
+
+  .splash-grid {
+    background-image:
+      linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+    background-size: 64px 64px;
+    mask-image: radial-gradient(ellipse 70% 60% at 50% 50%, black 20%, transparent 100%);
+  }
+
+  .na-minusie-grid {
+    background-image:
+      linear-gradient(rgba(16, 185, 129, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(16, 185, 129, 0.03) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(ellipse 80% 70% at 50% 30%, black 10%, transparent 80%);
+  }
+}
+
+@layer utilities {
+  .text-glow-arena {
+    text-shadow: 0 0 40px rgba(192, 132, 252, 0.35);
+  }
+
+  .text-glow-na-minusie {
+    text-shadow: 0 0 40px rgba(52, 211, 153, 0.35);
+  }
+}

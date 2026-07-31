@@ -1,12 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
-import type { GwMatchesBlock } from "@/types/match";
-import { TEAM_BY_NAME } from "@/config/playersIndex";
-import { getMatchOutcome } from "@/lib/match";
-import { TeamCrest } from "@/components/branding";
-import { playerDisplayName, shouldShowPlayerName } from "@/lib/playerDisplay";
-import { PageContainer, PageHeader, GwNavigator } from "@/components/layout";
-import { EmptyState, StatPill } from "@/components/ui";
-import { H2H_PL } from "@/features/fpl/constants";
+﻿import { useEffect, useMemo, useState } from "react";
+import type { GwMatchesBlock } from "@arena/types/match";
+import { TEAM_BY_NAME } from "@arena/config/playersIndex";
+import { getMatchOutcome } from "@arena/lib/match";
+import { TeamCrest } from "@arena/components/branding";
+import { playerDisplayName, shouldShowPlayerName } from "@arena/lib/playerDisplay";
+import { PageContainer, PageHeader, GwNavigator } from "@arena/components/layout";
+import { EmptyState, StatPill } from "@arena/components/ui";
+import { H2H_PL } from "@arena/features/fpl/constants";
 
 export function WynikiView({
   matchesByGw,

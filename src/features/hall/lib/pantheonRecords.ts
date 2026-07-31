@@ -1,5 +1,5 @@
-import type { Player } from "@/types/player";
-import type { PlayerHighlightsMap } from "@/types/highlights";
+﻿import type { Player } from "@arena/types/player";
+import type { PlayerHighlightsMap } from "@arena/types/highlights";
 
 export type PantheonRecord = {
   id: string;

@@ -1,4 +1,4 @@
-import type { Player } from "@/types/player";
+﻿import type { Player } from "@arena/types/player";
 
 function normalizeNameKey(name: string): string {
   return name.trim().toLocaleLowerCase("pl");

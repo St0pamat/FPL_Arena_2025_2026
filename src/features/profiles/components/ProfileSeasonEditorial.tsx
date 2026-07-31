@@ -1,4 +1,4 @@
-import { getProfileSeasonEditorial } from "@/features/profiles/lib/profileSeasonEditorial";
+﻿import { getProfileSeasonEditorial } from "@arena/features/profiles/lib/profileSeasonEditorial";
 
 export const ProfileSeasonEditorial = ({ playerId }: { playerId: number }) => {
   const editorial = getProfileSeasonEditorial(playerId);

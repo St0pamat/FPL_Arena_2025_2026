@@ -1,13 +1,13 @@
-import type { Player } from "@/types/player";
-import type { PredictedStandingEntry } from "@/features/profiles/lib/or";
-import { TeamBrand } from "@/components/branding";
-import { formatOrDisplay } from "@/features/profiles/lib/or";
+﻿import type { Player } from "@arena/types/player";
+import type { PredictedStandingEntry } from "@arena/features/profiles/lib/or";
+import { TeamBrand } from "@arena/components/branding";
+import { formatOrDisplay } from "@arena/features/profiles/lib/or";
 import {
   buildPredictionComment,
   getOutcomeLabel,
   getPredictionOutcome,
-} from "@/features/prognoza/lib/predictionCommentary";
-import type { OrBundle } from "@/features/profiles/lib/or";
+} from "@arena/features/prognoza/lib/predictionCommentary";
+import type { OrBundle } from "@arena/features/profiles/lib/or";
 
 const MEDAL = ["🥇", "🥈", "🥉", "4️⃣", "5️⃣"] as const;
 

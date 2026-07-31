@@ -1,9 +1,9 @@
-import { HubShell } from "@/components/layout/HubShell";
-import { HUB_CONFIG } from "@/config/navigation";
-import { CardGeneratorPanel } from "@/features/centrum/sections/CardGeneratorPanel";
-import { StoryPosterPanel } from "@/features/centrum/sections/StoryPosterPanel";
-import type { Player } from "@/types/player";
-import type { PlayerHighlightsMap } from "@/types/highlights";
+﻿import { HubShell } from "@arena/components/layout/HubShell";
+import { HUB_CONFIG } from "@arena/config/navigation";
+import { CardGeneratorPanel } from "@arena/features/centrum/sections/CardGeneratorPanel";
+import { StoryPosterPanel } from "@arena/features/centrum/sections/StoryPosterPanel";
+import type { Player } from "@arena/types/player";
+import type { PlayerHighlightsMap } from "@arena/types/highlights";
 
 const HUB = HUB_CONFIG.udostepnij;
 

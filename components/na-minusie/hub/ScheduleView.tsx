@@ -1,0 +1,134 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import { CalendarDays, Search } from "lucide-react";
+import type { ClubLogoRecord } from "@/lib/admin/clubLogos";
+import type { PublicFixture, PublicTeam } from "@/lib/public/types";
+import { ClubCrest } from "@/components/na-minusie/hub/ClubCrest";
+import { TeamIdentity, teamPrimaryLabel } from "@/components/na-minusie/hub/TeamIdentity";
+
+export function ScheduleView({
+  teams,
+  fixtures,
+  logos = [],
+}: {
+  teams: PublicTeam[];
+  fixtures: PublicFixture[];
+  logos?: ClubLogoRecord[];
+}) {
+  const [filterTeamId, setFilterTeamId] = useState("");
+
+  const byGw = useMemo(() => {
+    const filtered = filterTeamId
+      ? fixtures.filter(
+          (f) => f.home_team_id === filterTeamId || f.away_team_id === filterTeamId,
+        )
+      : fixtures;
+    const map = new Map<number, PublicFixture[]>();
+    for (const f of filtered) {
+      const list = map.get(f.gameweek) ?? [];
+      list.push(f);
+      map.set(f.gameweek, list);
+    }
+    return [...map.entries()].sort((a, b) => a[0] - b[0]);
+  }, [fixtures, filterTeamId]);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col gap-3 rounded-2xl border border-slate-800 bg-slate-900/80 p-4 backdrop-blur-md sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <div className="mb-1 flex items-center gap-2">
+            <CalendarDays className="h-4 w-4 text-emerald-400" />
+            <h2 className="font-athletic text-lg uppercase tracking-wide text-white">
+              Pełny terminarz
+            </h2>
+          </div>
+          <p className="text-xs text-slate-500">
+            Filtruj po swojej drużynie, aby zobaczyć kalendarz na cały sezon.
+          </p>
+        </div>
+        <label className="relative block w-full sm:max-w-xs">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+          <select
+            value={filterTeamId}
+            onChange={(e) => setFilterTeamId(e.target.value)}
+            className="w-full appearance-none rounded-xl border border-slate-700 bg-slate-950 py-2.5 pl-10 pr-4 text-sm text-white outline-none focus:border-emerald-400"
+          >
+            <option value="">Wszystkie drużyny</option>
+            {teams.map((t) => (
+              <option key={t.id} value={t.id}>
+                {teamPrimaryLabel(t)}
+                {t.fpl_team_name?.trim() ? ` · ${t.fpl_team_name.trim()}` : ""} ({t.discord_nick})
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      {!byGw.length ? (
+        <div className="rounded-2xl border border-dashed border-slate-700 px-6 py-12 text-center text-sm text-slate-500">
+          Brak meczów w terminarzu.
+        </div>
+      ) : (
+        <div className="space-y-5">
+          {byGw.map(([gw, matches]) => (
+            <section
+              key={gw}
+              className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/70 backdrop-blur-md"
+            >
+              <header className="flex items-center justify-between border-b border-slate-800 px-4 py-2.5">
+                <h3 className="font-athletic text-sm uppercase tracking-wider text-emerald-400">
+                  Gameweek {gw}
+                </h3>
+                <span className="text-[10px] uppercase tracking-wider text-slate-600">
+                  {matches.every((m) => m.is_finished) ? "Rozliczona" : "Nadchodząca"}
+                </span>
+              </header>
+              <ul className="divide-y divide-slate-800/80">
+                {matches.map((f) => {
+                  const highlight =
+                    filterTeamId &&
+                    (f.home_team_id === filterTeamId || f.away_team_id === filterTeamId);
+                  return (
+                    <li
+                      key={f.id}
+                      className={`grid grid-cols-[1fr_auto_1fr] items-center gap-2 px-3 py-3 sm:gap-4 sm:px-5 ${
+                        highlight ? "bg-emerald-500/5" : ""
+                      }`}
+                    >
+                      <div className="flex min-h-[3.5rem] min-w-0 items-stretch justify-end gap-2">
+                        <TeamIdentity team={f.home_team} align="right" size="sm" />
+                        <ClubCrest
+                          clubName={f.home_team?.chosen_club}
+                          logos={logos}
+                        />
+                      </div>
+                      <div className="flex flex-col items-center">
+                        {f.is_finished ? (
+                          <span className="font-mono text-sm font-black text-white">
+                            {f.home_fpl_points ?? 0}:{f.away_fpl_points ?? 0}
+                          </span>
+                        ) : (
+                          <span className="rounded bg-black/40 px-2 py-0.5 text-[10px] font-bold uppercase text-slate-400">
+                            vs
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex min-h-[3.5rem] min-w-0 items-stretch justify-start gap-2">
+                        <ClubCrest
+                          clubName={f.away_team?.chosen_club}
+                          logos={logos}
+                        />
+                        <TeamIdentity team={f.away_team} align="left" size="sm" />
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

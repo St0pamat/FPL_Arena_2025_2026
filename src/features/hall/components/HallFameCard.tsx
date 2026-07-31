@@ -1,6 +1,6 @@
-import type { ReactNode } from "react";
-import { PLAYER_BY_ID } from "@/config/playersIndex";
-import { TeamBrand, TeamCrest } from "@/components/branding";
+﻿import type { ReactNode } from "react";
+import { PLAYER_BY_ID } from "@arena/config/playersIndex";
+import { TeamBrand, TeamCrest } from "@arena/components/branding";
 
 export const HallFameCard = ({
   emoji,

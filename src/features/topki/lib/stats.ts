@@ -1,7 +1,7 @@
-import type { Player } from "@/types/player";
-import type { PlayerHighlightsMap } from "@/types/highlights";
-import type { GwMatchesBlock } from "@/types/match";
-import { buildStandingsHistory } from "@/features/standings/lib/standings";
+﻿import type { Player } from "@arena/types/player";
+import type { PlayerHighlightsMap } from "@arena/types/highlights";
+import type { GwMatchesBlock } from "@arena/types/match";
+import { buildStandingsHistory } from "@arena/features/standings/lib/standings";
 
 export interface H2HRow {
   gw: number;

@@ -1,6 +1,6 @@
-import { PLAYERS_DATA } from "@/data/players";
-import { TEAM_BY_NAME } from "@/config/playersIndex";
-import type { GwMatchesBlock, StandingRow } from "@/types/match";
+﻿import { PLAYERS_DATA } from "@arena/data/players";
+import { TEAM_BY_NAME } from "@arena/config/playersIndex";
+import type { GwMatchesBlock, StandingRow } from "@arena/types/match";
 
 export const emptyStandingRow = (team) => ({
     team,

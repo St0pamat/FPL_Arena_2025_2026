@@ -1,6 +1,6 @@
-import { LeagueLogo } from "@/components/branding";
-import { HomeNavButton } from "@/features/home/components/HomeNavButton";
-import { NAV_GROUPS, type AppTab } from "@/config/tabs";
+﻿import { LeagueLogo } from "@arena/components/branding";
+import { HomeNavButton } from "@arena/features/home/components/HomeNavButton";
+import { NAV_GROUPS, type AppTab } from "@arena/config/tabs";
 
 export const HomeView = ({
   magazynOpen,

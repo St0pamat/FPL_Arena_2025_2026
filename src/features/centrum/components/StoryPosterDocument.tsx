@@ -1,8 +1,8 @@
-import { LEAGUE_LOGO_SRC, teamLogoSrc } from "@/config/branding";
-import type { Player } from "@/types/player";
-import { playerDisplayName } from "@/lib/playerDisplay";
-import { buildStoryPosterLines } from "@/features/centrum/lib/cardContent";
-import type { PlayerHighlights } from "@/types/highlights";
+﻿import { LEAGUE_LOGO_SRC, teamLogoSrc } from "@arena/config/branding";
+import type { Player } from "@arena/types/player";
+import { playerDisplayName } from "@arena/lib/playerDisplay";
+import { buildStoryPosterLines } from "@arena/features/centrum/lib/cardContent";
+import type { PlayerHighlights } from "@arena/types/highlights";
 
 const KPI = [
   { key: "rank", label: "Miejsce H2H", fmt: (d: ReturnType<typeof buildStoryPosterLines>) => `#${d.rank}` },

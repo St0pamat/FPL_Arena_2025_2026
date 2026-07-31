@@ -1,0 +1,263 @@
+{
+  "version": 1,
+  "logos": [
+    {
+      "clubKey": "afc-richmond",
+      "clubName": "AFC Richmond",
+      "fileName": "afc-richmond.png",
+      "updatedAt": "2026-07-31T09:44:43.848Z"
+    },
+    {
+      "clubKey": "afc-wimbledon",
+      "clubName": "AFC Wimbledon",
+      "fileName": "afc-wimbledon.png",
+      "updatedAt": "2026-07-31T09:00:24.109Z"
+    },
+    {
+      "clubKey": "arsenal",
+      "clubName": "Arsenal",
+      "fileName": "arsenal.png",
+      "updatedAt": "2026-07-30T13:46:20.346Z"
+    },
+    {
+      "clubKey": "aston-villa",
+      "clubName": "Aston Villa",
+      "fileName": "aston-villa.png",
+      "updatedAt": "2026-07-31T07:10:01.459Z"
+    },
+    {
+      "clubKey": "birmingham",
+      "clubName": "Birmingham",
+      "fileName": "birmingham.png",
+      "updatedAt": "2026-07-31T07:16:26.929Z"
+    },
+    {
+      "clubKey": "blackburn-rovers",
+      "clubName": "Blackburn Rovers",
+      "fileName": "blackburn-rovers.png",
+      "updatedAt": "2026-07-31T07:13:28.120Z"
+    },
+    {
+      "clubKey": "bournemouth",
+      "clubName": "Bournemouth",
+      "fileName": "bournemouth.png",
+      "updatedAt": "2026-07-31T07:10:53.328Z"
+    },
+    {
+      "clubKey": "brentford",
+      "clubName": "Brentford",
+      "fileName": "brentford.png",
+      "updatedAt": "2026-07-31T07:15:15.433Z"
+    },
+    {
+      "clubKey": "brighton",
+      "clubName": "Brighton",
+      "fileName": "brighton.png",
+      "updatedAt": "2026-07-31T07:13:50.796Z"
+    },
+    {
+      "clubKey": "burnley",
+      "clubName": "Burnley",
+      "fileName": "burnley.png",
+      "updatedAt": "2026-07-31T07:19:17.773Z"
+    },
+    {
+      "clubKey": "charlton",
+      "clubName": "Charlton",
+      "fileName": "charlton.png",
+      "updatedAt": "2026-07-31T07:11:41.276Z"
+    },
+    {
+      "clubKey": "chelsea",
+      "clubName": "Chelsea",
+      "fileName": "chelsea.png",
+      "updatedAt": "2026-07-30T00:00:00.000Z"
+    },
+    {
+      "clubKey": "coventry-city",
+      "clubName": "Coventry City",
+      "fileName": "coventry-city.png",
+      "updatedAt": "2026-07-31T10:01:52.329Z"
+    },
+    {
+      "clubKey": "crystal-palace",
+      "clubName": "Crystal Palace",
+      "fileName": "crystal-palace.png",
+      "updatedAt": "2026-07-31T07:10:38.455Z"
+    },
+    {
+      "clubKey": "derby-county",
+      "clubName": "Derby County",
+      "fileName": "derby-county.png",
+      "updatedAt": "2026-07-31T07:19:52.129Z"
+    },
+    {
+      "clubKey": "everton",
+      "clubName": "Everton",
+      "fileName": "everton.png",
+      "updatedAt": "2026-07-31T07:10:13.403Z"
+    },
+    {
+      "clubKey": "farnborough-fc",
+      "clubName": "Farnborough FC",
+      "fileName": "farnborough-fc.png",
+      "updatedAt": "2026-07-31T09:47:29.232Z"
+    },
+    {
+      "clubKey": "fulham",
+      "clubName": "Fulham",
+      "fileName": "fulham.png",
+      "updatedAt": "2026-07-31T10:01:19.996Z"
+    },
+    {
+      "clubKey": "ipswich",
+      "clubName": "Ipswich",
+      "fileName": "ipswich.png",
+      "updatedAt": "2026-07-31T07:20:28.781Z"
+    },
+    {
+      "clubKey": "leeds",
+      "clubName": "Leeds",
+      "fileName": "leeds.png",
+      "updatedAt": "2026-07-31T07:15:56.914Z"
+    },
+    {
+      "clubKey": "leyton-orient",
+      "clubName": "Leyton Orient",
+      "fileName": "leyton-orient.png",
+      "updatedAt": "2026-07-31T07:20:51.010Z"
+    },
+    {
+      "clubKey": "liverpool",
+      "clubName": "Liverpool",
+      "fileName": "liverpool.png",
+      "updatedAt": "2026-07-31T07:18:35.967Z"
+    },
+    {
+      "clubKey": "luton",
+      "clubName": "Luton",
+      "fileName": "luton.png",
+      "updatedAt": "2026-07-31T07:28:42.235Z"
+    },
+    {
+      "clubKey": "manchester-city",
+      "clubName": "Manchester City",
+      "fileName": "manchester-city.png",
+      "updatedAt": "2026-07-31T07:12:06.922Z"
+    },
+    {
+      "clubKey": "manchester-united",
+      "clubName": "Manchester United",
+      "fileName": "manchester-united.png",
+      "updatedAt": "2026-07-31T07:12:26.732Z"
+    },
+    {
+      "clubKey": "milton-keynes-dons",
+      "clubName": "Milton Keynes Dons",
+      "fileName": "milton-keynes-dons.png",
+      "updatedAt": "2026-07-31T07:31:55.739Z"
+    },
+    {
+      "clubKey": "newcastle",
+      "clubName": "Newcastle",
+      "fileName": "newcastle.png",
+      "updatedAt": "2026-07-31T07:14:40.825Z"
+    },
+    {
+      "clubKey": "nottingham-forest",
+      "clubName": "Nottingham Forest",
+      "fileName": "nottingham-forest.png",
+      "updatedAt": "2026-07-31T07:11:28.276Z"
+    },
+    {
+      "clubKey": "notts-county",
+      "clubName": "Notts County",
+      "fileName": "notts-county.png",
+      "updatedAt": "2026-07-31T08:58:12.739Z"
+    },
+    {
+      "clubKey": "port-vale",
+      "clubName": "Port Vale",
+      "fileName": "port-vale.png",
+      "updatedAt": "2026-07-31T07:26:39.246Z"
+    },
+    {
+      "clubKey": "portsmouth",
+      "clubName": "Portsmouth",
+      "fileName": "portsmouth.png",
+      "updatedAt": "2026-07-31T07:24:38.586Z"
+    },
+    {
+      "clubKey": "qpr",
+      "clubName": "QPR",
+      "fileName": "qpr.png",
+      "updatedAt": "2026-07-31T08:57:54.480Z"
+    },
+    {
+      "clubKey": "sheffield-united",
+      "clubName": "Sheffield United",
+      "fileName": "sheffield-united.png",
+      "updatedAt": "2026-07-31T07:12:48.698Z"
+    },
+    {
+      "clubKey": "southampton",
+      "clubName": "Southampton",
+      "fileName": "southampton.png",
+      "updatedAt": "2026-07-31T07:24:07.147Z"
+    },
+    {
+      "clubKey": "swansea",
+      "clubName": "Swansea",
+      "fileName": "swansea.png",
+      "updatedAt": "2026-07-31T07:23:19.093Z"
+    },
+    {
+      "clubKey": "tottenham",
+      "clubName": "Tottenham",
+      "fileName": "tottenham.png",
+      "updatedAt": "2026-07-31T10:01:08.499Z"
+    },
+    {
+      "clubKey": "watford",
+      "clubName": "Watford",
+      "fileName": "watford.png",
+      "updatedAt": "2026-07-31T07:13:02.366Z"
+    },
+    {
+      "clubKey": "west-brom",
+      "clubName": "West Brom",
+      "fileName": "west-brom.png",
+      "updatedAt": "2026-07-31T07:13:16.365Z"
+    },
+    {
+      "clubKey": "west-ham",
+      "clubName": "West Ham",
+      "fileName": "west-ham.png",
+      "updatedAt": "2026-07-30T13:35:36.948Z"
+    },
+    {
+      "clubKey": "wigan",
+      "clubName": "Wigan",
+      "fileName": "wigan.png",
+      "updatedAt": "2026-07-31T07:25:48.589Z"
+    },
+    {
+      "clubKey": "wolves",
+      "clubName": "Wolves",
+      "fileName": "wolves.png",
+      "updatedAt": "2026-07-31T07:15:04.084Z"
+    },
+    {
+      "clubKey": "wrexham",
+      "clubName": "Wrexham",
+      "fileName": "wrexham.png",
+      "updatedAt": "2026-07-31T07:25:16.320Z"
+    },
+    {
+      "clubKey": "wycombe-wanderers",
+      "clubName": "Wycombe Wanderers",
+      "fileName": "wycombe-wanderers.png",
+      "updatedAt": "2026-07-31T07:29:13.755Z"
+    }
+  ]
+}

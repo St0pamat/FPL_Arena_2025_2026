@@ -1,5 +1,5 @@
-import { PLAYERS_DATA } from "@/data/players";
-import { TEAM_BY_NAME } from "@/config/playersIndex";
+﻿import { PLAYERS_DATA } from "@arena/data/players";
+import { TEAM_BY_NAME } from "@arena/config/playersIndex";
 
 const TEAM_NAMES = PLAYERS_DATA.map((p) => p.team);
 
