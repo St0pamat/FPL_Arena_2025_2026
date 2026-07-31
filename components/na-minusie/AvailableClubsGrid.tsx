@@ -56,13 +56,13 @@ export function AvailableClubsGrid({
 
                   <div className="mt-1.5 flex min-h-[1.75rem] w-full items-center justify-center">
                     {player.fplTeam ? (
-                      <p className="inline-flex max-w-full items-center justify-center rounded-md bg-[#39FF14]/10 px-2 py-1 text-[11px] font-bold leading-none text-[#39FF14] ring-1 ring-[#39FF14]/25 sm:text-xs">
-                        <span className="truncate">{player.fplTeam}</span>
+                      <p className="truncate text-[11px] font-bold leading-snug tracking-wide text-sky-300 sm:text-xs">
+                        {player.fplTeam}
                       </p>
                     ) : null}
                   </div>
 
-                  <p className="mt-2 truncate rounded-md border border-slate-700/80 bg-slate-950/60 px-2 py-1 text-[11px] font-semibold tracking-wide text-slate-200 sm:text-xs">
+                  <p className="mt-2 truncate text-[12px] font-black leading-snug tracking-wide text-[#39FF14] sm:text-sm">
                     {player.fplManager}
                   </p>
                 </div>

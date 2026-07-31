@@ -90,6 +90,8 @@ export function parseBazaPlayers(csvText: string): RecruitmentPlayer[] {
     players.push({ fplManager, fplTeam, discordClub });
   }
 
+  players.sort((a, b) => a.fplManager.localeCompare(b.fplManager, "pl", { sensitivity: "base" }));
+
   console.log("[parseBazaPlayers] Uczestnicy po filtrach:", players.length);
   return players;
 }
