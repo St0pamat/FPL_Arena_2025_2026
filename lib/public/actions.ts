@@ -27,12 +27,15 @@ import type {
   PublicFixture,
   PublicPyramid,
   PublicSeason,
+  PublicSeasonDivisionStructurePayload,
   PublicSeasonSummaryPayload,
   PublicStandingRow,
   PublicStructure,
   PublicTeam,
   SeasonSummaryPlayerRow,
   TeamSchedulePayload,
+  DivisionRosterBlock,
+  DivisionRosterRow,
 } from "@/lib/public/types";
 import type { ClubLogoRecord } from "@/lib/admin/clubLogos";
 import type { TierLogoRecord } from "@/lib/admin/tierLogos";
@@ -268,6 +271,252 @@ export async function getPublicClubLogos(): Promise<ClubLogoRecord[]> {
 
 export async function getPublicTierLogos(): Promise<TierLogoRecord[]> {
   return listTierLogos();
+}
+
+/**
+ * Publiczny podgląd dywizji (menu „Dywizje”).
+ * Pokazuje aktualny sezon (najnowszy niearchiwalny) — także DRAFT i niepełne ligi.
+ * Sort drużyn: previous_season_or ASC, null na końcu.
+ */
+export async function getPublicDivisionsPreview(
+  seasonId?: string,
+): Promise<PublicSeasonDivisionStructurePayload> {
+  const supabase = createClient();
+
+  let season: { id: string; name: string } | null = null;
+
+  if (seasonId) {
+    const { data, error } = await supabase
+      .from("seasons")
+      .select("id, name, is_archived")
+      .eq("id", seasonId)
+      .maybeSingle();
+    if (error) {
+      return {
+        seasonId,
+        seasonName: "",
+        divisions: [],
+        updatedAt: null,
+        isPreview: true,
+        error: error.message,
+      };
+    }
+    season = data ? { id: data.id, name: data.name } : null;
+  } else {
+    const { data, error } = await supabase
+      .from("seasons")
+      .select("id, name, is_archived, created_at")
+      .order("created_at", { ascending: false });
+    if (error) {
+      // fallback bez is_archived
+      if (/is_archived/i.test(error.message)) {
+        const retry = await supabase
+          .from("seasons")
+          .select("id, name, created_at")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (retry.error) {
+          return {
+            seasonId: "",
+            seasonName: "",
+            divisions: [],
+            updatedAt: null,
+            isPreview: true,
+            error: retry.error.message,
+          };
+        }
+        season = retry.data
+          ? { id: retry.data.id, name: retry.data.name }
+          : null;
+      } else {
+        return {
+          seasonId: "",
+          seasonName: "",
+          divisions: [],
+          updatedAt: null,
+          isPreview: true,
+          error: error.message,
+        };
+      }
+    } else {
+      const active = (data ?? []).find((s) => !s.is_archived) ?? data?.[0] ?? null;
+      season = active ? { id: active.id, name: active.name } : null;
+    }
+  }
+
+  if (!season) {
+    return {
+      seasonId: "",
+      seasonName: "",
+      divisions: [],
+      updatedAt: null,
+      isPreview: true,
+      error: "Brak sezonu do wyświetlenia.",
+    };
+  }
+
+  const { data: divisionsRaw, error: divError } = await supabase
+    .from("divisions")
+    .select("id, name, tier, season_id, pyramid_id")
+    .eq("season_id", season.id)
+    .order("tier", { ascending: true });
+  if (divError) {
+    return {
+      seasonId: season.id,
+      seasonName: season.name,
+      divisions: [],
+      updatedAt: null,
+      isPreview: true,
+      error: divError.message,
+    };
+  }
+
+  const allDivs = (divisionsRaw ?? []) as PublicDivision[];
+  if (!allDivs.length) {
+    return {
+      seasonId: season.id,
+      seasonName: season.name,
+      divisions: [],
+      updatedAt: null,
+      isPreview: true,
+    };
+  }
+
+  const pyramidIds = [...new Set(allDivs.map((d) => d.pyramid_id))];
+  const { data: pyData } = await supabase
+    .from("pyramids")
+    .select("id, name")
+    .in("id", pyramidIds);
+  const pyramidNameById = new Map(
+    (pyData ?? []).map((p) => [p.id as string, p.name as string]),
+  );
+
+  const divIds = allDivs.map((d) => d.id);
+  const { data: teamsRaw, error: teamsError } = await supabase
+    .from("teams")
+    .select(
+      "id, division_id, manager_name, discord_nick, fpl_team_name, chosen_club, previous_season_or, is_active, created_at",
+    )
+    .in("division_id", divIds);
+
+  type TeamRow = {
+    id: string;
+    division_id: string | null;
+    manager_name: string;
+    discord_nick: string;
+    fpl_team_name: string | null;
+    chosen_club: string;
+    previous_season_or?: number | null;
+    is_active?: boolean | null;
+    created_at?: string | null;
+  };
+
+  let teams: TeamRow[] = [];
+  if (teamsError) {
+    if (/previous_season_or|is_active|created_at/i.test(teamsError.message)) {
+      const retry = await supabase
+        .from("teams")
+        .select(
+          "id, division_id, manager_name, discord_nick, fpl_team_name, chosen_club, created_at",
+        )
+        .in("division_id", divIds);
+      if (retry.error) {
+        const bare = await supabase
+          .from("teams")
+          .select(
+            "id, division_id, manager_name, discord_nick, fpl_team_name, chosen_club",
+          )
+          .in("division_id", divIds);
+        if (bare.error) {
+          return {
+            seasonId: season.id,
+            seasonName: season.name,
+            divisions: [],
+            updatedAt: null,
+            isPreview: true,
+            error: bare.error.message,
+          };
+        }
+        teams = (bare.data ?? []) as TeamRow[];
+      } else {
+        teams = (retry.data ?? []) as TeamRow[];
+      }
+    } else {
+      return {
+        seasonId: season.id,
+        seasonName: season.name,
+        divisions: [],
+        updatedAt: null,
+        isPreview: true,
+        error: teamsError.message,
+      };
+    }
+  } else {
+    teams = (teamsRaw ?? []) as TeamRow[];
+  }
+
+  let updatedAt: string | null = null;
+  for (const t of teams) {
+    if (!t.created_at) continue;
+    if (!updatedAt || t.created_at > updatedAt) updatedAt = t.created_at;
+  }
+
+  const byDiv = new Map<string, DivisionRosterRow[]>();
+  for (const t of teams) {
+    if (!t.division_id || t.is_active === false) continue;
+    const list = byDiv.get(t.division_id) ?? [];
+    list.push({
+      lp: 0,
+      teamId: t.id,
+      fpl_team_name: t.fpl_team_name,
+      manager_name: t.manager_name,
+      discord_nick: t.discord_nick,
+      chosen_club: t.chosen_club,
+      previous_or:
+        typeof t.previous_season_or === "number" ? t.previous_season_or : null,
+    });
+    byDiv.set(t.division_id, list);
+  }
+
+  const blocks: DivisionRosterBlock[] = allDivs.map((d) => {
+    const roster = (byDiv.get(d.id) ?? [])
+      .sort((a, b) => {
+        const ao = a.previous_or;
+        const bo = b.previous_or;
+        if (ao == null && bo == null) {
+          return a.manager_name.localeCompare(b.manager_name, "pl");
+        }
+        if (ao == null) return 1;
+        if (bo == null) return -1;
+        if (ao !== bo) return ao - bo;
+        return a.manager_name.localeCompare(b.manager_name, "pl");
+      })
+      .map((row, i) => ({ ...row, lp: i + 1 }));
+    return {
+      divisionId: d.id,
+      name: d.name,
+      tier: d.tier,
+      pyramidId: d.pyramid_id,
+      pyramidName: pyramidNameById.get(d.pyramid_id) ?? "—",
+      teams: roster,
+    };
+  });
+
+  return {
+    seasonId: season.id,
+    seasonName: season.name,
+    divisions: blocks,
+    updatedAt: updatedAt ?? new Date().toISOString(),
+    isPreview: true,
+  };
+}
+
+/** @deprecated — użyj getPublicDivisionsPreview */
+export async function getPublicSeasonDivisionStructure(
+  seasonId: string,
+): Promise<PublicSeasonDivisionStructurePayload> {
+  return getPublicDivisionsPreview(seasonId);
 }
 
 /** Pełna tabela ligowa + fixtures dywizji + podgląd baraży GW19. */

@@ -1,7 +1,7 @@
 "use client";
 
 import { NA_MINUSIE_SECTION_IDS, NA_MINUSIE_SECTION_NAV, useActiveSection } from "@/lib/na-minusie";
-import { NM_CONTAINER } from "@/lib/na-minusie/theme";
+import { NM_BELOW_STICKY_HEADER, NM_CONTAINER } from "@/lib/na-minusie/theme";
 
 function scrollToSection(id: string) {
   const el = document.getElementById(id);
@@ -15,7 +15,9 @@ export function LandingSubNav() {
   const activeId = useActiveSection(NA_MINUSIE_SECTION_IDS);
 
   return (
-    <div className="sticky top-16 z-40 border-b border-[#1a1a1a]/80 bg-[#050505]/85 backdrop-blur-md sm:top-[4.5rem]">
+    <div
+      className={`sticky z-40 border-b border-[#1a1a1a]/80 bg-[#050505]/85 backdrop-blur-md ${NM_BELOW_STICKY_HEADER}`}
+    >
       <div className={`${NM_CONTAINER} overflow-x-auto`}>
         <nav
           className="flex min-w-max items-center gap-1 py-2.5 sm:gap-2"

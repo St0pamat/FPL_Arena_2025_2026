@@ -4,25 +4,12 @@ import { useEffect, useState } from "react";
 import { Shield } from "lucide-react";
 import {
   findTierLogo,
-  PYRAMID_TIER_NAMES,
+  resolveTierLogoName,
   tierLogoPublicUrl,
   type TierLogoRecord,
 } from "@/lib/admin/tierLogos";
 
-/** Mapuje nazwę/tier dywizji z bazy na klucz logo piramidy. */
-export function resolveTierLogoName(divisionName: string, tier?: number): string {
-  const raw = divisionName.trim();
-  const lower = raw.toLowerCase();
-
-  if (lower.includes("premier")) return PYRAMID_TIER_NAMES[0];
-  if (lower.includes("championship")) return PYRAMID_TIER_NAMES[1];
-  if (lower.includes("league one") || lower.includes("league 1")) return PYRAMID_TIER_NAMES[2];
-  if (lower.includes("league two") || lower.includes("league 2")) return PYRAMID_TIER_NAMES[3];
-  if (lower.includes("national")) return PYRAMID_TIER_NAMES[4];
-
-  if (tier && tier >= 1 && tier <= 5) return PYRAMID_TIER_NAMES[tier - 1];
-  return raw;
-}
+export { resolveTierLogoName };
 
 /** Herb / logo dywizji — fallback: zielona tarcza. */
 export function TierCrest({

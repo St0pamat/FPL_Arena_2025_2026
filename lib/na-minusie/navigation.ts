@@ -1,6 +1,7 @@
-/** Główne menu aplikacji (Header) — O lidze vs Strefa Gracza */
+/** Główne menu aplikacji (Header) */
 export const NA_MINUSIE_MAIN_NAV = [
   { id: "o-lidze", label: "O lidze", href: "/na-minusie" },
+  { id: "dywizje", label: "Dywizje", href: "/na-minusie/dywizje" },
   { id: "strefa-gracza", label: "Strefa Gracza", href: "/na-minusie/hub" },
 ] as const;
 

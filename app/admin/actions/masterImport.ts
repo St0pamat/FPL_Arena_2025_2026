@@ -25,6 +25,7 @@ function revalidateMaster() {
   revalidatePath("/admin/workspace");
   revalidatePath("/admin/fixture-draw");
   revalidatePath("/admin/struktura");
+  revalidatePath("/na-minusie/dywizje");
   revalidatePath("/admin", "layout");
 }
 

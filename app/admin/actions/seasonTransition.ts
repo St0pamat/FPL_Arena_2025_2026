@@ -35,6 +35,7 @@ function revalidateAll() {
   revalidatePath("/admin/season-settlement");
   revalidatePath("/admin/workspace");
   revalidatePath("/na-minusie/hub");
+  revalidatePath("/na-minusie/dywizje");
 }
 
 export async function markSeasonCompleted(

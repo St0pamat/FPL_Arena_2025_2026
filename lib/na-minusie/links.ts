@@ -1,6 +1,7 @@
 /** Ścieżki wewnętrzne Na Minusie ™ */
 export const NA_MINUSIE_PATHS = {
   home: "/na-minusie",
+  dywizje: "/na-minusie/dywizje",
   hub: "/na-minusie/hub",
   regulamin: "/na-minusie/regulamin",
   admin: "/admin/dashboard",

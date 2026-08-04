@@ -1,5 +1,10 @@
 import Papa from "papaparse";
 import { NA_MINUSIE_LINKS } from "@/lib/na-minusie/links";
+import type {
+  DivisionRosterBlock,
+  DivisionRosterRow,
+  PublicSeasonDivisionStructurePayload,
+} from "@/lib/public/types";
 
 /** Baza uczestników Na Minusie (FPL Manager / Team / Discord Club) */
 export const NAMINUSIE_BAZA_CSV_URL =
@@ -45,6 +50,31 @@ function cellByHeader(row: Record<string, unknown>, header: string): string {
   return key ? cleanCell(row[key]) : "";
 }
 
+/** Kolumna OR — w arkuszu bywa „OR 2025/26”, „OR”, „Overall Rank”. */
+function cellOr(row: Record<string, unknown>): string {
+  const direct =
+    cellByHeader(row, "OR 2025/26") ||
+    cellByHeader(row, "OR") ||
+    cellByHeader(row, "Overall Rank");
+  if (direct) return direct;
+  const key = Object.keys(row).find((k) => /^or\b/i.test(k.replace(/_\d+$/, "")));
+  return key ? cleanCell(row[key]) : "";
+}
+
+function parseOptionalInt(raw: string): number | null {
+  const cleaned = raw.replace(/\s+/g, "").replace(/,/g, "");
+  if (!cleaned) return null;
+  if (!/^\d+$/.test(cleaned)) return null;
+  const n = Number.parseInt(cleaned, 10);
+  return Number.isFinite(n) && n >= 1 ? n : null;
+}
+
+function isActiveStatus(statusRaw: string): boolean {
+  const s = statusRaw.trim().toLowerCase();
+  if (!s) return true;
+  return s === "aktywny" || s === "active" || s === "tak" || s === "yes" || s === "1";
+}
+
 async function fetchCsv(url: string): Promise<string> {
   const res = await fetch(url, {
     next: { revalidate: 60 },
@@ -54,6 +84,25 @@ async function fetchCsv(url: string): Promise<string> {
     throw new Error(`Błąd pobierania CSV (${res.status}): ${url}`);
   }
   return res.text();
+}
+
+async function fetchCsvWithMeta(
+  url: string,
+): Promise<{ text: string; lastModified: string | null }> {
+  const res = await fetch(url, {
+    next: { revalidate: 60 },
+    headers: { Accept: "text/csv,text/plain,*/*" },
+  });
+  if (!res.ok) {
+    throw new Error(`Błąd pobierania CSV (${res.status}): ${url}`);
+  }
+  const lastModifiedHeader = res.headers.get("last-modified");
+  let lastModified: string | null = null;
+  if (lastModifiedHeader) {
+    const d = new Date(lastModifiedHeader);
+    if (!Number.isNaN(d.getTime())) lastModified = d.toISOString();
+  }
+  return { text: await res.text(), lastModified };
 }
 
 /** Aktywni uczestnicy z arkusza NaMinusie Baza. */
@@ -94,6 +143,145 @@ export function parseBazaPlayers(csvText: string): RecruitmentPlayer[] {
 
   console.log("[parseBazaPlayers] Uczestnicy po filtrach:", players.length);
   return players;
+}
+
+/**
+ * Pełny podział na dywizje z arkusza Baza (to samo źródło co „Grają z Nami”).
+ * Grupuje po: Piramida + Dywizja (tier) + Nazwa dywizji.
+ */
+export function parseBazaDivisionStructure(
+  csvText: string,
+): DivisionRosterBlock[] {
+  const parsed = Papa.parse<Record<string, unknown>>(csvText, {
+    header: true,
+    skipEmptyLines: true,
+  });
+
+  type Acc = {
+    key: string;
+    name: string;
+    tier: number;
+    pyramidName: string;
+    teams: DivisionRosterRow[];
+  };
+
+  const byKey = new Map<string, Acc>();
+
+  for (const row of parsed.data) {
+    if (!row || typeof row !== "object") continue;
+
+    const status = cellByHeader(row, "Status");
+    if (!isActiveStatus(status)) continue;
+
+    const tier = parseOptionalInt(cellByHeader(row, "Dywizja"));
+    const divisionName = cellByHeader(row, "Nazwa dywizji");
+    const pyramidName = cellByHeader(row, "Piramida") || "—";
+    const fplManager = cellByHeader(row, "FPL Manager");
+    const discordNick = cellByHeader(row, "Discord Name");
+    const discordClub = cellByHeader(row, "Discord Club");
+    const fplTeam = cellByHeader(row, "FPL Team");
+    const previousOr = parseOptionalInt(cellOr(row));
+
+    if (tier == null || tier < 1 || !divisionName) continue;
+    // Puste sloty w arkuszu (tylko LP/tier/nazwa, czasem śmieci w Discord Name)
+    if (!fplManager || !discordClub) continue;
+    const nick = (discordNick || fplManager).trim();
+    if (!nick || /^[`'"\-–—._\s]+$/.test(nick)) continue;
+
+    const key = `${pyramidName.toLowerCase()}::${tier}::${divisionName.toLowerCase()}`;
+    let block = byKey.get(key);
+    if (!block) {
+      block = {
+        key,
+        name: divisionName,
+        tier,
+        pyramidName,
+        teams: [],
+      };
+      byKey.set(key, block);
+    }
+
+    block.teams.push({
+      lp: 0,
+      teamId: `${key}::${nick.toLowerCase()}::${discordClub.toLowerCase()}`,
+      fpl_team_name: fplTeam || null,
+      manager_name: fplManager,
+      discord_nick: nick,
+      chosen_club: discordClub,
+      previous_or: previousOr,
+    });
+  }
+
+  const blocks: DivisionRosterBlock[] = [...byKey.values()]
+    .sort(
+      (a, b) =>
+        a.tier - b.tier ||
+        a.pyramidName.localeCompare(b.pyramidName, "pl") ||
+        a.name.localeCompare(b.name, "pl"),
+    )
+    .map((acc) => {
+      const teams = acc.teams
+        .sort((a, b) => {
+          const ao = a.previous_or;
+          const bo = b.previous_or;
+          if (ao == null && bo == null) {
+            return a.manager_name.localeCompare(b.manager_name, "pl");
+          }
+          if (ao == null) return 1;
+          if (bo == null) return -1;
+          if (ao !== bo) return ao - bo;
+          return a.manager_name.localeCompare(b.manager_name, "pl");
+        })
+        .map((row, i) => ({ ...row, lp: i + 1 }));
+
+      return {
+        divisionId: acc.key,
+        name: acc.name,
+        tier: acc.tier,
+        pyramidId: acc.pyramidName.toLowerCase(),
+        pyramidName: acc.pyramidName,
+        teams,
+      };
+    });
+
+  console.log(
+    "[parseBazaDivisionStructure] Dywizje:",
+    blocks.length,
+    "graczy:",
+    blocks.reduce((n, b) => n + b.teams.length, 0),
+  );
+  return blocks;
+}
+
+/**
+ * Live podgląd dywizji z publicznego CSV bazy (jak „Grają z Nami”).
+ * Cache: revalidate 60s.
+ */
+export async function getPublicDivisionsFromBaza(): Promise<PublicSeasonDivisionStructurePayload> {
+  try {
+    const { text, lastModified } = await fetchCsvWithMeta(NAMINUSIE_BAZA_CSV_URL);
+    const divisions = parseBazaDivisionStructure(text);
+    return {
+      seasonId: "baza-live",
+      seasonName: "Na Minusie",
+      divisions,
+      updatedAt: lastModified ?? new Date().toISOString(),
+      isPreview: true,
+    };
+  } catch (e) {
+    console.error("[getPublicDivisionsFromBaza]", e);
+    return {
+      seasonId: "",
+      seasonName: "",
+      divisions: [],
+      updatedAt: null,
+      isPreview: true,
+      error:
+        e instanceof Error
+          ? e.message
+          : "Nie udało się wczytać bazy uczestników.",
+    };
+  }
 }
 
 /**

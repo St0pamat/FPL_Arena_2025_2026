@@ -30,6 +30,37 @@ export interface PublicStructure {
   divisions: PublicDivision[];
 }
 
+/** Wiersz składu dywizji (zakładka Struktura). */
+export interface DivisionRosterRow {
+  lp: number;
+  teamId: string;
+  fpl_team_name: string | null;
+  manager_name: string;
+  discord_nick: string;
+  chosen_club: string;
+  previous_or: number | null;
+}
+
+export interface DivisionRosterBlock {
+  divisionId: string;
+  name: string;
+  tier: number;
+  pyramidId: string;
+  pyramidName: string;
+  teams: DivisionRosterRow[];
+}
+
+export interface PublicSeasonDivisionStructurePayload {
+  seasonId: string;
+  seasonName: string;
+  divisions: DivisionRosterBlock[];
+  /** ISO timestamp ostatniej zmiany składu (max created_at drużyn) */
+  updatedAt?: string | null;
+  /** true = podgląd rekrutacyjny (także niepełne dywizje) */
+  isPreview?: boolean;
+  error?: string | null;
+}
+
 /** Wiersz raportu EoS (podsumowanie). */
 export interface SeasonSummaryPlayerRow {
   teamId: string;

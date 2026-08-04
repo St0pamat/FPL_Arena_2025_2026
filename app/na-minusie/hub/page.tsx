@@ -7,6 +7,7 @@ import type { TierLogoRecord } from "@/lib/admin/tierLogos";
 import type { PublicStructure } from "@/lib/public/types";
 import { NA_MINUSIE_BRAND } from "@/lib/na-minusie";
 import { createClient } from "@/lib/supabase/server";
+import { NM_BELOW_STICKY_HEADER } from "@/lib/na-minusie/theme";
 
 export const metadata: Metadata = {
   title: `Strefa Gracza — ${NA_MINUSIE_BRAND}`,
@@ -56,7 +57,7 @@ export default async function PublicHubPage() {
   return (
     <main className="relative min-h-screen bg-[#0B0F19] font-sans text-slate-100">
       <div
-        className="sticky top-16 z-40 border-b border-amber-500/30 bg-amber-500/10 px-4 py-2 text-center backdrop-blur-md sm:top-[4.5rem]"
+        className={`sticky z-40 border-b border-amber-500/30 bg-amber-500/10 px-4 py-2 text-center backdrop-blur-md ${NM_BELOW_STICKY_HEADER}`}
         role="status"
       >
         <p className="text-[11px] font-black uppercase tracking-[0.2em] text-amber-300">

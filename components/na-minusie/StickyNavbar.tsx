@@ -13,6 +13,7 @@ import {
 } from "@/lib/na-minusie";
 import { NA_MINUSIE_PATHS } from "@/lib/na-minusie/links";
 import { NM_CONTAINER } from "@/lib/na-minusie/theme";
+import { CollaborationCredits } from "@/components/na-minusie/CollaborationCredits";
 import { createClient } from "@/lib/supabase/client";
 
 const navLinkClass = (isActive: boolean) =>
@@ -24,9 +25,20 @@ function isMainNavActive(href: string, pathname: string): boolean {
   if (href === NA_MINUSIE_PATHS.hub) {
     return pathname === NA_MINUSIE_PATHS.hub || pathname.startsWith(`${NA_MINUSIE_PATHS.hub}/`);
   }
+  if (href === NA_MINUSIE_PATHS.dywizje) {
+    return (
+      pathname === NA_MINUSIE_PATHS.dywizje ||
+      pathname.startsWith(`${NA_MINUSIE_PATHS.dywizje}/`)
+    );
+  }
   if (href === NA_MINUSIE_PATHS.home) {
-    // O lidze = landing (+ regulamin), NIE hub
-    if (pathname === NA_MINUSIE_PATHS.hub || pathname.startsWith(`${NA_MINUSIE_PATHS.hub}/`)) {
+    // O lidze = landing (+ regulamin), bez huba i dywizji
+    if (
+      pathname === NA_MINUSIE_PATHS.hub ||
+      pathname.startsWith(`${NA_MINUSIE_PATHS.hub}/`) ||
+      pathname === NA_MINUSIE_PATHS.dywizje ||
+      pathname.startsWith(`${NA_MINUSIE_PATHS.dywizje}/`)
+    ) {
       return false;
     }
     return (
@@ -121,6 +133,7 @@ export function StickyNavbar() {
           ) : null}
         </nav>
       </div>
+      <CollaborationCredits />
     </header>
   );
 }

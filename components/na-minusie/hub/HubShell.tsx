@@ -52,6 +52,8 @@ const SECTION_TABS: {
   { id: "profile", label: "Uczestnicy", icon: Users },
 ];
 
+const SEASON_SCOPED_TABS: HubTab[] = ["podsumowanie", "profile"];
+
 export function HubShell({
   structure,
   logos,
@@ -302,6 +304,8 @@ export function HubShell({
         </div>
       ) : (
         <>
+          {/* Division pills — ukryte na zakładkach sezonowych */}
+          {activeTab !== "podsumowanie" ? (
           <nav
             className="-mx-1 mb-5 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             aria-label="Wybór dywizji"
@@ -326,6 +330,7 @@ export function HubShell({
               );
             })}
           </nav>
+          ) : null}
 
           {/* Section sub-nav */}
           <nav
@@ -358,14 +363,14 @@ export function HubShell({
             </p>
           ) : null}
 
-          {pending && !bundle && activeTab !== "podsumowanie" && activeTab !== "profile" ? (
+          {pending &&
+          !bundle &&
+          !SEASON_SCOPED_TABS.includes(activeTab) ? (
             <div className="flex items-center justify-center gap-2 rounded-2xl border border-slate-800 bg-slate-900/60 py-20 text-slate-400">
               <Loader2 className="h-5 w-5 animate-spin text-emerald-400" />
               Ładowanie dywizji…
             </div>
-          ) : !bundle &&
-            activeTab !== "profile" &&
-            activeTab !== "podsumowanie" ? (
+          ) : !bundle && !SEASON_SCOPED_TABS.includes(activeTab) ? (
             <div className="rounded-2xl border border-dashed border-slate-700 px-6 py-16 text-center text-sm text-slate-500">
               Wybierz dywizję.
             </div>

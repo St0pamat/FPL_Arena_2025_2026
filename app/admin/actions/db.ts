@@ -24,6 +24,7 @@ function revalidateAdmin() {
   revalidatePath("/admin/fixture-draw");
   revalidatePath("/admin/dashboard");
   revalidatePath("/admin/settings");
+  revalidatePath("/na-minusie/dywizje");
 }
 
 async function requireAuth() {

@@ -62,3 +62,18 @@ export function emptyTierLogosIndex(): TierLogosIndex {
 export function isPyramidTierName(name: string): name is PyramidTierName {
   return (PYRAMID_TIER_NAMES as readonly string[]).includes(name);
 }
+
+/** Mapuje nazwę/tier dywizji na klucz logo piramidy (bez zależności od React). */
+export function resolveTierLogoName(divisionName: string, tier?: number): string {
+  const raw = divisionName.trim();
+  const lower = raw.toLowerCase();
+
+  if (lower.includes("premier")) return PYRAMID_TIER_NAMES[0];
+  if (lower.includes("championship")) return PYRAMID_TIER_NAMES[1];
+  if (lower.includes("league one") || lower.includes("league 1")) return PYRAMID_TIER_NAMES[2];
+  if (lower.includes("league two") || lower.includes("league 2")) return PYRAMID_TIER_NAMES[3];
+  if (lower.includes("national")) return PYRAMID_TIER_NAMES[4];
+
+  if (tier && tier >= 1 && tier <= 5) return PYRAMID_TIER_NAMES[tier - 1];
+  return raw;
+}
