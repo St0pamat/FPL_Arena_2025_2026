@@ -3,14 +3,31 @@
 import { useRef } from "react";
 import { Loader2, Target } from "lucide-react";
 import type { ClubLogoRecord } from "@/lib/admin/clubLogos";
-import type { GameweekDetailsPayload, PublicFixture } from "@/lib/public/types";
+import type {
+  GameweekDetailsPayload,
+  PlayoffPreviewPayload,
+  PublicFixture,
+} from "@/lib/public/types";
 import { ClubCrest } from "@/components/na-minusie/hub/ClubCrest";
 import { TeamIdentity } from "@/components/na-minusie/hub/TeamIdentity";
 import { ExportControls } from "@/components/na-minusie/hub/ExportControls";
+import { PlayoffMatchRow } from "@/components/na-minusie/hub/PlayoffMatchRow";
 import { NA_MINUSIE_BRAND } from "@/lib/na-minusie";
 import { slugForExport } from "@/components/na-minusie/hub/DiscordExport";
+import {
+  gameweekLabel,
+  isPlayoffGameweek,
+  PLAYOFF_GAMEWEEK,
+  SEASON_MAX_GAMEWEEK,
+} from "@/lib/public/season";
 
 const EXPORT_BG = "#0B0F19";
+
+const EMPTY_PLAYOFFS: PlayoffPreviewPayload = {
+  gameweek: PLAYOFF_GAMEWEEK,
+  matches: [],
+  notices: [],
+};
 
 function MatchCard({
   match,
@@ -149,6 +166,7 @@ export function GameweekCenter({
   logos = [],
   exportMeta,
   fixtures = [],
+  playoffs = EMPTY_PLAYOFFS,
   divisionId = "",
   showDiscordSend = false,
   hasWebhook = false,
@@ -162,6 +180,7 @@ export function GameweekCenter({
   logos?: ClubLogoRecord[];
   exportMeta?: { season?: string; pyramid?: string; division?: string };
   fixtures?: PublicFixture[];
+  playoffs?: PlayoffPreviewPayload;
   divisionId?: string;
   showDiscordSend?: boolean;
   hasWebhook?: boolean;
@@ -169,15 +188,20 @@ export function GameweekCenter({
   const resultsRef = useRef<HTMLDivElement>(null);
   const previewRef = useRef<HTMLDivElement>(null);
   const rankingRef = useRef<HTMLDivElement>(null);
+  const playoffRef = useRef<HTMLDivElement>(null);
 
   const finishedSet = new Set(finishedGameweeks);
-  const total = Math.max(maxGameweek, 18);
+  const total = Math.max(maxGameweek, SEASON_MAX_GAMEWEEK);
+  const isPlayoffView = isPlayoffGameweek(selectedGw);
   const metaBits = [exportMeta?.season, exportMeta?.pyramid, exportMeta?.division]
     .filter(Boolean)
     .join(" · ");
 
   const nextGw = details ? details.gameweek + 1 : selectedGw + 1;
-  const nextFixtures = fixtures.filter((f) => f.gameweek === nextGw);
+  const nextIsPlayoff = isPlayoffGameweek(nextGw);
+  const nextFixtures = nextIsPlayoff
+    ? []
+    : fixtures.filter((f) => f.gameweek === nextGw);
 
   const resultsFile = `${slugForExport([
     "wyniki",
@@ -200,31 +224,54 @@ export function GameweekCenter({
     exportMeta?.pyramid,
   ]) || "tabela-mediany"}.png`;
 
+  const playoffFile = `${slugForExport([
+    "baraze",
+    `gw${selectedGw}`,
+    exportMeta?.division,
+    exportMeta?.pyramid,
+  ]) || "baraze"}.png`;
+
   return (
     <div className="space-y-6">
       <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 backdrop-blur-md">
         <p className="mb-3 text-[10px] font-bold uppercase tracking-wider text-slate-500">
           Wybierz kolejkę
         </p>
-        <div className="flex gap-2 overflow-x-auto pb-1">
+        <div className="flex w-full gap-1 sm:gap-1.5">
           {Array.from({ length: total }, (_, i) => i + 1).map((gw) => {
+            const playoff = isPlayoffGameweek(gw);
             const done = finishedSet.has(gw);
+            const selectable = done || playoff;
             const active = selectedGw === gw;
             return (
               <button
                 key={gw}
                 type="button"
-                disabled={!done}
+                disabled={!selectable}
                 onClick={() => onSelectGw(gw)}
-                className={`shrink-0 rounded-xl px-3 py-2 font-athletic text-sm font-bold uppercase tracking-wide transition ${
+                title={playoff ? gameweekLabel(gw) : `GW${gw}`}
+                className={`min-w-0 flex-1 rounded-lg px-0.5 py-1.5 font-athletic text-[10px] font-bold uppercase tracking-tight transition sm:rounded-xl sm:px-1 sm:py-2 sm:text-xs sm:tracking-wide ${
                   active
-                    ? "bg-emerald-400 text-black shadow-lg shadow-emerald-500/20"
-                    : done
-                      ? "bg-slate-800 text-slate-200 hover:bg-slate-700"
-                      : "cursor-not-allowed bg-slate-950/50 text-slate-600"
+                    ? playoff
+                      ? "bg-amber-400 text-black shadow-lg shadow-amber-500/25"
+                      : "bg-emerald-400 text-black shadow-lg shadow-emerald-500/20"
+                    : playoff
+                      ? "bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/40 hover:bg-amber-500/25"
+                      : done
+                        ? "bg-slate-800 text-slate-200 hover:bg-slate-700"
+                        : "cursor-not-allowed bg-slate-950/50 text-slate-600"
                 }`}
               >
-                GW{gw}
+                {playoff ? (
+                  <span className="flex flex-col items-center leading-none gap-0.5">
+                    <span>GW{gw}</span>
+                    <span className="text-[8px] font-black tracking-wider sm:text-[9px]">
+                      BARAŻ
+                    </span>
+                  </span>
+                ) : (
+                  `GW${gw}`
+                )}
               </button>
             );
           })}
@@ -235,6 +282,79 @@ export function GameweekCenter({
         <div className="flex items-center justify-center gap-2 rounded-2xl border border-slate-800 bg-slate-900/60 py-16 text-slate-400">
           <Loader2 className="h-5 w-5 animate-spin text-emerald-400" />
           Ładowanie kolejki…
+        </div>
+      ) : isPlayoffView ? (
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-amber-500/40 bg-gradient-to-br from-amber-500/15 via-slate-900 to-slate-950 p-5">
+            <p className="font-athletic text-xl uppercase tracking-wide text-white">
+              {gameweekLabel(selectedGw)}
+            </p>
+            <p className="mt-1 text-xs text-slate-400">
+              Oficjalna kolejka barażowa · 8. wyższej vs 3. niższej · mecz pucharowy (bez punktów H2H)
+            </p>
+          </div>
+
+          <div className="flex justify-end">
+            <ExportControls
+              targetRef={playoffRef}
+              fileName={playoffFile}
+              divisionId={divisionId}
+              discordMessage={`⚔️ Baraże GW${selectedGw} — awans / utrzymanie`}
+              showDiscordSend={showDiscordSend}
+              hasWebhook={hasWebhook}
+              compact
+            />
+          </div>
+
+          <div
+            ref={playoffRef}
+            id="export-gw-playoffs"
+            className="overflow-hidden rounded-2xl border border-slate-800 shadow-2xl shadow-black/50"
+            style={{ backgroundColor: EXPORT_BG }}
+          >
+            <div className="space-y-4 p-4 sm:p-6" style={{ backgroundColor: EXPORT_BG }}>
+              <header className="border-b border-amber-500/30 pb-4">
+                <p className="text-[10px] font-black uppercase tracking-[0.35em] text-emerald-400">
+                  {NA_MINUSIE_BRAND}
+                </p>
+                <h2 className="mt-1 font-athletic text-2xl uppercase tracking-wide text-white">
+                  {gameweekLabel(selectedGw)}
+                </h2>
+                {metaBits ? (
+                  <p className="mt-1 text-xs text-slate-400">{metaBits}</p>
+                ) : null}
+              </header>
+
+              {playoffs.notices.map((notice) => (
+                <div
+                  key={notice}
+                  className="rounded-2xl border border-dashed border-amber-500/30 bg-amber-500/5 px-5 py-4 text-sm leading-relaxed text-slate-300"
+                >
+                  {notice}
+                </div>
+              ))}
+
+              {playoffs.matches.filter((m) => m.fixture.gameweek === selectedGw)
+                .length > 0 ? (
+                <div className="flex flex-col gap-3">
+                  {playoffs.matches
+                    .filter((m) => m.fixture.gameweek === selectedGw)
+                    .map((m) => (
+                      <PlayoffMatchRow
+                        key={m.fixture.id}
+                        match={m}
+                        logos={logos}
+                        compact
+                      />
+                    ))}
+                </div>
+              ) : playoffs.notices.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-slate-700 px-6 py-10 text-center text-sm text-slate-500">
+                  Brak par barażowych dla tej dywizji.
+                </div>
+              ) : null}
+            </div>
+          </div>
         </div>
       ) : !details || !finishedSet.has(selectedGw) ? (
         <div className="rounded-2xl border border-dashed border-slate-700 px-6 py-12 text-center text-sm text-slate-500">
@@ -297,7 +417,46 @@ export function GameweekCenter({
                     </div>
                   </div>
 
-                  {nextFixtures.length > 0 ? (
+                  {nextIsPlayoff ? (
+                    <div
+                      ref={previewRef}
+                      id="export-gw-next"
+                      className="rounded-xl p-1"
+                      style={{ backgroundColor: EXPORT_BG }}
+                    >
+                      <p className="mb-3 text-center text-sm text-amber-400/90">
+                        Zapowiedź · {gameweekLabel(nextGw)}
+                      </p>
+                      {playoffs.notices.length > 0 ? (
+                        <div className="mb-3 space-y-2">
+                          {playoffs.notices.map((n) => (
+                            <p
+                              key={n}
+                              className="rounded-xl border border-dashed border-amber-500/25 px-3 py-2 text-xs leading-relaxed text-slate-400"
+                            >
+                              {n}
+                            </p>
+                          ))}
+                        </div>
+                      ) : null}
+                      {playoffs.matches.length > 0 ? (
+                        <div className="flex w-full flex-col gap-2.5">
+                          {playoffs.matches.map((m) => (
+                            <PlayoffMatchRow
+                              key={m.fixture.id}
+                              match={m}
+                              logos={logos}
+                              compact
+                            />
+                          ))}
+                        </div>
+                      ) : playoffs.notices.length === 0 ? (
+                        <p className="py-4 text-center text-sm text-slate-500">
+                          Brak par barażowych.
+                        </p>
+                      ) : null}
+                    </div>
+                  ) : nextFixtures.length > 0 ? (
                     <div
                       ref={previewRef}
                       id="export-gw-next"
@@ -362,14 +521,18 @@ export function GameweekCenter({
             </div>
             <div className="flex min-w-0 flex-col items-center gap-1">
               <span className="text-center text-[9px] font-bold uppercase tracking-wider text-slate-500 sm:text-[10px]">
-                Zapowiedź · GW{nextGw}
+                Zapowiedź · {nextIsPlayoff ? gameweekLabel(nextGw) : `GW${nextGw}`}
               </span>
-              {nextFixtures.length > 0 ? (
+              {nextIsPlayoff || nextFixtures.length > 0 ? (
                 <ExportControls
                   targetRef={previewRef}
                   fileName={previewFile}
                   divisionId={divisionId}
-                  discordMessage={`👀 Z kim grasz w następnej kolejce? Zapowiedź GW${nextGw}!`}
+                  discordMessage={
+                    nextIsPlayoff
+                      ? `⚔️ Zapowiedź baraży GW${nextGw}!`
+                      : `👀 Z kim grasz w następnej kolejce? Zapowiedź GW${nextGw}!`
+                  }
                   showDiscordSend={showDiscordSend}
                   hasWebhook={hasWebhook}
                   compact

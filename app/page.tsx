@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { PortalCard } from "@/components/platform/PortalCard";
 import { SplashAdminLink } from "@/components/platform/SplashAdminLink";
 import { ARENA_PORTAL_ALT, ARENA_PORTAL_LOGO } from "@/lib/arena";
@@ -9,29 +10,42 @@ export default function HomePage() {
       <SplashAdminLink />
       <div className="splash-grid pointer-events-none absolute inset-0" aria-hidden />
 
-      <div className="relative z-10 mb-10 max-w-2xl text-center sm:mb-14">
-        <h1 className="font-athletic text-4xl font-bold text-white sm:text-5xl lg:text-6xl">
-          Ekosystem Ligi
-        </h1>
-        <p className="mx-auto mt-4 text-base leading-relaxed text-slate-400 sm:mt-5 sm:text-lg">
-          Wybierz, gdzie chcesz się udać. Historia i aktualne rozgrywki w jednym miejscu.
+      <div className="relative z-10 mb-10 max-w-3xl text-center sm:mb-14">
+        <div className="flex flex-col items-center justify-center gap-4 sm:flex-row sm:gap-5">
+          <div className="relative h-16 w-16 shrink-0 sm:h-20 sm:w-20 lg:h-24 lg:w-24">
+            <Image
+              src={ARENA_PORTAL_LOGO}
+              alt={ARENA_PORTAL_ALT}
+              fill
+              priority
+              quality={95}
+              sizes="(max-width: 640px) 64px, (max-width: 1024px) 80px, 96px"
+              className="object-contain drop-shadow-[0_0_28px_rgba(52,211,153,0.35)]"
+            />
+          </div>
+          <h1 className="font-athletic text-5xl font-bold tracking-[0.06em] text-white sm:text-6xl lg:text-7xl">
+            FPL ARENA
+          </h1>
+        </div>
+        <p className="mx-auto mt-5 max-w-xl text-base font-medium leading-relaxed text-slate-300 sm:mt-6 sm:text-lg">
+          Organizujemy ligi FPL, w których każdy punkt ma swoją cenę.
         </p>
       </div>
 
       <div className="relative z-10 grid w-full max-w-5xl grid-cols-1 gap-5 sm:gap-6 md:grid-cols-2 md:gap-8">
         <PortalCard
-          title="FPL ARENA"
+          title="IGRZYSKA KAPCI KŁAPCIA"
           description="Zamknięty projekt. Skarb Kibica i archiwum sezonu 2025/2026."
           href="/arena"
-          logoSrc={ARENA_PORTAL_LOGO}
-          logoAlt={ARENA_PORTAL_ALT}
+          logoSrc="/logo/22952.png"
+          logoAlt="Logo Igrzyska Kapci Kłapcia"
           variant="arena"
           ctaLabel="Przejdź do Archiwum →"
           badge="Zamknięty"
         />
         <PortalCard
           title="NA MINUSIE ™"
-          description="Aktualny projekt. Wejdź w nowy wymiar Head to Head i poznaj system, w którym Twój wynik wreszcie ma znaczenie."
+          description="Projekt w ramach współpracy St0pa × Baldwiniasty. Wejdź w nowy wymiar Head to Head — system, w którym Twój wynik wreszcie ma znaczenie."
           href="/na-minusie"
           logoSrc={NA_MINUSIE_LOGO}
           logoAlt={NA_MINUSIE_LOGO_ALT}

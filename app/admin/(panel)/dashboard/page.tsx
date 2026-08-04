@@ -1,41 +1,108 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Calendar, Globe, Layers, Network, Shuffle, Users } from "lucide-react";
+import {
+  DashboardDivisionFill,
+  type DivisionFillRow,
+} from "@/components/admin/DashboardDivisionFill";
 
 export default async function AdminDashboardPage() {
   const supabase = createClient();
 
-  const [pyramidsRes, seasonsRes, divisionsRes, teamsRes] = await Promise.all([
+  const [pyramidsRes, seasonsData, divisionsData, teamsData] = await Promise.all([
     supabase.from("pyramids").select("id", { count: "exact", head: true }),
-    supabase.from("seasons").select("id", { count: "exact", head: true }),
-    supabase.from("divisions").select("id", { count: "exact", head: true }),
-    supabase.from("teams").select("id", { count: "exact", head: true }),
+    supabase
+      .from("seasons")
+      .select("id, name, status, is_archived, created_at")
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("divisions")
+      .select("id, name, tier, season_id, pyramid_id, pyramids(name), seasons(name, status)")
+      .order("tier", { ascending: true }),
+    supabase.from("teams").select("id, division_id, is_active"),
   ]);
 
+  const seasons = seasonsData.data ?? [];
+  const activeSeason =
+    seasons.find((s) => s.status === "PUBLISHED" && !s.is_archived) ??
+    seasons.find((s) => s.status === "PUBLISHED") ??
+    seasons[0] ??
+    null;
+
+  const activeDivIds = new Set(
+    (divisionsData.data ?? [])
+      .filter((d) => activeSeason && d.season_id === activeSeason.id)
+      .map((d) => d.id),
+  );
+
+  let playersInActiveSeason = 0;
+  const countByDivision = new Map<string, number>();
+  for (const t of teamsData.data ?? []) {
+    if (!t.division_id || t.is_active === false) continue;
+    countByDivision.set(t.division_id, (countByDivision.get(t.division_id) ?? 0) + 1);
+    if (activeDivIds.has(t.division_id)) playersInActiveSeason += 1;
+  }
+
+  const divisionsInActiveSeason = activeDivIds.size;
+
   const stats = [
-    { label: "Piramidy", value: pyramidsRes.error ? 0 : (pyramidsRes.count ?? 0), icon: Globe },
-    { label: "Sezony", value: seasonsRes.error ? 0 : (seasonsRes.count ?? 0), icon: Calendar },
-    { label: "Dywizje", value: divisionsRes.error ? 0 : (divisionsRes.count ?? 0), icon: Layers },
-    { label: "Uczestnicy", value: teamsRes.error ? 0 : (teamsRes.count ?? 0), icon: Users },
+    {
+      label: "Sezony (wszystkie)",
+      value: seasons.length,
+      icon: Calendar,
+    },
+    {
+      label: "Piramidy",
+      value: pyramidsRes.error ? 0 : (pyramidsRes.count ?? 0),
+      icon: Globe,
+    },
+    {
+      label: activeSeason ? `Dywizje · ${activeSeason.name}` : "Dywizje",
+      value: divisionsInActiveSeason,
+      icon: Layers,
+    },
+    {
+      label: activeSeason ? `Uczestnicy · ${activeSeason.name}` : "Uczestnicy",
+      value: playersInActiveSeason,
+      icon: Users,
+    },
   ];
+
+  const fillRows: DivisionFillRow[] = (divisionsData.data ?? [])
+    .filter((d) => !activeSeason || d.season_id === activeSeason.id)
+    .map((d) => {
+      const pyr = d.pyramids as { name?: string } | { name?: string }[] | null;
+      const pyrName = Array.isArray(pyr) ? pyr[0]?.name : pyr?.name;
+      const sea = d.seasons as { name?: string } | { name?: string }[] | null;
+      const seaName = Array.isArray(sea) ? sea[0]?.name : sea?.name;
+      return {
+        id: d.id,
+        name: d.name,
+        tier: d.tier,
+        pyramidName: pyrName ?? "—",
+        seasonName: seaName ?? activeSeason?.name ?? "—",
+        playerCount: countByDivision.get(d.id) ?? 0,
+        capacity: 10,
+      };
+    });
 
   const shortcuts = [
     {
       href: "/admin/struktura",
       title: "Struktura Ligi",
-      text: "Piramidy, sezony i dywizje — komplet architektury.",
+      text: "Utwórz sezon ręcznie, potem piramidy i dywizje.",
       icon: Network,
     },
     {
-      href: "/admin/uczestnicy",
-      title: "Uczestnicy",
-      text: "Edycja / import / logo — zarządzanie drużynami.",
+      href: "/admin/players",
+      title: "Baza Graczy i Dywizji",
+      text: "Master Import Excel — roster, herby, Berger.",
       icon: Users,
     },
     {
-      href: "/admin/fixture-draw",
-      title: "Maszyna Losująca",
-      text: "Pozycje startowe i terminarz H2H.",
+      href: "/admin/workspace",
+      title: "Edytor Kolejek",
+      text: "Brudnopis GW, import punktów, publikacja.",
       icon: Shuffle,
     },
   ];
@@ -46,7 +113,15 @@ export default async function AdminDashboardPage() {
         <p className="text-xs font-black uppercase tracking-[0.3em] text-[#39FF14]">Dashboard</p>
         <h1 className="mt-2 text-3xl font-extrabold text-white">Panel administratora</h1>
         <p className="mt-3 max-w-2xl text-sm leading-relaxed text-slate-400">
-          Struktura Ligi → Uczestnicy → Maszyna Losująca. Logo klubów siedzi w sekcji Uczestnicy.
+          Sezon → Master Import → Berger → Workspace.{" "}
+          {activeSeason ? (
+            <>
+              Aktywny kontekst: <strong className="text-slate-200">{activeSeason.name}</strong>
+              {" "}(liczniki dywizji/graczy tylko dla tego sezonu)
+            </>
+          ) : (
+            <>Brak sezonu — zacznij od Struktury Ligi.</>
+          )}
         </p>
       </header>
 
@@ -64,6 +139,8 @@ export default async function AdminDashboardPage() {
           </article>
         ))}
       </div>
+
+      <DashboardDivisionFill rows={fillRows} />
 
       <div className="mt-8 grid gap-4 md:grid-cols-3">
         {shortcuts.map(({ href, title, text, icon: Icon }) => (
@@ -83,17 +160,17 @@ export default async function AdminDashboardPage() {
         <h2 className="text-lg font-bold text-white">Workflow setupu sezonu</h2>
         <ol className="mt-4 list-decimal space-y-2 pl-5 text-sm text-slate-400">
           <li>
-            <strong className="text-slate-200">Struktura Ligi</strong> — piramida + sezon (Szkic) +
-            dywizje (tier).
+            <strong className="text-slate-200">Struktura Ligi</strong> — ręcznie utwórz sezon
+            (Jesień/Wiosna), potem piramidę.
           </li>
           <li>
-            <strong className="text-slate-200">Uczestnicy</strong> — import CSV lub edycja ręczna;
-            logo w zakładce Logo klubów.
+            <strong className="text-slate-200">Baza Graczy</strong> — Master Import do wybranego
+            sezonu + herby + Generuj/Regeneruj Berger.
           </li>
           <li>
-            <strong className="text-slate-200">Maszyna Losująca</strong> — ceremonia + terminarz.
+            <strong className="text-slate-200">Edytor Kolejek</strong> — punkty Excel, H2H + mediana,
+            publikacja.
           </li>
-          <li>Opublikuj sezon, gdy wszystko gotowe.</li>
         </ol>
       </section>
     </main>

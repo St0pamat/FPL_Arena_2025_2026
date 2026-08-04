@@ -3,27 +3,123 @@
 import { createClient } from "@/lib/supabase/server";
 import { listClubLogos } from "@/app/admin/actions/clubLogos";
 import { listTierLogos } from "@/app/admin/actions/tierLogos";
+import { DIVISION_CAPACITY } from "@/lib/admin/divisionCapacity";
 import {
   averageFplFromFinished,
   buildPublicStandings,
   finishedGameweeksFrom,
   gameweekMedianThreshold,
 } from "@/lib/public/standings";
+import { buildPlayoffPreview, playoffMetaFromPublishedFixture } from "@/lib/public/playoffs";
+import {
+  isPlayoffGameweek,
+  PLAYOFF_GAMEWEEK,
+  SEASON_MAX_GAMEWEEK,
+  SPRING_PLAYOFF_GAMEWEEK,
+} from "@/lib/public/season";
 import type {
   DivisionStandingsPayload,
   GameweekDetailsPayload,
   GwFplRankRow,
   GwMatchCard,
+  PlayoffPreviewPayload,
   PublicDivision,
   PublicFixture,
   PublicPyramid,
   PublicSeason,
+  PublicSeasonSummaryPayload,
+  PublicStandingRow,
   PublicStructure,
   PublicTeam,
+  SeasonSummaryPlayerRow,
   TeamSchedulePayload,
 } from "@/lib/public/types";
 import type { ClubLogoRecord } from "@/lib/admin/clubLogos";
 import type { TierLogoRecord } from "@/lib/admin/tierLogos";
+import { runCalculateEndSeasonStatuses } from "@/lib/admin/endSeasonCompute";
+import {
+  teamSeasonStatusLabel,
+  type TeamSeasonStatus,
+} from "@/lib/admin/endSeasonStatuses";
+
+type PublicSupabase = ReturnType<typeof createClient>;
+
+/**
+ * Strefa Gracza: tylko dywizje z dokładnie DIVISION_CAPACITY aktywnymi drużynami.
+ * Niepełne (rekrutacja) zostają ukryte przed kibicami.
+ */
+async function filterCompleteDivisions(
+  supabase: PublicSupabase,
+  divisions: PublicDivision[],
+): Promise<PublicDivision[]> {
+  if (divisions.length === 0) return [];
+
+  const ids = divisions.map((d) => d.id);
+  let teamsRaw: { division_id: string | null; is_active?: boolean | null }[] | null =
+    null;
+
+  {
+    const { data, error } = await supabase
+      .from("teams")
+      .select("division_id, is_active")
+      .in("division_id", ids);
+
+    if (error && /is_active/i.test(error.message)) {
+      const retry = await supabase
+        .from("teams")
+        .select("division_id")
+        .in("division_id", ids);
+      if (retry.error) {
+        console.error("[filterCompleteDivisions]", retry.error);
+        throw new Error(retry.error.message);
+      }
+      teamsRaw = retry.data ?? [];
+    } else if (error) {
+      console.error("[filterCompleteDivisions]", error);
+      throw new Error(error.message);
+    } else {
+      teamsRaw = data ?? [];
+    }
+  }
+
+  const counts = new Map<string, number>();
+  for (const t of teamsRaw ?? []) {
+    if (!t.division_id || t.is_active === false) continue;
+    counts.set(t.division_id, (counts.get(t.division_id) ?? 0) + 1);
+  }
+
+  return divisions.filter(
+    (d) => (counts.get(d.id) ?? 0) === DIVISION_CAPACITY,
+  );
+}
+
+async function isDivisionCompleteForPublic(
+  supabase: PublicSupabase,
+  divisionId: string,
+): Promise<boolean> {
+  const { data, error } = await supabase
+    .from("teams")
+    .select("id, is_active")
+    .eq("division_id", divisionId);
+
+  if (error && /is_active/i.test(error.message)) {
+    const retry = await supabase
+      .from("teams")
+      .select("id")
+      .eq("division_id", divisionId);
+    if (retry.error) throw new Error(retry.error.message);
+    return (retry.data ?? []).length === DIVISION_CAPACITY;
+  }
+  if (error) throw new Error(error.message);
+  const n = (data ?? []).filter((t) => t.is_active !== false).length;
+  return n === DIVISION_CAPACITY;
+}
+
+const EMPTY_PLAYOFFS: PlayoffPreviewPayload = {
+  gameweek: PLAYOFF_GAMEWEEK,
+  matches: [],
+  notices: [],
+};
 
 function mapTeam(row: {
   id: string;
@@ -56,6 +152,18 @@ function mapFixture(
     home_median_bonus: number | null;
     away_median_bonus: number | null;
     is_finished: boolean;
+    is_playoff?: boolean | null;
+    tiebreaker_home_goals?: number | null;
+    tiebreaker_away_goals?: number | null;
+    tiebreaker_home_goals_conceded?: number | null;
+    tiebreaker_away_goals_conceded?: number | null;
+    tiebreaker_home_bench?: number | null;
+    tiebreaker_away_bench?: number | null;
+    tiebreaker_winner_id?: string | null;
+    tiebreaker_reason?: string | null;
+    tiebreaker_method?: string | null;
+    home_division_name?: string | null;
+    away_division_name?: string | null;
   },
   byId: Map<string, PublicTeam>,
 ): PublicFixture {
@@ -71,18 +179,30 @@ function mapFixture(
     home_median_bonus: f.home_median_bonus ?? 0,
     away_median_bonus: f.away_median_bonus ?? 0,
     is_finished: f.is_finished,
+    is_playoff: Boolean(f.is_playoff),
+    tiebreaker_home_goals: f.tiebreaker_home_goals ?? null,
+    tiebreaker_away_goals: f.tiebreaker_away_goals ?? null,
+    tiebreaker_home_goals_conceded: f.tiebreaker_home_goals_conceded ?? null,
+    tiebreaker_away_goals_conceded: f.tiebreaker_away_goals_conceded ?? null,
+    tiebreaker_home_bench: f.tiebreaker_home_bench ?? null,
+    tiebreaker_away_bench: f.tiebreaker_away_bench ?? null,
+    tiebreaker_winner_id: f.tiebreaker_winner_id ?? null,
+    tiebreaker_reason: f.tiebreaker_reason ?? null,
+    tiebreaker_method: f.tiebreaker_method ?? null,
+    home_division_name: f.home_division_name ?? null,
+    away_division_name: f.away_division_name ?? null,
     home_team: byId.get(f.home_team_id) ?? null,
     away_team: byId.get(f.away_team_id) ?? null,
   };
 }
 
-/** Piramidy, opublikowane sezony i dywizje tylko dla PUBLISHED. */
+/** Piramidy, opublikowane sezony (w tym zarchiwizowane) i dywizje. */
 export async function getPublicStructure(): Promise<PublicStructure> {
   const supabase = createClient();
 
   const { data: seasons, error: seasonsError } = await supabase
     .from("seasons")
-    .select("id, name, status, created_at")
+    .select("id, name, status, is_completed, is_archived, created_at")
     .eq("status", "PUBLISHED")
     .order("created_at", { ascending: false });
 
@@ -91,7 +211,14 @@ export async function getPublicStructure(): Promise<PublicStructure> {
     throw new Error(seasonsError.message);
   }
 
-  const published = (seasons ?? []) as PublicSeason[];
+  const published: PublicSeason[] = (seasons ?? []).map((s) => ({
+    id: s.id,
+    name: s.name,
+    status: "PUBLISHED",
+    is_completed: Boolean(s.is_completed),
+    is_archived: Boolean(s.is_archived),
+    created_at: s.created_at,
+  }));
   const seasonIds = published.map((s) => s.id);
 
   if (seasonIds.length === 0) {
@@ -109,7 +236,8 @@ export async function getPublicStructure(): Promise<PublicStructure> {
     throw new Error(divError.message);
   }
 
-  const divs = (divisions ?? []) as PublicDivision[];
+  const allDivs = (divisions ?? []) as PublicDivision[];
+  const divs = await filterCompleteDivisions(supabase, allDivs);
   const pyramidIds = [...new Set(divs.map((d) => d.pyramid_id))];
 
   let pyramids: PublicPyramid[] = [];
@@ -142,7 +270,7 @@ export async function getPublicTierLogos(): Promise<TierLogoRecord[]> {
   return listTierLogos();
 }
 
-/** Pełna tabela ligowa + fixtures dywizji. */
+/** Pełna tabela ligowa + fixtures dywizji + podgląd baraży GW19. */
 export async function getDivisionStandings(
   divisionId: string,
 ): Promise<DivisionStandingsPayload> {
@@ -156,16 +284,19 @@ export async function getDivisionStandings(
       standings: [],
       fixtures: [],
       finishedGameweeks: [],
-      maxGameweek: 18,
+      maxGameweek: SEASON_MAX_GAMEWEEK,
       playedGwCount: 0,
       averageFpl: null,
       leader: null,
+      playoffs: EMPTY_PLAYOFFS,
     };
   }
 
   let division: {
     id: string;
+    name: string;
     season_id: string;
+    pyramid_id: string;
     tier: number;
     discord_webhook_url?: string | null;
   } | null = null;
@@ -173,14 +304,14 @@ export async function getDivisionStandings(
   {
     const { data, error: divError } = await supabase
       .from("divisions")
-      .select("id, season_id, tier, discord_webhook_url")
+      .select("id, name, season_id, pyramid_id, tier, discord_webhook_url")
       .eq("id", divisionId)
       .maybeSingle();
 
     if (divError && /discord_webhook_url/i.test(divError.message)) {
       const { data: data2, error: err2 } = await supabase
         .from("divisions")
-        .select("id, season_id, tier")
+        .select("id, name, season_id, pyramid_id, tier")
         .eq("id", divisionId)
         .maybeSingle();
       if (err2) throw new Error(err2.message);
@@ -205,47 +336,220 @@ export async function getDivisionStandings(
     throw new Error("Dywizja należy do nieopublikowanego sezonu.");
   }
 
+  // Niepełne dywizje (rekrutacja) niewidoczne w Strefie Gracza
+  if (!(await isDivisionCompleteForPublic(supabase, divisionId))) {
+    return {
+      divisionId,
+      tier: division.tier ?? 1,
+      hasDiscordWebhook: false,
+      teams: [],
+      standings: [],
+      fixtures: [],
+      finishedGameweeks: [],
+      maxGameweek: SEASON_MAX_GAMEWEEK,
+      playedGwCount: 0,
+      averageFpl: null,
+      leader: null,
+      playoffs: EMPTY_PLAYOFFS,
+    };
+  }
+
   const tier = division.tier ?? 1;
   const hasDiscordWebhook = Boolean((division.discord_webhook_url ?? "").trim());
 
-  const { data: teamsRaw, error: teamsError } = await supabase
-    .from("teams")
-    .select("id, manager_name, discord_nick, fpl_id, fpl_team_name, chosen_club")
-    .eq("division_id", divisionId)
-    .order("manager_name", { ascending: true });
+  const { data: peersRaw, error: peersError } = await supabase
+    .from("divisions")
+    .select("id, name, tier, season_id, pyramid_id")
+    .eq("season_id", division.season_id)
+    .eq("pyramid_id", division.pyramid_id)
+    .order("tier", { ascending: true });
 
-  if (teamsError) throw new Error(teamsError.message);
+  if (peersError) throw new Error(peersError.message);
+  const peers = await filterCompleteDivisions(
+    supabase,
+    (peersRaw ?? []) as PublicDivision[],
+  );
 
-  const teams = (teamsRaw ?? []).map(mapTeam);
-  const byId = new Map(teams.map((t) => [t.id, t]));
+  const higherDivision = peers.find((d) => d.tier === tier - 1) ?? null;
+  const lowerDivision = peers.find((d) => d.tier === tier + 1) ?? null;
 
-  const { data: fixturesRaw, error: fixError } = await supabase
+  async function loadDivisionBundle(divId: string, divTier: number): Promise<{
+    teams: PublicTeam[];
+    fixtures: PublicFixture[];
+    standings: PublicStandingRow[];
+  }> {
+    const { data: teamsRaw, error: teamsError } = await supabase
+      .from("teams")
+      .select("id, manager_name, discord_nick, fpl_id, fpl_team_name, chosen_club")
+      .eq("division_id", divId)
+      .order("manager_name", { ascending: true });
+
+    if (teamsError) throw new Error(teamsError.message);
+
+    const teams = (teamsRaw ?? []).map(mapTeam);
+    const byId = new Map(teams.map((t) => [t.id, t]));
+
+    const { data: fixturesRaw, error: fixError } = await supabase
+      .from("fixtures")
+      .select(
+        "id, gameweek, home_team_id, away_team_id, home_fpl_points, away_fpl_points, home_h2h_points, away_h2h_points, home_median_bonus, away_median_bonus, is_finished, is_playoff",
+      )
+      .eq("division_id", divId)
+      .eq("is_published", true)
+      .order("gameweek", { ascending: true });
+
+    if (fixError) throw new Error(fixError.message);
+
+    const fixtures = (fixturesRaw ?? [])
+      .filter((f) => !f.is_playoff)
+      .map((f) => mapFixture(f, byId));
+    const standings = buildPublicStandings(fixtures, teams, divTier);
+    return { teams, fixtures, standings };
+  }
+
+  const current = await loadDivisionBundle(divisionId, tier);
+
+  let higherStandings: PublicStandingRow[] | null = null;
+  if (higherDivision) {
+    const higher = await loadDivisionBundle(higherDivision.id, higherDivision.tier);
+    higherStandings = higher.standings.length ? higher.standings : null;
+  }
+
+  let lowerStandings: PublicStandingRow[] | null = null;
+  if (lowerDivision) {
+    const lower = await loadDivisionBundle(lowerDivision.id, lowerDivision.tier);
+    lowerStandings = lower.standings.length ? lower.standings : null;
+  }
+
+  // Opublikowane baraże cross-division (widoczne dla OBIEGU dywizji na granicy)
+  const teamIds = current.teams.map((t) => t.id);
+  const { data: playoffRaw, error: playoffError } = await supabase
     .from("fixtures")
     .select(
-      "id, gameweek, home_team_id, away_team_id, home_fpl_points, away_fpl_points, home_h2h_points, away_h2h_points, home_median_bonus, away_median_bonus, is_finished",
+      "id, gameweek, division_id, home_team_id, away_team_id, home_fpl_points, away_fpl_points, home_h2h_points, away_h2h_points, home_median_bonus, away_median_bonus, is_finished, is_playoff, tiebreaker_home_goals, tiebreaker_away_goals, tiebreaker_home_goals_conceded, tiebreaker_away_goals_conceded, tiebreaker_home_bench, tiebreaker_away_bench, tiebreaker_winner_id, tiebreaker_reason, tiebreaker_method",
     )
-    .eq("division_id", divisionId)
-    .order("gameweek", { ascending: true });
+    .eq("season_id", division.season_id)
+    .eq("is_published", true)
+    .eq("is_playoff", true)
+    .in("gameweek", [PLAYOFF_GAMEWEEK, SPRING_PLAYOFF_GAMEWEEK]);
 
-  if (fixError) throw new Error(fixError.message);
+  if (playoffError) throw new Error(playoffError.message);
 
-  const fixtures = (fixturesRaw ?? []).map((f) => mapFixture(f, byId));
-  const standings = buildPublicStandings(fixtures, teams, tier);
-  const finishedGameweeks = finishedGameweeksFrom(fixtures);
-  const maxGameweek = fixtures.reduce((m, f) => Math.max(m, f.gameweek), 0) || 18;
+  const relevantPlayoffs = (playoffRaw ?? []).filter(
+    (f) =>
+      f.division_id === divisionId ||
+      teamIds.includes(f.home_team_id) ||
+      teamIds.includes(f.away_team_id),
+  );
+
+  const playoffTeamIds = [
+    ...new Set(
+      relevantPlayoffs.flatMap((f) => [f.home_team_id, f.away_team_id]),
+    ),
+  ];
+
+  const playoffTeamById = new Map<string, PublicTeam & { division_id: string }>();
+  if (playoffTeamIds.length) {
+    const { data: poTeams, error: poTeamsError } = await supabase
+      .from("teams")
+      .select(
+        "id, manager_name, discord_nick, fpl_id, fpl_team_name, chosen_club, division_id",
+      )
+      .in("id", playoffTeamIds);
+    if (poTeamsError) throw new Error(poTeamsError.message);
+    for (const t of poTeams ?? []) {
+      playoffTeamById.set(t.id, { ...mapTeam(t), division_id: t.division_id });
+    }
+  }
+
+  const divNameById = new Map(peers.map((d) => [d.id, d.name]));
+  divNameById.set(division.id, division.name);
+
+  const publishedPlayoffFixtures: PublicFixture[] = relevantPlayoffs.map((f) => {
+    const homeMeta = playoffTeamById.get(f.home_team_id);
+    const awayMeta = playoffTeamById.get(f.away_team_id);
+    const byId = new Map<string, PublicTeam>();
+    if (homeMeta) byId.set(homeMeta.id, homeMeta);
+    if (awayMeta) byId.set(awayMeta.id, awayMeta);
+    return mapFixture(
+      {
+        ...f,
+        home_division_name: homeMeta
+          ? (divNameById.get(homeMeta.division_id) ?? null)
+          : null,
+        away_division_name: awayMeta
+          ? (divNameById.get(awayMeta.division_id) ?? null)
+          : null,
+      },
+      byId,
+    );
+  });
+
+  const publishedPlayoffMetas = publishedPlayoffFixtures.map(
+    playoffMetaFromPublishedFixture,
+  );
+
+  const playoffGw =
+    publishedPlayoffFixtures[0]?.gameweek ??
+    (current.fixtures.some((f) => f.gameweek >= 20)
+      ? SPRING_PLAYOFF_GAMEWEEK
+      : PLAYOFF_GAMEWEEK);
+
+  const playoffs: PlayoffPreviewPayload =
+    publishedPlayoffMetas.length > 0
+      ? {
+          gameweek: playoffGw,
+          matches: publishedPlayoffMetas,
+          notices: [],
+        }
+      : buildPlayoffPreview({
+          division: {
+            id: division.id,
+            name: division.name,
+            tier,
+            season_id: division.season_id,
+            pyramid_id: division.pyramid_id,
+          },
+          peers,
+          standings: current.standings,
+          higherStandings,
+          higherDivision,
+          lowerStandings,
+          lowerDivision,
+          playoffGameweek: playoffGw,
+        });
+
+  const finishedGameweeks = finishedGameweeksFrom(current.fixtures);
+  for (const f of publishedPlayoffFixtures) {
+    if (f.is_finished && !finishedGameweeks.includes(f.gameweek)) {
+      finishedGameweeks.push(f.gameweek);
+    }
+  }
+  finishedGameweeks.sort((a, b) => a - b);
+
+  const maxFromFixtures = Math.max(
+    0,
+    ...current.fixtures.map((f) => f.gameweek),
+    ...publishedPlayoffFixtures.map((f) => f.gameweek),
+  );
+  const maxGameweek = Math.max(maxFromFixtures, SEASON_MAX_GAMEWEEK, playoffGw);
+
+  // Terminarz: faza zasadnicza + opublikowane baraże (tabela ich nie liczy)
+  const fixtures = [...current.fixtures, ...publishedPlayoffFixtures];
 
   return {
     divisionId,
     tier,
     hasDiscordWebhook,
-    teams,
-    standings,
+    teams: current.teams,
+    standings: current.standings,
     fixtures,
     finishedGameweeks,
     maxGameweek,
-    playedGwCount: finishedGameweeks.length,
-    averageFpl: averageFplFromFinished(fixtures),
-    leader: standings[0] ?? null,
+    playedGwCount: finishedGameweeksFrom(current.fixtures).length,
+    averageFpl: averageFplFromFinished(current.fixtures),
+    leader: current.standings[0] ?? null,
+    playoffs,
   };
 }
 
@@ -255,7 +559,36 @@ export async function getGameweekDetails(
   gameweek: number,
 ): Promise<GameweekDetailsPayload> {
   const bundle = await getDivisionStandings(divisionId);
-  const gwFixtures = bundle.fixtures.filter((f) => f.gameweek === gameweek);
+
+  if (isPlayoffGameweek(gameweek)) {
+    const playoffMatches = bundle.playoffs.matches.filter(
+      (m) => m.fixture.gameweek === gameweek || isPlayoffGameweek(m.fixture.gameweek),
+    );
+    const matches: GwMatchCard[] = playoffMatches.map((m) => {
+      const fixture = m.fixture;
+      const homeWon = fixture.is_finished && fixture.home_h2h_points === 2;
+      const awayWon = fixture.is_finished && fixture.away_h2h_points === 2;
+      const draw =
+        fixture.is_finished &&
+        fixture.home_h2h_points === 1 &&
+        !fixture.tiebreaker_winner_id;
+      return { fixture, homeWon, awayWon, draw };
+    });
+    const isFinished =
+      matches.length > 0 && matches.every((m) => m.fixture.is_finished);
+    return {
+      divisionId,
+      gameweek,
+      isFinished,
+      medianThreshold: null,
+      matches,
+      fplRanking: [],
+    };
+  }
+
+  const gwFixtures = bundle.fixtures.filter(
+    (f) => f.gameweek === gameweek && !f.is_playoff,
+  );
   const isFinished = gwFixtures.length > 0 && gwFixtures.every((f) => f.is_finished);
   const threshold = isFinished ? gameweekMedianThreshold(gwFixtures) : null;
 
@@ -326,4 +659,203 @@ export async function getTeamSchedule(teamId: string): Promise<TeamSchedulePaylo
   );
 
   return { team, fixtures };
+}
+
+function tierHint(fromTier: number, toTier: number, kind: "up" | "down"): string {
+  if (kind === "up") {
+    return toTier < fromTier
+      ? `Awans do Tier ${toTier}`
+      : `Tier ${fromTier} → Tier ${toTier}`;
+  }
+  return toTier > fromTier
+    ? `Spadek do Tier ${toTier}`
+    : `Tier ${fromTier} → Tier ${toTier}`;
+}
+
+/**
+ * Publiczne Podsumowanie Sezonu.
+ * Stan A (is_completed=false): locked, bez kalkulacji.
+ * Stan B: podium + awanse + spadki.
+ */
+export async function getPublicSeasonSummary(
+  seasonId: string,
+): Promise<PublicSeasonSummaryPayload> {
+  const supabase = createClient();
+  if (!seasonId) {
+    return {
+      seasonId: "",
+      seasonName: "",
+      is_completed: false,
+      is_archived: false,
+      locked: true,
+      podium: [],
+      promotions: [],
+      relegations: [],
+      error: "Brak sezonu.",
+    };
+  }
+
+  const { data: season, error: seasonError } = await supabase
+    .from("seasons")
+    .select("id, name, is_completed, is_archived, status")
+    .eq("id", seasonId)
+    .maybeSingle();
+
+  if (seasonError) {
+    return {
+      seasonId,
+      seasonName: "",
+      is_completed: false,
+      is_archived: false,
+      locked: true,
+      podium: [],
+      promotions: [],
+      relegations: [],
+      error: seasonError.message,
+    };
+  }
+  if (!season) {
+    return {
+      seasonId,
+      seasonName: "",
+      is_completed: false,
+      is_archived: false,
+      locked: true,
+      podium: [],
+      promotions: [],
+      relegations: [],
+      error: "Nie znaleziono sezonu.",
+    };
+  }
+
+  const isCompleted = Boolean(season.is_completed);
+  const isArchived = Boolean(season.is_archived);
+
+  if (!isCompleted) {
+    return {
+      seasonId: season.id,
+      seasonName: season.name,
+      is_completed: false,
+      is_archived: isArchived,
+      locked: true,
+      podium: [],
+      promotions: [],
+      relegations: [],
+    };
+  }
+
+  const calc = await runCalculateEndSeasonStatuses(supabase, seasonId);
+  if (calc.error || !calc.byTeamId) {
+    return {
+      seasonId: season.id,
+      seasonName: season.name,
+      is_completed: true,
+      is_archived: isArchived,
+      locked: false,
+      podium: [],
+      promotions: [],
+      relegations: [],
+      error: calc.error ?? "Brak danych do podsumowania.",
+    };
+  }
+
+  const teamIds = Object.keys(calc.byTeamId);
+  const { data: teamsRaw, error: teamsError } = await supabase
+    .from("teams")
+    .select("id, manager_name, discord_nick, fpl_id, fpl_team_name, chosen_club")
+    .in("id", teamIds);
+  if (teamsError) {
+    return {
+      seasonId: season.id,
+      seasonName: season.name,
+      is_completed: true,
+      is_archived: isArchived,
+      locked: false,
+      podium: [],
+      promotions: [],
+      relegations: [],
+      error: teamsError.message,
+    };
+  }
+
+  const teamById = new Map(
+    (teamsRaw ?? []).map((t) => [t.id, mapTeam(t)]),
+  );
+  const divNames = calc.divisionNameById ?? {};
+
+  const toRow = (
+    teamId: string,
+    assignment: (typeof calc.byTeamId)[string],
+    kind: "up" | "down" | "podium",
+  ): SeasonSummaryPlayerRow | null => {
+    const team = teamById.get(teamId);
+    if (!team) return null;
+    const status = assignment.status as TeamSeasonStatus;
+    return {
+      teamId,
+      status,
+      statusLabel: teamSeasonStatusLabel(status),
+      nextTier: assignment.next_tier,
+      currentTier: assignment.current_tier,
+      position: assignment.position,
+      totalPoints: assignment.totalPoints ?? null,
+      fplPoints: assignment.fplPoints ?? null,
+      fromDivisionName: divNames[assignment.division_id] ?? `Tier ${assignment.current_tier}`,
+      toDivisionHint:
+        kind === "podium"
+          ? `Tier ${assignment.current_tier}`
+          : assignment.next_tier == null
+            ? "Poczekalnia"
+            : tierHint(
+                assignment.current_tier,
+                assignment.next_tier,
+                kind === "up" ? "up" : "down",
+              ),
+      team,
+    };
+  };
+
+  const podium: SeasonSummaryPlayerRow[] = [];
+  const promotions: SeasonSummaryPlayerRow[] = [];
+  const relegations: SeasonSummaryPlayerRow[] = [];
+
+  for (const [teamId, a] of Object.entries(calc.byTeamId)) {
+    if (a.status === "CHAMPION" || a.status === "RUNNER_UP" || a.status === "THIRD_PLACE") {
+      const row = toRow(teamId, a, "podium");
+      if (row) podium.push(row);
+    }
+    if (a.status === "PROMOTED_DIRECTLY" || a.status === "PROMOTED_PLAYOFF") {
+      const row = toRow(teamId, a, "up");
+      if (row) promotions.push(row);
+    }
+    if (a.status === "RELEGATED_DIRECTLY" || a.status === "RELEGATED_PLAYOFF") {
+      const row = toRow(teamId, a, "down");
+      if (row) relegations.push(row);
+    }
+  }
+
+  podium.sort((a, b) => a.position - b.position);
+  promotions.sort(
+    (a, b) =>
+      a.nextTier - b.nextTier ||
+      a.currentTier - b.currentTier ||
+      a.position - b.position,
+  );
+  relegations.sort(
+    (a, b) =>
+      a.currentTier - b.currentTier ||
+      a.position - b.position,
+  );
+
+  return {
+    seasonId: season.id,
+    seasonName: season.name,
+    is_completed: true,
+    is_archived: isArchived,
+    locked: false,
+    podium,
+    promotions,
+    relegations,
+    error: null,
+  };
 }

@@ -5,6 +5,11 @@ export const metadata: Metadata = {
   title: "FPL Platform — Arena & Na Minusie ™",
   description:
     "Platforma lig Fantasy Premier League: archiwum FPL Arena (Skarb Kibica) oraz nowa liga H2H Na Minusie ™.",
+  icons: {
+    icon: [{ url: "/images/fpl-arena-logo.png", type: "image/png" }],
+    apple: [{ url: "/images/fpl-arena-logo.png", type: "image/png" }],
+    shortcut: "/images/fpl-arena-logo.png",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

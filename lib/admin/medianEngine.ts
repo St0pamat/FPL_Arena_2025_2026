@@ -1,10 +1,12 @@
 /**
  * Silnik Mediana 2+1 — czysta logika (bez I/O).
  *
- * H2H: wygrana 2–0, remis 1–1.
+ * H2H: wygrana 2–0, remis 1–1 (kolumny DB: 0|1|2).
  * Bonus mediany: w dywizji próg = 5. najwyższy wynik FPL (lub ostatni, gdy <5 graczy).
  * Wszyscy z FPL >= próg dostają +1 (obsługa remisów na progu).
  */
+
+import { clampFplPoints, isValidFplPoints } from "@/lib/admin/constants";
 
 export interface GwScoreLine {
   gameweek: number;
@@ -28,17 +30,19 @@ export function parseGwBatchText(raw: string): ParseBatchResult {
     const lineNumber = idx + 1;
     const trimmed = row.trim();
     if (!trimmed) return;
-    if (/^(gw|gameweek|#)/i.test(trimmed) && /fpl/i.test(trimmed)) return; // nagłówek
+    if (/^(gw|gameweek|#)/i.test(trimmed) && /fpl/i.test(trimmed)) return;
 
     const parts = trimmed.split(/[,;\t]+/).map((p) => p.trim()).filter(Boolean);
     if (parts.length < 3) {
-      errors.push(`Wiersz ${lineNumber}: oczekiwano 3 wartości (GW, FPL_ID, Punkty), jest ${parts.length}.`);
+      errors.push(
+        `Wiersz ${lineNumber}: oczekiwano 3 wartości (GW, FPL_ID, Punkty), jest ${parts.length}.`,
+      );
       return;
     }
 
-    const gw = Number.parseInt(parts[0], 10);
-    const fpl_id = parts[1].replace(/\s+/g, "");
-    const points = Number.parseFloat(parts[2].replace(",", "."));
+    const gw = Number.parseInt(parts[0]!, 10);
+    const fpl_id = parts[1]!.replace(/\s+/g, "");
+    const points = Number.parseFloat(parts[2]!.replace(",", "."));
 
     if (!Number.isFinite(gw) || gw < 1 || gw > 38) {
       errors.push(`Wiersz ${lineNumber}: nieprawidłowy GW „${parts[0]}”.`);
@@ -48,7 +52,7 @@ export function parseGwBatchText(raw: string): ParseBatchResult {
       errors.push(`Wiersz ${lineNumber}: FPL ID musi być liczbą („${parts[1]}”).`);
       return;
     }
-    if (!Number.isFinite(points) || points < 0) {
+    if (!isValidFplPoints(points)) {
       errors.push(`Wiersz ${lineNumber}: nieprawidłowe punkty „${parts[2]}”.`);
       return;
     }
@@ -56,12 +60,396 @@ export function parseGwBatchText(raw: string): ParseBatchResult {
     lines.push({
       gameweek: gw,
       fpl_id,
-      points: Math.round(points),
+      points: clampFplPoints(points),
       lineNumber,
     });
   });
 
   return { lines, errors };
+}
+
+export type NamePointsLine = {
+  name: string;
+  points: number;
+  lineNumber: number;
+};
+
+export type FplPointsLine = {
+  team: string | null;
+  manager: string | null;
+  points: number;
+  lineNumber: number;
+  /** Etykieta do komunikatów (team / manager). */
+  label: string;
+};
+
+export type FplGwPointsLine = FplPointsLine & {
+  gameweek: number;
+};
+
+/** Wyciąga numer GW z komórki: „GW1”, „GW 2”, „1”, „kolejka 3”. */
+export function parseGameweekToken(raw: string | null | undefined): number | null {
+  const s = String(raw ?? "").trim();
+  if (!s) return null;
+  const m = s.match(/^(?:gw|game\s*week|gameweek|kolejka)?\s*[-:.]?\s*(\d{1,2})$/i);
+  if (!m) return null;
+  const n = Number.parseInt(m[1]!, 10);
+  if (!Number.isFinite(n) || n < 1 || n > 38) return null;
+  return n;
+}
+
+function splitPasteCells(row: string): string[] {
+  const trimmed = row.trim();
+  if (!trimmed) return [];
+  if (trimmed.includes("\t")) {
+    return trimmed.split("\t").map((p) => p.trim());
+  }
+  // FPL czasem kopiuje z wieloma spacjami / pipe
+  if (trimmed.includes("|")) {
+    return trimmed.split("|").map((p) => p.trim()).filter(Boolean);
+  }
+  if (trimmed.includes(";")) {
+    return trimmed.split(";").map((p) => p.trim()).filter(Boolean);
+  }
+  // Fallback: 2+ spacje jako separator kolumn
+  const multi = trimmed.split(/\s{2,}/).map((p) => p.trim()).filter(Boolean);
+  if (multi.length >= 2) return multi;
+  return [trimmed];
+}
+
+function isHeaderCell(value: string): boolean {
+  return /^(rank|#|lp|pos|position|team|fpl\s*team|manager|fpl\s*manager|menedzer|gw|event|pts|points|punkty|tot|total|score|nazwa)$/i.test(
+    value.replace(/\s+/g, " ").trim(),
+  );
+}
+
+function findColumnIndex(headers: string[], patterns: RegExp[]): number {
+  for (let i = 0; i < headers.length; i++) {
+    const h = headers[i]!.toLowerCase().replace(/\s+/g, " ").trim();
+    if (patterns.some((re) => re.test(h))) return i;
+  }
+  return -1;
+}
+
+function parseNumericCell(raw: string): number | null {
+  const cleaned = raw.replace(/[^\d,.\-]/g, "").replace(",", ".");
+  if (!cleaned || cleaned === "-" || cleaned === "." || cleaned === "-.") return null;
+  const n = Number.parseFloat(cleaned);
+  if (!isValidFplPoints(n)) return null;
+  return clampFplPoints(n);
+}
+
+function looksLikeHeaderRow(cells: string[]): boolean {
+  if (cells.length < 2) return false;
+  const hits = cells.filter(isHeaderCell).length;
+  return hits >= 2 || cells.some((c) => /^(team|manager|gw|points|punkty|fpl)/i.test(c));
+}
+
+/**
+ * Wklejka ze strony / tabeli FPL.
+ * Wyciąga FPL Team, FPL Manager oraz punkty GW/Event.
+ */
+export function parseFplPointsPaste(raw: string): {
+  lines: FplPointsLine[];
+  errors: string[];
+} {
+  return parseFplPointsPasteBody(raw);
+}
+
+/**
+ * Uniwersalny import Multi-GW:
+ *   GW1\tKapcie Kłapcia\tMateusz Stopczyński\t85
+ *   GW2\tKapcie Kłapcia\tMateusz Stopczyński\t55
+ *
+ * Kolumny: GW | FPL Team | FPL Manager | Punkty
+ * `gameweek` w wyniku = pierwsza wykryta kolejka (dla kompatybilności UI).
+ */
+export function parseGlobalGameweekPaste(raw: string): {
+  gameweek: number | null;
+  body: { lines: FplPointsLine[]; errors: string[] };
+  gwLines: FplGwPointsLine[];
+} {
+  const { lines: gwLines, errors } = parseMultiGameweekPaste(raw);
+  const gameweeks = [...new Set(gwLines.map((l) => l.gameweek))].sort((a, b) => a - b);
+  return {
+    gameweek: gameweeks[0] ?? null,
+    body: {
+      lines: gwLines.map(({ gameweek: _gw, ...rest }) => rest),
+      errors,
+    },
+    gwLines,
+  };
+}
+
+/**
+ * Parser wierszowy: `[GW] \t [FPL Team] \t [FPL Manager] \t [Punkty]`
+ */
+export function parseMultiGameweekPaste(raw: string): {
+  lines: FplGwPointsLine[];
+  errors: string[];
+} {
+  const lines: FplGwPointsLine[] = [];
+  const errors: string[] = [];
+  const rows = raw.split(/\r?\n/).map((r) => r.trim()).filter(Boolean);
+  if (!rows.length) return { lines, errors };
+
+  let start = 0;
+  const firstCells = splitPasteCells(rows[0]!);
+  if (looksLikeGwRowHeader(firstCells)) {
+    start = 1;
+  }
+
+  for (let i = start; i < rows.length; i++) {
+    const lineNumber = i + 1;
+    const cells = splitPasteCells(rows[i]!);
+    if (!cells.length) continue;
+    if (looksLikeGwRowHeader(cells)) continue;
+
+    if (cells.length < 3) {
+      errors.push(
+        `Wiersz ${lineNumber}: oczekiwano GW | FPL Team | FPL Manager | Punkty (min. 3–4 kolumny).`,
+      );
+      continue;
+    }
+
+    let gameweek = parseGameweekToken(cells[0]);
+    let team: string | null;
+    let manager: string | null;
+    let points: number | null;
+
+    if (gameweek != null && cells.length >= 4) {
+      team = cells[1]?.trim() || null;
+      manager = cells[2]?.trim() || null;
+      points = parseNumericCell(cells[3]!);
+    } else if (gameweek != null && cells.length === 3) {
+      // GW | TeamOrManager | Punkty
+      team = cells[1]?.trim() || null;
+      manager = null;
+      points = parseNumericCell(cells[2]!);
+    } else {
+      // Brak GW w kolumnie 0 — spróbuj stary format Team | Manager | Punkty (bez GW)
+      errors.push(
+        `Wiersz ${lineNumber}: brak numeru kolejki w 1. kolumnie („GW1”, „1”…).`,
+      );
+      continue;
+    }
+
+    if (points === null || !isValidFplPoints(points)) {
+      errors.push(`Wiersz ${lineNumber}: nieprawidłowe punkty.`);
+      continue;
+    }
+    if (!team && !manager) {
+      errors.push(`Wiersz ${lineNumber}: brak FPL Team / FPL Manager.`);
+      continue;
+    }
+    if (team && isHeaderCell(team) && (!manager || isHeaderCell(manager))) {
+      continue;
+    }
+
+    const label = [team, manager].filter(Boolean).join(" · ") || "—";
+    lines.push({
+      gameweek,
+      team,
+      manager,
+      points,
+      lineNumber,
+      label,
+    });
+  }
+
+  return { lines, errors };
+}
+
+function looksLikeGwRowHeader(cells: string[]): boolean {
+  if (cells.length < 2) return false;
+  const joined = cells.map((c) => c.toLowerCase()).join(" ");
+  const hasGw = /^(gw|gameweek|kolejka)$/i.test(cells[0]!.trim()) || /\bgw\b/.test(joined);
+  const hasTeamOrMgr = /team|manager|fpl|punkty|points/.test(joined);
+  return hasGw && hasTeamOrMgr && cells.filter(isHeaderCell).length >= 2;
+}
+
+function parseFplPointsPasteBody(raw: string): {
+  lines: FplPointsLine[];
+  errors: string[];
+} {
+  const lines: FplPointsLine[] = [];
+  const errors: string[] = [];
+  const rows = raw.split(/\r?\n/).map((r) => r.trim()).filter(Boolean);
+  if (!rows.length) return { lines, errors };
+
+  let start = 0;
+  let teamIdx = -1;
+  let managerIdx = -1;
+  let pointsIdx = -1;
+
+  const firstCells = splitPasteCells(rows[0]!);
+  if (looksLikeHeaderRow(firstCells)) {
+    teamIdx = findColumnIndex(firstCells, [
+      /^fpl\s*team$/,
+      /^team$/,
+      /team\s*name/,
+      /nazwa\s*(zespołu|druzyny|drużyny)/,
+    ]);
+    managerIdx = findColumnIndex(firstCells, [
+      /^fpl\s*manager$/,
+      /^manager$/,
+      /mened[zż]er/,
+      /player\s*name/,
+    ]);
+    pointsIdx = findColumnIndex(firstCells, [
+      /^gw$/,
+      /^event$/,
+      /gw\s*pts/,
+      /event\s*points/,
+      /^points$/,
+      /^pts$/,
+      /^punkty$/,
+      /zdobyte/,
+    ]);
+    if (pointsIdx < 0) {
+      pointsIdx = findColumnIndex(firstCells, [/^tot$/, /^total$/, /score/]);
+    }
+    start = 1;
+  }
+
+  for (let i = start; i < rows.length; i++) {
+    const lineNumber = i + 1;
+    const cells = splitPasteCells(rows[i]!);
+    if (!cells.length) continue;
+    if (looksLikeHeaderRow(cells)) continue;
+
+    let team: string | null = null;
+    let manager: string | null = null;
+    let points: number | null = null;
+
+    if (teamIdx >= 0 || managerIdx >= 0 || pointsIdx >= 0) {
+      team = teamIdx >= 0 ? cells[teamIdx]?.trim() || null : null;
+      manager = managerIdx >= 0 ? cells[managerIdx]?.trim() || null : null;
+      const ptsCell = pointsIdx >= 0 ? cells[pointsIdx] : cells[cells.length - 1];
+      points = ptsCell ? parseNumericCell(ptsCell) : null;
+    } else {
+      const numericTail: { idx: number; value: number }[] = [];
+      for (let c = 0; c < cells.length; c++) {
+        const n = parseNumericCell(cells[c]!);
+        if (n !== null && /^-?\d+[.,]?\d*$/.test(cells[c]!.replace(/\s/g, ""))) {
+          numericTail.push({ idx: c, value: n });
+        }
+      }
+
+      if (!numericTail.length) {
+        const m = rows[i]!.match(/^(.+?)[,\s]+(\d+[.,]?\d*)\s*$/);
+        if (m) {
+          team = m[1]!.trim();
+          points = parseNumericCell(m[2]!);
+        } else {
+          errors.push(
+            `Wiersz ${lineNumber}: nie znaleziono punktów (oczekiwano FPL Team / Manager / Punkty).`,
+          );
+          continue;
+        }
+      } else {
+        const lastNum = numericTail[numericTail.length - 1]!;
+        const prevNum =
+          numericTail.length >= 2 ? numericTail[numericTail.length - 2]! : null;
+        const useGw =
+          prevNum &&
+          lastNum.idx === cells.length - 1 &&
+          prevNum.idx === cells.length - 2 &&
+          lastNum.value >= prevNum.value;
+        points = useGw ? prevNum!.value : lastNum.value;
+        const pointsCellIdx = useGw ? prevNum!.idx : lastNum.idx;
+
+        let textCells = cells
+          .slice(0, pointsCellIdx)
+          .map((c) => c.trim())
+          .filter(Boolean);
+
+        if (
+          textCells.length >= 2 &&
+          /^\d{1,3}$/.test(textCells[0]!) &&
+          Number.parseInt(textCells[0]!, 10) <= 50
+        ) {
+          textCells = textCells.slice(1);
+        }
+
+        if (textCells.length >= 2) {
+          team = textCells[0]!;
+          manager = textCells.slice(1).join(" ").trim() || null;
+        } else if (textCells.length === 1) {
+          team = textCells[0]!;
+        }
+      }
+    }
+
+    if (points === null || !isValidFplPoints(points)) {
+      errors.push(`Wiersz ${lineNumber}: nieprawidłowe punkty.`);
+      continue;
+    }
+    if (!team && !manager) {
+      errors.push(`Wiersz ${lineNumber}: brak FPL Team / FPL Manager.`);
+      continue;
+    }
+
+    if (team && isHeaderCell(team) && (!manager || isHeaderCell(manager))) {
+      continue;
+    }
+
+    const label = [team, manager].filter(Boolean).join(" · ") || "—";
+    lines.push({ team, manager, points, lineNumber, label });
+  }
+
+  return { lines, errors };
+}
+
+/** @deprecated Użyj parseFplPointsPaste — zostawione dla kompatybilności. */
+export function parseNamePointsPaste(raw: string): {
+  lines: NamePointsLine[];
+  errors: string[];
+} {
+  const { lines, errors } = parseFplPointsPaste(raw);
+  return {
+    errors,
+    lines: lines.map((l) => ({
+      name: l.label,
+      points: l.points,
+      lineNumber: l.lineNumber,
+    })),
+  };
+}
+
+export function normalizeMatchKey(value: string | null | undefined): string {
+  return String(value ?? "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/ł/g, "l")
+    .replace(/Ł/g, "l")
+    .replace(/ą/g, "a")
+    .replace(/ę/g, "e")
+    .replace(/ó/g, "o")
+    .replace(/ś/g, "s")
+    .replace(/ć/g, "c")
+    .replace(/ź|ż/g, "z")
+    .replace(/ń/g, "n")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+/** Bezpieczne dopasowanie nazw FPL (trim / case / spacje / diakrytyki). */
+export function fplNamesMatch(
+  a: string | null | undefined,
+  b: string | null | undefined,
+): boolean {
+  const ka = normalizeMatchKey(a);
+  const kb = normalizeMatchKey(b);
+  if (!ka || !kb) return false;
+  if (ka === kb) return true;
+  // Lekki fuzzy: containment przy sensownej długości
+  if (ka.length >= 4 && kb.length >= 4 && (ka.includes(kb) || kb.includes(ka))) {
+    return true;
+  }
+  return false;
 }
 
 export function groupScoresByGameweek(
@@ -74,7 +462,7 @@ export function groupScoresByGameweek(
       map = new Map();
       byGw.set(line.gameweek, map);
     }
-    map.set(line.fpl_id, line.points); // ostatni wygrywa przy duplikacie
+    map.set(line.fpl_id, line.points);
   }
   return byGw;
 }
@@ -99,7 +487,6 @@ export function medianThreshold(sortedDesc: number[], k = 5): number | null {
 }
 
 export function computeMedianBonusSet(
-  /** teamId → FPL points w tej kolejce */
   pointsByTeam: Map<string, number>,
   k = 5,
 ): Set<string> {

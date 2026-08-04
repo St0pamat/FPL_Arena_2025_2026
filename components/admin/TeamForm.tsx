@@ -75,7 +75,7 @@ export function TeamForm({
 
         <div>
           <label htmlFor="division_id" className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-400">
-            Przypisz do dywizji
+            Dywizja (wskazówka)
           </label>
           <select
             id="division_id"
@@ -86,14 +86,19 @@ export function TeamForm({
             disabled={divisions.length === 0}
           >
             <option value="" disabled>
-              {divisions.length === 0 ? "Najpierw dodaj dywizję" : "Wybierz dywizję…"}
+              {divisions.length === 0 ? "Najpierw dodaj dywizję" : "Wybierz sezon/piramidę…"}
             </option>
-            {divisions.map((d) => (
-              <option key={d.id} value={d.id}>
-                {divisionLabel(d)}
-              </option>
-            ))}
+            {[...divisions]
+              .sort((a, b) => a.tier - b.tier)
+              .map((d) => (
+                <option key={d.id} value={d.id}>
+                  {divisionLabel(d)}
+                </option>
+              ))}
           </select>
+          <p className="mt-1.5 text-[11px] text-slate-500">
+            Serwer przypisze gracza do pierwszej niepełnej dywizji od góry w tej piramidzie.
+          </p>
         </div>
 
         <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-700/50 bg-slate-900/60 px-4 py-3 sm:col-span-2">

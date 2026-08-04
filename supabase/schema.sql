@@ -39,6 +39,10 @@ CREATE TABLE public.seasons (
   name TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'DRAFT'
     CHECK (status IN ('DRAFT', 'PUBLISHED')),
+  /** true = baraże zakończone → publiczne Podsumowanie */
+  is_completed BOOLEAN NOT NULL DEFAULT false,
+  /** true = sezon spakowany, gracze w nowym sezonie */
+  is_archived BOOLEAN NOT NULL DEFAULT false,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -55,13 +59,25 @@ CREATE TABLE public.divisions (
 
 CREATE TABLE public.teams (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  division_id UUID NOT NULL REFERENCES public.divisions(id) ON DELETE CASCADE,
+  /** NULL = pula przed losowaniem dywizji / Master Import */
+  division_id UUID REFERENCES public.divisions(id) ON DELETE SET NULL,
+  /** Excel: FPL Manager */
   manager_name TEXT NOT NULL,
+  /** Excel: Discord Name */
   discord_nick TEXT NOT NULL,
+  /** Excel: Discord ID */
+  discord_id TEXT,
+  /** Excel: FPL ID (TEXT; wartość numeryczna) */
   fpl_id TEXT,
+  /** Excel: FPL Team */
   fpl_team_name TEXT,
+  /** Excel: Discord Club */
   chosen_club TEXT NOT NULL,
   fee_paid BOOLEAN NOT NULL DEFAULT false,
+  /** Excel: Status — aktywny uczestnik */
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  /** Excel: OR (Overall Rank poprzedniego sezonu) */
+  previous_season_or INTEGER,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -80,6 +96,24 @@ CREATE TABLE public.fixtures (
   home_median_bonus INTEGER NOT NULL DEFAULT 0 CHECK (home_median_bonus IN (0, 1)),
   away_median_bonus INTEGER NOT NULL DEFAULT 0 CHECK (away_median_bonus IN (0, 1)),
   is_finished BOOLEAN NOT NULL DEFAULT false,
+  /** false = brudnopis (tylko admin); true = widoczne w Strefie Gracza */
+  is_published BOOLEAN NOT NULL DEFAULT false,
+  is_playoff BOOLEAN NOT NULL DEFAULT false,
+  tiebreaker_home_goals INTEGER NULL,
+  tiebreaker_away_goals INTEGER NULL,
+  tiebreaker_home_goals_conceded INTEGER NULL,
+  tiebreaker_away_goals_conceded INTEGER NULL,
+  tiebreaker_home_bench INTEGER NULL,
+  tiebreaker_away_bench INTEGER NULL,
+  tiebreaker_winner_id UUID NULL REFERENCES public.teams(id) ON DELETE SET NULL,
+  /** Kod: GOALS | CONCEDED | BENCH | COIN_TOSS | MANUAL */
+  tiebreaker_method TEXT NULL
+    CHECK (
+      tiebreaker_method IS NULL
+      OR tiebreaker_method IN ('GOALS', 'CONCEDED', 'BENCH', 'COIN_TOSS', 'MANUAL')
+    ),
+  /** Czytelny powód TB, np. „Więcej goli” */
+  tiebreaker_reason TEXT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   CONSTRAINT fixtures_different_teams CHECK (home_team_id <> away_team_id),
   CONSTRAINT fixtures_unique_match UNIQUE (season_id, division_id, gameweek, home_team_id, away_team_id)
@@ -93,6 +127,7 @@ CREATE INDEX idx_divisions_pyramid ON public.divisions(pyramid_id);
 CREATE INDEX idx_teams_division ON public.teams(division_id);
 CREATE INDEX idx_teams_fpl_id ON public.teams(fpl_id);
 CREATE INDEX idx_fixtures_division_gw ON public.fixtures(division_id, gameweek);
+CREATE INDEX idx_fixtures_published ON public.fixtures(division_id, is_published);
 CREATE INDEX idx_seasons_status ON public.seasons(status);
 
 -- ---------------------------------------------------------------------------
@@ -150,9 +185,10 @@ CREATE POLICY "teams_write_authenticated"
   ON public.teams FOR ALL TO authenticated
   USING (true) WITH CHECK (true);
 
--- fixtures
+-- fixtures: anon widzi tylko opublikowane (Strefa Gracza); admin (authenticated) — wszystko
 CREATE POLICY "fixtures_select_anon"
-  ON public.fixtures FOR SELECT TO anon USING (true);
+  ON public.fixtures FOR SELECT TO anon
+  USING (is_published = true);
 CREATE POLICY "fixtures_select_authenticated"
   ON public.fixtures FOR SELECT TO authenticated USING (true);
 CREATE POLICY "fixtures_write_authenticated"

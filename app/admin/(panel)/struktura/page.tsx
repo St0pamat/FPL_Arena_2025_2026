@@ -28,8 +28,8 @@ export default async function AdminStrukturaPage() {
         </p>
         <h1 className="mt-2 text-3xl font-extrabold text-white">Architektura sezonu</h1>
         <p className="mt-2 max-w-2xl text-sm text-slate-400">
-          Komplet w jednym miejscu: piramidy (regiony) → sezony (Szkic/Publikacja) → dywizje (tier
-          w sezonie × piramidzie). Potem przejdź do Uczestników i Maszyny Losującej.
+          Najpierw utwórz sezon (Jesień / Wiosna), potem piramidy. Import graczy robisz w Bazie
+          Graczy dopiero po utworzeniu sezonu.
         </p>
       </header>
 
@@ -41,8 +41,8 @@ export default async function AdminStrukturaPage() {
 
       <div className="space-y-12">
         <div className="grid gap-10 xl:grid-cols-2">
-          <PyramidSection pyramids={pyramids} />
           <SeasonSection seasons={seasons} />
+          <PyramidSection pyramids={pyramids} />
         </div>
 
         <section id="dywizje" className="scroll-mt-8">

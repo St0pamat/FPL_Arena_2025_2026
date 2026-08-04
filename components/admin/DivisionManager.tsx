@@ -57,6 +57,11 @@ export function DivisionManager({
           <h2 className="text-lg font-bold text-white">Dodaj dywizję</h2>
         </div>
 
+        <p className="mb-4 rounded-lg border border-slate-700/60 bg-slate-900/50 px-3 py-2 text-xs text-slate-400">
+          Nowy tier (np. T3) wolno utworzyć dopiero gdy wszystkie wyższe dywizje mają dokładnie
+          10/10 graczy.
+        </p>
+
         {!canCreate && (
           <p className="mb-4 rounded-lg border border-amber-500/30 bg-amber-950/20 px-3 py-2 text-sm text-amber-300">
             Najpierw utwórz co najmniej jeden sezon i jedną piramidę w zakładce Struktura.

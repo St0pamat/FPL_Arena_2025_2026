@@ -136,10 +136,10 @@ function EditTeamModal({
             </label>
             <select
               name="division_id"
-              required
-              defaultValue={team.division_id}
+              defaultValue={team.division_id ?? ""}
               className={inputClass}
             >
+              <option value="">— Pula (bez dywizji) —</option>
               {divisions.map((d) => (
                 <option key={d.id} value={d.id}>
                   {divisionLabel(d, seasons, pyramids)}
@@ -199,16 +199,9 @@ export function TeamsByDivision({
 }) {
   const [editing, setEditing] = useState<Team | null>(null);
 
-  if (divisions.length === 0) {
-    return (
-      <div className="rounded-2xl border border-dashed border-slate-700/50 bg-slate-800/30 p-8 text-center">
-        <Users className="mx-auto h-8 w-8 text-slate-600" />
-        <p className="mt-3 text-sm text-slate-500">
-          Najpierw utwórz dywizje w <strong>Strukturze Ligi</strong>, potem wróć tutaj.
-        </p>
-      </div>
-    );
-  }
+  const unassigned = teams
+    .filter((t) => !t.division_id)
+    .sort((a, b) => a.manager_name.localeCompare(b.manager_name, "pl"));
 
   const sorted = [...divisions].sort((a, b) => {
     const sa = seasons.find((s) => s.id === a.season_id)?.name ?? "";
@@ -219,6 +212,18 @@ export function TeamsByDivision({
     if (pa !== pb) return pa.localeCompare(pb, "pl");
     return a.tier - b.tier;
   });
+
+  if (divisions.length === 0 && unassigned.length === 0) {
+    return (
+      <div className="rounded-2xl border border-dashed border-slate-700/50 bg-slate-800/30 p-8 text-center">
+        <Users className="mx-auto h-8 w-8 text-slate-600" />
+        <p className="mt-3 text-sm text-slate-500">
+          Brak graczy. Użyj <strong>Zaimportuj z Excela</strong>, aby zapełnić bazę przed Kreatorem
+          Dywizji.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -233,6 +238,70 @@ export function TeamsByDivision({
         />
       )}
 
+      {unassigned.length > 0 && (
+        <section className="overflow-hidden rounded-2xl border border-amber-500/30 bg-slate-800/50">
+          <header className="flex items-center justify-between border-b border-amber-500/20 bg-amber-950/20 px-5 py-4">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.2em] text-amber-300">
+                Pula przed dywizjami
+              </p>
+              <h3 className="mt-0.5 text-lg font-bold text-white">Bez przydziału</h3>
+            </div>
+            <span className="rounded-lg bg-slate-900 px-2.5 py-1 text-xs font-bold text-amber-200">
+              {unassigned.length}
+            </span>
+          </header>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[780px] text-left text-sm">
+              <thead className="border-b border-slate-700/40 text-xs uppercase tracking-wider text-slate-500">
+                <tr>
+                  <th className="px-5 py-3 font-bold">Menedżer</th>
+                  <th className="px-5 py-3 font-bold">Discord</th>
+                  <th className="px-5 py-3 font-bold">FPL Team</th>
+                  <th className="px-5 py-3 font-bold">FPL ID</th>
+                  <th className="px-5 py-3 font-bold">OR</th>
+                  <th className="px-5 py-3 font-bold">Status</th>
+                  <th className="px-5 py-3 font-bold text-right">Akcje</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-700/40">
+                {unassigned.map((team) => (
+                  <tr key={team.id} className="hover:bg-slate-900/40">
+                    <td className="px-5 py-1.5 font-semibold text-white">{team.manager_name}</td>
+                    <td className="px-5 py-1.5 text-slate-300">{team.discord_nick}</td>
+                    <td className="px-5 py-1.5 text-slate-400">{team.fpl_team_name || "—"}</td>
+                    <td className="px-5 py-1.5 font-mono text-slate-400">{team.fpl_id || "—"}</td>
+                    <td className="px-5 py-1.5 font-mono text-slate-400">
+                      {team.previous_season_or ?? "—"}
+                    </td>
+                    <td className="px-5 py-1.5">
+                      {team.is_active === false ? (
+                        <span className="text-xs font-bold text-slate-500">NIEAKTYWNY</span>
+                      ) : (
+                        <span className="text-xs font-bold text-[#39FF14]">AKTYWNY</span>
+                      )}
+                    </td>
+                    <td className="px-5 py-1.5 text-right">
+                      <div className="inline-flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setEditing(team)}
+                          className="inline-flex items-center justify-center rounded-lg border border-slate-700/50 p-2 text-slate-400 transition-colors hover:border-[#39FF14]/40 hover:text-[#39FF14]"
+                          aria-label="Edytuj drużynę"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </button>
+                        <DeleteTeamButton teamId={team.id} />
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
       {sorted.map((division) => {
         const divisionTeams = teams.filter((t) => t.division_id === division.id);
         const seasonName = seasons.find((s) => s.id === division.season_id)?.name;
@@ -243,7 +312,7 @@ export function TeamsByDivision({
             key={division.id}
             className="overflow-hidden rounded-2xl border border-slate-700/50 bg-slate-800/50"
           >
-            <header className="flex items-center justify-between border-b border-slate-700/50 bg-slate-900/60 px-5 py-4">
+            <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-700/50 bg-slate-900/60 px-5 py-4">
               <div>
                 <p className="text-xs font-black uppercase tracking-[0.2em] text-[#39FF14]">
                   {[seasonName, pyramidName, `Tier ${division.tier}`, divisionHeading(division)]
@@ -251,8 +320,20 @@ export function TeamsByDivision({
                     .join(" · ")}
                 </p>
                 <h3 className="mt-0.5 text-lg font-bold text-white">{division.name}</h3>
+                {divisionTeams.length < 10 ? (
+                  <p className="mt-1 text-xs font-semibold text-amber-300">
+                    Dywizja Niepełna ({divisionTeams.length}/10). Rekrutacja w toku — bez Bergera /
+                    publikacji.
+                  </p>
+                ) : null}
               </div>
-              <span className="rounded-lg bg-slate-900 px-2.5 py-1 text-xs font-bold text-slate-400">
+              <span
+                className={`rounded-lg px-2.5 py-1 text-xs font-bold ${
+                  divisionTeams.length < 10
+                    ? "bg-amber-500/20 text-amber-200"
+                    : "bg-slate-900 text-slate-400"
+                }`}
+              >
                 {divisionTeams.length} / 10
               </span>
             </header>

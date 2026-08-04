@@ -20,7 +20,7 @@ export const NA_MINUSIE_CONTACT = {
 
 /** Oficjalne linki rekrutacyjne Na Minusie ™ */
 export const NA_MINUSIE_LINKS = {
-  discord: "https://discord.gg/2EyssM7Q",
+  discord: "https://discord.gg/8SADF9pHaA",
   /** Bezpośredni profil Discord (DM / dodanie znajomego) */
   discordProfile: `https://discord.com/users/${NA_MINUSIE_CONTACT.discordUserId}`,
   form: "https://docs.google.com/forms/d/e/1FAIpQLSef8QScJGz801roGR5-wlXSikqsWE4OnT8mCCyEvmQ6W4Ok1w/viewform?usp=dialog",

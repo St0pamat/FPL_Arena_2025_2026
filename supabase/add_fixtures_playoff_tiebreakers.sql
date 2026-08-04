@@ -1,0 +1,4 @@
+-- DEPRECATED — nie uruchamiaj tego pliku.
+-- Użyj jednegonego skryptu:
+--   supabase/ensure_fixtures_columns.sql
+-- (is_published, is_playoff, wszystkie tiebreaker_*)

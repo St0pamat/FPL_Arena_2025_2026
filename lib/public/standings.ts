@@ -1,4 +1,5 @@
 import { medianThreshold } from "@/lib/admin/medianEngine";
+import { isPlayoffGameweek } from "@/lib/public/season";
 import type {
   FormPill,
   FormResult,
@@ -7,6 +8,11 @@ import type {
   PublicTeam,
   TableZone,
 } from "@/lib/public/types";
+
+/** Faza zasadnicza: wszystkie GW poza barażami (GW19 / GW38). */
+function isRegularSeasonFixture(f: PublicFixture): boolean {
+  return !f.is_playoff && !isPlayoffGameweek(f.gameweek);
+}
 
 function emptyStats(teamId: string) {
   return {
@@ -67,7 +73,7 @@ export function buildPublicStandings(
   const stats = new Map(teams.map((t) => [t.id, emptyStats(t.id)]));
 
   const finished = fixtures
-    .filter((f) => f.is_finished)
+    .filter((f) => f.is_finished && isRegularSeasonFixture(f))
     .sort((a, b) => a.gameweek - b.gameweek);
 
   for (const f of finished) {
@@ -150,7 +156,7 @@ export function buildPublicStandings(
 export function finishedGameweeksFrom(fixtures: PublicFixture[]): number[] {
   const set = new Set<number>();
   for (const f of fixtures) {
-    if (f.is_finished) set.add(f.gameweek);
+    if (f.is_finished && isRegularSeasonFixture(f)) set.add(f.gameweek);
   }
   return [...set].sort((a, b) => a - b);
 }

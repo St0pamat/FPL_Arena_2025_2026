@@ -6,6 +6,8 @@ export interface PublicSeason {
   id: string;
   name: string;
   status: "PUBLISHED";
+  is_completed: boolean;
+  is_archived: boolean;
   created_at: string;
 }
 
@@ -26,6 +28,34 @@ export interface PublicStructure {
   seasons: PublicSeason[];
   pyramids: PublicPyramid[];
   divisions: PublicDivision[];
+}
+
+/** Wiersz raportu EoS (podsumowanie). */
+export interface SeasonSummaryPlayerRow {
+  teamId: string;
+  status: string;
+  statusLabel: string;
+  nextTier: number | null;
+  currentTier: number;
+  position: number;
+  totalPoints: number | null;
+  fplPoints: number | null;
+  fromDivisionName: string;
+  toDivisionHint: string;
+  team: PublicTeam;
+}
+
+export interface PublicSeasonSummaryPayload {
+  seasonId: string;
+  seasonName: string;
+  is_completed: boolean;
+  is_archived: boolean;
+  /** true = pokaż kłódkę, bez obliczeń */
+  locked: boolean;
+  podium: SeasonSummaryPlayerRow[];
+  promotions: SeasonSummaryPlayerRow[];
+  relegations: SeasonSummaryPlayerRow[];
+  error?: string | null;
 }
 
 export interface PublicTeam {
@@ -83,6 +113,18 @@ export interface PublicFixture {
   home_median_bonus: number;
   away_median_bonus: number;
   is_finished: boolean;
+  is_playoff?: boolean;
+  tiebreaker_home_goals?: number | null;
+  tiebreaker_away_goals?: number | null;
+  tiebreaker_home_goals_conceded?: number | null;
+  tiebreaker_away_goals_conceded?: number | null;
+  tiebreaker_home_bench?: number | null;
+  tiebreaker_away_bench?: number | null;
+  tiebreaker_winner_id?: string | null;
+  tiebreaker_reason?: string | null;
+  tiebreaker_method?: string | null;
+  home_division_name?: string | null;
+  away_division_name?: string | null;
   home_team: PublicTeam | null;
   away_team: PublicTeam | null;
 }
@@ -100,6 +142,7 @@ export interface DivisionStandingsPayload {
   playedGwCount: number;
   averageFpl: number | null;
   leader: PublicStandingRow | null;
+  playoffs: PlayoffPreviewPayload;
 }
 
 export interface GwMatchCard {
@@ -129,4 +172,25 @@ export interface GameweekDetailsPayload {
 export interface TeamSchedulePayload {
   team: PublicTeam;
   fixtures: PublicFixture[];
+}
+
+/** Wirtualny / podglądowy lub opublikowany mecz barażowy */
+export interface PlayoffMatchMeta {
+  fixture: PublicFixture;
+  badge: string;
+  contextLine: string;
+  provisionalNote: string;
+  /** true = jeszcze nie ma opublikowanego meczu w DB */
+  isProvisional?: boolean;
+  /** Ścieżka remisów + rozstrzygnięcie (TB1…TBn) */
+  decisionPath?: Array<{ key: string; label: string; isDeciding: boolean }>;
+  homeOutcome?: "UTRZYMANIE" | "SPADEK" | "AWANS" | "BRAK_AWANSU" | null;
+  awayOutcome?: "UTRZYMANIE" | "SPADEK" | "AWANS" | "BRAK_AWANSU" | null;
+}
+
+export interface PlayoffPreviewPayload {
+  gameweek: number;
+  matches: PlayoffMatchMeta[];
+  /** Komunikaty (najniższa liga / brak danych niższej) */
+  notices: string[];
 }

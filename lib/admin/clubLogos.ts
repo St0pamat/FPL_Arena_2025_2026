@@ -38,8 +38,8 @@ export interface ClubLogosIndex {
 }
 
 /** "West Ham United" → "west-ham-united" */
-export function slugifyClubName(name: string): string {
-  return name
+export function slugifyClubName(name: string | null | undefined | number): string {
+  return String(name ?? "")
     .normalize("NFKD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
@@ -54,14 +54,22 @@ export function clubLogoPublicUrl(fileName: string): string {
 }
 
 export function findClubLogo(
-  logos: ClubLogoRecord[],
-  clubName: string | null | undefined,
+  logos: ClubLogoRecord[] | unknown,
+  clubName: string | null | undefined | number,
 ): ClubLogoRecord | null {
-  const raw = (clubName ?? "").trim();
+  const raw = String(clubName ?? "").trim();
   if (!raw || raw === "—") return null;
 
+  const logosArray: ClubLogoRecord[] = Array.isArray(logos)
+    ? logos
+    : logos && typeof logos === "object" && Array.isArray((logos as ClubLogosIndex).logos)
+      ? (logos as ClubLogosIndex).logos
+      : logos && typeof logos === "object" && Array.isArray((logos as { default?: unknown }).default)
+        ? ((logos as { default: ClubLogoRecord[] }).default)
+        : [];
+
   const key = slugifyClubName(raw);
-  const byKey = logos.find((l) => l.clubKey === key);
+  const byKey = logosArray.find((l) => l.clubKey === key);
   if (byKey) return byKey;
 
   const lower = raw.toLowerCase();
@@ -70,13 +78,16 @@ export function findClubLogo(
   );
 
   return (
-    logos.find((l) => l.clubName.toLowerCase() === lower) ??
-    logos.find((l) => slugifyClubName(l.clubName) === key) ??
+    logosArray.find((l) => String(l.clubName ?? "").toLowerCase() === lower) ??
+    logosArray.find((l) => slugifyClubName(l.clubName) === key) ??
     (stripped
-      ? logos.find(
+      ? logosArray.find(
           (l) =>
             slugifyClubName(
-              l.clubName.replace(/\bA\.?\s*F\.?\s*C\.?\b/gi, "").replace(/\bF\.?\s*C\.?\b/gi, "").trim(),
+              String(l.clubName ?? "")
+                .replace(/\bA\.?\s*F\.?\s*C\.?\b/gi, "")
+                .replace(/\bF\.?\s*C\.?\b/gi, "")
+                .trim(),
             ) === stripped,
         )
       : undefined) ??
@@ -89,10 +100,12 @@ export function emptyClubLogosIndex(): ClubLogosIndex {
 }
 
 /** Unikalne nazwy klubów z listy uczestników (Discord Club / chosen_club). */
-export function uniqueParticipantClubs(clubNames: string[]): string[] {
+export function uniqueParticipantClubs(
+  clubNames: Array<string | null | undefined | number>,
+): string[] {
   const map = new Map<string, string>();
   for (const raw of clubNames) {
-    const name = raw.trim();
+    const name = String(raw ?? "").trim();
     if (!name || name === "—") continue;
     const key = slugifyClubName(name);
     if (!key) continue;

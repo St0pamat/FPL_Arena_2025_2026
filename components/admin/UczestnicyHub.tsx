@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { FileSpreadsheet, ImagePlus, UserPlus, Users } from "lucide-react";
+import { BulkPlayerImport } from "@/components/admin/BulkPlayerImport";
 import { ClubLogoManager } from "@/components/admin/ClubLogoManager";
 import { CsvImport } from "@/components/admin/CsvImport";
 import { TeamForm } from "@/components/admin/TeamForm";
@@ -17,13 +18,13 @@ const TABS: { id: TabId; label: string; icon: typeof Users; hint: string }[] = [
     id: "lista",
     label: "Zarządzaj",
     icon: Users,
-    hint: "Edycja, usuwanie, zmiana dywizji / klubu — zmiany wracają do terminarza i tabel.",
+    hint: "Edycja, usuwanie, zmiana dywizji / klubu — zmiany wracają do terminarza i tabel. Masowy import z Excela zasila pulę przed Kreatorem Dywizji.",
   },
   {
     id: "import",
     label: "Import CSV",
     icon: FileSpreadsheet,
-    hint: "Dry-run: podgląd → potwierdzenie (UPSERT po FPL ID).",
+    hint: "Dry-run: podgląd → potwierdzenie (UPSERT po FPL ID + przypisanie do dywizji).",
   },
   {
     id: "logo",
@@ -63,6 +64,7 @@ export function UczestnicyHub({
   const [tab, setTab] = useState<TabId>(initial);
 
   const active = TABS.find((t) => t.id === tab) ?? TABS[0];
+  const poolCount = teams.filter((t) => !t.division_id).length;
 
   function selectTab(id: TabId) {
     setTab(id);
@@ -102,13 +104,18 @@ export function UczestnicyHub({
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
               <h2 className="text-lg font-bold text-white">
-                Uczestnicy według dywizji ({teams.length})
+                Uczestnicy ({teams.length})
+                {poolCount > 0 ? (
+                  <span className="ml-2 text-sm font-semibold text-slate-400">
+                    · pula bez dywizji: {poolCount}
+                  </span>
+                ) : null}
               </h2>
               <p className="mt-1 text-xs text-slate-500">
-                Ikona ołówka = edycja (klub, logo-powiązanie, dywizja, dane). Po zapisie odświeżają
-                się tabele i Maszyna Losująca.
+                Ikona ołówka = edycja. Przed GW1: „Zaimportuj z Excela” → potem Kreator Dywizji.
               </p>
             </div>
+            <BulkPlayerImport />
           </div>
           <TeamsByDivision
             teams={teams}
@@ -121,7 +128,19 @@ export function UczestnicyHub({
       )}
 
       {tab === "import" && (
-        <CsvImport seasons={seasons} pyramids={pyramids} logos={logos} />
+        <div className="space-y-6">
+          <div className="rounded-2xl border border-slate-700/50 bg-slate-800/50 p-6">
+            <h2 className="text-lg font-bold text-white">Szybki import do puli (przed dywizjami)</h2>
+            <p className="mt-1 text-sm text-slate-400">
+              Wklejka z Excela: Team, Manager, FPL ID, OR, Discord Name, Discord Club — bez
+              przypisywania dywizji.
+            </p>
+            <div className="mt-4">
+              <BulkPlayerImport />
+            </div>
+          </div>
+          <CsvImport seasons={seasons} pyramids={pyramids} logos={logos} />
+        </div>
       )}
 
       {tab === "logo" && (

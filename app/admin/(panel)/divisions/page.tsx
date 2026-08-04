@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 
-export default function LegacyDivisionsRedirect() {
-  redirect("/admin/struktura#dywizje");
+/** Stary kreator dywizji usunięty (Excel SSOT) → Master Import w Bazie Graczy */
+export default function AdminDivisionsPage() {
+  redirect("/admin/players");
 }

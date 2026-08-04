@@ -7,6 +7,7 @@ import {
   CalendarRange,
   LayoutList,
   Loader2,
+  Medal,
   Shuffle,
   Swords,
   Trophy,
@@ -16,24 +17,28 @@ import {
 import {
   getDivisionStandings,
   getGameweekDetails,
+  getPublicSeasonSummary,
 } from "@/lib/public/actions";
 import type { ClubLogoRecord } from "@/lib/admin/clubLogos";
 import type { TierLogoRecord } from "@/lib/admin/tierLogos";
 import type {
   DivisionStandingsPayload,
   GameweekDetailsPayload,
+  PublicSeasonSummaryPayload,
   PublicStructure,
 } from "@/lib/public/types";
+import { isPlayoffGameweek } from "@/lib/public/season";
 import { NA_MINUSIE_PATHS } from "@/lib/na-minusie/links";
 import { StandingsTable } from "@/components/na-minusie/hub/StandingsTable";
 import { GameweekCenter } from "@/components/na-minusie/hub/GameweekCenter";
 import { ScheduleView } from "@/components/na-minusie/hub/ScheduleView";
+import { SeasonSummaryView } from "@/components/na-minusie/hub/SeasonSummaryView";
 import {
   resolveTierLogoName,
   TierCrest,
 } from "@/components/na-minusie/TierCrest";
 
-type HubTab = "tabela" | "kolejki" | "terminarz" | "profile";
+type HubTab = "tabela" | "kolejki" | "terminarz" | "podsumowanie" | "profile";
 
 const SECTION_TABS: {
   id: HubTab;
@@ -43,6 +48,7 @@ const SECTION_TABS: {
   { id: "tabela", label: "Tabela", icon: Trophy },
   { id: "kolejki", label: "Centrum kolejki", icon: Swords },
   { id: "terminarz", label: "Terminarz", icon: CalendarRange },
+  { id: "podsumowanie", label: "Podsumowanie", icon: Medal },
   { id: "profile", label: "Uczestnicy", icon: Users },
 ];
 
@@ -57,7 +63,10 @@ export function HubShell({
   tierLogos?: TierLogoRecord[];
   isAdmin?: boolean;
 }) {
-  const defaultSeasonId = structure.seasons[0]?.id ?? "";
+  const defaultSeasonId =
+    structure.seasons.find((s) => !s.is_archived)?.id ??
+    structure.seasons[0]?.id ??
+    "";
   const [seasonId, setSeasonId] = useState(defaultSeasonId);
 
   const divisions = useMemo(
@@ -79,9 +88,11 @@ export function HubShell({
 
   const [bundle, setBundle] = useState<DivisionStandingsPayload | null>(null);
   const [gwDetails, setGwDetails] = useState<GameweekDetailsPayload | null>(null);
+  const [summary, setSummary] = useState<PublicSeasonSummaryPayload | null>(null);
   const [selectedGw, setSelectedGw] = useState(1);
   const [pending, startTransition] = useTransition();
   const [gwPending, startGwTransition] = useTransition();
+  const [summaryPending, startSummaryTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -109,6 +120,40 @@ export function HubShell({
 
   useEffect(() => {
     if (!activeDivisionId || activeTab !== "kolejki") return;
+    if (isPlayoffGameweek(selectedGw)) {
+      if (!bundle) {
+        setGwDetails(null);
+        return;
+      }
+      // Użyj opublikowanych baraży z bundle (cross-division + wyniki)
+      const playoffMatches = bundle.playoffs.matches.filter(
+        (m) =>
+          m.fixture.gameweek === selectedGw ||
+          isPlayoffGameweek(m.fixture.gameweek),
+      );
+      setGwDetails({
+        divisionId: bundle.divisionId,
+        gameweek: selectedGw,
+        isFinished:
+          playoffMatches.length > 0 &&
+          playoffMatches.every((m) => m.fixture.is_finished),
+        medianThreshold: null,
+        matches: playoffMatches.map((m) => {
+          const fixture = m.fixture;
+          return {
+            fixture,
+            homeWon: fixture.is_finished && fixture.home_h2h_points === 2,
+            awayWon: fixture.is_finished && fixture.away_h2h_points === 2,
+            draw:
+              fixture.is_finished &&
+              fixture.home_h2h_points === 1 &&
+              !fixture.tiebreaker_winner_id,
+          };
+        }),
+        fplRanking: [],
+      });
+      return;
+    }
     if (!bundle?.finishedGameweeks.includes(selectedGw)) {
       setGwDetails(null);
       return;
@@ -121,9 +166,32 @@ export function HubShell({
         setGwDetails(null);
       }
     });
-  }, [activeDivisionId, selectedGw, activeTab, bundle?.finishedGameweeks]);
+  }, [activeDivisionId, selectedGw, activeTab, bundle]);
+
+  useEffect(() => {
+    if (!seasonId || activeTab !== "podsumowanie") return;
+    startSummaryTransition(async () => {
+      try {
+        const data = await getPublicSeasonSummary(seasonId);
+        setSummary(data);
+      } catch (e) {
+        setSummary({
+          seasonId,
+          seasonName: "",
+          is_completed: false,
+          is_archived: false,
+          locked: true,
+          podium: [],
+          promotions: [],
+          relegations: [],
+          error: e instanceof Error ? e.message : "Błąd podsumowania",
+        });
+      }
+    });
+  }, [seasonId, activeTab]);
 
   const seasonName = structure.seasons.find((s) => s.id === seasonId)?.name ?? "—";
+  const activeSeason = structure.seasons.find((s) => s.id === seasonId);
   const activeDivision = divisions.find((d) => d.id === activeDivisionId);
   const divisionName = activeDivision?.name ?? "—";
   const pyramidName =
@@ -168,26 +236,32 @@ export function HubShell({
             </h1>
 
             <div className="mt-4 flex flex-wrap items-center gap-2.5">
-              {structure.seasons.length > 1 ? (
-                <label className="inline-flex items-center gap-2">
-                  <span className="sr-only">Sezon</span>
-                  <select
-                    value={seasonId}
-                    onChange={(e) => setSeasonId(e.target.value)}
-                    className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-4 py-1.5 text-sm font-bold text-emerald-300 outline-none focus:border-emerald-400"
-                  >
-                    {structure.seasons.map((s) => (
-                      <option key={s.id} value={s.id} className="bg-slate-950 text-white">
-                        {s.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              ) : (
-                <span className="inline-flex items-center rounded-full border border-emerald-500/40 bg-emerald-500/10 px-4 py-1.5 text-sm font-bold text-emerald-300">
-                  {seasonName}
+              <label className="inline-flex items-center gap-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                  Sezon
                 </span>
-              )}
+                <select
+                  value={seasonId}
+                  onChange={(e) => {
+                    setSeasonId(e.target.value);
+                    setSummary(null);
+                  }}
+                  className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-4 py-1.5 text-sm font-bold text-emerald-300 outline-none focus:border-emerald-400"
+                >
+                  {structure.seasons.map((s) => (
+                    <option key={s.id} value={s.id} className="bg-slate-950 text-white">
+                      {s.name}
+                      {s.is_archived ? " (Zakończony)" : ""}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              {activeSeason?.is_archived ? (
+                <span className="rounded-full border border-slate-600 bg-slate-800/80 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  Historia
+                </span>
+              ) : null}
 
               <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-700 bg-slate-900/80 px-3 py-1.5 text-xs font-semibold text-slate-300">
                 <Activity className="h-3.5 w-3.5 text-emerald-400" aria-hidden />
@@ -284,12 +358,14 @@ export function HubShell({
             </p>
           ) : null}
 
-          {pending && !bundle ? (
+          {pending && !bundle && activeTab !== "podsumowanie" && activeTab !== "profile" ? (
             <div className="flex items-center justify-center gap-2 rounded-2xl border border-slate-800 bg-slate-900/60 py-20 text-slate-400">
               <Loader2 className="h-5 w-5 animate-spin text-emerald-400" />
               Ładowanie dywizji…
             </div>
-          ) : !bundle && activeTab !== "profile" ? (
+          ) : !bundle &&
+            activeTab !== "profile" &&
+            activeTab !== "podsumowanie" ? (
             <div className="rounded-2xl border border-dashed border-slate-700 px-6 py-16 text-center text-sm text-slate-500">
               Wybierz dywizję.
             </div>
@@ -319,6 +395,7 @@ export function HubShell({
                   logos={logos}
                   exportMeta={exportMeta}
                   fixtures={bundle.fixtures}
+                  playoffs={bundle.playoffs}
                   divisionId={bundle.divisionId}
                   showDiscordSend={isAdmin}
                   hasWebhook={bundle.hasDiscordWebhook}
@@ -333,8 +410,17 @@ export function HubShell({
                     teams={bundle.teams}
                     fixtures={bundle.fixtures}
                     logos={logos}
+                    playoffs={bundle.playoffs}
                   />
                 )
+              ) : null}
+
+              {activeTab === "podsumowanie" ? (
+                <SeasonSummaryView
+                  summary={summary}
+                  loading={summaryPending && !summary}
+                  logos={logos}
+                />
               ) : null}
 
               {activeTab === "profile" ? (

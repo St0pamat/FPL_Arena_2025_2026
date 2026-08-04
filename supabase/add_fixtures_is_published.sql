@@ -1,0 +1,4 @@
+-- DEPRECATED — nie uruchamiaj osobno.
+-- Użyj kompletnego skryptu:
+--   supabase/ensure_fixtures_columns.sql
+-- (zawiera is_published + indeks + politykę anon + cały system TB)

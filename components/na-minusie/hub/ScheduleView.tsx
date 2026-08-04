@@ -3,29 +3,46 @@
 import { useMemo, useState } from "react";
 import { CalendarDays, Search } from "lucide-react";
 import type { ClubLogoRecord } from "@/lib/admin/clubLogos";
-import type { PublicFixture, PublicTeam } from "@/lib/public/types";
+import type { PlayoffPreviewPayload, PublicFixture, PublicTeam } from "@/lib/public/types";
+import {
+  gameweekLabel,
+  isPlayoffGameweek,
+  PLAYOFF_GAMEWEEK,
+} from "@/lib/public/season";
 import { ClubCrest } from "@/components/na-minusie/hub/ClubCrest";
+import { PlayoffMatchRow } from "@/components/na-minusie/hub/PlayoffMatchRow";
 import { TeamIdentity, teamPrimaryLabel } from "@/components/na-minusie/hub/TeamIdentity";
 
 export function ScheduleView({
   teams,
   fixtures,
   logos = [],
+  playoffs,
 }: {
   teams: PublicTeam[];
   fixtures: PublicFixture[];
   logos?: ClubLogoRecord[];
+  playoffs: PlayoffPreviewPayload;
 }) {
   const [filterTeamId, setFilterTeamId] = useState("");
   const [filterGw, setFilterGw] = useState("");
 
   const availableGws = useMemo(() => {
-    const set = new Set(fixtures.map((f) => f.gameweek));
+    const set = new Set(
+      fixtures
+        .filter((f) => !f.is_playoff && !isPlayoffGameweek(f.gameweek))
+        .map((f) => f.gameweek),
+    );
+    set.add(playoffs.gameweek || PLAYOFF_GAMEWEEK);
+    for (const m of playoffs.matches) set.add(m.fixture.gameweek);
     return [...set].sort((a, b) => a - b);
-  }, [fixtures]);
+  }, [fixtures, playoffs.gameweek, playoffs.matches]);
 
   const byGw = useMemo(() => {
-    let filtered = fixtures;
+    // Baraże renderujemy w wyróżnionej sekcji (PlayoffMatchRow), nie w zwykłym terminarzu
+    let filtered = fixtures.filter(
+      (f) => !f.is_playoff && !isPlayoffGameweek(f.gameweek),
+    );
     if (filterTeamId) {
       filtered = filtered.filter(
         (f) => f.home_team_id === filterTeamId || f.away_team_id === filterTeamId,
@@ -33,6 +50,7 @@ export function ScheduleView({
     }
     if (filterGw) {
       const gw = Number(filterGw);
+      if (isPlayoffGameweek(gw)) return [];
       filtered = filtered.filter((f) => f.gameweek === gw);
     }
     const map = new Map<number, PublicFixture[]>();
@@ -43,6 +61,36 @@ export function ScheduleView({
     }
     return [...map.entries()].sort((a, b) => a[0] - b[0]);
   }, [fixtures, filterTeamId, filterGw]);
+
+  const playoffMatchesFiltered = useMemo(() => {
+    let list = playoffs.matches;
+    if (filterTeamId) {
+      list = list.filter(
+        (m) =>
+          m.fixture.home_team_id === filterTeamId ||
+          m.fixture.away_team_id === filterTeamId,
+      );
+    }
+    if (filterGw) {
+      const gw = Number(filterGw);
+      if (!isPlayoffGameweek(gw)) return [];
+      list = list.filter((m) => m.fixture.gameweek === gw);
+    }
+    return list;
+  }, [playoffs.matches, filterTeamId, filterGw]);
+
+  const showPlayoffSection =
+    (!filterGw || isPlayoffGameweek(Number(filterGw))) &&
+    (playoffMatchesFiltered.length > 0 ||
+      (playoffs.notices.length > 0 && !filterTeamId));
+
+  const playoffSectionGw =
+    playoffMatchesFiltered[0]?.fixture.gameweek ??
+    (filterGw && isPlayoffGameweek(Number(filterGw))
+      ? Number(filterGw)
+      : playoffs.gameweek);
+
+  const hasAnyContent = byGw.length > 0 || showPlayoffSection;
 
   return (
     <div className="space-y-6">
@@ -55,7 +103,7 @@ export function ScheduleView({
             </h2>
           </div>
           <p className="text-xs text-slate-500">
-            Filtruj po drużynie i kolejce (GW).
+            Filtruj po drużynie i kolejce (GW). GW19 / GW38 = baraże.
           </p>
         </div>
         <div className="flex w-full flex-col gap-2 sm:max-w-md sm:flex-row">
@@ -71,7 +119,7 @@ export function ScheduleView({
               <option value="">Wszystkie GW</option>
               {availableGws.map((gw) => (
                 <option key={gw} value={String(gw)}>
-                  GW{gw}
+                  {gameweekLabel(gw)}
                 </option>
               ))}
             </select>
@@ -98,7 +146,7 @@ export function ScheduleView({
         </div>
       </div>
 
-      {!byGw.length ? (
+      {!hasAnyContent ? (
         <div className="rounded-2xl border border-dashed border-slate-700 px-6 py-12 text-center text-sm text-slate-500">
           {filterTeamId || filterGw
             ? "Brak meczów dla wybranych filtrów."
@@ -113,7 +161,7 @@ export function ScheduleView({
             >
               <header className="flex items-center justify-between border-b border-slate-800 px-4 py-2.5">
                 <h3 className="font-athletic text-sm uppercase tracking-wider text-emerald-400">
-                  Gameweek {gw}
+                  {isPlayoffGameweek(gw) ? gameweekLabel(gw) : `Gameweek ${gw}`}
                 </h3>
                 <span className="text-[10px] uppercase tracking-wider text-slate-600">
                   {matches.every((m) => m.is_finished) ? "Rozliczona" : "Nadchodząca"}
@@ -162,6 +210,51 @@ export function ScheduleView({
               </ul>
             </section>
           ))}
+
+          {showPlayoffSection ? (
+            <section className="overflow-hidden rounded-2xl border border-amber-500/25 bg-slate-900/70 backdrop-blur-md">
+              <header className="flex items-center justify-between border-b border-amber-500/20 px-4 py-2.5">
+                <h3 className="font-athletic text-sm uppercase tracking-wider text-amber-400">
+                  {gameweekLabel(playoffSectionGw)} · Mecz o Awans / Utrzymanie
+                </h3>
+                <span className="text-[10px] uppercase tracking-wider text-amber-500/70">
+                  {playoffMatchesFiltered.some((m) => !m.isProvisional) ||
+                  playoffs.matches.some((m) => !m.isProvisional)
+                    ? "Wyniki baraży"
+                    : "Podgląd baraży"}
+                </span>
+              </header>
+
+              {playoffs.notices.map((notice) => (
+                <p
+                  key={notice}
+                  className="border-b border-slate-800/80 px-4 py-3 text-sm leading-relaxed text-slate-400"
+                >
+                  {notice}
+                </p>
+              ))}
+
+              {playoffMatchesFiltered.length > 0 ? (
+                <ul className="divide-y divide-slate-800/80">
+                  {playoffMatchesFiltered.map((m) => {
+                    const highlight =
+                      Boolean(filterTeamId) &&
+                      (m.fixture.home_team_id === filterTeamId ||
+                        m.fixture.away_team_id === filterTeamId);
+                    return (
+                      <li key={m.fixture.id} className="py-3">
+                        <PlayoffMatchRow
+                          match={m}
+                          logos={logos}
+                          highlight={highlight}
+                        />
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : null}
+            </section>
+          ) : null}
         </div>
       )}
     </div>

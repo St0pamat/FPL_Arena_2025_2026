@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
 
-export default function LegacyTeamsRedirect() {
-  redirect("/admin/uczestnicy");
+export default function AdminTeamsRedirectPage() {
+  redirect("/admin/players");
 }

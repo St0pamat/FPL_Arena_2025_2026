@@ -9,7 +9,25 @@ import {
   parseGwBatchText,
   resolveH2h,
 } from "@/lib/admin/medianEngine";
+import {
+  consecutiveTierBoundaries,
+  PLAYOFF_HIGHER_POS,
+  PLAYOFF_HIGHER_SEED_INDEX,
+  PLAYOFF_LOWER_POS,
+  PLAYOFF_LOWER_SEED_INDEX,
+  sortStandingsDesc,
+  teamIdAtZeroBasedIndex,
+} from "@/lib/admin/playoffPairs";
+import { buildStandings } from "@/lib/admin/standings";
+import { DIVISION_CAPACITY } from "@/lib/admin/divisionCapacity";
 import type { ActionState, Team } from "@/lib/admin/types";
+import {
+  gameweekLabel,
+  isPlayoffGameweek,
+  PLAYOFF_GAMEWEEK,
+  regularSeasonRangeForPlayoff,
+  SPRING_PLAYOFF_GAMEWEEK,
+} from "@/lib/public/season";
 
 export interface FixtureRow {
   id: string;
@@ -208,7 +226,14 @@ export async function generateDivisionFixtures(
       return { error: "Za mało drużyn w dywizji (min. 2)." };
     }
 
-    const shuffledTeams = shuffleInPlace([...(teams as Team[])]);
+    const activeCount = (teams as Team[]).filter((t) => t.is_active !== false).length;
+    if (activeCount !== DIVISION_CAPACITY) {
+      return {
+        error: `Terminarz Bergera wymaga równe ${DIVISION_CAPACITY} zespołów (obecnie ${activeCount}/${DIVISION_CAPACITY}).`,
+      };
+    }
+
+    const shuffledTeams = shuffleInPlace([...(teams as Team[])].filter((t) => t.is_active !== false));
     const shuffledIds = shuffledTeams.map((t) => t.id);
     const matches = generateBergerFixtures(shuffledIds);
 
@@ -237,6 +262,7 @@ export async function generateDivisionFixtures(
       home_median_bonus: 0,
       away_median_bonus: 0,
       is_finished: false,
+      is_published: false,
     }));
 
     const { error: insertError } = await supabase.from("fixtures").insert(payload);
@@ -254,7 +280,7 @@ export async function generateDivisionFixtures(
     const maxGw = Math.max(...matches.map((m) => m.gameweek));
     return {
       error: null,
-      success: `Wylosowano terminarz: ${matches.length} meczów w ${maxGw} kolejkach (${teams.length} drużyn).`,
+      success: `Wylosowano terminarz: ${matches.length} meczów w ${maxGw} kolejkach (${shuffledTeams.length} drużyn).`,
       fixturesCreated: matches.length,
       drawOrder: shuffledTeams,
       fixtures,
@@ -273,6 +299,7 @@ type FixtureDbRow = {
   home_team_id: string;
   away_team_id: string;
   is_finished: boolean;
+  is_published?: boolean;
   home_fpl_points: number | null;
   away_fpl_points: number | null;
   home_h2h_points: number;
@@ -378,7 +405,7 @@ export async function calculateGameweeksBatch(
     const { data: fixtures, error: fixError } = await supabase
       .from("fixtures")
       .select(
-        "id, season_id, division_id, gameweek, home_team_id, away_team_id, is_finished, home_fpl_points, away_fpl_points, home_h2h_points, away_h2h_points, home_median_bonus, away_median_bonus",
+        "id, season_id, division_id, gameweek, home_team_id, away_team_id, is_finished, is_published, home_fpl_points, away_fpl_points, home_h2h_points, away_h2h_points, home_median_bonus, away_median_bonus",
       )
       .eq("season_id", seasonId)
       .eq("is_finished", false)
@@ -479,6 +506,7 @@ export async function calculateGameweeksBatch(
           home_median_bonus: homeBonus,
           away_median_bonus: awayBonus,
           is_finished: true,
+          is_published: false,
         });
       }
 
@@ -602,3 +630,353 @@ export async function getDivisionResultsBundle(
     finishedCount: mapped.filter((f) => f.is_finished).length,
   };
 }
+
+// ---------------------------------------------------------------------------
+// Generator baraży GW19 / GW38 — Cross-Division (8. wyższej vs 3. niższej)
+// ---------------------------------------------------------------------------
+
+function revalidatePlayoffs() {
+  revalidatePath("/admin/workspace");
+  revalidatePath("/admin/simulator");
+  revalidatePath("/admin/gw-results");
+  revalidatePath("/na-minusie/hub");
+  revalidatePath("/admin", "layout");
+}
+
+export type GlobalPlayoffPairSummary = {
+  higherDivisionName: string;
+  lowerDivisionName: string;
+  homeSeed: number;
+  awaySeed: number;
+};
+
+export type GenerateGlobalPlayoffsResult = ActionState & {
+  created?: number;
+  deleted?: number;
+  pairs?: GlobalPlayoffPairSummary[];
+};
+
+type DivRow = {
+  id: string;
+  name: string;
+  tier: number;
+  pyramid_id: string;
+  season_id: string;
+};
+
+async function standingsTeamIdsForDivision(
+  supabase: Awaited<ReturnType<typeof requireAuth>>,
+  seasonId: string,
+  divisionId: string,
+  gwFrom: number,
+  gwTo: number,
+): Promise<{ rankedIds: string[]; error: string | null }> {
+  const { data: teams, error: teamsError } = await supabase
+    .from("teams")
+    .select("id, is_active")
+    .eq("division_id", divisionId);
+  if (teamsError) return { rankedIds: [], error: teamsError.message };
+
+  const teamIds = (teams ?? [])
+    .filter((t) => t.is_active !== false)
+    .map((t) => t.id);
+
+  if (teamIds.length < 2) {
+    return {
+      rankedIds: [],
+      error: `Za mało aktywnych drużyn (${teamIds.length}).`,
+    };
+  }
+
+  const { data: fixtures, error: fixError } = await supabase
+    .from("fixtures")
+    .select(
+      "gameweek, home_team_id, away_team_id, home_fpl_points, away_fpl_points, home_h2h_points, away_h2h_points, home_median_bonus, away_median_bonus, is_finished, is_published, is_playoff",
+    )
+    .eq("season_id", seasonId)
+    .eq("division_id", divisionId)
+    .gte("gameweek", gwFrom)
+    .lte("gameweek", gwTo)
+    .eq("is_published", true);
+  if (fixError) return { rankedIds: [], error: fixError.message };
+
+  const finishedPublished = (fixtures ?? []).filter(
+    (f) =>
+      !f.is_playoff &&
+      f.is_finished &&
+      f.home_fpl_points != null &&
+      f.away_fpl_points != null,
+  );
+
+  if (!finishedPublished.length) {
+    return {
+      rankedIds: [],
+      error: `Brak opublikowanych wyników GW${gwFrom}–${gwTo}.`,
+    };
+  }
+
+  const standings = buildStandings(
+    finishedPublished.map((f) => ({
+      gameweek: f.gameweek,
+      home_team_id: f.home_team_id,
+      away_team_id: f.away_team_id,
+      home_fpl_points: f.home_fpl_points,
+      away_fpl_points: f.away_fpl_points,
+      home_h2h_points: f.home_h2h_points ?? 0,
+      away_h2h_points: f.away_h2h_points ?? 0,
+      home_median_bonus: f.home_median_bonus ?? 0,
+      away_median_bonus: f.away_median_bonus ?? 0,
+      is_finished: true,
+    })),
+    teamIds,
+  );
+
+  const ranked = sortStandingsDesc(standings);
+  return { rankedIds: ranked.map((r) => r.teamId), error: null };
+}
+
+/**
+ * Globalne baraże: 8. wyższej (gospodarz, indeks [7]) vs 3. niższej (gość, indeks [2]).
+ * Na starcie czyści wszystkie mecze GW19 i GW38 w sezonie.
+ */
+export async function generateGlobalPlayoffs(
+  seasonId: string,
+  gameweek: number,
+): Promise<GenerateGlobalPlayoffsResult> {
+  try {
+    const supabase = await requireAuth();
+    if (!seasonId) return { error: "Brak sezonu." };
+    if (!isPlayoffGameweek(gameweek)) {
+      return {
+        error: `GW${gameweek} nie jest kolejką barażową (dozwolone: 19 lub 38).`,
+      };
+    }
+
+    const range = regularSeasonRangeForPlayoff(gameweek);
+    if (!range) return { error: "Nieprawidłowa kolejka barażowa." };
+
+    const { data: deletedRows, error: delError } = await supabase
+      .from("fixtures")
+      .delete()
+      .eq("season_id", seasonId)
+      .in("gameweek", [PLAYOFF_GAMEWEEK, SPRING_PLAYOFF_GAMEWEEK])
+      .select("id");
+    if (delError) return { error: delError.message };
+    const deleted = deletedRows?.length ?? 0;
+
+    const { data: divisions, error: divError } = await supabase
+      .from("divisions")
+      .select("id, name, tier, pyramid_id, season_id")
+      .eq("season_id", seasonId)
+      .order("tier", { ascending: true });
+    if (divError) return { error: divError.message };
+
+    const divs = (divisions ?? []) as DivRow[];
+    if (divs.length < 2) {
+      return {
+        error: "Potrzebujesz co najmniej 2 dywizji, żeby utworzyć baraż między ligami.",
+        deleted,
+      };
+    }
+
+    // Tylko aktywne dywizje (dokładnie 10/10) — niepełne nie tworzą granic barażowych.
+    const divIds = divs.map((d) => d.id);
+    const { data: teamsForCount, error: tcErr } = await supabase
+      .from("teams")
+      .select("division_id, is_active")
+      .in("division_id", divIds);
+    if (tcErr) return { error: tcErr.message, deleted };
+
+    const countByDiv = new Map<string, number>();
+    for (const t of teamsForCount ?? []) {
+      if (!t.division_id || t.is_active === false) continue;
+      countByDiv.set(t.division_id, (countByDiv.get(t.division_id) ?? 0) + 1);
+    }
+
+    const activeDivs = divs.filter(
+      (d) => (countByDiv.get(d.id) ?? 0) === DIVISION_CAPACITY,
+    );
+    const errors: string[] = [];
+    const skippedIncomplete = divs.filter((d) => {
+      const n = countByDiv.get(d.id) ?? 0;
+      return n > 0 && n < DIVISION_CAPACITY;
+    });
+    for (const d of skippedIncomplete) {
+      errors.push(
+        `${d.name}: niepełna (${countByDiv.get(d.id) ?? 0}/${DIVISION_CAPACITY}) — pominięta w barażach.`,
+      );
+    }
+
+    if (activeDivs.length < 2) {
+      return {
+        error:
+          "Potrzebujesz co najmniej 2 aktywnych dywizji (10/10), żeby utworzyć baraż. Niepełne ligi są pomijane.",
+        deleted,
+      };
+    }
+
+    const boundaries = consecutiveTierBoundaries(activeDivs);
+    if (!boundaries.length) {
+      return {
+        error: "Brak sąsiadujących aktywnych dywizji (granic tierów) w sezonie.",
+        deleted,
+      };
+    }
+
+    const pairPayloads: Array<{
+      season_id: string;
+      division_id: string;
+      gameweek: number;
+      home_team_id: string;
+      away_team_id: string;
+      home_fpl_points: null;
+      away_fpl_points: null;
+      home_h2h_points: number;
+      away_h2h_points: number;
+      home_median_bonus: number;
+      away_median_bonus: number;
+      is_finished: boolean;
+      is_published: boolean;
+      is_playoff: boolean;
+    }> = [];
+    const summaries: GlobalPlayoffPairSummary[] = [];
+    // errors already seeded for incomplete divisions
+
+    for (const { higher, lower } of boundaries) {
+      const [hi, lo] = await Promise.all([
+        standingsTeamIdsForDivision(
+          supabase,
+          seasonId,
+          higher.id,
+          range.from,
+          range.to,
+        ),
+        standingsTeamIdsForDivision(
+          supabase,
+          seasonId,
+          lower.id,
+          range.from,
+          range.to,
+        ),
+      ]);
+
+      if (hi.error) {
+        const msg = `${higher.name}: ${hi.error}`;
+        console.warn("[generateGlobalPlayoffs]", msg);
+        errors.push(msg);
+        continue;
+      }
+      if (lo.error) {
+        const msg = `${lower.name}: ${lo.error}`;
+        console.warn("[generateGlobalPlayoffs]", msg);
+        errors.push(msg);
+        continue;
+      }
+
+      if (hi.rankedIds.length <= PLAYOFF_HIGHER_SEED_INDEX) {
+        const msg = `${higher.name}: za mało drużyn (${hi.rankedIds.length}) — potrzeba min. ${PLAYOFF_HIGHER_POS} (indeks [${PLAYOFF_HIGHER_SEED_INDEX}]). Pomijam granicę z ${lower.name}.`;
+        console.warn("[generateGlobalPlayoffs]", msg);
+        errors.push(msg);
+        continue;
+      }
+      if (lo.rankedIds.length <= PLAYOFF_LOWER_SEED_INDEX) {
+        const msg = `${lower.name}: za mało drużyn (${lo.rankedIds.length}) — potrzeba min. ${PLAYOFF_LOWER_POS} (indeks [${PLAYOFF_LOWER_SEED_INDEX}]). Pomijam granicę z ${higher.name}.`;
+        console.warn("[generateGlobalPlayoffs]", msg);
+        errors.push(msg);
+        continue;
+      }
+
+      const homeTeamId = teamIdAtZeroBasedIndex(
+        hi.rankedIds,
+        PLAYOFF_HIGHER_SEED_INDEX,
+      );
+      const awayTeamId = teamIdAtZeroBasedIndex(
+        lo.rankedIds,
+        PLAYOFF_LOWER_SEED_INDEX,
+      );
+
+      if (!homeTeamId || !awayTeamId) {
+        const msg = `Nie udało się pobrać seedów ${PLAYOFF_HIGHER_POS}. ${higher.name} / ${PLAYOFF_LOWER_POS}. ${lower.name}.`;
+        console.warn("[generateGlobalPlayoffs]", msg);
+        errors.push(msg);
+        continue;
+      }
+
+      pairPayloads.push({
+        season_id: seasonId,
+        division_id: higher.id,
+        gameweek,
+        home_team_id: homeTeamId,
+        away_team_id: awayTeamId,
+        home_fpl_points: null,
+        away_fpl_points: null,
+        home_h2h_points: 0,
+        away_h2h_points: 0,
+        home_median_bonus: 0,
+        away_median_bonus: 0,
+        is_finished: false,
+        is_published: false,
+        is_playoff: true,
+      });
+      summaries.push({
+        higherDivisionName: higher.name,
+        lowerDivisionName: lower.name,
+        homeSeed: PLAYOFF_HIGHER_POS,
+        awaySeed: PLAYOFF_LOWER_POS,
+      });
+    }
+
+    if (!pairPayloads.length) {
+      return {
+        error:
+          errors.slice(0, 4).join(" · ") ||
+          "Nie udało się zbudować żadnej pary barażowej.",
+        deleted,
+      };
+    }
+
+    const { error: insertError } = await supabase
+      .from("fixtures")
+      .insert(pairPayloads);
+    if (insertError) return { error: insertError.message, deleted };
+
+    revalidatePlayoffs();
+    const pairLines = summaries
+      .map(
+        (p) =>
+          `${p.homeSeed}. ${p.higherDivisionName} vs ${p.awaySeed}. ${p.lowerDivisionName}`,
+      )
+      .join(" · ");
+
+    return {
+      error: null,
+      success: `Baraże cross-division · ${gameweekLabel(gameweek)}: ${pairPayloads.length} mecz(e)${deleted ? ` (usunięto ${deleted} starych GW19/38)` : ""}. ${pairLines}${errors.length ? ` · Ostrzeżenia: ${errors.slice(0, 2).join("; ")}` : ""}`,
+      created: pairPayloads.length,
+      deleted,
+      pairs: summaries,
+    };
+  } catch (e) {
+    console.error("[generateGlobalPlayoffs]", e);
+    return {
+      error: e instanceof Error ? e.message : "Błąd generowania baraży.",
+    };
+  }
+}
+
+/** @deprecated Użyj generateGlobalPlayoffs — zostawione jako alias. */
+export async function generateAllPlayoffFixtures(
+  seasonId: string,
+  gameweek: number,
+): Promise<GenerateGlobalPlayoffsResult> {
+  return generateGlobalPlayoffs(seasonId, gameweek);
+}
+
+/** @deprecated Baraże są globalne (cross-division), nie per dywizja. */
+export async function generatePlayoffFixtures(
+  seasonId: string,
+  _divisionId: string,
+  gameweek: number,
+): Promise<GenerateGlobalPlayoffsResult> {
+  return generateGlobalPlayoffs(seasonId, gameweek);
+}
+

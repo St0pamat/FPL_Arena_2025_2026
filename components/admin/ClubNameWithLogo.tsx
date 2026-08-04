@@ -9,8 +9,8 @@ import {
 } from "@/lib/admin/clubLogos";
 
 export function resolveLogoSrc(
-  logos: ClubLogoRecord[],
-  clubName: string | null | undefined,
+  logos: ClubLogoRecord[] | unknown,
+  clubName: string | null | undefined | number,
 ): string | null {
   const hit = findClubLogo(logos, clubName);
   return hit ? clubLogoPublicUrl(hit.fileName) : null;
