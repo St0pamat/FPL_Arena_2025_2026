@@ -62,6 +62,12 @@
       "updatedAt": "2026-07-31T07:13:50.796Z"
     },
     {
+      "clubKey": "bristol-city",
+      "clubName": "Bristol City",
+      "fileName": "bristol-city.png",
+      "updatedAt": "2026-08-05T15:04:53.410Z"
+    },
+    {
       "clubKey": "burnley",
       "clubName": "Burnley",
       "fileName": "burnley.png",
@@ -116,6 +122,12 @@
       "updatedAt": "2026-07-31T10:01:19.996Z"
     },
     {
+      "clubKey": "hull-city",
+      "clubName": "Hull City",
+      "fileName": "hull-city.png",
+      "updatedAt": "2026-08-05T15:04:43.838Z"
+    },
+    {
       "clubKey": "ipswich",
       "clubName": "Ipswich",
       "fileName": "ipswich.png",
@@ -126,6 +138,12 @@
       "clubName": "Leeds",
       "fileName": "leeds.png",
       "updatedAt": "2026-07-31T07:15:56.914Z"
+    },
+    {
+      "clubKey": "leicester-city",
+      "clubName": "Leicester City",
+      "fileName": "leicester-city.png",
+      "updatedAt": "2026-08-05T15:00:32.497Z"
     },
     {
       "clubKey": "leyton-orient",
