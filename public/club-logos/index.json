@@ -294,6 +294,12 @@
       "clubName": "Wycombe Wanderers",
       "fileName": "wycombe-wanderers.png",
       "updatedAt": "2026-07-31T07:29:13.755Z"
+    },
+    {
+      "clubKey": "york-city",
+      "clubName": "York City",
+      "fileName": "york-city.png",
+      "updatedAt": "2026-08-05T21:03:15.845Z"
     }
   ]
 }
