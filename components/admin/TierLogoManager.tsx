@@ -256,7 +256,7 @@ export function TierLogoManager({ logos }: { logos: TierLogoRecord[] }) {
                       className="h-full w-full object-contain"
                     />
                   ) : (
-                    <span className="font-mono text-xs font-black text-slate-600">T{index + 1}</span>
+                    <span className="font-mono text-xs font-black text-slate-600">D{index + 1}</span>
                   )}
                 </div>
                 <div className="min-w-0 flex-1">

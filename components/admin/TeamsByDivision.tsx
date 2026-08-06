@@ -18,7 +18,7 @@ const inputClass =
 function divisionLabel(d: Division, seasons: Season[], pyramids: Pyramid[]): string {
   const season = seasons.find((s) => s.id === d.season_id)?.name ?? "Sezon?";
   const pyramid = pyramids.find((p) => p.id === d.pyramid_id)?.name ?? "Piramida?";
-  return `${season} · ${pyramid} · T${d.tier} — ${d.name}`;
+  return `${season} · ${pyramid} · D${d.tier} — ${d.name}`;
 }
 function DeleteTeamButton({ teamId }: { teamId: string }) {
   const [pending, startTransition] = useTransition();
@@ -181,7 +181,7 @@ function EditTeamModal({
 }
 
 function divisionHeading(d: Division) {
-  return `T${d.tier}`;
+  return `D${d.tier}`;
 }
 
 export function TeamsByDivision({
@@ -315,7 +315,7 @@ export function TeamsByDivision({
             <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-700/50 bg-slate-900/60 px-5 py-4">
               <div>
                 <p className="text-xs font-black uppercase tracking-[0.2em] text-[#39FF14]">
-                  {[seasonName, pyramidName, `Tier ${division.tier}`, divisionHeading(division)]
+                  {[seasonName, pyramidName, `Dywizja ${division.tier}`, divisionHeading(division)]
                     .filter(Boolean)
                     .join(" · ")}
                 </p>

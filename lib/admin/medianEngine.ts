@@ -156,6 +156,285 @@ export function parseFplPointsPaste(raw: string): {
   return parseFplPointsPasteBody(raw);
 }
 
+function isLikelyNumericToken(raw: string): boolean {
+  const t = raw.trim();
+  if (!t) return false;
+  if (/^[\d,.\-]+$/.test(t.replace(/\s/g, ""))) return true;
+  return /^-?\d+[.,]?\d*$/.test(t);
+}
+
+/** Linie ze schowka FPL Classic — nagłówki, placeholdery, stopka paginacji. */
+function isFplClassicGarbageLine(line: string): boolean {
+  const t = line.trim();
+  if (!t) return true;
+
+  // Wiersz wyniku (rank + nazwa + GW + Total) nigdy nie jest śmieciem
+  if (/^\d+\s+.+?\s+\d+\s+\d+$/.test(t)) return false;
+
+  const lower = t.toLowerCase();
+  // Stopka / nawigacja tabeli FPL (Showing 1 to 10…, Previous, Next, …)
+  if (
+    /\bshowing\b/.test(lower) ||
+    /\bprevious\b/.test(lower) ||
+    /\bnext\b/.test(lower) ||
+    /\bentries\b/.test(lower) ||
+    /\brank\b/.test(lower) ||
+    /\btotal\b/.test(lower)
+  ) {
+    return true;
+  }
+
+  const compact = t.replace(/\s+/g, " ");
+  const patterns = [
+    /standings data will appear/i,
+    /new entries/i,
+    /team\s*&\s*manager/i,
+    /^overall\s*rank/i,
+    /^gameweek\s*points/i,
+    /^#\s*team/i,
+    /^team\s*manager\s*gw/i,
+    /^league\s*standings/i,
+    /^classic\s*league/i,
+    /will appear here when the league starts/i,
+    /no\s*data\s*available/i,
+  ];
+  if (patterns.some((re) => re.test(compact))) return true;
+
+  const squashed = t.replace(/\s+/g, "").toLowerCase();
+  if (squashed === "rankteammanagergwtotal") return true;
+  if (squashed.startsWith("rankteam") && squashed.includes("manager")) return true;
+  if (/^teammanager/i.test(squashed) && !/\d/.test(t)) return true;
+
+  return false;
+}
+
+/**
+ * Pojedynczy wiersz FPL Classic:
+ * `1 \t Team \t Manager \t 85 \t 85` lub `1 Team Name Manager Name 85 85`
+ */
+function extractFplClassicRow(line: string): {
+  team: string | null;
+  manager: string | null;
+  points: number;
+} | null {
+  const cleanLine = line.trim();
+  if (!cleanLine) return null;
+
+  // [rank] [dowolny tekst] [GW pts] [Total] — spacje lub taby
+  const regex = /^\d+\s+(.+?)\s+(\d+)\s+(\d+)$/;
+  const match = cleanLine.match(regex);
+
+  let team: string | null = null;
+  let manager: string | null = null;
+  let extractedPoints = Number.NaN;
+
+  if (match) {
+    const rawMiddle = match[1]!.trim();
+    extractedPoints = Number.parseInt(match[2]!, 10);
+
+    if (rawMiddle.includes("\t")) {
+      const parts = rawMiddle
+        .split(/\t+/)
+        .map((s) => s.trim())
+        .filter(Boolean);
+      team = parts[0] ?? null;
+      manager = parts.slice(1).join(" ").trim() || null;
+    } else {
+      // Cały blok nazwy → team; matchTeamInPool złapie combined / fuzzy
+      team = rawMiddle.replace(/\s+/g, " ").trim() || null;
+      manager = null;
+    }
+  } else {
+    const tokens = cleanLine
+      .split(/\t+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (tokens.length >= 4) {
+      const hasRank = /^\d+$/.test(tokens[0]!);
+      const ti = hasRank ? 1 : 0;
+      team = tokens[ti]?.trim() || null;
+      manager = tokens[ti + 1]?.trim() || null;
+      const prev = Number.parseInt(tokens[tokens.length - 2]!, 10);
+      const last = Number.parseInt(tokens[tokens.length - 1]!, 10);
+      extractedPoints = Number.isFinite(prev) ? prev : last;
+    } else if (tokens.length === 3 && /^\d+$/.test(tokens[0]!)) {
+      team = tokens[1]?.trim() || null;
+      manager = null;
+      extractedPoints = Number.parseInt(tokens[2]!, 10);
+    }
+  }
+
+  const extractedName = [team, manager].filter(Boolean).join(" ").trim();
+  if (!extractedName || !Number.isFinite(extractedPoints) || Number.isNaN(extractedPoints)) {
+    return null;
+  }
+  if (!isValidFplPoints(extractedPoints)) return null;
+
+  return {
+    team,
+    manager,
+    points: clampFplPoints(extractedPoints),
+  };
+}
+
+function splitFplClassicRow(row: string): string[] {
+  const trimmed = row.trim();
+  if (!trimmed) return [];
+  if (trimmed.includes("\t")) {
+    return trimmed.split("\t").map((p) => p.trim());
+  }
+  const multi = trimmed.split(/\s{2,}/).map((p) => p.trim()).filter(Boolean);
+  if (multi.length >= 3) return multi;
+  return trimmed.split(/\s+/).map((p) => p.trim()).filter(Boolean);
+}
+
+function parseFplClassicDataRow(cells: string[]): {
+  team: string | null;
+  manager: string | null;
+  points: number;
+} | null {
+  if (cells.length < 2) return null;
+  if (cells.every((c) => isHeaderCell(c) || !c.trim())) return null;
+
+  const numericCells: { idx: number; value: number }[] = [];
+  for (let i = 0; i < cells.length; i++) {
+    const cell = cells[i]!.trim();
+    if (!isLikelyNumericToken(cell)) continue;
+    const n = parseNumericCell(cell);
+    if (n !== null) numericCells.push({ idx: i, value: n });
+  }
+  if (!numericCells.length) return null;
+
+  let pointsIdx: number;
+  if (numericCells.length >= 2) {
+    const last = numericCells[numericCells.length - 1]!;
+    const prev = numericCells[numericCells.length - 2]!;
+    if (last.idx === cells.length - 1 && prev.idx === cells.length - 2) {
+      pointsIdx = prev.idx;
+    } else {
+      const tail = numericCells.filter((n) => n.idx >= cells.length - 3);
+      if (tail.length >= 2) {
+        pointsIdx = tail[tail.length - 2]!.idx;
+      } else {
+        pointsIdx = numericCells[numericCells.length - 1]!.idx;
+      }
+    }
+  } else {
+    const only = numericCells[0]!;
+    if (only.idx === 0 && only.value >= 1 && only.value <= 100 && cells.length >= 3) {
+      return null;
+    }
+    pointsIdx = only.idx;
+  }
+
+  const points = parseNumericCell(cells[pointsIdx]!.trim());
+  if (points === null || !isValidFplPoints(points)) return null;
+
+  const textCells = cells
+    .slice(0, pointsIdx)
+    .map((c) => c.trim())
+    .filter(Boolean);
+
+  let start = 0;
+  if (
+    textCells.length >= 2 &&
+    /^\d{1,3}$/.test(textCells[0]!) &&
+    Number.parseInt(textCells[0]!, 10) >= 1 &&
+    Number.parseInt(textCells[0]!, 10) <= 100
+  ) {
+    start = 1;
+  }
+
+  const rest = textCells.slice(start);
+  let team: string | null = null;
+  let manager: string | null = null;
+
+  if (rest.length >= 2) {
+    team = rest[0]!;
+    manager = rest.slice(1).join(" ").trim() || null;
+  } else if (rest.length === 1) {
+    const single = rest[0]!;
+    if (single.includes("|")) {
+      const [a, b] = single.split("|").map((s) => s.trim());
+      team = a || null;
+      manager = b || null;
+    } else {
+      team = single;
+    }
+  }
+
+  if (!team && !manager) return null;
+  if (team && isHeaderCell(team) && (!manager || isHeaderCell(manager))) return null;
+
+  return { team, manager, points };
+}
+
+export type FplClassicParseResult = {
+  lines: FplPointsLine[];
+  errors: string[];
+  skipped: string[];
+};
+
+/**
+ * Smart Parser — surowy tekst ze schowka strony FPL Classic League.
+ * Nie wymaga numeru GW w wierszu (wybierany osobno w UI).
+ */
+export function parseFplClassicLeaguePaste(raw: string): FplClassicParseResult {
+  const lines: FplPointsLine[] = [];
+  const errors: string[] = [];
+  const skipped: string[] = [];
+
+  const rows = raw.split(/\r?\n/);
+  rows.forEach((row, idx) => {
+    const lineNumber = idx + 1;
+    const trimmed = row.trim();
+    if (!trimmed) return;
+
+    // Stopka / nagłówki FPL — ciche pominięcie (bez zaśmiecania UI)
+    if (isFplClassicGarbageLine(trimmed)) {
+      return;
+    }
+
+    // 1) Regex / tab — preferowana ścieżka
+    let parsed = extractFplClassicRow(trimmed);
+
+    // 2) Fallback: stary podział na komórki
+    if (!parsed) {
+      const cells = splitFplClassicRow(trimmed);
+      if (cells.length < 2) {
+        skipped.push(`Wiersz ${lineNumber}: za mało kolumn`);
+        return;
+      }
+      if (looksLikeHeaderRow(cells) || looksLikeGwRowHeader(cells)) {
+        return;
+      }
+      parsed = parseFplClassicDataRow(cells);
+    }
+
+    if (!parsed) {
+      skipped.push(`Wiersz ${lineNumber}: nie rozpoznano gracza / punktów`);
+      return;
+    }
+
+    const label = [parsed.team, parsed.manager].filter(Boolean).join(" · ") || "—";
+    lines.push({
+      team: parsed.team,
+      manager: parsed.manager,
+      points: parsed.points,
+      lineNumber,
+      label,
+    });
+  });
+
+  if (!lines.length && !errors.length) {
+    errors.push(
+      "Nie znaleziono wyników w wklejce. Zaznacz tabelę ligową na fantasy.premierleague.com (Classic) i skopiuj ponownie.",
+    );
+  }
+
+  return { lines, errors, skipped };
+}
+
 /**
  * Uniwersalny import Multi-GW:
  *   GW1\tKapcie Kłapcia\tMateusz Stopczyński\t85
@@ -201,7 +480,10 @@ export function parseMultiGameweekPaste(raw: string): {
 
   for (let i = start; i < rows.length; i++) {
     const lineNumber = i + 1;
-    const cells = splitPasteCells(rows[i]!);
+    const rowText = rows[i]!;
+    if (isFplClassicGarbageLine(rowText)) continue;
+
+    const cells = splitPasteCells(rowText);
     if (!cells.length) continue;
     if (looksLikeGwRowHeader(cells)) continue;
 
@@ -431,6 +713,8 @@ export function normalizeMatchKey(value: string | null | undefined): string {
     .replace(/ź|ż/g, "z")
     .replace(/ń/g, "n")
     .toLowerCase()
+    // Apostrofy / cudzysłowy — znikają (Sebastian's → sebastians), nie robią dziury w słowie
+    .replace(/[''`´""„”]/g, "")
     .replace(/[^a-z0-9]+/g, " ")
     .trim()
     .replace(/\s+/g, " ");

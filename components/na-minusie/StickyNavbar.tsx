@@ -22,6 +22,12 @@ const navLinkClass = (isActive: boolean) =>
   }`;
 
 function isMainNavActive(href: string, pathname: string): boolean {
+  if (href === NA_MINUSIE_PATHS.strefaGracza) {
+    return (
+      pathname === NA_MINUSIE_PATHS.strefaGracza ||
+      pathname.startsWith(`${NA_MINUSIE_PATHS.strefaGracza}/`)
+    );
+  }
   if (href === NA_MINUSIE_PATHS.hub) {
     return pathname === NA_MINUSIE_PATHS.hub || pathname.startsWith(`${NA_MINUSIE_PATHS.hub}/`);
   }
@@ -32,10 +38,12 @@ function isMainNavActive(href: string, pathname: string): boolean {
     );
   }
   if (href === NA_MINUSIE_PATHS.home) {
-    // O lidze = landing (+ regulamin), bez huba i dywizji
+    // O lidze = landing (+ regulamin), bez huba, strefy i dywizji
     if (
       pathname === NA_MINUSIE_PATHS.hub ||
       pathname.startsWith(`${NA_MINUSIE_PATHS.hub}/`) ||
+      pathname === NA_MINUSIE_PATHS.strefaGracza ||
+      pathname.startsWith(`${NA_MINUSIE_PATHS.strefaGracza}/`) ||
       pathname === NA_MINUSIE_PATHS.dywizje ||
       pathname.startsWith(`${NA_MINUSIE_PATHS.dywizje}/`)
     ) {

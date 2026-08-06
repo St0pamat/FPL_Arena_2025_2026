@@ -101,6 +101,27 @@ export async function runCalculateEndSeasonStatuses(
     .eq("is_published", true);
   if (fixError) return { error: fixError.message };
 
+  // Archiwum: po transition teams.division_id wskazuje nowy sezon —
+  // odtwórz składy historyczne z fixtures.
+  for (const d of divisions as Array<{ id: string }>) {
+    const existing = teamIdsByDivision.get(d.id) ?? [];
+    if (existing.length === DIVISION_CAPACITY) continue;
+    const fromFixtures = new Set<string>();
+    for (const f of (fixtures ?? []) as Array<{
+      division_id: string;
+      home_team_id: string;
+      away_team_id: string;
+      is_playoff: boolean | null;
+    }>) {
+      if (f.division_id !== d.id || f.is_playoff) continue;
+      fromFixtures.add(f.home_team_id);
+      fromFixtures.add(f.away_team_id);
+    }
+    if (fromFixtures.size > 0 && (existing.length === 0 || fromFixtures.size >= existing.length)) {
+      teamIdsByDivision.set(d.id, [...fromFixtures]);
+    }
+  }
+
   const regularFixtures = (
     (fixtures ?? []) as Array<{
       id: string;

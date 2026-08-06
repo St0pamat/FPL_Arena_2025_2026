@@ -52,6 +52,53 @@ function parseIsActive(statusRaw: string): boolean {
   return s === "aktywny" || s === "active" || s === "tak" || s === "yes" || s === "1";
 }
 
+function optionalCell(raw: string | undefined): string | null {
+  const v = (raw ?? "").trim();
+  return v || null;
+}
+
+function parseParticipantStatus(statusRaw: string): { status: string; isActive: boolean } {
+  const status = statusRaw.trim() || "Aktywny";
+  return { status, isActive: parseIsActive(statusRaw) };
+}
+
+function stripOptionalTeamColumns(p: Record<string, unknown>, msg: string) {
+  let changed = false;
+  if (/discord_id/i.test(msg)) {
+    delete p.discord_id;
+    changed = true;
+  }
+  if (/\bstatus\b/i.test(msg)) {
+    delete p.status;
+    changed = true;
+  }
+  if (/x_com/i.test(msg)) {
+    delete p.x_com;
+    changed = true;
+  }
+  if (/email/i.test(msg)) {
+    delete p.email;
+    changed = true;
+  }
+  return changed;
+}
+
+function migrationHintForTeamError(msg: string) {
+  if (/status|x_com|email/i.test(msg)) {
+    return "Uruchom migrację: supabase/add_teams_contact_fields.sql.";
+  }
+  if (/discord_id/i.test(msg)) {
+    return "Uruchom migrację: add_teams_discord_id.sql.";
+  }
+  if (/is_active|previous_season_or/i.test(msg)) {
+    return "Uruchom migrację: add_teams_pool_fields.sql.";
+  }
+  if (/division_id/i.test(msg)) {
+    return "Uruchom migrację: add_teams_pool_fields.sql.";
+  }
+  return null;
+}
+
 type MasterImportRow = {
   lineNumber: number;
   pyramidName: string;
@@ -64,7 +111,10 @@ type MasterImportRow = {
   discordName: string;
   discordClub: string;
   discordId: string | null;
+  status: string;
   isActive: boolean;
+  xCom: string | null;
+  email: string | null;
 };
 
 type MasterExcelImportResult = ActionState & {
@@ -94,19 +144,27 @@ function parseMasterExcelTsv(raw: string): {
       parts = trimmed.split(/;+/).map((p) => p.trim());
     }
 
-    // Header row
+    // Header row (14 kolumn SSOT)
     if (
       /dywizja/i.test(trimmed) &&
-      (/piramida/i.test(trimmed) || /fpl\s*team/i.test(trimmed) || /^lp\b/i.test(parts[0] ?? ""))
+      (/piramida/i.test(trimmed) ||
+        /fpl\s*team/i.test(trimmed) ||
+        /^lp\b/i.test(parts[0] ?? "") ||
+        /x\.?com/i.test(trimmed) ||
+        /email/i.test(trimmed))
     ) {
       return;
     }
 
-    if (parts.length < 9) {
-      errors.push(`Wiersz ${lineNumber}: za mało kolumn (oczekiwano 12, mam ${parts.length}).`);
+    if (parts.length < 12) {
+      errors.push(
+        `Wiersz ${lineNumber}: za mało kolumn (oczekiwano min. 12 — do Status, mam ${parts.length}).`,
+      );
       return;
     }
 
+    // Indeksy 0–13: LP | Piramida | Dywizja | Nazwa dywizji | FPL Team | FPL Manager |
+    // FPL ID | OR | Discord Name | Discord Club | Discord ID | Status | x.com | email
     const pyramidName = parts[1] ?? "";
     const tierRaw = parts[2] ?? "";
     const divisionName = parts[3] ?? "";
@@ -118,6 +176,8 @@ function parseMasterExcelTsv(raw: string): {
     const discordClub = parts[9] ?? "";
     const discordIdRaw = parts[10] ?? "";
     const statusRaw = parts[11] ?? "";
+    const xComRaw = parts[12] ?? "";
+    const emailRaw = parts[13] ?? "";
 
     const tier = parseOptionalInt(tierRaw);
     if (!pyramidName) {
@@ -125,7 +185,7 @@ function parseMasterExcelTsv(raw: string): {
       return;
     }
     if (tier == null || tier < 1) {
-      errors.push(`Wiersz ${lineNumber}: nieprawidłowa Dywizja/tier („${tierRaw}”).`);
+      errors.push(`Wiersz ${lineNumber}: nieprawidłowa Dywizja („${tierRaw}”).`);
       return;
     }
     if (!divisionName) {
@@ -147,6 +207,8 @@ function parseMasterExcelTsv(raw: string): {
       errors.push(`Wiersz ${lineNumber}: FPL ID nie jest liczbą („${fplIdRaw}”) — ustawiam null.`);
     }
 
+    const { status, isActive } = parseParticipantStatus(statusRaw);
+
     rows.push({
       lineNumber,
       pyramidName,
@@ -158,8 +220,11 @@ function parseMasterExcelTsv(raw: string): {
       previousOr: parseOptionalInt(orRaw),
       discordName,
       discordClub: discordClub || "Do wyboru",
-      discordId: discordIdRaw.trim() || null,
-      isActive: parseIsActive(statusRaw),
+      discordId: optionalCell(discordIdRaw),
+      status,
+      isActive,
+      xCom: optionalCell(xComRaw),
+      email: optionalCell(emailRaw),
     });
   });
 
@@ -167,7 +232,7 @@ function parseMasterExcelTsv(raw: string): {
 }
 
 /**
- * Master Import Excel SSOT (12 kolumn TSV) → upsert piramid, dywizji i graczy.
+ * Master Import Excel SSOT (14 kolumn TSV) → upsert piramid, dywizji i graczy.
  * Wymaga jawnego `seasonId` — sezon tworzy organizator ręcznie w Strukturze Ligi.
  */
 async function resolveImportSeason(
@@ -325,7 +390,7 @@ export async function masterExcelImport(
         .single();
       if (error || !created) {
         return {
-          error: error?.message ?? `Nie utworzono dywizji „${name}” (tier ${tier}).`,
+          error: error?.message ?? `Nie utworzono dywizji „${name}” (D${tier}).`,
         };
       }
       const d = created as Division;
@@ -361,73 +426,62 @@ export async function masterExcelImport(
         fpl_id: row.fplId,
         previous_season_or: row.previousOr,
         is_active: row.isActive,
+        status: row.status,
         discord_id: row.discordId,
+        x_com: row.xCom,
+        email: row.email,
       };
 
       if (teamId) {
-        const { error: updError } = await supabase.from("teams").update(patch).eq("id", teamId);
-        if (updError) {
-          if (/discord_id/i.test(updError.message)) {
-            delete patch.discord_id;
-            const { error: retry } = await supabase.from("teams").update(patch).eq("id", teamId);
-            if (retry) {
-              return {
-                error: /is_active|previous_season_or/i.test(retry.message)
-                  ? "Uruchom migracje: add_teams_pool_fields.sql (+ opcjonalnie add_teams_discord_id.sql)."
-                  : `Update „${row.discordName}”: ${retry.message}`,
-                skipped,
-              };
-            }
-          } else {
-            return {
-              error: /is_active|previous_season_or/i.test(updError.message)
-                ? "Uruchom migracje: add_teams_pool_fields.sql (+ opcjonalnie add_teams_discord_id.sql)."
-                : `Update „${row.discordName}”: ${updError.message}`,
-              skipped,
-            };
+        let updatePatch = { ...patch };
+        let updError: { message: string } | null = null;
+        for (let attempt = 0; attempt < 5; attempt++) {
+          const { error } = await supabase.from("teams").update(updatePatch).eq("id", teamId);
+          if (!error) {
+            updError = null;
+            break;
           }
+          updError = error;
+          if (!stripOptionalTeamColumns(updatePatch, error.message)) break;
         }
-        teamsUpdated += 1;
-      } else {
-        const { data: created, error: insError } = await supabase
-          .from("teams")
-          .insert({ ...patch, fee_paid: false })
-          .select("id, discord_nick, fpl_id")
-          .single();
-
-        if (insError) {
-          if (/discord_id/i.test(insError.message)) {
-            delete patch.discord_id;
-            const { data: created2, error: retry } = await supabase
-              .from("teams")
-              .insert({ ...patch, fee_paid: false })
-              .select("id, discord_nick, fpl_id")
-              .single();
-            if (retry || !created2) {
-              return {
-                error: /division_id|is_active/i.test(retry?.message ?? "")
-                  ? "Uruchom migracje: add_teams_pool_fields.sql."
-                  : `Insert „${row.discordName}”: ${retry?.message ?? "błąd"}`,
-                skipped,
-              };
-            }
-            teamId = created2.id;
-            teamByDiscord.set(discordKey, created2.id);
-            if (created2.fpl_id) teamByFpl.set(String(created2.fpl_id), created2.id);
-            teamsInserted += 1;
-            continue;
-          }
+        if (updError) {
           return {
-            error: /division_id|is_active/i.test(insError.message)
-              ? "Uruchom migracje: add_teams_pool_fields.sql."
-              : `Insert „${row.discordName}”: ${insError.message}`,
+            error:
+              migrationHintForTeamError(updError.message) ??
+              `Update „${row.discordName}”: ${updError.message}`,
             skipped,
           };
         }
-        if (created) {
-          teamByDiscord.set(discordKey, created.id);
-          if (created.fpl_id) teamByFpl.set(String(created.fpl_id), created.id);
+        teamsUpdated += 1;
+      } else {
+        let insertPatch = { ...patch, fee_paid: false };
+        let created: { id: string; discord_nick: string; fpl_id: string | null } | null = null;
+        let insError: { message: string } | null = null;
+        for (let attempt = 0; attempt < 5; attempt++) {
+          const { data, error } = await supabase
+            .from("teams")
+            .insert(insertPatch)
+            .select("id, discord_nick, fpl_id")
+            .single();
+          if (!error && data) {
+            created = data;
+            insError = null;
+            break;
+          }
+          insError = error;
+          if (!error || !stripOptionalTeamColumns(insertPatch, error.message)) break;
         }
+        if (insError || !created) {
+          return {
+            error:
+              migrationHintForTeamError(insError?.message ?? "") ??
+              `Insert „${row.discordName}”: ${insError?.message ?? "błąd"}`,
+            skipped,
+          };
+        }
+        teamId = created.id;
+        teamByDiscord.set(discordKey, created.id);
+        if (created.fpl_id) teamByFpl.set(String(created.fpl_id), created.id);
         teamsInserted += 1;
       }
     }

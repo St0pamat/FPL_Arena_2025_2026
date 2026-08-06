@@ -33,7 +33,7 @@ export const REGULAMIN_SECTIONS: RegulaminSection[] = [
           "Pojemność Dywizji: Każda dywizja składa się z dokładnie 10 zespołów.",
           "Dwa sezony w jednym roku: Pełny rok w FPL dzielimy na dwa oddzielne, niezależne sezony ligowe: Sezon Jesienny (Gameweek 1 – Gameweek 19) oraz Sezon Wiosenny (Gameweek 20 – Gameweek 38).",
           "Ciągłe Nazewnictwo Sezonów: Ponieważ w jednym roku kalendarzowym FPL gramy dwa sezony naszej ligi, wprowadzamy ciągłą numerację historyczną. Przykładowo: Sezon 1 (jesień 2026/27), Sezon 2 (wiosna 2026/27), Sezon 3 (jesień 2027/28), Sezon 4 (wiosna 2027/28) i tak dalej.",
-          "Nazewnictwo Szczebli: Tier 1: Premier League (Ścisła elita, mistrz serwera) | Tier 2: Championship (Bezpośrednie zaplecze) | Tier 3: League One | Tier 4: League Two | Tier 5+: National League (i niższe).",
+          "Nazewnictwo Szczebli: Dywizja 1: Premier League (Ścisła elita, mistrz serwera) | Dywizja 2: Championship (Bezpośrednie zaplecze) | Dywizja 3: League One | Dywizja 4: League Two | Dywizja 5+: National League (i niższe).",
         ],
       },
     ],

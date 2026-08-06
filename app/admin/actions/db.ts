@@ -333,7 +333,7 @@ export async function createDivision(
     if (!pyramid_id) return { error: "Wybierz piramidę." };
     if (!name) return { error: "Podaj nazwę dywizji." };
     if (!Number.isFinite(tier) || tier < 1) {
-      return { error: "Tier musi być liczbą całkowitą ≥ 1." };
+      return { error: "Dywizja musi być liczbą całkowitą ≥ 1." };
     }
     if (discord_webhook_url && !isDiscordWebhookUrl(discord_webhook_url)) {
       return { error: "Nieprawidłowy Discord Webhook URL." };
@@ -350,21 +350,21 @@ export async function createDivision(
 
     const siblings = siblingDivs ?? [];
     if (siblings.some((d) => d.tier === tier)) {
-      return { error: `Tier ${tier} już istnieje w tej piramidzie.` };
+      return { error: `Dywizja ${tier} już istnieje w tej piramidzie.` };
     }
 
     if (tier > 1) {
       const higher = siblings.filter((d) => d.tier < tier);
       if (higher.length === 0) {
         return {
-          error: `Najpierw utwórz Tier 1 przed Tier ${tier}.`,
+          error: `Najpierw utwórz Dywizję 1 przed Dywizją ${tier}.`,
         };
       }
       const expectedTiers = Array.from({ length: tier - 1 }, (_, i) => i + 1);
       for (const t of expectedTiers) {
         if (!higher.some((d) => d.tier === t)) {
           return {
-            error: `Brakuje Tier ${t} — twórz dywizje po kolei od góry.`,
+            error: `Brakuje Dywizji ${t} — twórz dywizje po kolei od góry.`,
           };
         }
       }
@@ -385,7 +385,7 @@ export async function createDivision(
         const n = countByDiv.get(d.id) ?? 0;
         if (n !== DIVISION_CAPACITY) {
           return {
-            error: `Nie można utworzyć Tier ${tier}: „${d.name}” (T${d.tier}) ma ${n}/${DIVISION_CAPACITY}. Najpierw uzupełnij wyższe dywizje do pełnych 10-tek.`,
+            error: `Nie można utworzyć Dywizji ${tier}: „${d.name}” (D${d.tier}) ma ${n}/${DIVISION_CAPACITY}. Najpierw uzupełnij wyższe dywizje do pełnych 10-tek.`,
           };
         }
       }
@@ -438,7 +438,7 @@ export async function updateDivision(
     }
     if (patch.tier != null) {
       if (!Number.isFinite(patch.tier) || patch.tier < 1) {
-        return { error: "Tier musi być liczbą całkowitą ≥ 1." };
+        return { error: "Dywizja musi być liczbą całkowitą ≥ 1." };
       }
       payload.tier = patch.tier;
     }
@@ -566,7 +566,7 @@ export async function createTeam(
       const n = countByDiv.get(division_id) ?? 0;
       if (n >= DIVISION_CAPACITY) {
         return {
-          error: `Wszystkie dywizje mają ${DIVISION_CAPACITY}/10. Utwórz nowy tier dopiero gdy wyższe są pełne, albo zostaw gracza w poczekalni (bez dywizji).`,
+          error: `Wszystkie dywizje mają ${DIVISION_CAPACITY}/10. Utwórz nową dywizję dopiero gdy wyższe są pełne, albo zostaw gracza w poczekalni (bez dywizji).`,
         };
       }
     }
@@ -598,7 +598,7 @@ export async function createTeam(
     return {
       error: null,
       success: assigned
-        ? `Drużyna dodana do ${assigned.name} (T${assigned.tier}) — pierwsza luka od góry.`
+        ? `Drużyna dodana do ${assigned.name} (D${assigned.tier}) — pierwsza luka od góry.`
         : "Drużyna została dodana.",
     };
   } catch (e) {
@@ -683,7 +683,7 @@ export async function updateTeam(
       if (firstIncomplete && firstIncomplete !== division_id) {
         const gap = divList.find((d) => d.id === firstIncomplete);
         return {
-          error: `Najpierw uzupełnij lukę od góry: ${gap?.name ?? "wyższa dywizja"} (T${gap?.tier ?? "?"}). System nie pozwala dokładać do niższych tierów przy niepełnej wyższej lidze.`,
+          error: `Najpierw uzupełnij lukę od góry: ${gap?.name ?? "wyższa dywizja"} (D${gap?.tier ?? "?"}). System nie pozwala dokładać do niższych dywizji przy niepełnej wyższej lidze.`,
         };
       }
 
@@ -850,7 +850,7 @@ export async function bulkUpsertTeams(
 
       const division_id = tierToDivisionId.get(t.tier);
       if (!division_id) {
-        mappingErrors.push(`FPL ID ${fpl_id}: brak dywizji Tier ${t.tier} w bazie.`);
+        mappingErrors.push(`FPL ID ${fpl_id}: brak dywizji D${t.tier} w bazie.`);
         continue;
       }
 

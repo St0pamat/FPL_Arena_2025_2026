@@ -4,11 +4,11 @@ import { listTierLogos } from "@/app/admin/actions/tierLogos";
 import { PYRAMID_TIER_NAMES } from "@/lib/admin/tierLogos";
 
 const pyramidTiers = [
-  { tier: 1, name: PYRAMID_TIER_NAMES[0], leagueHint: "Tier 1 — Elita" },
-  { tier: 2, name: PYRAMID_TIER_NAMES[1], leagueHint: "Tier 2 — Mordercza walka" },
-  { tier: 3, name: PYRAMID_TIER_NAMES[2], leagueHint: "Tier 3 — Awans albo ból" },
-  { tier: 4, name: PYRAMID_TIER_NAMES[3], leagueHint: "Tier 4 — Fundamenty" },
-  { tier: 5, name: PYRAMID_TIER_NAMES[4], leagueHint: "Tier 5 — Błoto i chwała" },
+  { tier: 1, name: PYRAMID_TIER_NAMES[0], leagueHint: "Premier League — Elita" },
+  { tier: 2, name: PYRAMID_TIER_NAMES[1], leagueHint: "Championship — Mordercza walka" },
+  { tier: 3, name: PYRAMID_TIER_NAMES[2], leagueHint: "League One — Awans albo ból" },
+  { tier: 4, name: PYRAMID_TIER_NAMES[3], leagueHint: "League Two — Fundamenty" },
+  { tier: 5, name: PYRAMID_TIER_NAMES[4], leagueHint: "National League — Błoto i chwała" },
 ] as const;
 
 export async function StructureSection() {
@@ -44,7 +44,7 @@ export async function StructureSection() {
               <p className="mt-1 text-xs text-slate-400 sm:text-sm">10 zespołów · Mecz i rewanż</p>
             </div>
             <p className="shrink-0 font-mono text-xl font-black text-[#39FF14] sm:text-2xl">
-              T{tier.tier}
+              D{tier.tier}
             </p>
           </article>
         ))}

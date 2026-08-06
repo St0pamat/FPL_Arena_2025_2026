@@ -1,4 +1,5 @@
 import { Building2, Clock, Info, MessageCircle } from "lucide-react";
+import Link from "next/link";
 import type { ClubLogoRecord } from "@/lib/admin/clubLogos";
 import {
   resolveTierLogoName,
@@ -8,6 +9,12 @@ import { DIVISION_CAPACITY } from "@/lib/admin/divisionCapacity";
 import type { PublicSeasonDivisionStructurePayload } from "@/lib/public/types";
 import { ClubCrest } from "@/components/na-minusie/hub/ClubCrest";
 import { TierCrest } from "@/components/na-minusie/TierCrest";
+import {
+  identityClubClass,
+  identityDiscordClass,
+  identityFplTeamClass,
+  identityManagerClass,
+} from "@/lib/na-minusie/playerIdentityStyles";
 
 function formatOr(value: number | null): string {
   if (value == null || !Number.isFinite(value) || value < 1) {
@@ -36,10 +43,15 @@ export function DivisionStructureView({
   data,
   logos = [],
   tierLogos = [],
+  variant = "page",
+  linkToProfile = false,
 }: {
   data: PublicSeasonDivisionStructurePayload;
   logos?: ClubLogoRecord[];
   tierLogos?: TierLogoRecord[];
+  /** Ukryj duży nagłówek strony — osadzenie w HubShell */
+  variant?: "page" | "embedded";
+  linkToProfile?: boolean;
 }) {
   const updatedLabel = formatUpdatedAt(data.updatedAt);
 
@@ -53,6 +65,7 @@ export function DivisionStructureView({
 
   return (
     <div className="space-y-6">
+      {variant === "page" ? (
       <header className="space-y-4">
         <div>
           <p className="text-[10px] font-black uppercase tracking-[0.25em] text-emerald-400">
@@ -95,6 +108,11 @@ export function DivisionStructureView({
           </div>
         </aside>
       </header>
+      ) : (
+        <p className="text-sm text-slate-400">
+          Obsada dywizji · herby klubów, Discord, FPL Team, menedżer i OR 2025/26.
+        </p>
+      )}
 
       {!data.divisions.length ? (
         <div className="rounded-2xl border border-dashed border-slate-700 px-6 py-16 text-center text-sm text-slate-500">
@@ -116,8 +134,7 @@ export function DivisionStructureView({
                 <TierCrest tierName={crestName} logos={tierLogos} size="sm" />
                 <div className="min-w-0">
                   <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#39FF14]">
-                    Dywizja {block.tier}
-                    {block.pyramidName !== "—" ? ` · ${block.pyramidName}` : ""}
+                    {block.pyramidName !== "—" ? block.pyramidName : "Piramida"}
                   </p>
                   <h2 className="truncate font-athletic text-base uppercase tracking-wide text-white sm:text-lg">
                     {block.name}
@@ -140,7 +157,14 @@ export function DivisionStructureView({
                 </p>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full min-w-[720px] text-left text-sm">
+                  <table className="w-full min-w-[760px] table-fixed text-left text-sm">
+                    <colgroup>
+                      <col className="w-[3.25rem]" />
+                      <col className="w-[34%]" />
+                      <col className="w-[22%]" />
+                      <col className="w-[22%]" />
+                      <col className="w-[7.5rem]" />
+                    </colgroup>
                     <thead className="border-b border-slate-800 text-[10px] font-bold uppercase tracking-wider text-slate-500">
                       <tr>
                         <th className="px-3 py-3 sm:px-4">LP</th>
@@ -158,36 +182,71 @@ export function DivisionStructureView({
                       {block.teams.map((row) => (
                         <tr
                           key={row.teamId}
-                          className="transition-colors hover:bg-slate-800/40"
+                          className={`transition-colors hover:bg-slate-800/40 ${linkToProfile ? "group" : ""}`}
                         >
                           <td className="px-3 py-2.5 font-mono text-xs font-black text-slate-400 sm:px-4">
                             {row.lp}
                           </td>
                           <td className="px-3 py-2 sm:px-4">
-                            <div className="flex min-w-0 items-center gap-3">
-                              <ClubCrest
-                                clubName={row.chosen_club}
-                                logos={logos}
-                                size="md"
-                                className="!h-10 !w-10 sm:!h-11 sm:!w-11"
-                              />
-                              <div className="min-w-0">
-                                <p className="truncate font-bold text-white">
-                                  {row.chosen_club || "—"}
-                                </p>
-                                <p className="truncate text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-                                  {row.fpl_team_name?.trim() || "—"}
-                                </p>
+                            {linkToProfile ? (
+                              <Link
+                                href={`/strefa-gracza/gracz/${row.teamId}`}
+                                className="flex min-w-0 items-center gap-3 rounded-lg transition-colors group-hover:text-emerald-300"
+                              >
+                                <ClubCrest
+                                  clubName={row.chosen_club}
+                                  logos={logos}
+                                  size="md"
+                                  className="!h-10 !w-10 shrink-0 sm:!h-11 sm:!w-11"
+                                />
+                                <div className="min-w-0 flex-1">
+                                  <p className={identityClubClass("sm", "table", "truncate group-hover:text-emerald-200")}>
+                                    {row.chosen_club || "—"}
+                                  </p>
+                                  <p className={identityFplTeamClass("sm", "table", "truncate")}>
+                                    {row.fpl_team_name?.trim() || "—"}
+                                  </p>
+                                </div>
+                              </Link>
+                            ) : (
+                              <div className="flex min-w-0 items-center gap-3">
+                                <ClubCrest
+                                  clubName={row.chosen_club}
+                                  logos={logos}
+                                  size="md"
+                                  className="!h-10 !w-10 shrink-0 sm:!h-11 sm:!w-11"
+                                />
+                                <div className="min-w-0 flex-1">
+                                  <p className={identityClubClass("sm", "table", "truncate")}>
+                                    {row.chosen_club || "—"}
+                                  </p>
+                                  <p className={identityFplTeamClass("sm", "table", "truncate")}>
+                                    {row.fpl_team_name?.trim() || "—"}
+                                  </p>
+                                </div>
                               </div>
-                            </div>
+                            )}
                           </td>
-                          <td className="px-3 py-2.5 font-semibold text-slate-200 sm:px-4">
-                            {row.manager_name}
+                          <td className="truncate px-3 py-2.5 sm:px-4">
+                            {linkToProfile ? (
+                              <Link
+                                href={`/strefa-gracza/gracz/${row.teamId}`}
+                                className={identityManagerClass("sm", "table", "hover:brightness-110")}
+                              >
+                                {row.manager_name}
+                              </Link>
+                            ) : (
+                              <span className={identityManagerClass("sm", "table")}>
+                                {row.manager_name}
+                              </span>
+                            )}
                           </td>
                           <td className="px-3 py-2.5 sm:px-4">
-                            <span className="inline-flex max-w-[12rem] items-center gap-1.5 truncate rounded-lg border border-indigo-500/25 bg-indigo-500/10 px-2 py-1 text-xs font-medium text-indigo-200">
-                              <MessageCircle className="h-3 w-3 shrink-0 opacity-70" />
-                              <span className="truncate">{row.discord_nick}</span>
+                            <span className="inline-flex max-w-full items-center gap-1.5 truncate rounded-lg border border-slate-800 bg-slate-950/60 px-2 py-1">
+                              <MessageCircle className="h-3 w-3 shrink-0 text-slate-500" />
+                              <span className={identityDiscordClass("sm", "truncate")}>
+                                {row.discord_nick}
+                              </span>
                             </span>
                           </td>
                           <td className="px-3 py-2.5 text-right font-mono text-xs font-bold tabular-nums text-slate-300 sm:px-4 sm:text-sm">

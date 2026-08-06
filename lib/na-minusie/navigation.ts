@@ -2,7 +2,7 @@
 export const NA_MINUSIE_MAIN_NAV = [
   { id: "o-lidze", label: "O lidze", href: "/na-minusie" },
   { id: "dywizje", label: "Dywizje", href: "/na-minusie/dywizje" },
-  { id: "strefa-gracza", label: "Strefa Gracza", href: "/na-minusie/hub" },
+  { id: "strefa-gracza", label: "Strefa Gracza", href: "/strefa-gracza" },
 ] as const;
 
 /**

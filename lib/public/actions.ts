@@ -1,4 +1,4 @@
-"use server";
+﻿"use server";
 
 import { createClient } from "@/lib/supabase/server";
 import { listClubLogos } from "@/app/admin/actions/clubLogos";
@@ -41,59 +41,117 @@ import type { ClubLogoRecord } from "@/lib/admin/clubLogos";
 import type { TierLogoRecord } from "@/lib/admin/tierLogos";
 import { runCalculateEndSeasonStatuses } from "@/lib/admin/endSeasonCompute";
 import {
+  resolvePlayoffMatchWinnerId,
   teamSeasonStatusLabel,
   type TeamSeasonStatus,
 } from "@/lib/admin/endSeasonStatuses";
+import { divisionLabel, divisionMoveHint } from "@/lib/na-minusie/divisionLabels";
+import type {
+  SeasonSummaryDivisionBlock,
+  SeasonSummaryPlayoffMatch,
+} from "@/lib/public/types";
 
 type PublicSupabase = ReturnType<typeof createClient>;
 
 /**
- * Strefa Gracza: tylko dywizje z dokładnie DIVISION_CAPACITY aktywnymi drużynami.
- * Niepełne (rekrutacja) zostają ukryte przed kibicami.
+ * Strefa Gracza:
+ * - sezon aktywny: tylko dywizje z dokladnie DIVISION_CAPACITY aktywnymi druzynami
+ * - sezon zakonczony/archiwalny: dywizje z opublikowanymi fixtures (sklad mogl
+ *   juz zostac przeniesiony do nowego sezonu — teams.division_id != stara dywizja)
  */
 async function filterCompleteDivisions(
   supabase: PublicSupabase,
   divisions: PublicDivision[],
+  seasons: PublicSeason[],
 ): Promise<PublicDivision[]> {
   if (divisions.length === 0) return [];
 
-  const ids = divisions.map((d) => d.id);
-  let teamsRaw: { division_id: string | null; is_active?: boolean | null }[] | null =
-    null;
+  const archivedSeasonIds = new Set(
+    seasons
+      .filter((s) => s.is_completed || s.is_archived)
+      .map((s) => s.id),
+  );
+  const liveDivs = divisions.filter((d) => !archivedSeasonIds.has(d.season_id));
+  const archiveDivs = divisions.filter((d) => archivedSeasonIds.has(d.season_id));
 
-  {
-    const { data, error } = await supabase
-      .from("teams")
-      .select("division_id, is_active")
-      .in("division_id", ids);
+  const result: PublicDivision[] = [];
 
-    if (error && /is_active/i.test(error.message)) {
-      const retry = await supabase
+  if (liveDivs.length) {
+    const ids = liveDivs.map((d) => d.id);
+    let teamsRaw: { division_id: string | null; is_active?: boolean | null }[] | null =
+      null;
+
+    {
+      const { data, error } = await supabase
         .from("teams")
-        .select("division_id")
+        .select("division_id, is_active")
         .in("division_id", ids);
-      if (retry.error) {
-        console.error("[filterCompleteDivisions]", retry.error);
-        throw new Error(retry.error.message);
+
+      if (error && /is_active/i.test(error.message)) {
+        const retry = await supabase
+          .from("teams")
+          .select("division_id")
+          .in("division_id", ids);
+        if (retry.error) {
+          console.error("[filterCompleteDivisions]", retry.error);
+          throw new Error(retry.error.message);
+        }
+        teamsRaw = retry.data ?? [];
+      } else if (error) {
+        console.error("[filterCompleteDivisions]", error);
+        throw new Error(error.message);
+      } else {
+        teamsRaw = data ?? [];
       }
-      teamsRaw = retry.data ?? [];
-    } else if (error) {
-      console.error("[filterCompleteDivisions]", error);
-      throw new Error(error.message);
-    } else {
-      teamsRaw = data ?? [];
+    }
+
+    const counts = new Map<string, number>();
+    for (const t of teamsRaw ?? []) {
+      if (!t.division_id || t.is_active === false) continue;
+      counts.set(t.division_id, (counts.get(t.division_id) ?? 0) + 1);
+    }
+
+    for (const d of liveDivs) {
+      if ((counts.get(d.id) ?? 0) === DIVISION_CAPACITY) result.push(d);
     }
   }
 
-  const counts = new Map<string, number>();
-  for (const t of teamsRaw ?? []) {
-    if (!t.division_id || t.is_active === false) continue;
-    counts.set(t.division_id, (counts.get(t.division_id) ?? 0) + 1);
+  if (archiveDivs.length) {
+    const ids = archiveDivs.map((d) => d.id);
+    const { data: fixRows, error: fixError } = await supabase
+      .from("fixtures")
+      .select("division_id")
+      .in("division_id", ids)
+      .eq("is_published", true);
+
+    if (fixError) {
+      console.error("[filterCompleteDivisions] fixtures:", fixError);
+      throw new Error(fixError.message);
+    }
+
+    const withFixtures = new Set(
+      (fixRows ?? []).map((f) => f.division_id as string),
+    );
+    for (const d of archiveDivs) {
+      if (withFixtures.has(d.id)) result.push(d);
+    }
   }
 
-  return divisions.filter(
-    (d) => (counts.get(d.id) ?? 0) === DIVISION_CAPACITY,
-  );
+  return result;
+}
+
+async function divisionHasPublishedFixtures(
+  supabase: PublicSupabase,
+  divisionId: string,
+): Promise<boolean> {
+  const { data, error } = await supabase
+    .from("fixtures")
+    .select("id")
+    .eq("division_id", divisionId)
+    .eq("is_published", true)
+    .limit(1);
+  if (error) throw new Error(error.message);
+  return (data ?? []).length > 0;
 }
 
 async function isDivisionCompleteForPublic(
@@ -118,6 +176,18 @@ async function isDivisionCompleteForPublic(
   return n === DIVISION_CAPACITY;
 }
 
+/** Widocznosc dywizji: pelny sklad LUB archiwum z fixtures. */
+async function isDivisionVisibleForPublic(
+  supabase: PublicSupabase,
+  divisionId: string,
+  seasonFlags: { is_completed: boolean; is_archived: boolean },
+): Promise<boolean> {
+  if (seasonFlags.is_completed || seasonFlags.is_archived) {
+    return divisionHasPublishedFixtures(supabase, divisionId);
+  }
+  return isDivisionCompleteForPublic(supabase, divisionId);
+}
+
 const EMPTY_PLAYOFFS: PlayoffPreviewPayload = {
   gameweek: PLAYOFF_GAMEWEEK,
   matches: [],
@@ -131,6 +201,7 @@ function mapTeam(row: {
   fpl_id: string | null;
   fpl_team_name: string | null;
   chosen_club: string;
+  previous_season_or?: number | null;
 }): PublicTeam {
   return {
     id: row.id,
@@ -139,6 +210,7 @@ function mapTeam(row: {
     fpl_id: row.fpl_id,
     fpl_team_name: row.fpl_team_name,
     chosen_club: row.chosen_club,
+    previous_season_or: row.previous_season_or ?? null,
   };
 }
 
@@ -155,6 +227,7 @@ function mapFixture(
     home_median_bonus: number | null;
     away_median_bonus: number | null;
     is_finished: boolean;
+    is_published?: boolean | null;
     is_playoff?: boolean | null;
     tiebreaker_home_goals?: number | null;
     tiebreaker_away_goals?: number | null;
@@ -182,6 +255,7 @@ function mapFixture(
     home_median_bonus: f.home_median_bonus ?? 0,
     away_median_bonus: f.away_median_bonus ?? 0,
     is_finished: f.is_finished,
+    is_published: f.is_published !== false,
     is_playoff: Boolean(f.is_playoff),
     tiebreaker_home_goals: f.tiebreaker_home_goals ?? null,
     tiebreaker_away_goals: f.tiebreaker_away_goals ?? null,
@@ -240,7 +314,7 @@ export async function getPublicStructure(): Promise<PublicStructure> {
   }
 
   const allDivs = (divisions ?? []) as PublicDivision[];
-  const divs = await filterCompleteDivisions(supabase, allDivs);
+  const divs = await filterCompleteDivisions(supabase, allDivs, published);
   const pyramidIds = [...new Set(divs.map((d) => d.pyramid_id))];
 
   let pyramids: PublicPyramid[] = [];
@@ -274,9 +348,9 @@ export async function getPublicTierLogos(): Promise<TierLogoRecord[]> {
 }
 
 /**
- * Publiczny podgląd dywizji (menu „Dywizje”).
- * Pokazuje aktualny sezon (najnowszy niearchiwalny) — także DRAFT i niepełne ligi.
- * Sort drużyn: previous_season_or ASC, null na końcu.
+ * Publiczny podglÄ…d dywizji (menu â€žDywizjeâ€ť).
+ * Pokazuje aktualny sezon (najnowszy niearchiwalny) â€” takĹĽe DRAFT i niepeĹ‚ne ligi.
+ * Sort druĹĽyn: previous_season_or ASC, null na koĹ„cu.
  */
 export async function getPublicDivisionsPreview(
   seasonId?: string,
@@ -352,7 +426,7 @@ export async function getPublicDivisionsPreview(
       divisions: [],
       updatedAt: null,
       isPreview: true,
-      error: "Brak sezonu do wyświetlenia.",
+      error: "Brak sezonu do wyĹ›wietlenia.",
     };
   }
 
@@ -498,7 +572,7 @@ export async function getPublicDivisionsPreview(
       name: d.name,
       tier: d.tier,
       pyramidId: d.pyramid_id,
-      pyramidName: pyramidNameById.get(d.pyramid_id) ?? "—",
+      pyramidName: pyramidNameById.get(d.pyramid_id) ?? "â€”",
       teams: roster,
     };
   });
@@ -512,14 +586,14 @@ export async function getPublicDivisionsPreview(
   };
 }
 
-/** @deprecated — użyj getPublicDivisionsPreview */
+/** @deprecated â€” uĹĽyj getPublicDivisionsPreview */
 export async function getPublicSeasonDivisionStructure(
   seasonId: string,
 ): Promise<PublicSeasonDivisionStructurePayload> {
   return getPublicDivisionsPreview(seasonId);
 }
 
-/** Pełna tabela ligowa + fixtures dywizji + podgląd baraży GW19. */
+/** PeĹ‚na tabela ligowa + fixtures dywizji + podglÄ…d baraĹĽy GW19. */
 export async function getDivisionStandings(
   divisionId: string,
 ): Promise<DivisionStandingsPayload> {
@@ -532,7 +606,9 @@ export async function getDivisionStandings(
       teams: [],
       standings: [],
       fixtures: [],
+      publishedFixtures: [],
       finishedGameweeks: [],
+      availableGameweeks: [],
       maxGameweek: SEASON_MAX_GAMEWEEK,
       playedGwCount: 0,
       averageFpl: null,
@@ -576,7 +652,7 @@ export async function getDivisionStandings(
 
   const { data: season, error: seasonError } = await supabase
     .from("seasons")
-    .select("id, status")
+    .select("id, name, status, is_completed, is_archived")
     .eq("id", division.season_id)
     .maybeSingle();
 
@@ -585,8 +661,21 @@ export async function getDivisionStandings(
     throw new Error("Dywizja należy do nieopublikowanego sezonu.");
   }
 
-  // Niepełne dywizje (rekrutacja) niewidoczne w Strefie Gracza
-  if (!(await isDivisionCompleteForPublic(supabase, divisionId))) {
+  const seasonFlags = {
+    is_completed: Boolean(season.is_completed),
+    is_archived: Boolean(season.is_archived),
+  };
+  const seasonMeta: PublicSeason = {
+    id: String(season.id),
+    name: String(season.name ?? ""),
+    status: "PUBLISHED",
+    is_completed: seasonFlags.is_completed,
+    is_archived: seasonFlags.is_archived,
+    created_at: "",
+  };
+
+  // Niepełne dywizje (rekrutacja) niewidoczne; archiwum OK jeśli ma fixtures
+  if (!(await isDivisionVisibleForPublic(supabase, divisionId, seasonFlags))) {
     return {
       divisionId,
       tier: division.tier ?? 1,
@@ -594,7 +683,9 @@ export async function getDivisionStandings(
       teams: [],
       standings: [],
       fixtures: [],
+      publishedFixtures: [],
       finishedGameweeks: [],
+      availableGameweeks: [],
       maxGameweek: SEASON_MAX_GAMEWEEK,
       playedGwCount: 0,
       averageFpl: null,
@@ -617,6 +708,7 @@ export async function getDivisionStandings(
   const peers = await filterCompleteDivisions(
     supabase,
     (peersRaw ?? []) as PublicDivision[],
+    [seasonMeta],
   );
 
   const higherDivision = peers.find((d) => d.tier === tier - 1) ?? null;
@@ -624,9 +716,24 @@ export async function getDivisionStandings(
 
   async function loadDivisionBundle(divId: string, divTier: number): Promise<{
     teams: PublicTeam[];
+    /** Pełny terminarz (draft + published) */
     fixtures: PublicFixture[];
+    /** Tylko opublikowane — tabela / wyniki / statystyki */
+    publishedFixtures: PublicFixture[];
     standings: PublicStandingRow[];
   }> {
+    const { data: fixturesRaw, error: fixError } = await supabase
+      .from("fixtures")
+      .select(
+        "id, gameweek, home_team_id, away_team_id, home_fpl_points, away_fpl_points, home_h2h_points, away_h2h_points, home_median_bonus, away_median_bonus, is_finished, is_published, is_playoff",
+      )
+      .eq("division_id", divId)
+      .order("gameweek", { ascending: true });
+
+    if (fixError) throw new Error(fixError.message);
+
+    const regularRaw = (fixturesRaw ?? []).filter((f) => !f.is_playoff);
+
     const { data: teamsRaw, error: teamsError } = await supabase
       .from("teams")
       .select("id, manager_name, discord_nick, fpl_id, fpl_team_name, chosen_club")
@@ -635,25 +742,36 @@ export async function getDivisionStandings(
 
     if (teamsError) throw new Error(teamsError.message);
 
-    const teams = (teamsRaw ?? []).map(mapTeam);
+    let teams = (teamsRaw ?? []).map(mapTeam);
     const byId = new Map(teams.map((t) => [t.id, t]));
 
-    const { data: fixturesRaw, error: fixError } = await supabase
-      .from("fixtures")
-      .select(
-        "id, gameweek, home_team_id, away_team_id, home_fpl_points, away_fpl_points, home_h2h_points, away_h2h_points, home_median_bonus, away_median_bonus, is_finished, is_playoff",
-      )
-      .eq("division_id", divId)
-      .eq("is_published", true)
-      .order("gameweek", { ascending: true });
+    // Po przejściu sezonu drużyny mają nowy division_id — odtwórz skład z fixtures
+    const fixtureTeamIds = [
+      ...new Set(
+        regularRaw.flatMap((f) => [f.home_team_id as string, f.away_team_id as string]),
+      ),
+    ];
+    const missingIds = fixtureTeamIds.filter((id) => !byId.has(id));
+    if (missingIds.length) {
+      const { data: histTeams, error: histErr } = await supabase
+        .from("teams")
+        .select("id, manager_name, discord_nick, fpl_id, fpl_team_name, chosen_club")
+        .in("id", missingIds);
+      if (histErr) throw new Error(histErr.message);
+      for (const t of histTeams ?? []) {
+        const mapped = mapTeam(t);
+        byId.set(mapped.id, mapped);
+        teams.push(mapped);
+      }
+      teams = [...byId.values()].sort((a, b) =>
+        a.manager_name.localeCompare(b.manager_name, "pl"),
+      );
+    }
 
-    if (fixError) throw new Error(fixError.message);
-
-    const fixtures = (fixturesRaw ?? [])
-      .filter((f) => !f.is_playoff)
-      .map((f) => mapFixture(f, byId));
-    const standings = buildPublicStandings(fixtures, teams, divTier);
-    return { teams, fixtures, standings };
+    const fixtures = regularRaw.map((f) => mapFixture(f, byId));
+    const publishedFixtures = fixtures.filter((f) => f.is_published !== false);
+    const standings = buildPublicStandings(publishedFixtures, teams, divTier);
+    return { teams, fixtures, publishedFixtures, standings };
   }
 
   const current = await loadDivisionBundle(divisionId, tier);
@@ -670,15 +788,14 @@ export async function getDivisionStandings(
     lowerStandings = lower.standings.length ? lower.standings : null;
   }
 
-  // Opublikowane baraże cross-division (widoczne dla OBIEGU dywizji na granicy)
+  // Baraże: pobierz wszystkie (Terminarz), a w Wynikach tylko opublikowane
   const teamIds = current.teams.map((t) => t.id);
   const { data: playoffRaw, error: playoffError } = await supabase
     .from("fixtures")
     .select(
-      "id, gameweek, division_id, home_team_id, away_team_id, home_fpl_points, away_fpl_points, home_h2h_points, away_h2h_points, home_median_bonus, away_median_bonus, is_finished, is_playoff, tiebreaker_home_goals, tiebreaker_away_goals, tiebreaker_home_goals_conceded, tiebreaker_away_goals_conceded, tiebreaker_home_bench, tiebreaker_away_bench, tiebreaker_winner_id, tiebreaker_reason, tiebreaker_method",
+      "id, gameweek, division_id, home_team_id, away_team_id, home_fpl_points, away_fpl_points, home_h2h_points, away_h2h_points, home_median_bonus, away_median_bonus, is_finished, is_published, is_playoff, tiebreaker_home_goals, tiebreaker_away_goals, tiebreaker_home_goals_conceded, tiebreaker_away_goals_conceded, tiebreaker_home_bench, tiebreaker_away_bench, tiebreaker_winner_id, tiebreaker_reason, tiebreaker_method",
     )
     .eq("season_id", division.season_id)
-    .eq("is_published", true)
     .eq("is_playoff", true)
     .in("gameweek", [PLAYOFF_GAMEWEEK, SPRING_PLAYOFF_GAMEWEEK]);
 
@@ -714,7 +831,7 @@ export async function getDivisionStandings(
   const divNameById = new Map(peers.map((d) => [d.id, d.name]));
   divNameById.set(division.id, division.name);
 
-  const publishedPlayoffFixtures: PublicFixture[] = relevantPlayoffs.map((f) => {
+  const allPlayoffFixtures: PublicFixture[] = relevantPlayoffs.map((f) => {
     const homeMeta = playoffTeamById.get(f.home_team_id);
     const awayMeta = playoffTeamById.get(f.away_team_id);
     const byId = new Map<string, PublicTeam>();
@@ -733,13 +850,16 @@ export async function getDivisionStandings(
       byId,
     );
   });
+  const publishedPlayoffFixtures = allPlayoffFixtures.filter(
+    (f) => f.is_published !== false,
+  );
 
   const publishedPlayoffMetas = publishedPlayoffFixtures.map(
     playoffMetaFromPublishedFixture,
   );
 
   const playoffGw =
-    publishedPlayoffFixtures[0]?.gameweek ??
+    allPlayoffFixtures[0]?.gameweek ??
     (current.fixtures.some((f) => f.gameweek >= 20)
       ? SPRING_PLAYOFF_GAMEWEEK
       : PLAYOFF_GAMEWEEK);
@@ -768,7 +888,8 @@ export async function getDivisionStandings(
           playoffGameweek: playoffGw,
         });
 
-  const finishedGameweeks = finishedGameweeksFrom(current.fixtures);
+  // Wyniki: tylko opublikowane kolejki
+  const finishedGameweeks = finishedGameweeksFrom(current.publishedFixtures);
   for (const f of publishedPlayoffFixtures) {
     if (f.is_finished && !finishedGameweeks.includes(f.gameweek)) {
       finishedGameweeks.push(f.gameweek);
@@ -776,15 +897,33 @@ export async function getDivisionStandings(
   }
   finishedGameweeks.sort((a, b) => a - b);
 
-  const maxFromFixtures = Math.max(
-    0,
-    ...current.fixtures.map((f) => f.gameweek),
-    ...publishedPlayoffFixtures.map((f) => f.gameweek),
-  );
-  const maxGameweek = Math.max(maxFromFixtures, SEASON_MAX_GAMEWEEK, playoffGw);
+  // Y = wszystkie wygenerowane GW (Berger) + slot barażowy (nawet gdy jeszcze nie wygenerowano par)
+  const availableGameweeks = [
+    ...new Set([
+      ...current.fixtures.map((f) => f.gameweek),
+      ...allPlayoffFixtures.map((f) => f.gameweek),
+      playoffGw,
+    ]),
+  ].sort((a, b) => a - b);
 
-  // Terminarz: faza zasadnicza + opublikowane baraże (tabela ich nie liczy)
-  const fixtures = [...current.fixtures, ...publishedPlayoffFixtures];
+  const maxFromFixtures =
+    availableGameweeks.length > 0
+      ? availableGameweeks[availableGameweeks.length - 1]!
+      : 0;
+  const maxGameweek = maxFromFixtures || playoffGw;
+
+  // X = najwyższa opublikowana/ukończona kolejka
+  const playedGwCount =
+    finishedGameweeks.length > 0
+      ? finishedGameweeks[finishedGameweeks.length - 1]!
+      : 0;
+
+  // Terminarz: pełna rozpiska; publishedFixtures: tylko publiczne wyniki
+  const fixtures = [...current.fixtures, ...allPlayoffFixtures];
+  const publishedFixtures = [
+    ...current.publishedFixtures,
+    ...publishedPlayoffFixtures,
+  ];
 
   return {
     divisionId,
@@ -793,16 +932,19 @@ export async function getDivisionStandings(
     teams: current.teams,
     standings: current.standings,
     fixtures,
+    publishedFixtures,
     finishedGameweeks,
+    availableGameweeks,
     maxGameweek,
-    playedGwCount: finishedGameweeksFrom(current.fixtures).length,
-    averageFpl: averageFplFromFinished(current.fixtures),
+    playedGwCount,
+    averageFpl: averageFplFromFinished(current.publishedFixtures),
     leader: current.standings[0] ?? null,
     playoffs,
   };
 }
 
-/** Mecze, próg mediany i ranking FPL dla jednej kolejki. */
+
+/** Mecze, prĂłg mediany i ranking FPL dla jednej kolejki. */
 export async function getGameweekDetails(
   divisionId: string,
   gameweek: number,
@@ -835,10 +977,29 @@ export async function getGameweekDetails(
     };
   }
 
-  const gwFixtures = bundle.fixtures.filter(
+  const gwRaw = bundle.fixtures.filter(
     (f) => f.gameweek === gameweek && !f.is_playoff,
   );
-  const isFinished = gwFixtures.length > 0 && gwFixtures.every((f) => f.is_finished);
+  // Publicznie: nieopublikowane = puste wyniki (nawet jeśli w DB jest brudnopis)
+  const gwFixtures = gwRaw.map((f) => {
+    if (f.is_published !== false) return f;
+    return {
+      ...f,
+      home_fpl_points: null,
+      away_fpl_points: null,
+      home_h2h_points: 0,
+      away_h2h_points: 0,
+      home_median_bonus: 0,
+      away_median_bonus: 0,
+      is_finished: false,
+    };
+  });
+  const isPublished =
+    gwRaw.length > 0 && gwRaw.every((f) => f.is_published !== false);
+  const isFinished =
+    isPublished &&
+    gwFixtures.length > 0 &&
+    gwFixtures.every((f) => f.is_finished);
   const threshold = isFinished ? gameweekMedianThreshold(gwFixtures) : null;
 
   const matches: GwMatchCard[] = gwFixtures.map((fixture) => {
@@ -850,20 +1011,22 @@ export async function getGameweekDetails(
 
   type ScoreEntry = { team: PublicTeam; fpl: number; median: boolean };
   const scores: ScoreEntry[] = [];
-  for (const f of gwFixtures) {
-    if (f.home_team) {
-      scores.push({
-        team: f.home_team,
-        fpl: f.home_fpl_points ?? 0,
-        median: f.home_median_bonus === 1,
-      });
-    }
-    if (f.away_team) {
-      scores.push({
-        team: f.away_team,
-        fpl: f.away_fpl_points ?? 0,
-        median: f.away_median_bonus === 1,
-      });
+  if (isFinished) {
+    for (const f of gwFixtures) {
+      if (f.home_team) {
+        scores.push({
+          team: f.home_team,
+          fpl: f.home_fpl_points ?? 0,
+          median: f.home_median_bonus === 1,
+        });
+      }
+      if (f.away_team) {
+        scores.push({
+          team: f.away_team,
+          fpl: f.away_fpl_points ?? 0,
+          median: f.away_median_bonus === 1,
+        });
+      }
     }
   }
 
@@ -887,10 +1050,10 @@ export async function getGameweekDetails(
   };
 }
 
-/** Cały terminarz jednej drużyny. */
+/** CaĹ‚y terminarz jednej druĹĽyny. */
 export async function getTeamSchedule(teamId: string): Promise<TeamSchedulePayload> {
   const supabase = createClient();
-  if (!teamId) throw new Error("Brak ID drużyny.");
+  if (!teamId) throw new Error("Brak ID druĹĽyny.");
 
   const { data: teamRaw, error: teamError } = await supabase
     .from("teams")
@@ -899,7 +1062,7 @@ export async function getTeamSchedule(teamId: string): Promise<TeamSchedulePaylo
     .maybeSingle();
 
   if (teamError) throw new Error(teamError.message);
-  if (!teamRaw) throw new Error("Nie znaleziono drużyny.");
+  if (!teamRaw) throw new Error("Nie znaleziono druĹĽyny.");
 
   const team = mapTeam(teamRaw);
   const bundle = await getDivisionStandings(teamRaw.division_id);
@@ -910,38 +1073,39 @@ export async function getTeamSchedule(teamId: string): Promise<TeamSchedulePaylo
   return { team, fixtures };
 }
 
-function tierHint(fromTier: number, toTier: number, kind: "up" | "down"): string {
-  if (kind === "up") {
-    return toTier < fromTier
-      ? `Awans do Tier ${toTier}`
-      : `Tier ${fromTier} → Tier ${toTier}`;
-  }
-  return toTier > fromTier
-    ? `Spadek do Tier ${toTier}`
-    : `Tier ${fromTier} → Tier ${toTier}`;
-}
 
 /**
  * Publiczne Podsumowanie Sezonu.
  * Stan A (is_completed=false): locked, bez kalkulacji.
- * Stan B: podium + awanse + spadki.
+ * Stan B: podium + mistrzowie dywizji + ruchy ligowe + baraże.
  */
 export async function getPublicSeasonSummary(
   seasonId: string,
 ): Promise<PublicSeasonSummaryPayload> {
+  const empty = (
+    partial: Partial<PublicSeasonSummaryPayload> &
+      Pick<PublicSeasonSummaryPayload, "seasonId" | "seasonName" | "locked">,
+  ): PublicSeasonSummaryPayload => ({
+    is_completed: false,
+    is_archived: false,
+    podium: [],
+    divisionChampions: [],
+    divisionBlocks: [],
+    promotions: [],
+    relegations: [],
+    playoffGameweek: null,
+    error: null,
+    ...partial,
+  });
+
   const supabase = createClient();
   if (!seasonId) {
-    return {
+    return empty({
       seasonId: "",
       seasonName: "",
-      is_completed: false,
-      is_archived: false,
       locked: true,
-      podium: [],
-      promotions: [],
-      relegations: [],
       error: "Brak sezonu.",
-    };
+    });
   }
 
   const { data: season, error: seasonError } = await supabase
@@ -951,61 +1115,45 @@ export async function getPublicSeasonSummary(
     .maybeSingle();
 
   if (seasonError) {
-    return {
+    return empty({
       seasonId,
       seasonName: "",
-      is_completed: false,
-      is_archived: false,
       locked: true,
-      podium: [],
-      promotions: [],
-      relegations: [],
       error: seasonError.message,
-    };
+    });
   }
   if (!season) {
-    return {
+    return empty({
       seasonId,
       seasonName: "",
-      is_completed: false,
-      is_archived: false,
       locked: true,
-      podium: [],
-      promotions: [],
-      relegations: [],
       error: "Nie znaleziono sezonu.",
-    };
+    });
   }
 
   const isCompleted = Boolean(season.is_completed);
   const isArchived = Boolean(season.is_archived);
 
   if (!isCompleted) {
-    return {
+    return empty({
       seasonId: season.id,
       seasonName: season.name,
       is_completed: false,
       is_archived: isArchived,
       locked: true,
-      podium: [],
-      promotions: [],
-      relegations: [],
-    };
+    });
   }
 
   const calc = await runCalculateEndSeasonStatuses(supabase, seasonId);
   if (calc.error || !calc.byTeamId) {
-    return {
+    return empty({
       seasonId: season.id,
       seasonName: season.name,
       is_completed: true,
       is_archived: isArchived,
       locked: false,
-      podium: [],
-      promotions: [],
-      relegations: [],
       error: calc.error ?? "Brak danych do podsumowania.",
-    };
+    });
   }
 
   const teamIds = Object.keys(calc.byTeamId);
@@ -1014,32 +1162,44 @@ export async function getPublicSeasonSummary(
     .select("id, manager_name, discord_nick, fpl_id, fpl_team_name, chosen_club")
     .in("id", teamIds);
   if (teamsError) {
-    return {
+    return empty({
       seasonId: season.id,
       seasonName: season.name,
       is_completed: true,
       is_archived: isArchived,
       locked: false,
-      podium: [],
-      promotions: [],
-      relegations: [],
       error: teamsError.message,
-    };
+    });
   }
 
-  const teamById = new Map(
-    (teamsRaw ?? []).map((t) => [t.id, mapTeam(t)]),
-  );
+  const teamById = new Map((teamsRaw ?? []).map((t) => [t.id, mapTeam(t)]));
   const divNames = calc.divisionNameById ?? {};
+
+  const officialName = (divisionId: string, tier: number) =>
+    divNames[divisionId]?.trim() || divisionLabel(tier);
 
   const toRow = (
     teamId: string,
     assignment: (typeof calc.byTeamId)[string],
-    kind: "up" | "down" | "podium",
+    kind: "up" | "down" | "podium" | "champion",
   ): SeasonSummaryPlayerRow | null => {
     const team = teamById.get(teamId);
     if (!team) return null;
     const status = assignment.status as TeamSeasonStatus;
+    const fromName = officialName(assignment.division_id, assignment.current_tier);
+    let toHint = fromName;
+    if (kind === "up" || kind === "down") {
+      toHint =
+        assignment.next_tier == null
+          ? "Poczekalnia"
+          : divisionMoveHint(
+              assignment.current_tier,
+              assignment.next_tier,
+              kind === "up" ? "up" : "down",
+            );
+    } else if (kind === "champion") {
+      toHint = `Mistrz ${fromName}`;
+    }
     return {
       teamId,
       status,
@@ -1049,52 +1209,186 @@ export async function getPublicSeasonSummary(
       position: assignment.position,
       totalPoints: assignment.totalPoints ?? null,
       fplPoints: assignment.fplPoints ?? null,
-      fromDivisionName: divNames[assignment.division_id] ?? `Tier ${assignment.current_tier}`,
-      toDivisionHint:
-        kind === "podium"
-          ? `Tier ${assignment.current_tier}`
-          : assignment.next_tier == null
-            ? "Poczekalnia"
-            : tierHint(
-                assignment.current_tier,
-                assignment.next_tier,
-                kind === "up" ? "up" : "down",
-              ),
+      fromDivisionName: fromName,
+      toDivisionHint: toHint,
       team,
+      divisionId: assignment.division_id,
     };
   };
 
   const podium: SeasonSummaryPlayerRow[] = [];
   const promotions: SeasonSummaryPlayerRow[] = [];
   const relegations: SeasonSummaryPlayerRow[] = [];
+  const allRows = new Map<string, SeasonSummaryPlayerRow>();
 
   for (const [teamId, a] of Object.entries(calc.byTeamId)) {
+    const base = toRow(teamId, a, "podium");
+    if (base) allRows.set(teamId, base);
+
     if (a.status === "CHAMPION" || a.status === "RUNNER_UP" || a.status === "THIRD_PLACE") {
       const row = toRow(teamId, a, "podium");
       if (row) podium.push(row);
     }
     if (a.status === "PROMOTED_DIRECTLY" || a.status === "PROMOTED_PLAYOFF") {
       const row = toRow(teamId, a, "up");
-      if (row) promotions.push(row);
+      if (row) {
+        promotions.push(row);
+        allRows.set(teamId, row);
+      }
     }
     if (a.status === "RELEGATED_DIRECTLY" || a.status === "RELEGATED_PLAYOFF") {
       const row = toRow(teamId, a, "down");
-      if (row) relegations.push(row);
+      if (row) {
+        relegations.push(row);
+        allRows.set(teamId, row);
+      }
     }
   }
 
   podium.sort((a, b) => a.position - b.position);
   promotions.sort(
     (a, b) =>
-      a.nextTier - b.nextTier ||
+      (a.nextTier ?? 99) - (b.nextTier ?? 99) ||
       a.currentTier - b.currentTier ||
       a.position - b.position,
   );
   relegations.sort(
-    (a, b) =>
-      a.currentTier - b.currentTier ||
-      a.position - b.position,
+    (a, b) => a.currentTier - b.currentTier || a.position - b.position,
   );
+
+  const divisionChampions: SeasonSummaryPlayerRow[] = [];
+  const byDivision = new Map<
+    string,
+    { tier: number; name: string; rows: SeasonSummaryPlayerRow[] }
+  >();
+
+  for (const [teamId, a] of Object.entries(calc.byTeamId)) {
+    const row =
+      allRows.get(teamId) ??
+      toRow(teamId, a, a.position === 1 ? "champion" : "podium");
+    if (!row) continue;
+    const name = officialName(a.division_id, a.current_tier);
+    const block = byDivision.get(a.division_id) ?? {
+      tier: a.current_tier,
+      name,
+      rows: [],
+    };
+    block.rows.push(
+      a.position === 1
+        ? {
+            ...row,
+            statusLabel: `Mistrz ${name}`,
+            toDivisionHint: `Mistrz ${name}`,
+          }
+        : row,
+    );
+    byDivision.set(a.division_id, block);
+  }
+
+  for (const block of byDivision.values()) {
+    const champ = block.rows.find((r) => r.position === 1);
+    if (champ) divisionChampions.push(champ);
+  }
+  divisionChampions.sort((a, b) => a.currentTier - b.currentTier);
+
+  const playoffGw = calc.playoffGameweek ?? PLAYOFF_GAMEWEEK;
+  const { data: playoffRaw } = await supabase
+    .from("fixtures")
+    .select(
+      "id, gameweek, home_team_id, away_team_id, home_fpl_points, away_fpl_points, home_h2h_points, away_h2h_points, is_finished, tiebreaker_winner_id",
+    )
+    .eq("season_id", seasonId)
+    .eq("is_published", true)
+    .eq("is_playoff", true)
+    .in("gameweek", [PLAYOFF_GAMEWEEK, SPRING_PLAYOFF_GAMEWEEK]);
+
+  const playoffByHigherDiv = new Map<string, SeasonSummaryPlayoffMatch>();
+
+  for (const f of playoffRaw ?? []) {
+    const homeA = calc.byTeamId[f.home_team_id];
+    const awayA = calc.byTeamId[f.away_team_id];
+    if (!homeA || !awayA) continue;
+
+    const homeHigher = homeA.current_tier < awayA.current_tier;
+    const higherId = homeHigher ? f.home_team_id : f.away_team_id;
+    const lowerId = homeHigher ? f.away_team_id : f.home_team_id;
+    const higherA = homeHigher ? homeA : awayA;
+    const lowerA = homeHigher ? awayA : homeA;
+    const higherFpl = homeHigher ? f.home_fpl_points : f.away_fpl_points;
+    const lowerFpl = homeHigher ? f.away_fpl_points : f.home_fpl_points;
+
+    const higherRow =
+      allRows.get(higherId) ?? toRow(higherId, higherA, "podium");
+    const lowerRow = allRows.get(lowerId) ?? toRow(lowerId, lowerA, "podium");
+    if (!higherRow || !lowerRow) continue;
+
+    const winnerId = resolvePlayoffMatchWinnerId({
+      id: f.id,
+      home_team_id: f.home_team_id,
+      away_team_id: f.away_team_id,
+      home_fpl_points: f.home_fpl_points,
+      away_fpl_points: f.away_fpl_points,
+      home_h2h_points: f.home_h2h_points,
+      away_h2h_points: f.away_h2h_points,
+      is_finished: Boolean(f.is_finished),
+      tiebreaker_winner_id: f.tiebreaker_winner_id,
+    });
+
+    const higherName = officialName(higherA.division_id, higherA.current_tier);
+    const lowerName = officialName(lowerA.division_id, lowerA.current_tier);
+
+    let higherOutcomeLabel = "⏳ Baraż nierozstrzygnięty";
+    let lowerOutcomeLabel = "⏳ Baraż nierozstrzygnięty";
+    if (winnerId === higherId) {
+      higherOutcomeLabel = `🛡️ Utrzymanie w ${higherName} po barażu`;
+      lowerOutcomeLabel = `⚪ Pozostaje w ${lowerName}`;
+    } else if (winnerId === lowerId) {
+      higherOutcomeLabel = `🔴 Spadek do ${lowerName} po barażu`;
+      lowerOutcomeLabel = `🟢 Awans do ${higherName} po barażu`;
+    }
+
+    playoffByHigherDiv.set(higherA.division_id, {
+      fixtureId: f.id,
+      gameweek: f.gameweek,
+      higherDivisionName: higherName,
+      lowerDivisionName: lowerName,
+      higherTier: higherA.current_tier,
+      lowerTier: lowerA.current_tier,
+      higher: higherRow,
+      lower: lowerRow,
+      higherFpl,
+      lowerFpl,
+      winnerTeamId: winnerId,
+      higherOutcomeLabel,
+      lowerOutcomeLabel,
+    });
+  }
+
+  const divisionBlocks: SeasonSummaryDivisionBlock[] = [...byDivision.entries()]
+    .map(([divisionId, block]) => {
+      const rows = block.rows;
+      const champion = rows.find((r) => r.position === 1) ?? null;
+      const isTop = block.tier === 1;
+      const directPromotions = isTop
+        ? []
+        : rows
+            .filter((r) => r.status === "PROMOTED_DIRECTLY")
+            .sort((a, b) => a.position - b.position);
+      const directRelegations = rows
+        .filter((r) => r.status === "RELEGATED_DIRECTLY")
+        .sort((a, b) => a.position - b.position);
+
+      return {
+        divisionId,
+        divisionName: block.name,
+        tier: block.tier,
+        champion,
+        directPromotions,
+        directRelegations,
+        playoff: playoffByHigherDiv.get(divisionId) ?? null,
+      };
+    })
+    .sort((a, b) => a.tier - b.tier);
 
   return {
     seasonId: season.id,
@@ -1103,8 +1397,11 @@ export async function getPublicSeasonSummary(
     is_archived: isArchived,
     locked: false,
     podium,
+    divisionChampions,
+    divisionBlocks,
     promotions,
     relegations,
+    playoffGameweek: playoffGw,
     error: null,
   };
 }

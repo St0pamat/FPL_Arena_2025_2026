@@ -2,9 +2,15 @@
 
 import { Clock, Shield } from "lucide-react";
 import { MarketingCrest } from "@/components/na-minusie/MarketingCrest";
+import { LeagueCapacityMeter } from "@/components/na-minusie/LeagueCapacityMeter";
 import { SectionShell } from "@/components/na-minusie/SectionShell";
 import type { ClubLogoRecord } from "@/lib/admin/clubLogos";
 import type { RecruitmentClubsData } from "@/lib/public/getAvailableClubs";
+import {
+  identityClubClass,
+  identityFplTeamClass,
+  identityManagerClass,
+} from "@/lib/na-minusie/playerIdentityStyles";
 
 export function AvailableClubsGrid({
   data,
@@ -28,6 +34,8 @@ export function AvailableClubsGrid({
           </p>
         </div>
 
+        <LeagueCapacityMeter occupied={data.players.length} />
+
         {data.players.length === 0 ? (
           <p className="mt-8 text-sm text-slate-500">
             Nie udało się wczytać listy uczestników. Odśwież stronę za chwilę.
@@ -49,22 +57,20 @@ export function AvailableClubsGrid({
 
                 <div className="flex flex-1 flex-col px-2.5 pb-3 pt-2 sm:px-3">
                   <div className="flex min-h-[2.75rem] w-full items-center justify-center sm:min-h-[3rem]">
-                    <h4 className="text-[13px] font-black uppercase leading-tight tracking-wide text-white sm:text-sm">
+                    <h4 className={identityClubClass("sm", "default", "leading-tight")}>
                       {player.discordClub}
                     </h4>
                   </div>
 
-                  <div className="mt-1.5 flex min-h-[1.75rem] w-full items-center justify-center">
-                    {player.fplTeam ? (
-                      <p className="truncate text-[11px] font-bold leading-snug tracking-wide text-sky-300 sm:text-xs">
-                        {player.fplTeam}
-                      </p>
-                    ) : null}
-                  </div>
-
-                  <p className="mt-2 truncate text-[12px] font-black leading-snug tracking-wide text-[#39FF14] sm:text-sm">
+                  <p className={identityManagerClass("sm", "default", "mt-1.5 truncate")}>
                     {player.fplManager}
                   </p>
+
+                  {player.fplTeam ? (
+                    <p className={identityFplTeamClass("sm", "default", "mt-1 truncate")}>
+                      {player.fplTeam}
+                    </p>
+                  ) : null}
                 </div>
               </article>
             ))}
@@ -137,7 +143,6 @@ export function AvailableClubsGrid({
             </article>
           ))}
 
-          {/* Zawsze ostatni (20.) kafelek — ten sam rozmiar co pozostałe */}
           <article className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-[#39FF14]/40 bg-[#39FF14]/5 p-4 text-center sm:p-5">
             <span className="inline-flex h-20 w-20 items-center justify-center rounded-2xl border border-[#39FF14]/25 bg-slate-950/40 text-[#39FF14] sm:h-24 sm:w-24">
               <Shield className="h-10 w-10 sm:h-12 sm:w-12" strokeWidth={1.5} aria-hidden />

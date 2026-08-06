@@ -27,7 +27,7 @@ export const DiplomaDocument = ({
 
     <div className="relative z-10 flex flex-col h-full px-[12mm] py-[10mm]">
       {/* Nagłówek */}
-      <div className="flex items-start justify-between gap-[6mm] mb-[5mm]">
+        <div className="flex items-start justify-between gap-[6mm] mb-[5mm]">
         <img
           src={LEAGUE_LOGO_SRC}
           alt="FPL Arena"

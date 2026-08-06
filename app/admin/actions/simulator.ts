@@ -127,6 +127,7 @@ function revalidateSim() {
   revalidatePath("/admin/simulator");
   revalidatePath("/admin/workspace");
   revalidatePath("/admin/gw-results");
+  revalidatePath("/strefa-gracza");
   revalidatePath("/na-minusie/hub");
   revalidatePath("/admin", "layout");
 }

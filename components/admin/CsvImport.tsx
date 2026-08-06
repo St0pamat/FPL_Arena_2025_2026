@@ -446,7 +446,7 @@ function PreviewTable({
           <thead className="border-b border-slate-700/40 text-xs uppercase tracking-wider text-slate-500">
             <tr>
               <th className="px-4 py-3 font-bold">Wiersz</th>
-              <th className="px-4 py-3 font-bold">Tier</th>
+              <th className="px-4 py-3 font-bold">Dywizja</th>
               <th className="px-4 py-3 font-bold">Manager</th>
               <th className="px-4 py-3 font-bold">FPL ID</th>
               <th className="px-4 py-3 font-bold">Discord</th>

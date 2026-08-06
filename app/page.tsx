@@ -12,15 +12,15 @@ export default function HomePage() {
 
       <div className="relative z-10 mb-10 max-w-3xl text-center sm:mb-14">
         <div className="flex flex-col items-center justify-center gap-4 sm:flex-row sm:gap-5">
-          <div className="relative h-16 w-16 shrink-0 sm:h-20 sm:w-20 lg:h-24 lg:w-24">
+          <div className="relative h-24 w-24 shrink-0 sm:h-28 sm:w-28 lg:h-36 lg:w-36">
             <Image
               src={ARENA_PORTAL_LOGO}
               alt={ARENA_PORTAL_ALT}
               fill
               priority
               quality={95}
-              sizes="(max-width: 640px) 64px, (max-width: 1024px) 80px, 96px"
-              className="object-contain drop-shadow-[0_0_28px_rgba(52,211,153,0.35)]"
+              sizes="(max-width: 640px) 96px, (max-width: 1024px) 112px, 144px"
+              className="object-contain drop-shadow-[0_0_28px_rgba(56,189,248,0.35)]"
             />
           </div>
           <h1 className="font-athletic text-5xl font-bold tracking-[0.06em] text-white sm:text-6xl lg:text-7xl">

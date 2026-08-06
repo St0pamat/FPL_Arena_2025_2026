@@ -58,7 +58,7 @@ export function DivisionManager({
         </div>
 
         <p className="mb-4 rounded-lg border border-slate-700/60 bg-slate-900/50 px-3 py-2 text-xs text-slate-400">
-          Nowy tier (np. T3) wolno utworzyć dopiero gdy wszystkie wyższe dywizje mają dokładnie
+          Nową dywizję (np. D3) wolno utworzyć dopiero gdy wszystkie wyższe dywizje mają dokładnie
           10/10 graczy.
         </p>
 
@@ -128,7 +128,7 @@ export function DivisionManager({
 
           <div>
             <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-400">
-              Poziom (Tier)
+              Poziom (Dywizja)
             </label>
             <input
               name="tier"
@@ -189,7 +189,7 @@ export function DivisionManager({
                     <div>
                       <p className="font-semibold text-white">{d.name}</p>
                       <p className="text-xs text-slate-500">
-                        {seasonName(d.season_id)} · {pyramidName(d.pyramid_id)} · Tier{" "}
+                        {seasonName(d.season_id)} · {pyramidName(d.pyramid_id)} · Dywizja{" "}
                         <span className="font-mono text-[#39FF14]">{d.tier}</span>
                         {saved ? (
                           <span className="ml-2 text-emerald-400/80">· webhook OK</span>

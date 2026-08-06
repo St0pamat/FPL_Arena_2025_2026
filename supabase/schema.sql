@@ -76,6 +76,12 @@ CREATE TABLE public.teams (
   fee_paid BOOLEAN NOT NULL DEFAULT false,
   /** Excel: Status — aktywny uczestnik */
   is_active BOOLEAN NOT NULL DEFAULT true,
+  /** Excel: Status (tekst, np. Aktywny) */
+  status TEXT NOT NULL DEFAULT 'Aktywny',
+  /** Excel: x.com (np. @st0pamat) */
+  x_com TEXT,
+  /** Excel: e-mail uczestnika */
+  email TEXT,
   /** Excel: OR (Overall Rank poprzedniego sezonu) */
   previous_season_or INTEGER,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()

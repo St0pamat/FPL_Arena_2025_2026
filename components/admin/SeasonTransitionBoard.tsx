@@ -341,7 +341,7 @@ export function SeasonTransitionBoard({ seasons }: { seasons: Season[] }) {
                   <header className="flex items-center justify-between border-b border-slate-800 px-3 py-2.5">
                     <div>
                       <p className="text-[10px] font-bold uppercase text-slate-500">
-                        Tier {col.tier}
+                        Dywizja {col.tier}
                       </p>
                       <h3 className="font-athletic text-sm uppercase text-white">
                         {col.label}
@@ -429,14 +429,14 @@ export function SeasonTransitionBoard({ seasons }: { seasons: Season[] }) {
                   className="inline-flex items-center gap-2 rounded-xl border border-emerald-500/40 bg-emerald-500/15 px-3 py-2 text-xs font-black uppercase tracking-wider text-emerald-200"
                 >
                   <Plus className="h-3.5 w-3.5" />
-                  Utwórz Tier {board.maxTier + 1} (10/10)
+                  Utwórz Dywizję {board.maxTier + 1} (10/10)
                 </button>
               ) : null}
             </div>
             <p className="mb-4 text-xs text-slate-400">
               Gracze z niepełnych dywizji (&lt;10) oraz nowi rekruci. Możesz przenieść ich
-              do niepełnej kolumny (np. Tier 2 8/10) albo przy {DRAFT_TARGET_SIZE} osobach
-              otworzyć nowy tier.
+              do niepełnej kolumny (np. Dywizja 2 8/10) albo przy {DRAFT_TARGET_SIZE} osobach
+              otworzyć nową dywizję.
             </p>
 
             {board.waitingRoom.length > 0 ? (
@@ -480,7 +480,7 @@ export function SeasonTransitionBoard({ seasons }: { seasons: Season[] }) {
                               </option>
                               {incompleteColumns.map((c) => (
                                 <option key={c.tier} value={c.tier}>
-                                  Tier {c.tier} · {c.label} ({c.players.length}/
+                                  Dywizja {c.tier} · {c.label} ({c.players.length}/
                                   {DRAFT_TARGET_SIZE})
                                 </option>
                               ))}
@@ -488,7 +488,7 @@ export function SeasonTransitionBoard({ seasons }: { seasons: Season[] }) {
                           </label>
                         ) : (
                           <p className="mt-2 text-[10px] text-slate-500">
-                            Brak niepełnych kolumn — zbierz 10 i utwórz nowy tier.
+                            Brak niepełnych kolumn — zbierz 10 i utwórz nową dywizję.
                           </p>
                         )}
                       </div>

@@ -18,7 +18,6 @@ import {
   gameweekLabel,
   isPlayoffGameweek,
   PLAYOFF_GAMEWEEK,
-  SEASON_MAX_GAMEWEEK,
 } from "@/lib/public/season";
 
 const EXPORT_BG = "#0B0F19";
@@ -75,7 +74,7 @@ function MatchCard({
           <span className="font-athletic text-xl font-bold tabular-nums text-white sm:text-2xl">
             {fixture.is_finished
               ? `${fixture.home_fpl_points ?? 0} : ${fixture.away_fpl_points ?? 0}`
-              : "vs"}
+              : "– : –"}
           </span>
           {fixture.is_finished ? (
             <>
@@ -87,8 +86,8 @@ function MatchCard({
               </span>
             </>
           ) : (
-            <span className="text-[10px] uppercase tracking-wider text-slate-600">
-              Zaplanowany
+            <span className="text-[10px] uppercase tracking-wider text-slate-500">
+              Oczekuje na wyniki
             </span>
           )}
         </div>
@@ -158,6 +157,7 @@ function FplMedianRanking({
 
 export function GameweekCenter({
   maxGameweek,
+  availableGameweeks,
   finishedGameweeks,
   selectedGw,
   onSelectGw,
@@ -172,6 +172,8 @@ export function GameweekCenter({
   hasWebhook = false,
 }: {
   maxGameweek: number;
+  /** Distinct GW z fixtures sezonu (np. 20–38); nie renderować 1…38 na ślepo. */
+  availableGameweeks?: number[];
   finishedGameweeks: number[];
   selectedGw: number;
   onSelectGw: (gw: number) => void;
@@ -191,7 +193,10 @@ export function GameweekCenter({
   const playoffRef = useRef<HTMLDivElement>(null);
 
   const finishedSet = new Set(finishedGameweeks);
-  const total = Math.max(maxGameweek, SEASON_MAX_GAMEWEEK);
+  const weeks =
+    availableGameweeks && availableGameweeks.length > 0
+      ? availableGameweeks
+      : Array.from({ length: Math.max(maxGameweek, 1) }, (_, i) => i + 1);
   const isPlayoffView = isPlayoffGameweek(selectedGw);
   const metaBits = [exportMeta?.season, exportMeta?.pyramid, exportMeta?.division]
     .filter(Boolean)
@@ -238,16 +243,14 @@ export function GameweekCenter({
           Wybierz kolejkę
         </p>
         <div className="flex w-full gap-1 sm:gap-1.5">
-          {Array.from({ length: total }, (_, i) => i + 1).map((gw) => {
+          {weeks.map((gw) => {
             const playoff = isPlayoffGameweek(gw);
             const done = finishedSet.has(gw);
-            const selectable = done || playoff;
             const active = selectedGw === gw;
             return (
               <button
                 key={gw}
                 type="button"
-                disabled={!selectable}
                 onClick={() => onSelectGw(gw)}
                 title={playoff ? gameweekLabel(gw) : `GW${gw}`}
                 className={`min-w-0 flex-1 rounded-lg px-0.5 py-1.5 font-athletic text-[10px] font-bold uppercase tracking-tight transition sm:rounded-xl sm:px-1 sm:py-2 sm:text-xs sm:tracking-wide ${
@@ -259,7 +262,7 @@ export function GameweekCenter({
                       ? "bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/40 hover:bg-amber-500/25"
                       : done
                         ? "bg-slate-800 text-slate-200 hover:bg-slate-700"
-                        : "cursor-not-allowed bg-slate-950/50 text-slate-600"
+                        : "bg-slate-950/50 text-slate-500 hover:bg-slate-800/80 hover:text-slate-300"
                 }`}
               >
                 {playoff ? (
@@ -356,9 +359,31 @@ export function GameweekCenter({
             </div>
           </div>
         </div>
-      ) : !details || !finishedSet.has(selectedGw) ? (
+      ) : !details ? (
         <div className="rounded-2xl border border-dashed border-slate-700 px-6 py-12 text-center text-sm text-slate-500">
-          Wybierz rozliczoną kolejkę, aby zobaczyć medianę i wyniki H2H.
+          Brak meczów dla tej kolejki.
+        </div>
+      ) : !details.isFinished ? (
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-slate-700/80 bg-slate-900/60 p-5">
+            <p className="font-athletic text-xl uppercase tracking-wide text-white">
+              {gameweekLabel(selectedGw)}
+            </p>
+            <p className="mt-1 text-xs text-slate-400">
+              Mecze zaplanowane · wyniki pojawią się po publikacji kolejki
+            </p>
+          </div>
+          {details.matches.length > 0 ? (
+            <div className="flex w-full flex-col gap-2.5">
+              {details.matches.map((m) => (
+                <MatchCard key={m.fixture.id} match={m} logos={logos} />
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-dashed border-slate-700 px-6 py-12 text-center text-sm text-slate-500">
+              Brak meczów w terminarzu dla tej kolejki.
+            </div>
+          )}
         </div>
       ) : (
         <div className="space-y-4">

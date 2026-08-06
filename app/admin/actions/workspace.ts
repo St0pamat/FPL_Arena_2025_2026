@@ -7,6 +7,7 @@ import {
   computeMedianBonusSet,
   fplNamesMatch,
   normalizeMatchKey,
+  parseFplClassicLeaguePaste,
   parseGwBatchText,
   parseMultiGameweekPaste,
   resolveH2h,
@@ -78,6 +79,7 @@ function revalidateWorkspace() {
   revalidatePath("/admin/workspace");
   revalidatePath("/admin/gw-results");
   revalidatePath("/admin/data-ingestion");
+  revalidatePath("/strefa-gracza");
   revalidatePath("/na-minusie/hub");
   revalidatePath("/admin", "layout");
 }
@@ -1173,14 +1175,14 @@ export async function getSeasonGameweek(
 }
 
 /**
- * One-box import Multi-GW / Multi-Division.
- * Format wiersza: GW | FPL Team | FPL Manager | Punkty
+ * Import wyników ze schowka FPL Classic → wszystkie dywizje sezonu.
+ * Numer kolejki (GW) wybierany w UI — nie w wklejce.
  * H2H = 2/1/0 (Mediana 2+1), zapis is_published=false.
  */
 export async function importGlobalGameweekResults(
   pasteData: string,
   seasonId: string,
-  _fallbackGw?: number,
+  gameweek: number,
 ): Promise<
   ActionState & {
     updated?: number;
@@ -1189,25 +1191,34 @@ export async function importGlobalGameweekResults(
     divisionsUpdated?: number;
     playersMatched?: number;
     unmatched?: string[];
+    parseSkipped?: string[];
   }
 > {
   try {
     const supabase = await requireAuth();
     if (!seasonId) return { error: "Wybierz sezon." };
+    if (!gameweek || gameweek < 1 || gameweek > 38) {
+      return { error: "Wybierz numer kolejki (GW1–GW38)." };
+    }
     if (!pasteData.trim()) {
       return {
-        error: "Wklej wyniki. Kolumny: GW | FPL Team | FPL Manager | Punkty.",
+        error: "Wklej tekst skopiowany ze strony ligi Classic w FPL (Ctrl+V).",
       };
     }
 
-    const { lines, errors } = parseMultiGameweekPaste(pasteData);
+    const { lines, errors, skipped } = parseFplClassicLeaguePaste(pasteData);
     if (errors.length && !lines.length) {
-      return { error: `Parsowanie:\n${errors.slice(0, 10).join("\n")}` };
+      return {
+        error: errors.slice(0, 8).join("\n"),
+        parseSkipped: skipped.slice(0, 20),
+      };
     }
     if (!lines.length) {
       return {
         error:
-          "Brak wierszy. Format: GW1\\tFPL Team\\tFPL Manager\\tPunkty (każdy wiersz osobno).",
+          errors[0] ??
+          "Nie znaleziono wyników w wklejce — zaznacz tabelę ligową na stronie FPL i skopiuj ponownie.",
+        parseSkipped: skipped.slice(0, 20),
       };
     }
 
@@ -1230,44 +1241,31 @@ export async function importGlobalGameweekResults(
     if (teamsError) return { error: teamsError.message };
 
     const pool = (teams ?? []) as MatchPoolTeam[];
-    /** used per gameweek — ten sam gracz może wystąpić w GW1 i GW2 */
-    const usedByGw = new Map<number, Set<string>>();
-    /** gw → divisionId → scores */
-    const scoresByGwDiv = new Map<number, Map<string, Record<string, number>>>();
+    const used = new Set<string>();
+    const scoresByDiv = new Map<string, Record<string, number>>();
     const unmatched: string[] = [...errors.map((e) => `⚠ ${e}`)];
     let playersMatched = 0;
 
     for (const line of lines) {
-      const used = usedByGw.get(line.gameweek) ?? new Set<string>();
-      usedByGw.set(line.gameweek, used);
-
       const team = matchTeamInPool(pool, used, line);
       if (!team || !team.division_id) {
-        unmatched.push(
-          `Wiersz ${line.lineNumber} (GW${line.gameweek}): nie znaleziono „${line.label}”`,
-        );
+        unmatched.push(`Nie rozpoznano: „${line.label}” (wiersz ${line.lineNumber})`);
         continue;
       }
       used.add(team.id);
       playersMatched += 1;
 
-      let byDiv = scoresByGwDiv.get(line.gameweek);
-      if (!byDiv) {
-        byDiv = new Map();
-        scoresByGwDiv.set(line.gameweek, byDiv);
-      }
-      const bucket = byDiv.get(team.division_id) ?? {};
+      const bucket = scoresByDiv.get(team.division_id) ?? {};
       bucket[team.id] = line.points;
-      byDiv.set(team.division_id, bucket);
+      scoresByDiv.set(team.division_id, bucket);
     }
 
-    const gameweeks = [...scoresByGwDiv.keys()].sort((a, b) => a - b);
     if (!playersMatched) {
       return {
-        error: "Nie zmapowano żadnego gracza (FPL Team / FPL Manager).",
-        unmatched: unmatched.slice(0, 30),
-        gameweek: lines[0]?.gameweek,
-        gameweeks: [...new Set(lines.map((l) => l.gameweek))].sort((a, b) => a - b),
+        error: "Nie dopasowano żadnego gracza z wklejki do bazy (sprawdź nazwy drużyn / menedżerów).",
+        unmatched: unmatched.slice(0, 40),
+        parseSkipped: skipped.slice(0, 20),
+        gameweek,
       };
     }
 
@@ -1275,61 +1273,55 @@ export async function importGlobalGameweekResults(
     let divisionsUpdated = 0;
     const divErrors: string[] = [];
 
-    for (const gw of gameweeks) {
-      const byDiv = scoresByGwDiv.get(gw)!;
-      for (const [divisionId, scores] of byDiv) {
-        const result = await saveDivisionScoresLenient(
-          seasonId,
-          divisionId,
-          gw,
-          scores,
+    for (const [divisionId, scores] of scoresByDiv) {
+      const result = await saveDivisionScoresLenient(
+        seasonId,
+        divisionId,
+        gameweek,
+        scores,
+      );
+      if (result.error) {
+        divErrors.push(
+          `${divName.get(divisionId) ?? divisionId}: ${result.error}`,
         );
-        if (result.error) {
-          divErrors.push(
-            `GW${gw} · ${divName.get(divisionId) ?? divisionId}: ${result.error}`,
-          );
-          continue;
-        }
-        divisionsUpdated += 1;
-        fixturesUpdated += result.updated ?? 0;
+        continue;
       }
+      divisionsUpdated += 1;
+      fixturesUpdated += result.updated ?? 0;
     }
 
     if (!fixturesUpdated && divErrors.length) {
       return {
-        error: `Import nie zapisał meczów.\n${divErrors.slice(0, 8).join("\n")}`,
-        unmatched: unmatched.slice(0, 30),
-        gameweek: gameweeks[0],
-        gameweeks,
+        error: `Import nie zapisał meczów GW${gameweek}.\n${divErrors.slice(0, 8).join("\n")}`,
+        unmatched: unmatched.slice(0, 40),
+        parseSkipped: skipped.slice(0, 20),
+        gameweek,
         playersMatched,
       };
     }
 
     revalidateWorkspace();
-    const gwLabel =
-      gameweeks.length === 1
-        ? `GW${gameweeks[0]}`
-        : `GW${gameweeks[0]}–${gameweeks[gameweeks.length - 1]} (${gameweeks.length} kolejek)`;
     const warnParts = [
-      unmatched.length ? `pominięto ${unmatched.length}` : null,
-      divErrors.length ? `ostrzeżenia: ${divErrors.length}` : null,
+      unmatched.length ? `${unmatched.length} nierozpoznanych` : null,
+      divErrors.length ? `${divErrors.length} ostrzeżeń dywizji` : null,
     ].filter(Boolean);
 
     return {
       error: null,
-      success: `Import ${gwLabel}: ${playersMatched} wpisów → ${divisionsUpdated} par GW×dywizja, ${fixturesUpdated} meczów (brudnopis).${
+      success: `GW${gameweek}: dopasowano ${playersMatched} graczy → ${fixturesUpdated} meczów (brudnopis).${
         warnParts.length ? ` · ${warnParts.join(" · ")}` : ""
       }`,
       updated: fixturesUpdated,
-      gameweek: gameweeks[gameweeks.length - 1],
-      gameweeks,
+      gameweek,
+      gameweeks: [gameweek],
       divisionsUpdated,
       playersMatched,
-      unmatched: [...unmatched, ...divErrors].slice(0, 30),
+      unmatched: [...unmatched, ...divErrors.map((e) => `⚠ ${e}`)].slice(0, 40),
+      parseSkipped: skipped.slice(0, 20),
     };
   } catch (e) {
     console.error("[importGlobalGameweekResults]", e);
-    return { error: e instanceof Error ? e.message : "Błąd globalnego importu." };
+    return { error: e instanceof Error ? e.message : "Błąd importu wyników." };
   }
 }
 

@@ -639,6 +639,7 @@ function revalidatePlayoffs() {
   revalidatePath("/admin/workspace");
   revalidatePath("/admin/simulator");
   revalidatePath("/admin/gw-results");
+  revalidatePath("/strefa-gracza");
   revalidatePath("/na-minusie/hub");
   revalidatePath("/admin", "layout");
 }
@@ -818,7 +819,7 @@ export async function generateGlobalPlayoffs(
     const boundaries = consecutiveTierBoundaries(activeDivs);
     if (!boundaries.length) {
       return {
-        error: "Brak sąsiadujących aktywnych dywizji (granic tierów) w sezonie.",
+        error: "Brak sąsiadujących aktywnych dywizji (granic między dywizjami) w sezonie.",
         deleted,
       };
     }

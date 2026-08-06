@@ -381,7 +381,7 @@ export function GwResultsStandingsPanel({
             <option value="">Wybierz…</option>
             {divisions.map((d) => (
               <option key={d.id} value={d.id}>
-                T{d.tier} — {d.name}
+                D{d.tier} — {d.name}
               </option>
             ))}
           </select>

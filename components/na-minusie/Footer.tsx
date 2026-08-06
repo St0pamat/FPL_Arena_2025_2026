@@ -19,7 +19,7 @@ function XIcon({ className }: { className?: string }) {
 const navLinks = [
   { label: "O lidze", href: NA_MINUSIE_PATHS.home },
   { label: "Dywizje", href: NA_MINUSIE_PATHS.dywizje },
-  { label: "Strefa Gracza", href: NA_MINUSIE_PATHS.hub },
+  { label: "Strefa Gracza", href: NA_MINUSIE_PATHS.strefaGracza },
   { label: "Dostępne Kluby", href: `${NA_MINUSIE_PATHS.home}#dostepne-kluby` },
   { label: "Jak dołączyć", href: `${NA_MINUSIE_PATHS.home}#jak-dolaczyc` },
   { label: "Pełny Regulamin", href: NA_MINUSIE_PATHS.regulamin },

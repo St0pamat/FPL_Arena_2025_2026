@@ -50,7 +50,7 @@ export function DashboardDivisionFill({ rows }: { rows: DivisionFillRow[] }) {
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <p className="text-[10px] font-black uppercase tracking-wider text-[#39FF14]">
-                    Tier {d.tier} · {d.pyramidName}
+                    Dywizja {d.tier} · {d.pyramidName}
                   </p>
                   <h3 className="mt-0.5 font-bold text-white">{d.name}</h3>
                   <p className="text-xs text-slate-500">{d.seasonName}</p>

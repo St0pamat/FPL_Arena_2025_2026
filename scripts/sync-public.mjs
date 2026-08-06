@@ -91,3 +91,9 @@ if (!zipInPublic) {
     "WARN: Brak public/FPL-Arena-Soundtrack-Sezon-2025-26.zip — dodaj archiwum przed deployem."
   );
 }
+
+try {
+  await import("./process-fpl-arena-ikk-logo.mjs");
+} catch (err) {
+  console.warn("WARN: Nie udało się przetworzyć logotypu IKK:", err.message);
+}

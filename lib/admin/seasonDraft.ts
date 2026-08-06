@@ -261,10 +261,10 @@ export function assignWaitingPlayerToTier(
   tier: number,
 ): DraftBoardState | { error: string } {
   const col = state.columns.find((c) => c.tier === tier);
-  if (!col) return { error: `Brak kolumny Tier ${tier} w drafcie.` };
+  if (!col) return { error: `Brak kolumny Dywizja ${tier} w drafcie.` };
   if (col.players.length >= DRAFT_TARGET_SIZE) {
     return {
-      error: `Tier ${tier} jest już pełny (${DRAFT_TARGET_SIZE}/${DRAFT_TARGET_SIZE}).`,
+      error: `Dywizja ${tier} jest już pełna (${DRAFT_TARGET_SIZE}/${DRAFT_TARGET_SIZE}).`,
     };
   }
 

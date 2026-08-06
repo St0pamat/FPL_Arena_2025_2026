@@ -2,7 +2,9 @@
 export const NA_MINUSIE_PATHS = {
   home: "/na-minusie",
   dywizje: "/na-minusie/dywizje",
-  hub: "/na-minusie/hub",
+  /** @deprecated alias — używaj strefaGracza; stary URL przekierowuje */
+  hub: "/strefa-gracza",
+  strefaGracza: "/strefa-gracza",
   regulamin: "/na-minusie/regulamin",
   admin: "/admin/dashboard",
   adminLogin: "/admin/login",
@@ -14,7 +16,7 @@ export const NA_MINUSIE_CONTACT = {
   discordNick: "st0pa.",
   /** Snowflake ID — otwiera profil użytkownika w Discord */
   discordUserId: "1097839268405194833",
-  email: "fpl.st0pa@gmail.com",
+  email: "st0pamat@gmail.com",
   xHandle: "@st0pamat",
   xUrl: "https://x.com/st0pamat",
 } as const;

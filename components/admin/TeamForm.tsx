@@ -14,7 +14,7 @@ const inputClass =
   "w-full rounded-xl border border-slate-700/50 bg-slate-900 px-4 py-3 text-sm text-white outline-none placeholder:text-slate-600 focus:border-[#39FF14]";
 
 function divisionLabel(d: Division) {
-  return `T${d.tier} — ${d.name}`;
+  return `D${d.tier} — ${d.name}`;
 }
 
 export function TeamForm({

@@ -96,7 +96,7 @@ export function MasterImportPanel({
 
     const result: DivisionGroup[] = scopedDivisions.map((d) => ({
       division: d,
-      label: `${seasonName(d.season_id)} · ${pyramidName(d.pyramid_id)} · T${d.tier} — ${d.name}`,
+      label: `${seasonName(d.season_id)} · ${pyramidName(d.pyramid_id)} · D${d.tier} — ${d.name}`,
       teams: teams
         .filter((t) => t.division_id === d.id)
         .sort((a, b) => a.manager_name.localeCompare(b.manager_name, "pl")),
@@ -259,7 +259,7 @@ export function MasterImportPanel({
           </button>
         </div>
         <p className="mt-3 text-xs text-slate-500">
-          Excel SSOT · 12 kolumn · wybierz istniejący sezon · {totalPlayers} w bazie
+          Excel SSOT · 14 kolumn · wybierz istniejący sezon · {totalPlayers} w bazie
         </p>
         {toast ? (
           <p
@@ -307,7 +307,7 @@ export function MasterImportPanel({
                     ) : null}
                     <div className="min-w-0">
                       <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#39FF14]">
-                        {g.division ? `Tier ${g.division.tier}` : "Pula"}
+                        {g.division ? `Dywizja ${g.division.tier}` : "Pula"}
                       </p>
                       <h3 className="mt-0.5 truncate text-base font-bold text-white">
                         {g.label}
@@ -427,15 +427,24 @@ export function MasterImportPanel({
                               {t.previous_season_or ?? "—"}
                             </td>
                             <td className="px-4 py-2.5">
-                              {t.is_active === false ? (
-                                <span className="text-xs font-bold text-slate-500">
-                                  NIEAKTYWNY
-                                </span>
-                              ) : (
-                                <span className="text-xs font-bold text-[#39FF14]">
-                                  AKTYWNY
-                                </span>
-                              )}
+                              {(() => {
+                                const label =
+                                  t.status?.trim() ||
+                                  (t.is_active === false ? "Nieaktywny" : "Aktywny");
+                                const inactive =
+                                  t.is_active === false ||
+                                  /^nieaktyw/i.test(label) ||
+                                  /^inactive/i.test(label);
+                                return (
+                                  <span
+                                    className={`text-xs font-bold ${
+                                      inactive ? "text-slate-500" : "text-[#39FF14]"
+                                    }`}
+                                  >
+                                    {label.toUpperCase()}
+                                  </span>
+                                );
+                              })()}
                             </td>
                           </tr>
                         ))}
@@ -463,10 +472,10 @@ export function MasterImportPanel({
                   Master Import — Excel SSOT
                 </h3>
                 <p className="mt-2 text-xs leading-relaxed text-slate-400">
-                  Wklej z Excela pierwsze 12 kolumn:{" "}
+                  Wklej z Excela 14 kolumn (TSV):{" "}
                   <span className="font-mono text-slate-300">
                     LP | Piramida | Dywizja | Nazwa dywizji | FPL Team | FPL Manager | FPL ID |
-                    OR 2025/26 | Discord Name | Discord Club | Discord ID | Status
+                    OR 2025/26 | Discord Name | Discord Club | Discord ID | Status | x.com | email
                   </span>
                 </p>
               </div>
@@ -488,7 +497,7 @@ export function MasterImportPanel({
               rows={16}
               className="min-h-[280px] w-full flex-1 rounded-xl border border-slate-700 bg-slate-900 p-3 font-mono text-xs text-white outline-none focus:border-[#39FF14] disabled:opacity-60"
               placeholder={
-                "1\tAnglia A\t1\tPremier League\tFC Example\tJan Kowalski\t123456\t50000\tst0pa.\tArsenal\t111\tAktywny"
+                "1\tAnglia\t1\tPremier League\tFC Example\tJan Kowalski\t123456\t50000\tst0pa.\tArsenal\t111\tAktywny\t@st0pamat\tjan@example.com"
               }
             />
 

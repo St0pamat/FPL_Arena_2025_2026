@@ -21,8 +21,8 @@ export default async function AdminWorkspacePage() {
         </p>
         <h1 className="mt-2 text-3xl font-extrabold text-white">Edytor Kolejek</h1>
         <p className="mt-2 max-w-2xl text-sm text-slate-400">
-          Brudnopis kolejki (MODUŁ 3): jeden import FPL dla wszystkich dywizji (GW + Team +
-          Manager + Punkty), H2H + Mediana 2+1, ręczna korekta i publikacja całej kolejki.
+          Wklej wyniki prosto ze strony FPL, sprawdź podgląd meczów, popraw ręcznie jeśli trzeba
+          i opublikuj kolejkę do Strefy Gracza.
         </p>
       </header>
 

@@ -1,0 +1,36 @@
+---
+description: Design System tożsamości gracza Na Minusie — kolory i wagi nienaruszalne
+globs: components/na-minusie/**/*.tsx,components/strefa-gracza/**/*.tsx,lib/na-minusie/playerIdentityStyles.ts
+alwaysApply: false
+---
+
+# Player Identity Design System (Na Minusie)
+
+Single Source of Truth: `lib/na-minusie/playerIdentityStyles.ts`
+
+Importuj `identityClubClass`, `identityManagerClass`, `identityFplTeamClass`, `identityDiscordClass` — NIE hardkoduj kolorów tożsamości lokalnie.
+
+## Hierarchia (kolejność wyświetlania)
+1. Discord Club (+ herb)
+2. FPL Manager
+3. FPL Team (opcjonalnie)
+4. Discord Name (opcjonalnie)
+
+## Nienaruszalne (kolor + waga + tracking)
+| Pole | Klasy |
+|------|--------|
+| Discord Club | `text-white uppercase tracking-wide font-black` (tabela: `font-bold`) |
+| FPL Manager | `text-[#39FF14] tracking-wide font-black` (tabela: `font-semibold`) |
+| FPL Team | `text-sky-300 tracking-wide font-bold` (tabela: `text-sky-300/90 font-medium`) |
+| Discord Name | `text-slate-500 font-normal` |
+
+## Elastyczne
+- Rozmiary (`text-xs` / `text-sm` / …) — dopasuj do kontekstu (tabela ciaśniej, karta większa).
+- Nie każde pole musi być widoczne, ale jeśli jest — zawsze w powyższych kolorach/wagach.
+- Rodzina: zawsze `font-sans` (Inter).
+
+## Zakazane
+- Szary/slate menedżer lub FPL Team
+- Indigo badge jako styl Discord Name
+- Zamiana kolejności Club ↔ Manager ↔ FPL Team
+- Wymyślanie nowych kolorów tożsamości „dla estetyki”

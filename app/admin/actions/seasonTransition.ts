@@ -34,6 +34,7 @@ function revalidateAll() {
   revalidatePath("/admin/season-transition");
   revalidatePath("/admin/season-settlement");
   revalidatePath("/admin/workspace");
+  revalidatePath("/strefa-gracza");
   revalidatePath("/na-minusie/hub");
   revalidatePath("/na-minusie/dywizje");
 }
@@ -244,7 +245,7 @@ export async function loadSeasonDraftBoard(
       });
       columns.push({
         tier: t,
-        label: labelByTier.get(t) ?? `Tier ${t}`,
+        label: labelByTier.get(t) ?? `Dywizja ${t}`,
         players,
       });
     }
@@ -312,7 +313,7 @@ export async function finalizeSeasonTransition(
     for (const col of draft.columns) {
       if (col.players.length !== DRAFT_TARGET_SIZE) {
         return {
-          error: `Tier ${col.tier} ma ${col.players.length}/${DRAFT_TARGET_SIZE} — wyrównaj tablicę.`,
+          error: `Dywizja ${col.tier} ma ${col.players.length}/${DRAFT_TARGET_SIZE} — wyrównaj tablicę.`,
         };
       }
     }
@@ -478,12 +479,12 @@ export async function finalizeSeasonTransition(
           const players = byTier.get(t) ?? [];
           if (players.length !== DRAFT_TARGET_SIZE) {
             return {
-              error: `Piramida ${pyramidId} Tier ${t}: ${players.length}/${DRAFT_TARGET_SIZE} — wyrównaj lub rozlicz tę piramidę ręcznie (obecnie finalizacja wymaga 10/10 też w innych piramidach).`,
+              error: `Piramida ${pyramidId} Dywizja ${t}: ${players.length}/${DRAFT_TARGET_SIZE} — wyrównaj lub rozlicz tę piramidę ręcznie (obecnie finalizacja wymaga 10/10 też w innych piramidach).`,
             };
           }
           columns.push({
             tier: t,
-            label: oldByTier.get(t)?.name ?? `Tier ${t}`,
+            label: oldByTier.get(t)?.name ?? `Dywizja ${t}`,
             players,
           });
         }
@@ -504,7 +505,7 @@ export async function finalizeSeasonTransition(
           .select("id, tier")
           .single();
         if (ndErr || !nd) {
-          return { error: ndErr?.message ?? `Błąd dywizji Tier ${col.tier}.` };
+          return { error: ndErr?.message ?? `Błąd dywizji D${col.tier}.` };
         }
         newDivByTier.set(col.tier, nd.id);
       }
@@ -514,7 +515,7 @@ export async function finalizeSeasonTransition(
         if (!newDivId) continue;
         if (col.players.length !== DRAFT_TARGET_SIZE) {
           return {
-            error: `Tier ${col.tier}: ${col.players.length}/${DRAFT_TARGET_SIZE}.`,
+            error: `Dywizja ${col.tier}: ${col.players.length}/${DRAFT_TARGET_SIZE}.`,
           };
         }
 

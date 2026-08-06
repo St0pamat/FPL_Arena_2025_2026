@@ -74,6 +74,38 @@ export interface SeasonSummaryPlayerRow {
   fromDivisionName: string;
   toDivisionHint: string;
   team: PublicTeam;
+  divisionId: string;
+}
+
+/** Mecz barażowy GW19/38 w raporcie EoS. */
+export interface SeasonSummaryPlayoffMatch {
+  fixtureId: string;
+  gameweek: number;
+  higherDivisionName: string;
+  lowerDivisionName: string;
+  higherTier: number;
+  lowerTier: number;
+  higher: SeasonSummaryPlayerRow;
+  lower: SeasonSummaryPlayerRow;
+  higherFpl: number | null;
+  lowerFpl: number | null;
+  winnerTeamId: string | null;
+  /** Status dla strony wyższej ligi */
+  higherOutcomeLabel: string;
+  /** Status dla strony niższej ligi */
+  lowerOutcomeLabel: string;
+}
+
+/** Blok ruchów ligowych dla jednej dywizji. */
+export interface SeasonSummaryDivisionBlock {
+  divisionId: string;
+  divisionName: string;
+  tier: number;
+  champion: SeasonSummaryPlayerRow | null;
+  directPromotions: SeasonSummaryPlayerRow[];
+  directRelegations: SeasonSummaryPlayerRow[];
+  /** Baraż o utrzymanie w tej dywizji (8. vs 3. z niższej) */
+  playoff: SeasonSummaryPlayoffMatch | null;
 }
 
 export interface PublicSeasonSummaryPayload {
@@ -83,9 +115,17 @@ export interface PublicSeasonSummaryPayload {
   is_archived: boolean;
   /** true = pokaż kłódkę, bez obliczeń */
   locked: boolean;
+  /** Podium najwyższej ligi (PL): 1–2–3 */
   podium: SeasonSummaryPlayerRow[];
+  /** Mistrzowie każdej dywizji (poz. 1) */
+  divisionChampions: SeasonSummaryPlayerRow[];
+  /** Ruchy ligowe pogrupowane per dywizja (sort tier ASC) */
+  divisionBlocks: SeasonSummaryDivisionBlock[];
+  /** @deprecated — używaj divisionBlocks; zostawione dla kompatybilności */
   promotions: SeasonSummaryPlayerRow[];
+  /** @deprecated — używaj divisionBlocks */
   relegations: SeasonSummaryPlayerRow[];
+  playoffGameweek: number | null;
   error?: string | null;
 }
 
@@ -96,6 +136,7 @@ export interface PublicTeam {
   fpl_id: string | null;
   fpl_team_name: string | null;
   chosen_club: string;
+  previous_season_or?: number | null;
 }
 
 export type FormResult = "W" | "D" | "L";
@@ -144,6 +185,8 @@ export interface PublicFixture {
   home_median_bonus: number;
   away_median_bonus: number;
   is_finished: boolean;
+  /** false = brudnopis / jeszcze nie w Wynikach publicznych */
+  is_published?: boolean;
   is_playoff?: boolean;
   tiebreaker_home_goals?: number | null;
   tiebreaker_away_goals?: number | null;
@@ -167,9 +210,18 @@ export interface DivisionStandingsPayload {
   hasDiscordWebhook: boolean;
   teams: PublicTeam[];
   standings: PublicStandingRow[];
+  /** Pełny terminarz (również nieopublikowane) — zakładka Terminarz */
   fixtures: PublicFixture[];
+  /** Tylko opublikowane / rozliczone — Wyniki, Statystyki */
+  publishedFixtures: PublicFixture[];
   finishedGameweeks: number[];
+  /**
+   * Wszystkie wygenerowane numery kolejek w fixtures (np. 1–19),
+   * BEZ filtra is_published — mianownik licznika „Kolejka X / Y”.
+   */
+  availableGameweeks: number[];
   maxGameweek: number;
+  /** Najwyższa opublikowana/ukończona kolejka (licznik X) */
   playedGwCount: number;
   averageFpl: number | null;
   leader: PublicStandingRow | null;

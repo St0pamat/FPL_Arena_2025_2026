@@ -329,7 +329,7 @@ export function SeasonSimulatorPanel({
                     </span>
                     <span>
                       <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                        Tier {d.tier}
+                        Dywizja {d.tier}
                       </span>
                       <span className="font-semibold">{d.name}</span>
                     </span>

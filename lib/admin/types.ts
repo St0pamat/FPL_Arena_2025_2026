@@ -46,7 +46,9 @@ export interface Division {
  * - FPL Manager    → manager_name (alias: fpl_manager_name)
  * - FPL ID         → fpl_id (TEXT w DB; wartość numeryczna z Excela)
  * - OR             → previous_season_or
- * - Status         → is_active
+ * - Status         → status (+ is_active)
+ * - x.com          → x_com
+ * - email          → email
  */
 export interface Team {
   id: string;
@@ -68,8 +70,14 @@ export interface Team {
   /** Excel: Discord Club (np. Arsenal, Derby County) */
   chosen_club: string;
   fee_paid: boolean;
-  /** Excel: Status → aktywny uczestnik */
+  /** Excel: Status → aktywny uczestnik (boolean) */
   is_active?: boolean;
+  /** Excel: Status (np. Aktywny) */
+  status?: string;
+  /** Excel: x.com */
+  x_com?: string | null;
+  /** Excel: e-mail */
+  email?: string | null;
   /** Excel: OR (Overall Rank poprzedniego sezonu) */
   previous_season_or?: number | null;
   created_at: string;

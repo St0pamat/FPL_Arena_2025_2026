@@ -9,5 +9,6 @@ export {
 export type { NaMinusieMainNavId, NaMinusieNavId } from "./navigation";
 export { ENGLISH_CLUBS_CATALOG, LEAGUE_ORDER } from "./englishClubsCatalog";
 export type { CatalogClub, EnglishLeague } from "./englishClubsCatalog";
+export { divisionCode, divisionLabel, divisionMoveHint } from "./divisionLabels";
 export { NM, NM_BELOW_STICKY_HEADER, NM_CONTAINER } from "./theme";
 export { useActiveSection } from "./useActiveSection";

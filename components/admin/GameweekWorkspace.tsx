@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import {
   CheckCircle2,
   ClipboardPaste,
@@ -60,7 +61,8 @@ function errorMessage(err: unknown, fallback: string): string {
   return fallback;
 }
 
-/** Mediana i H2H liczone osobno per dywizja. Baraże: tylko H2H, bez mediany. */
+/** Mediana i H2H liczone osobno per dywizja. Baraże: tylko H2H, bez mediany.
+ * Źródło prawdy = lokalny `scores` (bez fallbacku do starych props.fixtures). */
 function liveRecalcByDivision(
   fixtures: WorkspaceFixtureRow[],
   scores: Record<string, number>,
@@ -83,8 +85,8 @@ function liveRecalcByDivision(
       if (f.is_playoff || isPlayoffGameweek(f.gameweek)) continue;
       const hp = scores[f.home_team_id];
       const ap = scores[f.away_team_id];
-      if (Number.isFinite(hp)) pts.set(f.home_team_id, hp);
-      if (Number.isFinite(ap)) pts.set(f.away_team_id, ap);
+      if (Number.isFinite(hp)) pts.set(f.home_team_id, hp!);
+      if (Number.isFinite(ap)) pts.set(f.away_team_id, ap!);
     }
     const winners = skipMedian ? new Set<string>() : computeMedianBonusSet(pts, 5);
 
@@ -92,31 +94,29 @@ function liveRecalcByDivision(
       const playoff = f.is_playoff || isPlayoffGameweek(f.gameweek);
       const homeFpl = scores[f.home_team_id];
       const awayFpl = scores[f.away_team_id];
-      if (!Number.isFinite(homeFpl) || !Number.isFinite(awayFpl)) {
+      const homeOk = Number.isFinite(homeFpl);
+      const awayOk = Number.isFinite(awayFpl);
+
+      if (!homeOk || !awayOk) {
         out.push({
           ...f,
-          home_fpl_points: Number.isFinite(homeFpl) ? homeFpl : f.home_fpl_points,
-          away_fpl_points: Number.isFinite(awayFpl) ? awayFpl : f.away_fpl_points,
-          home_median_bonus: playoff
-            ? 0
-            : winners.has(f.home_team_id)
-              ? 1
-              : f.home_median_bonus,
-          away_median_bonus: playoff
-            ? 0
-            : winners.has(f.away_team_id)
-              ? 1
-              : f.away_median_bonus,
+          home_fpl_points: homeOk ? homeFpl! : null,
+          away_fpl_points: awayOk ? awayFpl! : null,
+          home_h2h_points: 0,
+          away_h2h_points: 0,
+          home_median_bonus: 0,
+          away_median_bonus: 0,
+          is_finished: false,
         });
         continue;
       }
-      const h2h = resolveH2h(homeFpl, awayFpl);
+      const h2h = resolveH2h(homeFpl!, awayFpl!);
       if (playoff) {
         if (homeFpl === awayFpl) {
           out.push({
             ...f,
-            home_fpl_points: homeFpl,
-            away_fpl_points: awayFpl,
+            home_fpl_points: homeFpl!,
+            away_fpl_points: awayFpl!,
             home_h2h_points: 0,
             away_h2h_points: 0,
             home_median_bonus: 0,
@@ -126,8 +126,8 @@ function liveRecalcByDivision(
         } else {
           out.push({
             ...f,
-            home_fpl_points: homeFpl,
-            away_fpl_points: awayFpl,
+            home_fpl_points: homeFpl!,
+            away_fpl_points: awayFpl!,
             home_h2h_points: h2h.home === 1 ? 0 : h2h.home,
             away_h2h_points: h2h.away === 1 ? 0 : h2h.away,
             home_median_bonus: 0,
@@ -135,15 +135,15 @@ function liveRecalcByDivision(
             is_finished: true,
             tiebreaker_method: "FPL_POINTS",
             tiebreaker_winner_id:
-              homeFpl > awayFpl ? f.home_team_id : f.away_team_id,
+              homeFpl! > awayFpl! ? f.home_team_id : f.away_team_id,
           });
         }
         continue;
       }
       out.push({
         ...f,
-        home_fpl_points: homeFpl,
-        away_fpl_points: awayFpl,
+        home_fpl_points: homeFpl!,
+        away_fpl_points: awayFpl!,
         home_h2h_points: h2h.home,
         away_h2h_points: h2h.away,
         home_median_bonus: winners.has(f.home_team_id) ? 1 : 0,
@@ -153,6 +153,16 @@ function liveRecalcByDivision(
     }
   }
   return out;
+}
+
+function fixtureBothScoresFilled(
+  f: WorkspaceFixtureRow,
+  scores: Record<string, number>,
+): boolean {
+  return (
+    Number.isFinite(scores[f.home_team_id]) &&
+    Number.isFinite(scores[f.away_team_id])
+  );
 }
 
 function ScoreCell({
@@ -311,6 +321,7 @@ export function GameweekWorkspace({
   seasons: Season[];
   divisions: Division[];
 }) {
+  const router = useRouter();
   const defaultSeason = useMemo(() => {
     const sorted = [...seasons].sort((a, b) => {
       const aa = a.is_archived ? 1 : 0;
@@ -348,6 +359,13 @@ export function GameweekWorkspace({
   );
   const [pasteOpen, setPasteOpen] = useState(false);
   const [pasteRaw, setPasteRaw] = useState("");
+  const [pasteImportGw, setPasteImportGw] = useState(gw);
+  const [pasteResult, setPasteResult] = useState<{
+    type: "ok" | "err";
+    text: string;
+    unmatched?: string[];
+    parseSkipped?: string[];
+  } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isActionPending, setIsActionPending] = useState(false);
 
@@ -406,17 +424,40 @@ export function GameweekWorkspace({
     return liveRecalcByDivision(bundle.fixtures, scores);
   }, [bundle, scores]);
 
+  const liveFinishedTotal = useMemo(() => {
+    if (!bundle) return 0;
+    return bundle.fixtures.filter((f) => fixtureBothScoresFilled(f, scores)).length;
+  }, [bundle, scores]);
+
   const divisionTabs = useMemo(() => {
-    if (bundle?.divisions.length) return bundle.divisions;
-    return seasonDivisions.map((d) => ({
-      id: d.id,
-      name: d.name,
-      tier: d.tier,
-      fixtureCount: 0,
-      finishedCount: 0,
-      publishedCount: 0,
-    }));
-  }, [bundle, seasonDivisions]);
+    const base = bundle?.divisions.length
+      ? bundle.divisions
+      : seasonDivisions.map((d) => ({
+          id: d.id,
+          name: d.name,
+          tier: d.tier,
+          fixtureCount: 0,
+          finishedCount: 0,
+          publishedCount: 0,
+        }));
+
+    if (!bundle) return base;
+
+    return base.map((d) => {
+      const rows = bundle.fixtures.filter((f) => {
+        if (f.division_id === d.id) return true;
+        if (!isPlayoffGameweek(gw)) return false;
+        return (
+          f.home_team?.division_id === d.id || f.away_team?.division_id === d.id
+        );
+      });
+      return {
+        ...d,
+        fixtureCount: rows.length || d.fixtureCount,
+        finishedCount: rows.filter((f) => fixtureBothScoresFilled(f, scores)).length,
+      };
+    });
+  }, [bundle, seasonDivisions, scores, gw]);
 
   const activeRows = useMemo(() => {
     if (!isPlayoffGameweek(gw)) {
@@ -451,6 +492,49 @@ export function GameweekWorkspace({
     });
   }
 
+  function clearLocalScoresForFixtures(fixtures: WorkspaceFixtureRow[]) {
+    const teamIds = new Set<string>();
+    for (const f of fixtures) {
+      teamIds.add(f.home_team_id);
+      teamIds.add(f.away_team_id);
+    }
+    setScores((prev) => {
+      const next = { ...prev };
+      for (const id of teamIds) delete next[id];
+      return next;
+    });
+    setBundle((prev) => {
+      if (!prev) return prev;
+      const clearedIds = new Set(fixtures.map((f) => f.id));
+      return {
+        ...prev,
+        fixtures: prev.fixtures.map((f) =>
+          clearedIds.has(f.id)
+            ? {
+                ...f,
+                home_fpl_points: null,
+                away_fpl_points: null,
+                home_h2h_points: 0,
+                away_h2h_points: 0,
+                home_median_bonus: 0,
+                away_median_bonus: 0,
+                is_finished: false,
+              }
+            : f,
+        ),
+        finishedCount: Math.max(0, prev.finishedCount - fixtures.filter((f) => f.is_finished).length),
+        divisions: prev.divisions.map((d) => {
+          const clearedInDiv = fixtures.filter((f) => f.division_id === d.id).length;
+          if (!clearedInDiv) return d;
+          return {
+            ...d,
+            finishedCount: Math.max(0, d.finishedCount - clearedInDiv),
+          };
+        }),
+      };
+    });
+  }
+
   async function run(
     label: string,
     fn: () => Promise<{
@@ -459,6 +543,7 @@ export function GameweekWorkspace({
       unmatched?: string[];
       gameweek?: number;
     }>,
+    opts?: { refreshRouter?: boolean },
   ) {
     setMessage(null);
     setIsActionPending(true);
@@ -471,6 +556,8 @@ export function GameweekWorkspace({
             ? `${r.error}\n\n${r.unmatched.slice(0, 15).join("\n")}`
             : r.error,
         );
+        // Przywróć stan z serwera (np. po optymistycznym clearze)
+        await load(gw);
         return;
       }
       const targetGw = r.gameweek ?? gw;
@@ -485,10 +572,48 @@ export function GameweekWorkspace({
           : ok,
       );
       await load(targetGw);
+      if (opts?.refreshRouter) {
+        router.refresh();
+      }
     } catch (e) {
       const text = errorMessage(e, `Błąd: ${label}`);
       setMessage({ type: "err", text });
       window.alert(text);
+      await load(gw);
+    } finally {
+      setIsActionPending(false);
+    }
+  }
+
+  async function runPasteImport() {
+    if (!seasonId || !pasteRaw.trim()) return;
+    setPasteResult(null);
+    setIsActionPending(true);
+    try {
+      const r = await importGlobalGameweekResults(pasteRaw, seasonId, pasteImportGw);
+      if (r.error) {
+        setPasteResult({
+          type: "err",
+          text: r.error,
+          unmatched: r.unmatched,
+          parseSkipped: r.parseSkipped,
+        });
+        return;
+      }
+      const targetGw = r.gameweek ?? pasteImportGw;
+      setGw(targetGw);
+      setPasteResult({
+        type: "ok",
+        text: r.success ?? "Import zakończony.",
+        unmatched: r.unmatched,
+        parseSkipped: r.parseSkipped,
+      });
+      await load(targetGw);
+    } catch (e) {
+      setPasteResult({
+        type: "err",
+        text: errorMessage(e, "Błąd importu wyników."),
+      });
     } finally {
       setIsActionPending(false);
     }
@@ -510,7 +635,7 @@ export function GameweekWorkspace({
     <div className="space-y-6 pb-32">
       <section className="rounded-2xl border border-slate-700/50 bg-slate-900/70 p-5 sm:p-6">
         <p className="mb-4 text-[10px] font-black uppercase tracking-[0.25em] text-[#39FF14]">
-          Brudnopis kolejki · One-Box Import
+          Rozliczanie kolejki
         </p>
 
         <button
@@ -518,12 +643,14 @@ export function GameweekWorkspace({
           disabled={busy || !seasonId}
           onClick={() => {
             setPasteRaw("");
+            setPasteImportGw(gw);
+            setPasteResult(null);
             setPasteOpen(true);
           }}
           className="mb-5 inline-flex w-full items-center justify-center gap-3 rounded-2xl bg-[#39FF14] px-6 py-4 text-base font-black uppercase tracking-wider text-black transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto"
         >
           <ClipboardPaste className="h-5 w-5" />
-          Wklej Wyniki GW (Wszystkie Dywizje)
+          📋 Wklej wyniki ze strony FPL
         </button>
 
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -551,7 +678,7 @@ export function GameweekWorkspace({
           </label>
           <label className="block">
             <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500">
-              Kolejka (podgląd / fallback)
+              Podgląd kolejki
             </span>
             <select
               className={selectClass}
@@ -627,8 +754,19 @@ export function GameweekWorkspace({
               ) {
                 return;
               }
-              void run("Wyczyszczono dywizję", () =>
-                clearDivisionGameweekDraft(seasonId, activeDivisionId, gw),
+              const toClear = (bundle?.fixtures ?? []).filter((f) => {
+                if (f.division_id === activeDivisionId) return true;
+                if (!isPlayoffGameweek(gw)) return false;
+                return (
+                  f.home_team?.division_id === activeDivisionId ||
+                  f.away_team?.division_id === activeDivisionId
+                );
+              });
+              clearLocalScoresForFixtures(toClear);
+              void run(
+                "Wyczyszczono dywizję",
+                () => clearDivisionGameweekDraft(seasonId, activeDivisionId, gw),
+                { refreshRouter: true },
               );
             }}
             className="inline-flex items-center gap-2 rounded-xl border border-rose-500/30 px-4 py-2.5 text-xs font-black uppercase tracking-wider text-rose-300 disabled:opacity-40"
@@ -647,8 +785,11 @@ export function GameweekWorkspace({
               ) {
                 return;
               }
-              void run("Wyczyszczono GW", () =>
-                clearSeasonGameweekDraft(seasonId, gw),
+              clearLocalScoresForFixtures(bundle?.fixtures ?? []);
+              void run(
+                "Wyczyszczono GW",
+                () => clearSeasonGameweekDraft(seasonId, gw),
+                { refreshRouter: true },
               );
             }}
             className="inline-flex items-center gap-2 rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-2.5 text-xs font-black uppercase tracking-wider text-rose-300 disabled:opacity-40"
@@ -659,9 +800,9 @@ export function GameweekWorkspace({
         </div>
 
         <p className="mt-3 text-xs text-slate-500">
-          Format wklejki:{" "}
-          <strong className="text-slate-400">GW | FPL Team | FPL Manager | Punkty</strong>{" "}
-          (każdy wiersz osobno, wiele kolejek OK). Silnik: Mediana 2+1 (H2H 2/1/0 + bonus).
+          Skopiuj tabelę ligową z{" "}
+          <strong className="text-slate-400">fantasy.premierleague.com</strong> — system sam
+          odnajdzie graczy i punkty. Po imporcie możesz ręcznie poprawić wyniki w tabeli poniżej.
         </p>
 
         {message ? (
@@ -775,7 +916,7 @@ export function GameweekWorkspace({
                       : "border border-slate-700 bg-slate-950 text-slate-300 hover:border-[#39FF14]/40"
                   }`}
                 >
-                  <span className="block">T{d.tier} · {d.name}</span>
+                  <span className="block">D{d.tier} · {d.name}</span>
                   <span
                     className={`mt-0.5 block text-[10px] font-semibold normal-case tracking-normal ${
                       active ? "text-black/70" : "text-slate-500"
@@ -822,7 +963,7 @@ export function GameweekWorkspace({
             >
               {statusLabel}
               {bundle
-                ? ` · ${bundle.finishedCount}/${bundle.fixtures.length} meczów`
+                ? ` · ${liveFinishedTotal}/${bundle.fixtures.length} meczów`
                 : ""}
             </p>
           </div>
@@ -855,18 +996,26 @@ export function GameweekWorkspace({
 
       {pasteOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-          <div className="flex max-h-[92vh] w-full max-w-2xl flex-col rounded-2xl border border-slate-700 bg-slate-950 p-5 shadow-2xl">
-            <div className="mb-3 flex items-start justify-between gap-3">
+          <div className="flex max-h-[92vh] w-full max-w-2xl flex-col overflow-y-auto rounded-2xl border border-slate-700 bg-slate-950 p-5 shadow-2xl">
+            <div className="mb-4 flex items-start justify-between gap-3">
               <div>
                 <h3 className="text-lg font-bold text-white">
-                  Wklej Wyniki GW — wszystkie dywizje
+                  Import wyników ze strony FPL
                 </h3>
-                <p className="mt-2 text-xs leading-relaxed text-slate-400">
-                  Wklej wyniki. Kolumny:{" "}
-                  <code className="text-slate-300">GW | FPL Team | FPL Manager | Punkty</code>.
-                  Możesz wkleić wiele kolejek naraz (GW1, GW2…). System sam mapuje graczy do
-                  dywizji i przelicza H2H + medianę.
-                </p>
+                <div className="mt-3 rounded-xl border border-slate-800 bg-slate-900/60 px-4 py-3 text-xs leading-relaxed text-slate-300">
+                  <p className="font-bold text-white">Jak importować wyniki?</p>
+                  <ol className="mt-2 list-decimal space-y-1.5 pl-4">
+                    <li>Wejdź na oficjalną stronę swojej ligi Classic w FPL.</li>
+                    <li>
+                      Zaznacz myszką całą tabelę z wynikami graczy i skopiuj (Ctrl+C / Cmd+C).
+                    </li>
+                    <li>
+                      Wybierz numer kolejki poniżej, wklej tekst w pole (Ctrl+V / Cmd+V) i
+                      kliknij Importuj. Nie przejmuj się „śmieciami” tekstowymi – system sam
+                      odnajdzie graczy i punkty!
+                    </li>
+                  </ol>
+                </div>
               </div>
               <button
                 type="button"
@@ -877,35 +1026,104 @@ export function GameweekWorkspace({
                 <X className="h-5 w-5" />
               </button>
             </div>
+
+            <label className="mb-3 block">
+              <span className="mb-1.5 block text-xs font-black uppercase tracking-wider text-[#39FF14]">
+                Importujesz wyniki do kolejki
+              </span>
+              <select
+                className={`${selectClass} text-base font-bold`}
+                value={pasteImportGw}
+                onChange={(e) => {
+                  setPasteImportGw(Number(e.target.value));
+                  setPasteResult(null);
+                }}
+                disabled={busy}
+              >
+                {gwOptions.map((n) => (
+                  <option key={n} value={n}>
+                    {gameweekLabel(n)}
+                  </option>
+                ))}
+              </select>
+            </label>
+
             <textarea
               value={pasteRaw}
-              onChange={(e) => setPasteRaw(e.target.value)}
-              rows={16}
-              className="min-h-[280px] w-full flex-1 rounded-xl border border-slate-700 bg-slate-900 p-3 font-mono text-xs text-white outline-none focus:border-[#39FF14]"
-              placeholder={`GW1\tKapcie Kłapcia\tMateusz Stopczyński\t85\nGW1\tFootball Heritage\tChef Juan\t82\nGW2\tKapcie Kłapcia\tMateusz Stopczyński\t55`}
+              onChange={(e) => {
+                setPasteRaw(e.target.value);
+                setPasteResult(null);
+              }}
+              rows={14}
+              className="min-h-[240px] w-full flex-1 rounded-xl border border-slate-700 bg-slate-900 p-3 font-mono text-xs text-white outline-none focus:border-[#39FF14]"
+              placeholder={
+                "Wklej tutaj skopiowaną tabelę z fantasy.premierleague.com…\n\nPrzykład wiersza:\n1\tFPLA Kapcie\tSt0pa | FPL Arena\t85\t85"
+              }
             />
-            <div className="mt-3 flex justify-end gap-2">
+
+            {pasteResult ? (
+              <div
+                className={`mt-3 flex h-auto min-h-fit flex-col gap-2 rounded-lg border p-4 text-sm leading-relaxed whitespace-pre-wrap break-words sm:text-base ${
+                  pasteResult.type === "ok"
+                    ? "border-emerald-500/30 bg-emerald-950/30 text-emerald-200"
+                    : "border-rose-500/30 bg-rose-950/40 text-rose-200"
+                }`}
+              >
+                <p className="font-semibold">{pasteResult.text}</p>
+                {pasteResult.unmatched?.length ? (
+                  <div className="flex flex-col gap-1">
+                    <p className="font-bold text-amber-200">Nierozpoznani gracze:</p>
+                    <ul className="list-disc space-y-1 pl-4 text-amber-100/90">
+                      {pasteResult.unmatched.map((u) => (
+                        <li key={u} className="break-words whitespace-pre-wrap">
+                          {u}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+                {pasteResult.parseSkipped?.length ? (
+                  <details className="text-slate-400">
+                    <summary className="cursor-pointer font-semibold">
+                      Pominięte wiersze ({pasteResult.parseSkipped.length})
+                    </summary>
+                    <ul className="mt-2 list-disc space-y-1 pl-4">
+                      {pasteResult.parseSkipped.map((s) => (
+                        <li key={s} className="break-words whitespace-pre-wrap">
+                          {s}
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                ) : null}
+              </div>
+            ) : null}
+
+            <div className="mt-4 flex justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setPasteOpen(false)}
                 className="rounded-xl px-4 py-2 text-xs font-bold uppercase text-slate-400"
               >
-                Anuluj
+                {pasteResult?.type === "ok" ? "Zamknij" : "Anuluj"}
               </button>
               <button
                 type="button"
                 disabled={busy || !pasteRaw.trim() || !seasonId}
-                onClick={() => {
-                  const payload = pasteRaw;
-                  setPasteOpen(false);
-                  void run("Import OK", () =>
-                    importGlobalGameweekResults(payload, seasonId, gw),
-                  );
-                }}
+                onClick={() => void runPasteImport()}
                 className="inline-flex items-center gap-2 rounded-xl bg-[#39FF14] px-4 py-2 text-xs font-black uppercase text-black disabled:opacity-40"
               >
-                <CheckCircle2 className="h-4 w-4" />
-                Importuj i przelicz wszystkie dywizje
+                {isActionPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Importuję…
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="h-4 w-4" />
+                    Importuj do {gameweekLabel(pasteImportGw)}
+                  </>
+                )}
               </button>
             </div>
           </div>
