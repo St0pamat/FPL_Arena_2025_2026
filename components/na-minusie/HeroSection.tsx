@@ -28,9 +28,10 @@ export function HeroSection() {
           <p>
             W tradycyjnych ligach Head to Head ślepy los i pechowy terminarz potrafią odebrać całą
             satysfakcję z gry. W Na Minusie ™ zmieniamy zasady – łączymy bezpośrednią rywalizację z
-            dodatkowym punktowaniem za dobrą formę. Wybierz swój ulubiony klub – od Premier League po
-            najniższe ligi angielskie, a nawet kultowe zespoły znane z seriali, filmów, komiksów czy
-            książek. Immersja i wspólna zabawa na Discordzie wchodzą na zupełnie inny poziom.
+            dodatkowym punktowaniem za dobrą formę. Wybierz swój ulubiony angielski klub piłkarski –
+            od Premier League po najniższe ligi, a nawet kultowe drużyny z seriali, filmów, komiksów
+            czy książek (też angielskie kluby piłkarskie). Klimat i wspólna zabawa na Discordzie
+            wchodzą na zupełnie inny poziom.
           </p>
         </div>
 
