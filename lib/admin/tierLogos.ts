@@ -1,13 +1,23 @@
 import { slugifyClubName } from "@/lib/admin/clubLogos";
 
+/** Seed / git — logo wersjonowane w repo */
 export const TIER_LOGOS_DIR = "tier-logos";
 export const TIER_LOGOS_PUBLIC_PATH = `/${TIER_LOGOS_DIR}`;
 export const TIER_LOGOS_INDEX = "index.json";
 
+/**
+ * Runtime uploads (produkcja PM2) — poza git.
+ * Zapis: public/uploads/tier-logos/
+ * URL: /uploads/tier-logos/… (rewrite → API)
+ */
+export const TIER_LOGOS_UPLOAD_DIR = "uploads/tier-logos";
+export const TIER_LOGOS_UPLOAD_PUBLIC_PATH = "/uploads/tier-logos";
+export const TIER_LOGOS_UPLOAD_INDEX = "index.json";
+
 export const TIER_LOGO_ACCEPT = ".png,.jpg,.jpeg,.webp,.gif";
 export const TIER_LOGO_MAX_BYTES = 2 * 1024 * 1024;
 export const TIER_LOGO_HINT =
-  "PNG z przezroczystością, kwadrat ~400×400. Osobna biblioteka od herbów klubowych.";
+  "PNG z przezroczystością, kwadrat ~400×400. Osobna biblioteka od herbów klubowych. Upload idzie do /uploads/tier-logos/ (jak herby klubów).";
 
 /** Stała piramida Na Minusie ™ — kolejność = Tier 1…5 */
 export const PYRAMID_TIER_NAMES = [
@@ -34,20 +44,43 @@ export interface TierLogoRecord {
   tierKey: string;
   tierName: string;
   fileName: string;
+  /**
+   * Relatywny URL przeglądarki (np. /uploads/tier-logos/the-fa-ranking.png).
+   * Brak = seed z /tier-logos/{fileName}.
+   */
+  publicUrl?: string;
   updatedAt: string;
 }
 
 export interface TierLogosIndex {
   version: 1;
   logos: TierLogoRecord[];
+  /** Klucze usunięte z panelu — ukrywa też seed po git pull. */
+  deletedKeys?: string[];
 }
 
 export function slugifyTierName(name: string): string {
   return slugifyClubName(name);
 }
 
+/** Seed URL: /tier-logos/x.png */
 export function tierLogoPublicUrl(fileName: string): string {
-  return `${TIER_LOGOS_PUBLIC_PATH}/${fileName}`;
+  const clean = String(fileName ?? "").replace(/^\/+/, "");
+  return `${TIER_LOGOS_PUBLIC_PATH}/${clean}`.replace(/([^:]\/)\/+/g, "$1");
+}
+
+export function tierLogoUploadPublicUrl(fileName: string): string {
+  const clean = String(fileName ?? "").replace(/^\/+/, "");
+  return `${TIER_LOGOS_UPLOAD_PUBLIC_PATH}/${clean}`.replace(/([^:]\/)\/+/g, "$1");
+}
+
+/** Preferuj publicUrl (upload), inaczej seed. */
+export function resolveTierLogoSrc(logo: TierLogoRecord): string {
+  const fromRecord = (logo.publicUrl ?? "").trim();
+  if (fromRecord) {
+    return fromRecord.replace(/([^:]\/)\/+/g, "$1");
+  }
+  return tierLogoPublicUrl(logo.fileName);
 }
 
 export function findTierLogo(
@@ -66,7 +99,45 @@ export function findTierLogo(
 }
 
 export function emptyTierLogosIndex(): TierLogosIndex {
-  return { version: 1, logos: [] };
+  return { version: 1, logos: [], deletedKeys: [] };
+}
+
+/** Merge seed + runtime: runtime wygrywa po tierKey; deletedKeys ukrywa seed. */
+export function mergeTierLogoIndexes(
+  seed: TierLogosIndex,
+  runtime: TierLogosIndex,
+): TierLogosIndex {
+  const deleted = new Set(
+    [...(seed.deletedKeys ?? []), ...(runtime.deletedKeys ?? [])].filter(Boolean),
+  );
+  const order = new Map(
+    [
+      "premier-division",
+      "championship",
+      "league-one",
+      "league-two",
+      "national-league",
+      "the-fa-ranking",
+    ].map((k, i) => [k, i]),
+  );
+  const map = new Map<string, TierLogoRecord>();
+  for (const l of seed.logos) {
+    if (!deleted.has(l.tierKey)) map.set(l.tierKey, l);
+  }
+  for (const l of runtime.logos) {
+    if (deleted.has(l.tierKey)) {
+      map.delete(l.tierKey);
+      continue;
+    }
+    map.set(l.tierKey, l);
+  }
+  return {
+    version: 1,
+    logos: [...map.values()].sort(
+      (a, b) => (order.get(a.tierKey) ?? 99) - (order.get(b.tierKey) ?? 99),
+    ),
+    deletedKeys: [...deleted].sort(),
+  };
 }
 
 export function isPyramidTierName(name: string): name is PyramidTierName {

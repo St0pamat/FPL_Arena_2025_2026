@@ -23,9 +23,11 @@ export default async function AdminTierLogosPage() {
         </p>
         <h1 className="mt-2 text-3xl font-extrabold text-white">Logotypy Dywizji</h1>
         <p className="mt-2 max-w-2xl text-sm text-slate-400">
-          Oficjalne logo lig (Premier Division → National League) oraz The FA Ranking — do
-          przycisków w Strefie Gracza i sekcji Piramida Ligowa. Osobna biblioteka od herbów
-          klubowych.
+          Oficjalne logo lig (Premier Division → National League) oraz The FA Ranking. Upload działa
+          jak herby klubów: zapis do{" "}
+          <code className="text-slate-300">public/uploads/tier-logos/</code> + API (PM2). Seed z
+          gita zostaje w{" "}
+          <code className="text-slate-300">public/tier-logos/</code>.
         </p>
       </header>
 

@@ -11,7 +11,7 @@ import {
   TIER_LOGO_ACCEPT,
   TIER_LOGO_HINT,
   findTierLogo,
-  tierLogoPublicUrl,
+  resolveTierLogoSrc,
   type TierLogoRecord,
 } from "@/lib/admin/tierLogos";
 import { INITIAL_ACTION_STATE } from "@/lib/admin/types";
@@ -71,7 +71,7 @@ export function TierLogoManager({ logos }: { logos: TierLogoRecord[] }) {
   }
 
   function handleDelete(logo: TierLogoRecord) {
-    if (!confirm(`Usunąć logo „${logo.tierName}”? Plik zniknie z public/tier-logos/.`)) return;
+    if (!confirm(`Usunąć logo „${logo.tierName}”? Plik zniknie z uploads/tier-logos/.`)) return;
     startTransition(async () => {
       const r = await deleteTierLogo(logo.tierKey);
       setToast(r.error ?? r.success ?? null);
@@ -165,7 +165,7 @@ export function TierLogoManager({ logos }: { logos: TierLogoRecord[] }) {
                 ) : current ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={tierLogoPublicUrl(current.fileName)}
+                    src={resolveTierLogoSrc(current)}
                     alt={current.tierName}
                     className="max-h-24 max-w-24 object-contain p-1"
                   />
@@ -264,7 +264,7 @@ export function TierLogoManager({ logos }: { logos: TierLogoRecord[] }) {
                   {logo ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
-                      src={tierLogoPublicUrl(logo.fileName)}
+                      src={resolveTierLogoSrc(logo)}
                       alt={name}
                       className="h-full w-full object-contain"
                     />
@@ -317,7 +317,7 @@ export function TierLogoManager({ logos }: { logos: TierLogoRecord[] }) {
               {faLogo ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={tierLogoPublicUrl(faLogo.fileName)}
+                  src={resolveTierLogoSrc(faLogo)}
                   alt={FA_RANKING_LOGO_NAME}
                   className="h-full w-full object-contain"
                 />

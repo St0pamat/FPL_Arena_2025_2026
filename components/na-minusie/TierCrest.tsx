@@ -5,7 +5,7 @@ import { Shield } from "lucide-react";
 import {
   findTierLogo,
   resolveTierLogoName,
-  tierLogoPublicUrl,
+  resolveTierLogoSrc,
   type TierLogoRecord,
 } from "@/lib/admin/tierLogos";
 
@@ -24,7 +24,7 @@ export function TierCrest({
   className?: string;
 }) {
   const hit = findTierLogo(logos, tierName);
-  const src = hit ? tierLogoPublicUrl(hit.fileName) : null;
+  const src = hit ? resolveTierLogoSrc(hit) : null;
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {

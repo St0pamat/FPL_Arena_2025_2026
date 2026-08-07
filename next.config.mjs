@@ -16,11 +16,20 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   async rewrites() {
-    // /uploads/logos/x.png → API (niezawodne serwowanie plików dopisanych po buildzie)
+    // Runtime uploads → API (niezawodne serwowanie plików dopisanych po buildzie)
     return [
       {
         source: "/uploads/logos/:file",
         destination: "/api/uploads/logos/:file",
+      },
+      {
+        source: "/uploads/tier-logos/:file",
+        destination: "/api/uploads/tier-logos/:file",
+      },
+      // Seed + stare uploady do public/tier-logos/ (też przez API z dysku)
+      {
+        source: "/tier-logos/:file",
+        destination: "/api/uploads/tier-logos/:file",
       },
     ];
   },
