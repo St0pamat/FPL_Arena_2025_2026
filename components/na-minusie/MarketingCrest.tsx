@@ -3,11 +3,11 @@
 import { useEffect, useState } from "react";
 import { Shield } from "lucide-react";
 import type { ClubLogoRecord } from "@/lib/admin/clubLogos";
-import { clubLogoPublicUrl, findClubLogo } from "@/lib/admin/clubLogos";
+import { findClubLogo, resolveClubLogoSrc } from "@/lib/admin/clubLogos";
 
 /**
  * Duży herb na stronie reklamowej.
- * Źródło: wyłącznie biblioteka admina (`/club-logos`) — bez zgadywania /images/clubs (brak 404).
+ * Źródło: biblioteka admina (seed /club-logos + uploady /uploads/logos).
  */
 export function MarketingCrest({
   clubName,
@@ -24,7 +24,7 @@ export function MarketingCrest({
   className?: string;
 }) {
   const hit = findClubLogo(logos, clubName);
-  const src = hit ? clubLogoPublicUrl(hit.fileName) : null;
+  const src = hit ? resolveClubLogoSrc(hit) : null;
   const [failed, setFailed] = useState(false);
   const initial = (clubName.trim().charAt(0) || "?").toUpperCase();
 

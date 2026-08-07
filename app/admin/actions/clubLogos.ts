@@ -9,20 +9,35 @@ import {
   CLUB_LOGO_MAX_BYTES,
   CLUB_LOGOS_DIR,
   CLUB_LOGOS_INDEX,
-  clubLogoPublicUrl,
+  CLUB_LOGOS_UPLOAD_DIR,
+  CLUB_LOGOS_UPLOAD_INDEX,
+  clubLogoUploadPublicUrl,
   emptyClubLogosIndex,
   findClubLogo,
+  mergeClubLogoIndexes,
+  resolveClubLogoSrc,
+  sanitizeUploadBaseName,
   slugifyClubName,
   type ClubLogoRecord,
   type ClubLogosIndex,
 } from "@/lib/admin/clubLogos";
 
-function logosDir() {
+/** Seed (git): public/club-logos */
+function seedDir() {
   return path.join(process.cwd(), "public", CLUB_LOGOS_DIR);
 }
 
-function indexPath() {
-  return path.join(logosDir(), CLUB_LOGOS_INDEX);
+function seedIndexPath() {
+  return path.join(seedDir(), CLUB_LOGOS_INDEX);
+}
+
+/** Runtime (produkcja): public/uploads/logos — process.cwd(), nie __dirname */
+function uploadDir() {
+  return path.join(process.cwd(), "public", CLUB_LOGOS_UPLOAD_DIR);
+}
+
+function uploadIndexPath() {
+  return path.join(uploadDir(), CLUB_LOGOS_UPLOAD_INDEX);
 }
 
 async function requireAuth() {
@@ -34,14 +49,13 @@ async function requireAuth() {
   return supabase;
 }
 
-async function ensureDir() {
-  await mkdir(logosDir(), { recursive: true });
+async function ensureUploadDir() {
+  await mkdir(uploadDir(), { recursive: true });
 }
 
-async function readIndex(): Promise<ClubLogosIndex> {
-  await ensureDir();
+async function readJsonIndex(filePath: string): Promise<ClubLogosIndex> {
   try {
-    const raw = await readFile(indexPath(), "utf8");
+    const raw = await readFile(filePath, "utf8");
     const parsed = JSON.parse(raw) as ClubLogosIndex;
     if (!parsed?.logos || !Array.isArray(parsed.logos)) return emptyClubLogosIndex();
     return { version: 1, logos: parsed.logos };
@@ -50,13 +64,27 @@ async function readIndex(): Promise<ClubLogosIndex> {
   }
 }
 
-async function writeIndex(index: ClubLogosIndex) {
-  await ensureDir();
-  const sorted = {
-    version: 1 as const,
+async function readSeedIndex(): Promise<ClubLogosIndex> {
+  return readJsonIndex(seedIndexPath());
+}
+
+async function readRuntimeIndex(): Promise<ClubLogosIndex> {
+  await ensureUploadDir();
+  return readJsonIndex(uploadIndexPath());
+}
+
+async function writeRuntimeIndex(index: ClubLogosIndex) {
+  await ensureUploadDir();
+  const sorted: ClubLogosIndex = {
+    version: 1,
     logos: [...index.logos].sort((a, b) => a.clubName.localeCompare(b.clubName, "pl")),
   };
-  await writeFile(indexPath(), `${JSON.stringify(sorted, null, 2)}\n`, "utf8");
+  await writeFile(uploadIndexPath(), `${JSON.stringify(sorted, null, 2)}\n`, "utf8");
+}
+
+async function readMergedIndex(): Promise<ClubLogosIndex> {
+  const [seed, runtime] = await Promise.all([readSeedIndex(), readRuntimeIndex()]);
+  return mergeClubLogoIndexes(seed, runtime);
 }
 
 function revalidateLogoSurfaces() {
@@ -68,6 +96,7 @@ function revalidateLogoSurfaces() {
   revalidatePath("/admin/struktura");
   revalidatePath("/admin/fixture-draw");
   revalidatePath("/na-minusie");
+  revalidatePath("/strefa-gracza");
 }
 
 function extFromFile(file: File): string | null {
@@ -75,12 +104,14 @@ function extFromFile(file: File): string | null {
   if (name.endsWith(".png") || file.type === "image/png") return "png";
   if (name.endsWith(".webp") || file.type === "image/webp") return "webp";
   if (name.endsWith(".gif") || file.type === "image/gif") return "gif";
-  if (name.endsWith(".jpg") || name.endsWith(".jpeg") || file.type === "image/jpeg") return "jpg";
+  if (name.endsWith(".jpg") || name.endsWith(".jpeg") || file.type === "image/jpeg") {
+    return "jpg";
+  }
   return null;
 }
 
 export async function listClubLogos(): Promise<ClubLogoRecord[]> {
-  const index = await readIndex();
+  const index = await readMergedIndex();
   return index.logos;
 }
 
@@ -88,7 +119,7 @@ export async function getClubLogoMap(): Promise<Record<string, string>> {
   const logos = await listClubLogos();
   const map: Record<string, string> = {};
   for (const logo of logos) {
-    const url = clubLogoPublicUrl(logo.fileName);
+    const url = resolveClubLogoSrc(logo);
     map[logo.clubKey] = url;
     map[slugifyClubName(logo.clubName)] = url;
     map[logo.clubName.toLowerCase()] = url;
@@ -99,7 +130,7 @@ export async function getClubLogoMap(): Promise<Record<string, string>> {
 export async function resolveClubLogoUrl(clubName: string): Promise<string | null> {
   const logos = await listClubLogos();
   const hit = findClubLogo(logos, clubName);
-  return hit ? clubLogoPublicUrl(hit.fileName) : null;
+  return hit ? resolveClubLogoSrc(hit) : null;
 }
 
 export async function upsertClubLogo(
@@ -127,41 +158,53 @@ export async function upsertClubLogo(
     const clubKey = slugifyClubName(clubName);
     if (!clubKey) return { error: "Niepoprawna nazwa klubu." };
 
-    const index = await readIndex();
-    const existing =
-      index.logos.find((l) => l.clubKey === (replaceKey || clubKey)) ??
-      index.logos.find((l) => l.clubKey === clubKey);
+    const runtime = await readRuntimeIndex();
+    const seed = await readSeedIndex();
+    const existingRuntime =
+      runtime.logos.find((l) => l.clubKey === (replaceKey || clubKey)) ??
+      runtime.logos.find((l) => l.clubKey === clubKey);
+    const existingSeed =
+      seed.logos.find((l) => l.clubKey === (replaceKey || clubKey)) ??
+      seed.logos.find((l) => l.clubKey === clubKey);
 
-    const fileName = `${clubKey}.${ext}`;
-    const abs = path.join(logosDir(), fileName);
+    const cleanBase = sanitizeUploadBaseName(clubKey);
+    const uniqueFileName = `${Date.now()}-${cleanBase}.${ext}`;
+    const abs = path.join(uploadDir(), uniqueFileName);
     const buffer = Buffer.from(await file.arrayBuffer());
-    await ensureDir();
+    await ensureUploadDir();
     await writeFile(abs, buffer);
 
-    // Usuń stary plik przy zmianie rozszerzenia / klucza
-    if (existing && existing.fileName !== fileName) {
+    // Usuń poprzedni plik runtime (seed w git zostawiamy)
+    if (existingRuntime?.fileName && existingRuntime.fileName !== uniqueFileName) {
       try {
-        await unlink(path.join(logosDir(), existing.fileName));
+        await unlink(path.join(uploadDir(), existingRuntime.fileName));
       } catch {
         /* ignore */
       }
     }
 
+    const publicUrl = clubLogoUploadPublicUrl(uniqueFileName);
     const next: ClubLogoRecord = {
       clubKey,
       clubName,
-      fileName,
+      fileName: uniqueFileName,
+      publicUrl,
       updatedAt: new Date().toISOString(),
     };
 
-    const logos = index.logos.filter((l) => l.clubKey !== existing?.clubKey && l.clubKey !== clubKey);
+    const logos = runtime.logos.filter(
+      (l) => l.clubKey !== existingRuntime?.clubKey && l.clubKey !== clubKey,
+    );
     logos.push(next);
-    await writeIndex({ version: 1, logos });
+    await writeRuntimeIndex({ version: 1, logos });
     revalidateLogoSurfaces();
 
+    const replaced = Boolean(existingRuntime || existingSeed);
     return {
       error: null,
-      success: existing ? `Zaktualizowano logo: ${clubName}` : `Dodano logo: ${clubName}`,
+      success: replaced
+        ? `Zaktualizowano logo: ${clubName}`
+        : `Dodano logo: ${clubName}`,
     };
   } catch (e) {
     console.error("[upsertClubLogo]", e);
@@ -174,19 +217,28 @@ export async function deleteClubLogo(clubKey: string): Promise<ActionState> {
     await requireAuth();
     if (!clubKey) return { error: "Brak klucza logo." };
 
-    const index = await readIndex();
-    const existing = index.logos.find((l) => l.clubKey === clubKey);
-    if (!existing) return { error: "Nie znaleziono logo." };
+    const runtime = await readRuntimeIndex();
+    const existing = runtime.logos.find((l) => l.clubKey === clubKey);
+    if (!existing) {
+      const seed = await readSeedIndex();
+      if (seed.logos.some((l) => l.clubKey === clubKey)) {
+        return {
+          error:
+            "To logo jest w repozytorium (public/club-logos). Usuń je lokalnie i wypchnij na git — nie da się skasować z panelu na produkcji.",
+        };
+      }
+      return { error: "Nie znaleziono logo." };
+    }
 
     try {
-      await unlink(path.join(logosDir(), existing.fileName));
+      await unlink(path.join(uploadDir(), existing.fileName));
     } catch {
       /* plik mógł już nie istnieć */
     }
 
-    await writeIndex({
+    await writeRuntimeIndex({
       version: 1,
-      logos: index.logos.filter((l) => l.clubKey !== clubKey),
+      logos: runtime.logos.filter((l) => l.clubKey !== clubKey),
     });
     revalidateLogoSurfaces();
     return { error: null, success: `Usunięto logo: ${existing.clubName}` };
@@ -209,20 +261,28 @@ export async function renameClubLogo(
     const newKey = slugifyClubName(name);
     if (!newKey) return { error: "Niepoprawna nazwa klubu." };
 
-    const index = await readIndex();
-    const existing = index.logos.find((l) => l.clubKey === clubKey);
-    if (!existing) return { error: "Nie znaleziono logo." };
+    const runtime = await readRuntimeIndex();
+    const existing = runtime.logos.find((l) => l.clubKey === clubKey);
+    if (!existing) {
+      return {
+        error:
+          "Zmiana nazwy dotyczy tylko logo wgranych na serwer (uploads). Seed z gita edytuj lokalnie.",
+      };
+    }
 
-    if (newKey !== clubKey && index.logos.some((l) => l.clubKey === newKey)) {
+    const merged = await readMergedIndex();
+    if (newKey !== clubKey && merged.logos.some((l) => l.clubKey === newKey)) {
       return { error: "Logo dla tej nazwy już istnieje." };
     }
 
     let fileName = existing.fileName;
+    let publicUrl = existing.publicUrl ?? clubLogoUploadPublicUrl(existing.fileName);
+
     if (newKey !== clubKey) {
-      const ext = path.extname(existing.fileName);
-      const nextName = `${newKey}${ext}`;
-      const from = path.join(logosDir(), existing.fileName);
-      const to = path.join(logosDir(), nextName);
+      const ext = path.extname(existing.fileName) || ".png";
+      const nextName = `${Date.now()}-${sanitizeUploadBaseName(newKey)}${ext}`;
+      const from = path.join(uploadDir(), existing.fileName);
+      const to = path.join(uploadDir(), nextName);
       const data = await readFile(from);
       await writeFile(to, data);
       try {
@@ -231,19 +291,21 @@ export async function renameClubLogo(
         /* ignore */
       }
       fileName = nextName;
+      publicUrl = clubLogoUploadPublicUrl(nextName);
     }
 
-    const logos = index.logos.map((l) =>
+    const logos = runtime.logos.map((l) =>
       l.clubKey === clubKey
         ? {
             clubKey: newKey,
             clubName: name,
             fileName,
+            publicUrl,
             updatedAt: new Date().toISOString(),
           }
         : l,
     );
-    await writeIndex({ version: 1, logos });
+    await writeRuntimeIndex({ version: 1, logos });
     revalidateLogoSurfaces();
     return { error: null, success: `Zapisano nazwę: ${name}` };
   } catch (e) {

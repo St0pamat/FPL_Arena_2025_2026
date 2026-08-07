@@ -4,8 +4,8 @@ import { useMemo, useState } from "react";
 import { ClubLogo } from "@/components/admin/ClubLogo";
 import {
   CLUB_LOGO_HINT,
-  clubLogoPublicUrl,
   findClubLogo,
+  resolveClubLogoSrc,
   type ClubLogoRecord,
 } from "@/lib/admin/clubLogos";
 
@@ -28,7 +28,7 @@ export function ClubField({
 }) {
   const [value, setValue] = useState(defaultValue);
   const match = useMemo(() => findClubLogo(logos, value), [logos, value]);
-  const src = match ? clubLogoPublicUrl(match.fileName) : null;
+  const src = match ? resolveClubLogoSrc(match) : null;
 
   return (
     <div className="space-y-2 sm:col-span-2">

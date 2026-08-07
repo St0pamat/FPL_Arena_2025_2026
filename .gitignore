@@ -20,6 +20,9 @@ Thumbs.db
 .vscode/
 .idea/
 
+# Runtime uploads (produkcja PM2) — poza Git, bez konfliktów przy git pull
+/public/uploads/
+
 # Duże pliki audio — recznie w public/ (Vite -> dist/); poza Git
 public/soundtracks/*
 !public/soundtracks/README.md

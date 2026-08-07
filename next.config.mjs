@@ -15,6 +15,15 @@ const nextConfig = {
     // Legacy src/ ma luźniejsze typy (Vite); Next sprawdza tylko app/ + components/
     ignoreBuildErrors: true,
   },
+  async rewrites() {
+    // /uploads/logos/x.png → API (niezawodne serwowanie plików dopisanych po buildzie)
+    return [
+      {
+        source: "/uploads/logos/:file",
+        destination: "/api/uploads/logos/:file",
+      },
+    ];
+  },
   webpack: (config, { dev }) => {
     // OneDrive + ścieżka ze znakami specjalnymi psują PackFileCache → 404 na chunki JS.
     if (dev) config.cache = false;

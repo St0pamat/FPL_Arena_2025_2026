@@ -3,7 +3,7 @@
 import { ClubLogo } from "@/components/admin/ClubLogo";
 import {
   findClubLogo,
-  clubLogoPublicUrl,
+  resolveClubLogoSrc,
   type ClubLogoRecord,
   type ClubLogoSize,
 } from "@/lib/admin/clubLogos";
@@ -13,7 +13,7 @@ export function resolveLogoSrc(
   clubName: string | null | undefined | number,
 ): string | null {
   const hit = findClubLogo(logos, clubName);
-  return hit ? clubLogoPublicUrl(hit.fileName) : null;
+  return hit ? resolveClubLogoSrc(hit) : null;
 }
 
 /**

@@ -35,7 +35,7 @@ export function ClubLogo({
         style={fill ? undefined : { width: px, height: px }}
         title={clubName ?? undefined}
       >
-        {/* eslint-disable-next-line @next/next/no-img-element -- lokalne /public/club-logos */}
+        {/* eslint-disable-next-line @next/next/no-img-element -- lokalne crestsy (/club-logos, /uploads/logos) */}
         <img
           src={src}
           alt={clubName ? `Logo ${clubName}` : ""}

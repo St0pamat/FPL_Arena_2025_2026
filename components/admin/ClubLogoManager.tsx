@@ -13,8 +13,8 @@ import { SubmitButton } from "@/components/admin/SubmitButton";
 import {
   CLUB_LOGO_ACCEPT,
   CLUB_LOGO_HINT,
-  clubLogoPublicUrl,
   findClubLogo,
+  resolveClubLogoSrc,
   uniqueParticipantClubs,
   type ClubLogoRecord,
 } from "@/lib/admin/clubLogos";
@@ -100,7 +100,7 @@ export function ClubLogoManager({
   }
 
   function handleDelete(logo: ClubLogoRecord) {
-    if (!confirm(`Usunąć logo „${logo.clubName}”? Plik zniknie z public/club-logos/.`)) return;
+    if (!confirm(`Usunąć logo „${logo.clubName}”? Plik zniknie z public/uploads/logos/ (seed z gita nie da się skasować z panelu).`)) return;
     startTransition(async () => {
       const r = await deleteClubLogo(logo.clubKey);
       setToast(r.error ?? r.success ?? null);
@@ -211,7 +211,7 @@ export function ClubLogoManager({
                   />
                 ) : editing ? (
                   <ClubLogo
-                    src={clubLogoPublicUrl(editing.fileName)}
+                    src={resolveClubLogoSrc(editing)}
                     clubName={editing.clubName}
                     size="hero"
                   />
@@ -322,7 +322,7 @@ export function ClubLogoManager({
                 className="flex items-center gap-4 rounded-2xl border border-slate-700/50 bg-slate-800/50 p-4"
               >
                 <ClubLogo
-                  src={clubLogoPublicUrl(logo.fileName)}
+                  src={resolveClubLogoSrc(logo)}
                   clubName={logo.clubName}
                   size="hero"
                 />

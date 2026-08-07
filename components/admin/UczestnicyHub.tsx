@@ -30,7 +30,7 @@ const TABS: { id: TabId; label: string; icon: typeof Users; hint: string }[] = [
     id: "logo",
     label: "Logo klubów",
     icon: ImagePlus,
-    hint: "Cresty w public/club-logos/ — dopasowanie po nazwie klubu uczestnika.",
+    hint: "Cresty: seed w public/club-logos/ + uploady w public/uploads/logos/.",
   },
   {
     id: "dodaj",
