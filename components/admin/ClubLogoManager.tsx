@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useFormState } from "react-dom";
+import { useRouter } from "next/navigation";
 import { CheckCircle2, ImagePlus, Loader2, Pencil, Trash2, Upload } from "lucide-react";
 import {
   deleteClubLogo,
@@ -34,6 +35,7 @@ export function ClubLogoManager({
   /** Kluby ze strony reklamowej (Discord Club z bazy + kolumna S LIVE VIEW) */
   marketingClubs?: string[];
 }) {
+  const router = useRouter();
   const [state, formAction] = useFormState(upsertClubLogo, INITIAL_ACTION_STATE);
   const formRef = useRef<HTMLFormElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -43,17 +45,30 @@ export function ClubLogoManager({
   const [clubName, setClubName] = useState("");
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [fileLabel, setFileLabel] = useState<string | null>(null);
+  const [hiddenKeys, setHiddenKeys] = useState<string[]>([]);
+
+  const visibleLogos = useMemo(
+    () => logos.filter((l) => !hiddenKeys.includes(l.clubKey)),
+    [logos, hiddenKeys],
+  );
 
   const clubOptions = useMemo(() => {
     const fromParticipants = uniqueParticipantClubs(participantClubs);
     const fromMarketing = uniqueParticipantClubs(marketingClubs);
-    const fromLogos = logos.map((l) => l.clubName);
+    const fromLogos = visibleLogos.map((l) => l.clubName);
     return uniqueParticipantClubs([...fromParticipants, ...fromMarketing, ...fromLogos]);
-  }, [participantClubs, marketingClubs, logos]);
+  }, [participantClubs, marketingClubs, visibleLogos]);
 
   const missingMarketing = useMemo(() => {
-    return uniqueParticipantClubs(marketingClubs).filter((name) => !findClubLogo(logos, name));
-  }, [marketingClubs, logos]);
+    return uniqueParticipantClubs(marketingClubs).filter(
+      (name) => !findClubLogo(visibleLogos, name),
+    );
+  }, [marketingClubs, visibleLogos]);
+
+  useEffect(() => {
+    // Sync: po revalidatePath ukryte klucze, których już nie ma w props, czyścimy
+    setHiddenKeys((prev) => prev.filter((k) => logos.some((l) => l.clubKey === k)));
+  }, [logos]);
 
   useEffect(() => {
     if (state.success) {
@@ -61,8 +76,9 @@ export function ClubLogoManager({
       setEditing(null);
       setClubName("");
       clearPreview();
+      router.refresh();
     }
-  }, [state.success]);
+  }, [state.success, router]);
 
   useEffect(() => {
     return () => {
@@ -100,13 +116,17 @@ export function ClubLogoManager({
   }
 
   function handleDelete(logo: ClubLogoRecord) {
-    if (!confirm(`Usunąć logo „${logo.clubName}”? Plik zniknie z public/uploads/logos/ (seed z gita nie da się skasować z panelu).`)) return;
+    if (!confirm(`Usunąć logo „${logo.clubName}”?`)) return;
     startTransition(async () => {
       const r = await deleteClubLogo(logo.clubKey);
       setToast(r.error ?? r.success ?? null);
-      if (editing?.clubKey === logo.clubKey) {
-        setEditing(null);
-        setClubName("");
+      if (!r.error) {
+        setHiddenKeys((prev) => (prev.includes(logo.clubKey) ? prev : [...prev, logo.clubKey]));
+        if (editing?.clubKey === logo.clubKey) {
+          setEditing(null);
+          setClubName("");
+        }
+        router.refresh();
       }
     });
   }
@@ -120,6 +140,7 @@ export function ClubLogoManager({
     startTransition(async () => {
       const r = await renameClubLogo(logo.clubKey, next);
       setToast(r.error ?? r.success ?? null);
+      if (!r.error) router.refresh();
     });
   }
 
@@ -299,7 +320,7 @@ export function ClubLogoManager({
       <section>
         <div className="mb-4 flex items-center justify-between gap-3">
           <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400">
-            Biblioteka logo ({logos.length})
+            Biblioteka logo ({visibleLogos.length})
           </h3>
           {pending && <Loader2 className="h-4 w-4 animate-spin text-slate-400" />}
         </div>
@@ -310,13 +331,13 @@ export function ClubLogoManager({
           </p>
         )}
 
-        {logos.length === 0 ? (
+        {visibleLogos.length === 0 ? (
           <p className="rounded-2xl border border-dashed border-slate-700/50 px-5 py-8 text-center text-sm text-slate-500">
             Brak logo — wybierz klub z listy i dodaj crest powyżej.
           </p>
         ) : (
           <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {logos.map((logo) => (
+            {visibleLogos.map((logo) => (
               <li
                 key={logo.clubKey}
                 className="flex items-center gap-4 rounded-2xl border border-slate-700/50 bg-slate-800/50 p-4"

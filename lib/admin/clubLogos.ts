@@ -50,6 +50,11 @@ export interface ClubLogoRecord {
 export interface ClubLogosIndex {
   version: 1;
   logos: ClubLogoRecord[];
+  /**
+   * Klucze usunięte z panelu (także stare seed z public/club-logos).
+   * Po git pull seed może wrócić na dysk — te klucze i tak zostają ukryte.
+   */
+  deletedKeys?: string[];
 }
 
 /** "West Ham United" → "west-ham-united" */
@@ -153,20 +158,32 @@ export function findClubLogo(
 }
 
 export function emptyClubLogosIndex(): ClubLogosIndex {
-  return { version: 1, logos: [] };
+  return { version: 1, logos: [], deletedKeys: [] };
 }
 
-/** Merge seed + runtime: runtime (uploads) wygrywa po clubKey. */
+/** Merge seed + runtime: runtime (uploads) wygrywa po clubKey; deletedKeys ukrywa seed. */
 export function mergeClubLogoIndexes(
   seed: ClubLogosIndex,
   runtime: ClubLogosIndex,
 ): ClubLogosIndex {
+  const deleted = new Set(
+    [...(seed.deletedKeys ?? []), ...(runtime.deletedKeys ?? [])].filter(Boolean),
+  );
   const map = new Map<string, ClubLogoRecord>();
-  for (const l of seed.logos) map.set(l.clubKey, l);
-  for (const l of runtime.logos) map.set(l.clubKey, l);
+  for (const l of seed.logos) {
+    if (!deleted.has(l.clubKey)) map.set(l.clubKey, l);
+  }
+  for (const l of runtime.logos) {
+    if (deleted.has(l.clubKey)) {
+      map.delete(l.clubKey);
+      continue;
+    }
+    map.set(l.clubKey, l);
+  }
   return {
     version: 1,
     logos: [...map.values()].sort((a, b) => a.clubName.localeCompare(b.clubName, "pl")),
+    deletedKeys: [...deleted].sort(),
   };
 }
 

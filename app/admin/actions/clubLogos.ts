@@ -58,7 +58,13 @@ async function readJsonIndex(filePath: string): Promise<ClubLogosIndex> {
     const raw = await readFile(filePath, "utf8");
     const parsed = JSON.parse(raw) as ClubLogosIndex;
     if (!parsed?.logos || !Array.isArray(parsed.logos)) return emptyClubLogosIndex();
-    return { version: 1, logos: parsed.logos };
+    return {
+      version: 1,
+      logos: parsed.logos,
+      deletedKeys: Array.isArray(parsed.deletedKeys)
+        ? parsed.deletedKeys.filter((k): k is string => typeof k === "string" && k.length > 0)
+        : [],
+    };
   } catch {
     return emptyClubLogosIndex();
   }
@@ -78,8 +84,61 @@ async function writeRuntimeIndex(index: ClubLogosIndex) {
   const sorted: ClubLogosIndex = {
     version: 1,
     logos: [...index.logos].sort((a, b) => a.clubName.localeCompare(b.clubName, "pl")),
+    deletedKeys: [...new Set(index.deletedKeys ?? [])].filter(Boolean).sort(),
   };
   await writeFile(uploadIndexPath(), `${JSON.stringify(sorted, null, 2)}\n`, "utf8");
+}
+
+/** Best-effort: usuń wpis ze seed index (stare uploady w public/club-logos). */
+async function writeSeedIndex(index: ClubLogosIndex) {
+  const sorted: ClubLogosIndex = {
+    version: 1,
+    logos: [...index.logos].sort((a, b) => a.clubName.localeCompare(b.clubName, "pl")),
+  };
+  await writeFile(seedIndexPath(), `${JSON.stringify(sorted, null, 2)}\n`, "utf8");
+}
+
+/**
+ * Fault-tolerant unlink: próbuje uploads/, club-logos/ oraz ścieżkę z publicUrl.
+ * ENOENT / zła ścieżka → warn, bez crashu.
+ */
+async function safeUnlinkClubLogoFile(logo: ClubLogoRecord) {
+  const candidates = new Set<string>();
+  const fileName = String(logo.fileName ?? "").replace(/^\/+/, "").trim();
+  if (fileName && !fileName.includes("..")) {
+    candidates.add(path.join(uploadDir(), fileName));
+    candidates.add(path.join(seedDir(), fileName));
+  }
+
+  const publicUrl = String(logo.publicUrl ?? "").trim();
+  if (publicUrl.startsWith("/") && !publicUrl.includes("..")) {
+    // /uploads/logos/x.png → public/uploads/logos/x.png
+    candidates.add(path.join(process.cwd(), "public", ...publicUrl.replace(/^\/+/, "").split("/")));
+  }
+
+  let removed = false;
+  for (const filePath of candidates) {
+    try {
+      await unlink(filePath);
+      removed = true;
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException)?.code;
+      if (code !== "ENOENT") {
+        console.warn(
+          "[deleteClubLogo] Nie można usunąć pliku logo (kontynuuję czyszczenie indeksu).",
+          filePath,
+          error,
+        );
+      }
+    }
+  }
+  if (!removed && candidates.size > 0) {
+    console.warn(
+      "[deleteClubLogo] Plik logo nie istnieje fizycznie (stara ścieżka / ENOENT). Kontynuuję czyszczenie indeksu.",
+      logo.clubKey,
+      logo.fileName,
+    );
+  }
 }
 
 async function readMergedIndex(): Promise<ClubLogosIndex> {
@@ -174,14 +233,9 @@ export async function upsertClubLogo(
     await ensureUploadDir();
     await writeFile(abs, buffer);
 
-    // Usuń poprzedni plik runtime (seed w git zostawiamy)
-    if (existingRuntime?.fileName && existingRuntime.fileName !== uniqueFileName) {
-      try {
-        await unlink(path.join(uploadDir(), existingRuntime.fileName));
-      } catch {
-        /* ignore */
-      }
-    }
+    // Usuń poprzedni plik (uploads lub stare club-logos) — fault-tolerant
+    if (existingRuntime) await safeUnlinkClubLogoFile(existingRuntime);
+    else if (existingSeed) await safeUnlinkClubLogoFile(existingSeed);
 
     const publicUrl = clubLogoUploadPublicUrl(uniqueFileName);
     const next: ClubLogoRecord = {
@@ -196,7 +250,11 @@ export async function upsertClubLogo(
       (l) => l.clubKey !== existingRuntime?.clubKey && l.clubKey !== clubKey,
     );
     logos.push(next);
-    await writeRuntimeIndex({ version: 1, logos });
+    // Re-upload czyści tombstone — logo znów widoczne
+    const deletedKeys = (runtime.deletedKeys ?? []).filter(
+      (k) => k !== clubKey && k !== existingRuntime?.clubKey,
+    );
+    await writeRuntimeIndex({ version: 1, logos, deletedKeys });
     revalidateLogoSurfaces();
 
     const replaced = Boolean(existingRuntime || existingSeed);
@@ -217,29 +275,50 @@ export async function deleteClubLogo(clubKey: string): Promise<ActionState> {
     await requireAuth();
     if (!clubKey) return { error: "Brak klucza logo." };
 
-    const runtime = await readRuntimeIndex();
-    const existing = runtime.logos.find((l) => l.clubKey === clubKey);
+    const [runtime, seed] = await Promise.all([readRuntimeIndex(), readSeedIndex()]);
+    const existingRuntime = runtime.logos.find((l) => l.clubKey === clubKey);
+    const existingSeed = seed.logos.find((l) => l.clubKey === clubKey);
+    const existing = existingRuntime ?? existingSeed;
+
     if (!existing) {
-      const seed = await readSeedIndex();
-      if (seed.logos.some((l) => l.clubKey === clubKey)) {
-        return {
-          error:
-            "To logo jest w repozytorium (public/club-logos). Usuń je lokalnie i wypchnij na git — nie da się skasować z panelu na produkcji.",
-        };
+      // Już skasowane — upewnij się, że tombstone jest ustawiony
+      if (!(runtime.deletedKeys ?? []).includes(clubKey)) {
+        await writeRuntimeIndex({
+          version: 1,
+          logos: runtime.logos,
+          deletedKeys: [...(runtime.deletedKeys ?? []), clubKey],
+        });
+        revalidateLogoSurfaces();
       }
       return { error: "Nie znaleziono logo." };
     }
 
-    try {
-      await unlink(path.join(uploadDir(), existing.fileName));
-    } catch {
-      /* plik mógł już nie istnieć */
-    }
+    // 1) Fizyczne usunięcie — fault-tolerant (stare ścieżki / ENOENT nie crashują akcji)
+    await safeUnlinkClubLogoFile(existing);
 
+    // 2) Indeks runtime: usuń wpis + oznacz deletedKeys (ukrywa też seed po git pull)
+    const nextDeleted = new Set([...(runtime.deletedKeys ?? []), clubKey]);
     await writeRuntimeIndex({
       version: 1,
       logos: runtime.logos.filter((l) => l.clubKey !== clubKey),
+      deletedKeys: [...nextDeleted],
     });
+
+    // 3) Best-effort: wyczyść też seed index (stare wgrania przed migracją ścieżek)
+    if (existingSeed) {
+      try {
+        await writeSeedIndex({
+          version: 1,
+          logos: seed.logos.filter((l) => l.clubKey !== clubKey),
+        });
+      } catch (error) {
+        console.warn(
+          "[deleteClubLogo] Nie udało się zaktualizować seed index — deletedKeys w uploads wystarczy.",
+          error,
+        );
+      }
+    }
+
     revalidateLogoSurfaces();
     return { error: null, success: `Usunięto logo: ${existing.clubName}` };
   } catch (e) {
@@ -305,7 +384,10 @@ export async function renameClubLogo(
           }
         : l,
     );
-    await writeRuntimeIndex({ version: 1, logos });
+    const deletedKeys = (runtime.deletedKeys ?? []).filter(
+      (k) => k !== clubKey && k !== newKey,
+    );
+    await writeRuntimeIndex({ version: 1, logos, deletedKeys });
     revalidateLogoSurfaces();
     return { error: null, success: `Zapisano nazwę: ${name}` };
   } catch (e) {
