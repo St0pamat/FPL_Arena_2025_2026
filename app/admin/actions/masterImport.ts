@@ -113,7 +113,8 @@ type MasterImportRow = {
   discordId: string | null;
   status: string;
   isActive: boolean;
-  xCom: string | null;
+  /** Excel kolumna x.com (indeks 12) — null gdy puste / brak komórki */
+  x_com: string | null;
   email: string | null;
 };
 
@@ -176,6 +177,7 @@ function parseMasterExcelTsv(raw: string): {
     const discordClub = parts[9] ?? "";
     const discordIdRaw = parts[10] ?? "";
     const statusRaw = parts[11] ?? "";
+    // Indeks 12: x.com — bezpieczne przy krótszych wierszach TSV (puste końcówki)
     const xComRaw = parts[12] ?? "";
     const emailRaw = parts[13] ?? "";
 
@@ -223,7 +225,7 @@ function parseMasterExcelTsv(raw: string): {
       discordId: optionalCell(discordIdRaw),
       status,
       isActive,
-      xCom: optionalCell(xComRaw),
+      x_com: optionalCell(xComRaw),
       email: optionalCell(emailRaw),
     });
   });
@@ -428,7 +430,7 @@ export async function masterExcelImport(
         is_active: row.isActive,
         status: row.status,
         discord_id: row.discordId,
-        x_com: row.xCom,
+        x_com: row.x_com,
         email: row.email,
       };
 

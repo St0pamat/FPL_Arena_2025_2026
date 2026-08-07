@@ -6,6 +6,7 @@ import { CheckCircle2, ImagePlus, Loader2, Trash2, Upload } from "lucide-react";
 import { deleteTierLogo, upsertTierLogo } from "@/app/admin/actions/tierLogos";
 import { SubmitButton } from "@/components/admin/SubmitButton";
 import {
+  FA_RANKING_LOGO_NAME,
   PYRAMID_TIER_NAMES,
   TIER_LOGO_ACCEPT,
   TIER_LOGO_HINT,
@@ -30,6 +31,9 @@ export function TierLogoManager({ logos }: { logos: TierLogoRecord[] }) {
 
   const current = findTierLogo(logos, tierName);
   const missing = PYRAMID_TIER_NAMES.filter((name) => !findTierLogo(logos, name));
+  const faLogo = findTierLogo(logos, FA_RANKING_LOGO_NAME);
+  const pyramidCount = PYRAMID_TIER_NAMES.filter((name) => findTierLogo(logos, name)).length;
+  const isFaSelected = tierName === FA_RANKING_LOGO_NAME;
 
   useEffect(() => {
     if (state.success) {
@@ -85,7 +89,7 @@ export function TierLogoManager({ logos }: { logos: TierLogoRecord[] }) {
             <h2 className="text-lg font-bold text-white">Dodaj / zaktualizuj logo dywizji</h2>
             <p className="mt-1 text-sm text-slate-400">{TIER_LOGO_HINT}</p>
             <p className="mt-1 text-xs text-slate-500">
-              Osobna biblioteka od herbów klubowych — tylko 5 poziomów piramidy.
+              Osobna biblioteka od herbów klubowych — 5 poziomów piramidy + logo The FA Ranking.
             </p>
           </div>
         </div>
@@ -116,7 +120,7 @@ export function TierLogoManager({ logos }: { logos: TierLogoRecord[] }) {
         <form ref={formRef} action={formAction} className="grid gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2 sm:max-w-lg">
             <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-400">
-              Dywizja
+              Dywizja / Branding
             </label>
             <select
               name="tier_name"
@@ -128,12 +132,20 @@ export function TierLogoManager({ logos }: { logos: TierLogoRecord[] }) {
               }}
               className={inputClass}
             >
-              {PYRAMID_TIER_NAMES.map((name) => (
-                <option key={name} value={name}>
-                  {name}
-                  {findTierLogo(logos, name) ? "" : " · brak logo"}
+              <optgroup label="Piramida ligowa">
+                {PYRAMID_TIER_NAMES.map((name) => (
+                  <option key={name} value={name}>
+                    {name}
+                    {findTierLogo(logos, name) ? "" : " · brak logo"}
+                  </option>
+                ))}
+              </optgroup>
+              <optgroup label="Rozgrywki globalne">
+                <option value={FA_RANKING_LOGO_NAME}>
+                  {FA_RANKING_LOGO_NAME}
+                  {faLogo ? "" : " · brak logo"}
                 </option>
-              ))}
+              </optgroup>
             </select>
           </div>
 
@@ -184,7 +196,8 @@ export function TierLogoManager({ logos }: { logos: TierLogoRecord[] }) {
                   </p>
                 ) : current ? (
                   <p className="text-xs text-amber-200/90">
-                    Wybierz nowy plik, żeby podmienić logo dywizji.
+                    Wybierz nowy plik, żeby podmienić logo{" "}
+                    {isFaSelected ? "The FA Ranking" : "dywizji"}.
                   </p>
                 ) : (
                   <p className="text-xs text-slate-500">
@@ -228,7 +241,7 @@ export function TierLogoManager({ logos }: { logos: TierLogoRecord[] }) {
       <section>
         <div className="mb-4 flex items-center justify-between gap-3">
           <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400">
-            Biblioteka logo dywizji ({logos.length}/5)
+            Biblioteka logo dywizji ({pyramidCount}/5)
           </h3>
           {pending ? <Loader2 className="h-4 w-4 animate-spin text-slate-400" /> : null}
         </div>
@@ -256,7 +269,9 @@ export function TierLogoManager({ logos }: { logos: TierLogoRecord[] }) {
                       className="h-full w-full object-contain"
                     />
                   ) : (
-                    <span className="font-mono text-xs font-black text-slate-600">D{index + 1}</span>
+                    <span className="font-mono text-xs font-black text-slate-600">
+                      D{index + 1}
+                    </span>
                   )}
                 </div>
                 <div className="min-w-0 flex-1">
@@ -289,6 +304,55 @@ export function TierLogoManager({ logos }: { logos: TierLogoRecord[] }) {
               </li>
             );
           })}
+        </ul>
+      </section>
+
+      <section>
+        <h3 className="mb-4 text-sm font-bold uppercase tracking-wider text-amber-400/90">
+          Logo The FA Ranking ({faLogo ? "1" : "0"}/1)
+        </h3>
+        <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <li className="flex items-center gap-4 rounded-2xl border border-amber-500/25 bg-amber-950/20 p-4">
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl border border-slate-700/60 bg-white p-1">
+              {faLogo ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={tierLogoPublicUrl(faLogo.fileName)}
+                  alt={FA_RANKING_LOGO_NAME}
+                  className="h-full w-full object-contain"
+                />
+              ) : (
+                <span className="font-mono text-[10px] font-black text-slate-600">FA</span>
+              )}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-bold text-white">{FA_RANKING_LOGO_NAME}</p>
+              <p className="truncate font-mono text-[11px] text-slate-500">
+                {faLogo ? faLogo.fileName : "brak pliku — używane na przycisku w Strefie Gracza"}
+              </p>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTierName(FA_RANKING_LOGO_NAME);
+                    clearPreview();
+                  }}
+                  className="inline-flex items-center gap-1 rounded-lg border border-amber-500/40 px-2 py-1 text-[11px] font-bold uppercase tracking-wider text-amber-200 hover:border-amber-300 hover:text-amber-100"
+                >
+                  <Upload className="h-3 w-3" /> {faLogo ? "Podmień" : "Dodaj"}
+                </button>
+                {faLogo ? (
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(faLogo)}
+                    className="inline-flex items-center gap-1 rounded-lg border border-red-500/30 px-2 py-1 text-[11px] font-bold uppercase tracking-wider text-red-300 hover:bg-red-950/40"
+                  >
+                    <Trash2 className="h-3 w-3" /> Usuń
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          </li>
         </ul>
       </section>
     </div>

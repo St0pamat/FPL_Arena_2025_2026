@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useFormState } from "react-dom";
 import { AlertTriangle, Calendar, Loader2, Pencil, Trash2 } from "lucide-react";
 import {
   createSeason,
   deleteSeason,
+  updateSeasonGlobalWebhooks,
   updateSeasonName,
   updateSeasonStatus,
 } from "@/app/admin/actions/db";
@@ -154,6 +155,144 @@ function SeasonRow({ season }: { season: Season }) {
   );
 }
 
+function SeasonGlobalWebhooksPanel({ seasons }: { seasons: Season[] }) {
+  const activeSeasons = useMemo(
+    () => seasons.filter((s) => !s.is_archived),
+    [seasons],
+  );
+  const defaultId =
+    activeSeasons.find((s) => s.status === "PUBLISHED")?.id ??
+    activeSeasons[0]?.id ??
+    "";
+  const [seasonId, setSeasonId] = useState(defaultId);
+  const [rankingUrl, setRankingUrl] = useState("");
+  const [cupUrl, setCupUrl] = useState("");
+  const [pending, startTransition] = useTransition();
+  const [toast, setToast] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!activeSeasons.some((s) => s.id === seasonId)) {
+      setSeasonId(defaultId);
+    }
+  }, [activeSeasons, seasonId, defaultId]);
+
+  useEffect(() => {
+    const s = activeSeasons.find((x) => x.id === seasonId);
+    setRankingUrl(s?.fa_ranking_webhook_url ?? "");
+    setCupUrl(s?.fa_cup_webhook_url ?? "");
+    setToast(null);
+  }, [seasonId, activeSeasons]);
+
+  if (activeSeasons.length === 0) return null;
+
+  const selected = activeSeasons.find((s) => s.id === seasonId);
+  const rankingOk = Boolean((selected?.fa_ranking_webhook_url ?? "").trim());
+  const cupOk = Boolean((selected?.fa_cup_webhook_url ?? "").trim());
+
+  return (
+    <div className="rounded-2xl border border-slate-700/50 bg-slate-800/50 p-5">
+      <h3 className="text-sm font-bold uppercase tracking-wider text-slate-300">
+        Kanały globalne · Content Hub
+      </h3>
+      <p className="mt-1 text-xs text-slate-500">
+        Webhooki sezonowe (nie dywizyjne): The FA Ranking (JSON + opcjonalna karuzela PNG)
+        oraz FA Cup (tylko JSON embed).
+      </p>
+
+      <div className="mt-4 space-y-3">
+        <div>
+          <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">
+            Sezon
+          </label>
+          <select
+            className={inputClass}
+            value={seasonId}
+            onChange={(e) => setSeasonId(e.target.value)}
+            disabled={pending}
+          >
+            {activeSeasons.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+                {s.status === "PUBLISHED" ? " · Aktywny" : " · Szkic"}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="mb-1.5 flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-slate-500">
+            <span>The FA Ranking · Webhook URL</span>
+            {rankingOk ? (
+              <span className="normal-case tracking-normal text-emerald-400/80">
+                · webhook OK
+              </span>
+            ) : (
+              <span className="normal-case tracking-normal text-amber-400/70">
+                · brak webhooka
+              </span>
+            )}
+          </label>
+          <input
+            className={inputClass}
+            value={rankingUrl}
+            onChange={(e) => setRankingUrl(e.target.value)}
+            placeholder="https://discord.com/api/webhooks/…"
+            disabled={pending}
+            spellCheck={false}
+          />
+        </div>
+
+        <div>
+          <label className="mb-1.5 flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-slate-500">
+            <span>FA Cup · Webhook URL</span>
+            {cupOk ? (
+              <span className="normal-case tracking-normal text-emerald-400/80">
+                · webhook OK
+              </span>
+            ) : (
+              <span className="normal-case tracking-normal text-amber-400/70">
+                · brak webhooka
+              </span>
+            )}
+          </label>
+          <input
+            className={inputClass}
+            value={cupUrl}
+            onChange={(e) => setCupUrl(e.target.value)}
+            placeholder="https://discord.com/api/webhooks/…"
+            disabled={pending}
+            spellCheck={false}
+          />
+        </div>
+
+        <button
+          type="button"
+          disabled={pending || !seasonId}
+          onClick={() => {
+            startTransition(async () => {
+              const r = await updateSeasonGlobalWebhooks(seasonId, {
+                fa_ranking_webhook_url: rankingUrl.trim() || null,
+                fa_cup_webhook_url: cupUrl.trim() || null,
+              });
+              setToast(r.error ?? r.success ?? null);
+              if (r.error) window.alert(r.error);
+            });
+          }}
+          className="inline-flex items-center gap-2 rounded-xl bg-[#39FF14] px-4 py-2.5 text-xs font-black uppercase tracking-wider text-black transition hover:bg-white disabled:opacity-40"
+        >
+          {pending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+          Zapisz webhooki globalne
+        </button>
+        {toast ? (
+          <p className="text-xs text-slate-400" role="status">
+            {toast}
+          </p>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 export function SeasonSection({ seasons }: { seasons: Season[] }) {
   const [state, formAction] = useFormState(createSeason, INITIAL_ACTION_STATE);
   const formRef = useRef<HTMLFormElement>(null);
@@ -260,6 +399,8 @@ export function SeasonSection({ seasons }: { seasons: Season[] }) {
           </table>
         )}
       </div>
+
+      <SeasonGlobalWebhooksPanel seasons={seasons} />
     </section>
   );
 }

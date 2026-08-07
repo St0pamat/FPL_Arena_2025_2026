@@ -137,6 +137,8 @@ export interface PublicTeam {
   fpl_team_name: string | null;
   chosen_club: string;
   previous_season_or?: number | null;
+  /** Handle / URL X.com (opcjonalnie) */
+  x_com?: string | null;
 }
 
 export type FormResult = "W" | "D" | "L";

@@ -8,7 +8,7 @@ import type {
   PlayoffPreviewPayload,
   PublicFixture,
 } from "@/lib/public/types";
-import { ClubCrest } from "@/components/na-minusie/hub/ClubCrest";
+import { LinkedCrestOnly } from "@/components/na-minusie/hub/LinkedTeamCell";
 import { TeamIdentity } from "@/components/na-minusie/hub/TeamIdentity";
 import { ExportControls } from "@/components/na-minusie/hub/ExportControls";
 import { PlayoffMatchRow } from "@/components/na-minusie/hub/PlayoffMatchRow";
@@ -28,7 +28,7 @@ const EMPTY_PLAYOFFS: PlayoffPreviewPayload = {
   notices: [],
 };
 
-function MatchCard({
+export function MatchCard({
   match,
   logos,
 }: {
@@ -63,11 +63,7 @@ function MatchCard({
               truncate={false}
             />
           </div>
-          <ClubCrest
-            clubName={fixture.home_team?.chosen_club}
-            logos={logos}
-            size="lg"
-          />
+          <LinkedCrestOnly team={fixture.home_team} logos={logos} size="lg" />
         </div>
 
         <div className="flex shrink-0 flex-col items-center gap-1 px-1">
@@ -97,11 +93,7 @@ function MatchCard({
             awayWon ? "opacity-100" : homeWon ? "opacity-50" : "opacity-90"
           }`}
         >
-          <ClubCrest
-            clubName={fixture.away_team?.chosen_club}
-            logos={logos}
-            size="lg"
-          />
+          <LinkedCrestOnly team={fixture.away_team} logos={logos} size="lg" />
           <div className="min-w-0 flex-1">
             <TeamIdentity
               team={fixture.away_team}
@@ -136,7 +128,7 @@ function FplMedianRanking({
             {row.position}
           </span>
           <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
-            <ClubCrest clubName={row.team.chosen_club} logos={logos} size="lg" />
+            <LinkedCrestOnly team={row.team} logos={logos} size="lg" />
             <TeamIdentity team={row.team} size="md" truncate />
           </div>
           <div className="flex shrink-0 flex-col items-end gap-1">

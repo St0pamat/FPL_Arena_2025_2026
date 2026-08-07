@@ -54,11 +54,21 @@ export interface PlayerZoneProfile {
   divisionId: string;
   divisionName: string;
   tier: number;
+  seasonId: string;
   seasonName: string;
   standing: PublicStandingRow | null;
   form: FormPill[];
   fixtures: PublicFixture[];
   matchHistory: PlayerMatchRow[];
   logos: ClubLogoRecord[];
+  /** Pozycja w The FA Ranking (kampania) */
+  faRankingPosition: number | null;
+  faRankingPlayers: number;
+  /** Średnia małych punktów FPL / kolejkę */
+  ppg: number | null;
+  /** Najwyższy wynik FPL w jednej GW */
+  highScore: { points: number; gameweek: number } | null;
+  /** Suma małych punktów FPL z opublikowanych meczów w dywizji */
+  overallFplPoints: number;
   error?: string | null;
 }

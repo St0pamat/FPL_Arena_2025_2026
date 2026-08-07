@@ -400,7 +400,18 @@ export function MasterImportPanel({
                         {g.teams.map((t) => (
                           <tr key={t.id} className="hover:bg-slate-950/50">
                             <td className="px-4 py-2.5 font-semibold text-white">
-                              {t.manager_name}
+                              <span className="inline-flex items-center gap-1.5">
+                                {t.manager_name}
+                                {t.x_com?.trim() ? (
+                                  <span
+                                    className="inline-flex h-4 min-w-[1rem] items-center justify-center rounded bg-slate-800 px-1 text-[10px] font-black leading-none text-sky-300"
+                                    title={`X.com: ${t.x_com.trim()}`}
+                                    aria-label={`Profil X: ${t.x_com.trim()}`}
+                                  >
+                                    𝕏
+                                  </span>
+                                ) : null}
+                              </span>
                             </td>
                             <td className="px-4 py-2.5 text-slate-300">
                               {t.discord_nick}

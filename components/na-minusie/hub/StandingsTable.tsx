@@ -1,10 +1,10 @@
 "use client";
 
 import { ArrowDown, ArrowUp, Medal } from "lucide-react";
+import type { RefObject } from "react";
 import type { ClubLogoRecord } from "@/lib/admin/clubLogos";
 import type { FormPill, PublicStandingRow, TableZone } from "@/lib/public/types";
-import { ClubCrest } from "@/components/na-minusie/hub/ClubCrest";
-import { TeamIdentity } from "@/components/na-minusie/hub/TeamIdentity";
+import { LinkedTeamCell } from "@/components/na-minusie/hub/LinkedTeamCell";
 import {
   DiscordExportFrame,
   slugForExport,
@@ -145,6 +145,8 @@ export function StandingsTable({
   divisionId = "",
   showDiscordSend = false,
   hasWebhook = false,
+  hideControls = false,
+  captureRef,
 }: {
   rows: PublicStandingRow[];
   logos?: ClubLogoRecord[];
@@ -153,8 +155,36 @@ export function StandingsTable({
   divisionId?: string;
   showDiscordSend?: boolean;
   hasWebhook?: boolean;
+  hideControls?: boolean;
+  captureRef?: RefObject<HTMLDivElement | null>;
 }) {
   if (!rows.length) {
+    if (hideControls) {
+      return (
+        <DiscordExportFrame
+          exportId="export-standings"
+          fileName={
+            `${slugForExport([
+              "tabela",
+              exportMeta?.division,
+              exportMeta?.pyramid,
+              exportMeta?.season,
+            ]) || "tabela-ogolna"}.png`
+          }
+          title="Tabela ogólna"
+          subtitle={[exportMeta?.season, exportMeta?.pyramid, exportMeta?.division]
+            .filter(Boolean)
+            .join(" · ")}
+          divisionId={divisionId}
+          hideControls
+          captureRef={captureRef}
+        >
+          <p className="py-8 text-center text-sm text-slate-500">
+            Brak drużyn lub rozliczonych meczów w tej dywizji.
+          </p>
+        </DiscordExportFrame>
+      );
+    }
     return (
       <div className="rounded-2xl border border-dashed border-slate-700/60 bg-slate-900/40 px-6 py-12 text-center text-sm text-slate-500">
         Brak drużyn lub rozliczonych meczów w tej dywizji.
@@ -183,6 +213,8 @@ export function StandingsTable({
       discordMessage="🏆 Aktualna Tabela Ogólna!"
       showDiscordSend={showDiscordSend}
       hasWebhook={hasWebhook}
+      hideControls={hideControls}
+      captureRef={captureRef}
     >
       <table className="w-full text-left text-sm">
         <thead className="border-b border-slate-700 text-[10px] uppercase tracking-wider text-slate-500">
@@ -218,12 +250,12 @@ export function StandingsTable({
                   <ZoneMark zone={r.zone} position={r.position} />
                 </td>
                 <td className="px-2 py-2.5">
-                  <div className="flex min-h-[3.25rem] items-stretch gap-2.5">
-                    <ClubCrest clubName={r.team.chosen_club} logos={logos} />
-                    <div className="flex min-w-0 flex-col justify-center">
-                      <TeamIdentity team={r.team} />
-                    </div>
-                  </div>
+                  <LinkedTeamCell
+                    team={r.team}
+                    logos={logos}
+                    crestSize="md"
+                    identitySize="sm"
+                  />
                 </td>
                 <td className="px-2 py-3 text-center tabular-nums text-slate-300">{r.played}</td>
                 <td className="px-2 py-3 text-center tabular-nums text-slate-300">

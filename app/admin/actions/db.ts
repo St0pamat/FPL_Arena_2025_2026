@@ -239,6 +239,59 @@ export async function updateSeasonName(
   }
 }
 
+/** Globalne webhooki sezonu: The FA Ranking + FA Cup (Content Hub). */
+export async function updateSeasonGlobalWebhooks(
+  seasonId: string,
+  patch: {
+    fa_ranking_webhook_url?: string | null;
+    fa_cup_webhook_url?: string | null;
+  },
+): Promise<ActionState> {
+  try {
+    const supabase = await requireAuth();
+    if (!seasonId) return { error: "Brak ID sezonu." };
+
+    const payload: Record<string, unknown> = {};
+    if ("fa_ranking_webhook_url" in patch) {
+      const url = patch.fa_ranking_webhook_url?.trim() || null;
+      if (url && !isDiscordWebhookUrl(url)) {
+        return { error: "Nieprawidłowy Discord Webhook URL (FA Ranking)." };
+      }
+      payload.fa_ranking_webhook_url = url;
+    }
+    if ("fa_cup_webhook_url" in patch) {
+      const url = patch.fa_cup_webhook_url?.trim() || null;
+      if (url && !isDiscordWebhookUrl(url)) {
+        return { error: "Nieprawidłowy Discord Webhook URL (FA Cup)." };
+      }
+      payload.fa_cup_webhook_url = url;
+    }
+
+    if (!Object.keys(payload).length) {
+      return { error: "Brak zmian do zapisania." };
+    }
+
+    const { error } = await supabase.from("seasons").update(payload).eq("id", seasonId);
+    if (error) {
+      // Graceful: brak kolumn → hint migracji
+      if (/fa_ranking_webhook_url|fa_cup_webhook_url/i.test(error.message)) {
+        return {
+          error:
+            "Brak kolumn globalnych webhooków. Uruchom migrację: supabase/migrations/add_season_global_webhooks.sql",
+        };
+      }
+      console.error("[updateSeasonGlobalWebhooks]", error);
+      return { error: error.message };
+    }
+
+    revalidateAdmin();
+    return { error: null, success: "Zapisano webhooki globalne sezonu." };
+  } catch (e) {
+    console.error("[updateSeasonGlobalWebhooks]", e);
+    return { error: e instanceof Error ? e.message : "Nieznany błąd" };
+  }
+}
+
 export async function deleteSeason(id: string): Promise<ActionState> {
   try {
     const supabase = await requireAuth();

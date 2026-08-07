@@ -16,6 +16,10 @@ export interface Season {
   is_completed?: boolean;
   /** Sezon spakowany po wygenerowaniu nowego */
   is_archived?: boolean;
+  /** Content Hub — The FA Ranking (globalny) */
+  fa_ranking_webhook_url?: string | null;
+  /** Content Hub — FA Cup (globalny) */
+  fa_cup_webhook_url?: string | null;
   created_at: string;
 }
 

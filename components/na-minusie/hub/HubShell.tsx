@@ -5,11 +5,11 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import {
   Activity,
+  ArrowLeft,
   BarChart3,
   CalendarRange,
   LayoutList,
   Loader2,
-  Medal,
   ScrollText,
   Shuffle,
   Swords,
@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import {
   getDivisionStandings,
+  getFARankingData,
   getGameweekDetails,
   getPublicSeasonSummary,
 } from "@/lib/public/actions";
@@ -29,6 +30,7 @@ import type {
   PublicSeasonSummaryPayload,
   PublicStructure,
 } from "@/lib/public/types";
+import type { FARankingPayload } from "@/lib/public/faRanking";
 import type { PlayerSearchEntry } from "@/lib/public/playerZoneTypes";
 import { computeSeasonStats, EMPTY_SEASON_STATS } from "@/lib/public/seasonStats";
 import type { HubTab } from "@/lib/na-minusie/hubTabs";
@@ -38,6 +40,7 @@ import { NA_MINUSIE_PATHS } from "@/lib/na-minusie/links";
 import { StandingsTable } from "@/components/na-minusie/hub/StandingsTable";
 import { GameweekCenter } from "@/components/na-minusie/hub/GameweekCenter";
 import { ScheduleView } from "@/components/na-minusie/hub/ScheduleView";
+import { FARankingTable } from "@/components/na-minusie/hub/FARankingTable";
 import { ParticipantsPanel } from "@/components/strefa-gracza/ParticipantsPanel";
 import { SeasonStatsPanel } from "@/components/strefa-gracza/SeasonStatsPanel";
 import { SeasonSummaryPanel } from "@/components/strefa-gracza/SeasonSummaryPanel";
@@ -45,6 +48,7 @@ import {
   resolveTierLogoName,
   TierCrest,
 } from "@/components/na-minusie/TierCrest";
+import { FA_RANKING_LOGO_NAME } from "@/lib/admin/tierLogos";
 
 const SECTION_TABS: {
   id: HubTab;
@@ -131,10 +135,12 @@ export function HubShell({
   const [bundle, setBundle] = useState<DivisionStandingsPayload | null>(null);
   const [gwDetails, setGwDetails] = useState<GameweekDetailsPayload | null>(null);
   const [summary, setSummary] = useState<PublicSeasonSummaryPayload | null>(null);
+  const [faRanking, setFaRanking] = useState<FARankingPayload | null>(null);
   const [selectedGw, setSelectedGw] = useState(1);
   const [pending, startTransition] = useTransition();
   const [gwPending, startGwTransition] = useTransition();
   const [summaryPending, startSummaryTransition] = useTransition();
+  const [faPending, startFaTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
   const selectSeason = useCallback(
@@ -277,6 +283,22 @@ export function HubShell({
     });
   }, [seasonId, activeTab]);
 
+  useEffect(() => {
+    if (!seasonId || activeTab !== "fa-ranking") return;
+    setError(null);
+    startFaTransition(async () => {
+      try {
+        const data = await getFARankingData(seasonId);
+        setFaRanking(data);
+      } catch (e) {
+        setFaRanking(null);
+        setError(
+          e instanceof Error ? e.message : "Błąd ładowania The FA Ranking",
+        );
+      }
+    });
+  }, [seasonId, activeTab]);
+
   const seasonName = structure.seasons.find((s) => s.id === seasonId)?.name ?? "—";
   const activeSeason = structure.seasons.find((s) => s.id === seasonId);
   const activeDivision = divisions.find((d) => d.id === activeDivisionId);
@@ -292,6 +314,7 @@ export function HubShell({
   };
 
   const needsDivisionData = DIVISION_SCOPED_TABS.includes(activeTab);
+  const isFaRankingTab = activeTab === "fa-ranking";
 
   const divisionStats = useMemo(() => {
     if (!bundle) return EMPTY_SEASON_STATS;
@@ -400,62 +423,121 @@ export function HubShell({
         </div>
       </header>
 
-      {divisions.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-slate-700 px-6 py-12 text-center text-sm text-slate-500">
-          Brak dywizji w tym sezonie.
+      {divisions.length === 0 && needsDivisionData ? (
+        <div className="mb-5 space-y-4">
+          <nav
+            className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            aria-label="The FA Ranking"
+          >
+            <button
+              type="button"
+              onClick={() => selectTab("fa-ranking")}
+              className="inline-flex shrink-0 items-center gap-2.5 rounded-full border border-amber-500/40 bg-amber-950/40 px-3.5 py-2 text-sm font-black text-amber-300/90 transition-all hover:border-amber-400/70 hover:text-amber-200"
+            >
+              <TierCrest
+                tierName={FA_RANKING_LOGO_NAME}
+                logos={tierLogos}
+                size="sm"
+              />
+              <span className="whitespace-nowrap">The FA Ranking</span>
+            </button>
+          </nav>
+          <div className="rounded-2xl border border-dashed border-slate-700 px-6 py-12 text-center text-sm text-slate-500">
+            Brak dywizji w tym sezonie.
+          </div>
         </div>
       ) : (
         <>
-          {needsDivisionData ? (
-            <nav
-              className="-mx-1 mb-5 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-              aria-label="Wybór dywizji"
+          <nav
+            className="-mx-1 mb-5 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            aria-label="Wybór dywizji i The FA Ranking"
+          >
+            <button
+              type="button"
+              onClick={() => selectTab("fa-ranking")}
+              className={`inline-flex shrink-0 items-center gap-2.5 rounded-full border px-3.5 py-2 text-sm font-black transition-all ${
+                isFaRankingTab
+                  ? "border-amber-400 bg-amber-500/20 text-amber-200 shadow-[0_0_24px_rgba(245,158,11,0.25)]"
+                  : "border-amber-500/40 bg-amber-950/40 text-amber-300/90 hover:border-amber-400/70 hover:text-amber-200"
+              }`}
             >
-              {divisions.map((d) => {
-                const active = d.id === activeDivisionId;
-                const crestName = resolveTierLogoName(d.name, d.tier);
+              <TierCrest
+                tierName={FA_RANKING_LOGO_NAME}
+                logos={tierLogos}
+                size="sm"
+              />
+              <span className="whitespace-nowrap">The FA Ranking</span>
+            </button>
+
+            {isFaRankingTab ? (
+              <button
+                type="button"
+                onClick={() => selectTab("tabela")}
+                className="inline-flex shrink-0 items-center gap-2 rounded-full border border-slate-600 bg-slate-800/70 px-3.5 py-2 text-sm font-bold text-slate-200 transition-all hover:border-emerald-500/50 hover:bg-emerald-600/15 hover:text-white"
+              >
+                <ArrowLeft className="h-3.5 w-3.5 text-emerald-400" aria-hidden />
+                <span className="whitespace-nowrap">Powrót do dywizji</span>
+              </button>
+            ) : null}
+
+            {needsDivisionData
+              ? divisions.map((d) => {
+                  const active = d.id === activeDivisionId && !isFaRankingTab;
+                  const crestName = resolveTierLogoName(d.name, d.tier);
+                  return (
+                    <button
+                      key={d.id}
+                      type="button"
+                      onClick={() => {
+                        setActiveDivisionId(d.id);
+                        if (isFaRankingTab) selectTab("tabela");
+                      }}
+                      className={`inline-flex shrink-0 items-center gap-2.5 rounded-full border px-3.5 py-2 text-sm font-bold transition-all ${
+                        active
+                          ? "border-emerald-500 bg-emerald-600/20 text-white shadow-[0_0_20px_rgba(16,185,129,0.15)]"
+                          : "border-slate-700/80 bg-slate-800/50 text-slate-400 hover:border-slate-600 hover:text-slate-200"
+                      }`}
+                    >
+                      <TierCrest tierName={crestName} logos={tierLogos} size="sm" />
+                      <span className="whitespace-nowrap">{d.name}</span>
+                    </button>
+                  );
+                })
+              : null}
+          </nav>
+
+          {!isFaRankingTab ? (
+            <nav
+              className="mb-6 flex gap-1 overflow-x-auto border-b border-slate-800 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              aria-label="Sekcje Strefy Gracza"
+            >
+              {SECTION_TABS.map(({ id, label, icon: Icon }) => {
+                const active = activeTab === id;
                 return (
                   <button
-                    key={d.id}
+                    key={id}
                     type="button"
-                    onClick={() => setActiveDivisionId(d.id)}
-                    className={`inline-flex shrink-0 items-center gap-2.5 rounded-full border px-3.5 py-2 text-sm font-bold transition-all ${
+                    onClick={() => selectTab(id)}
+                    className={`inline-flex shrink-0 items-center gap-2 border-b-2 px-3 py-3 text-xs font-black uppercase tracking-wider transition-colors sm:px-4 ${
                       active
-                        ? "border-emerald-500 bg-emerald-600/20 text-white shadow-[0_0_20px_rgba(16,185,129,0.15)]"
-                        : "border-slate-700/80 bg-slate-800/50 text-slate-400 hover:border-slate-600 hover:text-slate-200"
+                        ? "border-emerald-500 text-white"
+                        : "border-transparent text-slate-500 hover:text-slate-300"
                     }`}
                   >
-                    <TierCrest tierName={crestName} logos={tierLogos} size="sm" />
-                    <span className="whitespace-nowrap">{d.name}</span>
+                    <Icon className="h-3.5 w-3.5" aria-hidden />
+                    <span className="whitespace-nowrap">{label}</span>
                   </button>
                 );
               })}
             </nav>
-          ) : null}
-
-          <nav
-            className="mb-6 flex gap-1 overflow-x-auto border-b border-slate-800 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-            aria-label="Sekcje Strefy Gracza"
-          >
-            {SECTION_TABS.map(({ id, label, icon: Icon }) => {
-              const active = activeTab === id;
-              return (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => selectTab(id)}
-                  className={`inline-flex shrink-0 items-center gap-2 border-b-2 px-3 py-3 text-xs font-black uppercase tracking-wider transition-colors sm:px-4 ${
-                    active
-                      ? "border-emerald-500 text-white"
-                      : "border-transparent text-slate-500 hover:text-slate-300"
-                  }`}
-                >
-                  <Icon className="h-3.5 w-3.5" aria-hidden />
-                  <span className="whitespace-nowrap">{label}</span>
-                </button>
-              );
-            })}
-          </nav>
+          ) : (
+            <div className="mb-6 border-b border-amber-500/20 pb-3">
+              <p className="text-xs text-slate-400">
+                Ranking Classic niezależny od dywizji — suma małych punktów FPL z
+                kampanii (Jesień + Wiosna).
+              </p>
+            </div>
+          )}
 
           {error ? (
             <p className="mb-4 rounded-xl border border-rose-500/30 bg-rose-950/40 px-4 py-3 text-sm text-rose-200">
@@ -463,7 +545,22 @@ export function HubShell({
             </p>
           ) : null}
 
-          {pending && needsDivisionData && !bundle ? (
+          {isFaRankingTab ? (
+            <div className="nm-hub-panel min-h-[20rem]">
+              {faPending && !faRanking ? (
+                <div className="flex items-center justify-center gap-2 rounded-2xl border border-slate-800 bg-slate-900/60 py-20 text-slate-400">
+                  <Loader2 className="h-5 w-5 animate-spin text-amber-400" />
+                  Ładowanie The FA Ranking…
+                </div>
+              ) : faRanking ? (
+                <FARankingTable data={faRanking} logos={logos} />
+              ) : (
+                <div className="rounded-2xl border border-dashed border-slate-700 px-6 py-16 text-center text-sm text-slate-500">
+                  Brak danych The FA Ranking.
+                </div>
+              )}
+            </div>
+          ) : pending && needsDivisionData && !bundle ? (
             <div className="flex items-center justify-center gap-2 rounded-2xl border border-slate-800 bg-slate-900/60 py-20 text-slate-400">
               <Loader2 className="h-5 w-5 animate-spin text-emerald-400" />
               Ładowanie dywizji…

@@ -43,6 +43,10 @@ CREATE TABLE public.seasons (
   is_completed BOOLEAN NOT NULL DEFAULT false,
   /** true = sezon spakowany, gracze w nowym sezonie */
   is_archived BOOLEAN NOT NULL DEFAULT false,
+  /** Content Hub: The FA Ranking (globalny webhook) */
+  fa_ranking_webhook_url TEXT,
+  /** Content Hub: FA Cup (globalny webhook) */
+  fa_cup_webhook_url TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 

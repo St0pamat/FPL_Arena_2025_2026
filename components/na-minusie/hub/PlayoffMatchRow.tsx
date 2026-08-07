@@ -1,7 +1,7 @@
 import type { ClubLogoRecord } from "@/lib/admin/clubLogos";
 import { cupOutcomeLabel, cupOutcomeTone } from "@/lib/admin/playoffTiebreak";
 import type { PlayoffMatchMeta } from "@/lib/public/types";
-import { ClubCrest } from "@/components/na-minusie/hub/ClubCrest";
+import { LinkedCrestOnly } from "@/components/na-minusie/hub/LinkedTeamCell";
 import { TeamIdentity } from "@/components/na-minusie/hub/TeamIdentity";
 
 function teamLabel(side: "home" | "away", match: PlayoffMatchMeta) {
@@ -85,8 +85,8 @@ export function PlayoffMatchRow({
         <div className="flex min-h-[3.5rem] min-w-0 flex-col items-end justify-center gap-1">
           <div className="flex w-full min-w-0 items-stretch justify-end gap-2">
             <TeamIdentity team={f.home_team} align="right" size="sm" truncate={false} />
-            <ClubCrest
-              clubName={f.home_team?.chosen_club}
+            <LinkedCrestOnly
+              team={f.home_team}
               logos={logos}
               size={compact ? "lg" : "md"}
             />
@@ -124,8 +124,8 @@ export function PlayoffMatchRow({
 
         <div className="flex min-h-[3.5rem] min-w-0 flex-col items-start justify-center gap-1">
           <div className="flex w-full min-w-0 items-stretch justify-start gap-2">
-            <ClubCrest
-              clubName={f.away_team?.chosen_club}
+            <LinkedCrestOnly
+              team={f.away_team}
               logos={logos}
               size={compact ? "lg" : "md"}
             />

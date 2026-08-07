@@ -36,7 +36,7 @@ export function TeamIdentity({
   const idSize = size === "sm" ? "sm" : "md";
   const profileHref = `/strefa-gracza/gracz/${team.id}`;
   const hoverCls = linkToProfile
-    ? "transition-colors hover:text-emerald-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500"
+    ? "rounded-md transition-colors hover:text-emerald-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500"
     : "";
 
   const inner = (

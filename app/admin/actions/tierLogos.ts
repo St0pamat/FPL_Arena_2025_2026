@@ -10,7 +10,7 @@ import {
   TIER_LOGOS_DIR,
   TIER_LOGOS_INDEX,
   emptyTierLogosIndex,
-  isPyramidTierName,
+  isBrandingLogoName,
   slugifyTierName,
   type TierLogoRecord,
   type TierLogosIndex,
@@ -58,6 +58,7 @@ async function writeIndex(index: TierLogosIndex) {
       "league-one",
       "league-two",
       "national-league",
+      "the-fa-ranking",
     ].map((k, i) => [k, i]),
   );
   const sorted = {
@@ -73,6 +74,7 @@ function revalidateTierLogoSurfaces() {
   revalidatePath("/admin", "layout");
   revalidatePath("/admin/tier-logos");
   revalidatePath("/na-minusie");
+  revalidatePath("/strefa-gracza");
 }
 
 function extFromFile(file: File): string | null {
@@ -99,8 +101,8 @@ export async function upsertTierLogo(
     const tierName = String(formData.get("tier_name") ?? "").trim();
     const file = formData.get("logo") as File | null;
 
-    if (!tierName || !isPyramidTierName(tierName)) {
-      return { error: "Wybierz dywizję z listy piramidy." };
+    if (!tierName || !isBrandingLogoName(tierName)) {
+      return { error: "Wybierz dywizję lub The FA Ranking z listy." };
     }
     if (!file || !(file instanceof File) || file.size === 0) {
       return { error: "Wybierz plik logo." };

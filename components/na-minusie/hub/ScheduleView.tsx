@@ -9,7 +9,7 @@ import {
   isPlayoffGameweek,
   PLAYOFF_GAMEWEEK,
 } from "@/lib/public/season";
-import { ClubCrest } from "@/components/na-minusie/hub/ClubCrest";
+import { LinkedCrestOnly } from "@/components/na-minusie/hub/LinkedTeamCell";
 import { PlayoffMatchRow } from "@/components/na-minusie/hub/PlayoffMatchRow";
 import { TeamIdentity, teamPrimaryLabel } from "@/components/na-minusie/hub/TeamIdentity";
 
@@ -181,10 +181,7 @@ export function ScheduleView({
                     >
                       <div className="flex min-h-[3.5rem] min-w-0 items-stretch justify-end gap-2">
                         <TeamIdentity team={f.home_team} align="right" size="sm" />
-                        <ClubCrest
-                          clubName={f.home_team?.chosen_club}
-                          logos={logos}
-                        />
+                        <LinkedCrestOnly team={f.home_team} logos={logos} size="md" />
                       </div>
                       <div className="flex flex-col items-center">
                         {f.is_finished ? (
@@ -198,10 +195,7 @@ export function ScheduleView({
                         )}
                       </div>
                       <div className="flex min-h-[3.5rem] min-w-0 items-stretch justify-start gap-2">
-                        <ClubCrest
-                          clubName={f.away_team?.chosen_club}
-                          logos={logos}
-                        />
+                        <LinkedCrestOnly team={f.away_team} logos={logos} size="md" />
                         <TeamIdentity team={f.away_team} align="left" size="sm" />
                       </div>
                     </li>

@@ -50,8 +50,8 @@ export default async function AdminPlayersPage() {
           Baza Graczy i Dywizji
         </h1>
         <p className="mt-3 text-sm leading-relaxed text-slate-400">
-          Najpierw utwórz sezon w Strukturze, potem Master Import (12 kolumn), herby i terminarz
-          Bergera.
+          Najpierw utwórz sezon w Strukturze, potem Master Import (14 kolumn, w tym x.com), herby i
+          terminarz Bergera.
         </p>
       </header>
 

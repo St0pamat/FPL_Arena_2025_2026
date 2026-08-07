@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, type ReactNode } from "react";
+import { useRef, type ReactNode, type RefObject } from "react";
 import { NA_MINUSIE_BRAND } from "@/lib/na-minusie";
 import { ExportControls } from "@/components/na-minusie/hub/ExportControls";
 
@@ -19,6 +19,10 @@ export function DiscordExportFrame({
   hasWebhook = false,
   /** Bez sztywnego min-width — do wąskich kolumn (Centrum Kolejki) */
   fluid = false,
+  /** Ukryj przyciski Pobierz/Discord (Content Hub off-screen capture) */
+  hideControls = false,
+  /** Zewnętrzny ref na węzeł do html-to-image */
+  captureRef,
 }: {
   fileName: string;
   title: string;
@@ -31,24 +35,29 @@ export function DiscordExportFrame({
   showDiscordSend?: boolean;
   hasWebhook?: boolean;
   fluid?: boolean;
+  hideControls?: boolean;
+  captureRef?: RefObject<HTMLDivElement | null>;
 }) {
-  const nodeRef = useRef<HTMLDivElement>(null);
+  const localRef = useRef<HTMLDivElement>(null);
+  const nodeRef = captureRef ?? localRef;
   const id =
     exportId ??
     `export-${fileName.replace(/[^a-z0-9_-]/gi, "-").toLowerCase()}`;
 
   return (
     <div className={`space-y-3 ${className}`.trim()}>
-      <div className="flex flex-wrap items-center justify-end gap-2">
-        <ExportControls
-          targetRef={nodeRef}
-          fileName={fileName}
-          divisionId={divisionId ?? ""}
-          discordMessage={discordMessage ?? title}
-          showDiscordSend={showDiscordSend}
-          hasWebhook={hasWebhook}
-        />
-      </div>
+      {!hideControls ? (
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <ExportControls
+            targetRef={nodeRef}
+            fileName={fileName}
+            divisionId={divisionId ?? ""}
+            discordMessage={discordMessage ?? title}
+            showDiscordSend={showDiscordSend}
+            hasWebhook={hasWebhook}
+          />
+        </div>
+      ) : null}
 
       <div
         ref={nodeRef}

@@ -17,6 +17,12 @@ import {
   SEASON_MAX_GAMEWEEK,
   SPRING_PLAYOFF_GAMEWEEK,
 } from "@/lib/public/season";
+import {
+  buildFARanking,
+  resolveCampaignSeasonIds,
+  type FARankingPayload,
+  type FARankingTeamInput,
+} from "@/lib/public/faRanking";
 import type {
   DivisionStandingsPayload,
   GameweekDetailsPayload,
@@ -202,6 +208,7 @@ function mapTeam(row: {
   fpl_team_name: string | null;
   chosen_club: string;
   previous_season_or?: number | null;
+  x_com?: string | null;
 }): PublicTeam {
   return {
     id: row.id,
@@ -211,6 +218,7 @@ function mapTeam(row: {
     fpl_team_name: row.fpl_team_name,
     chosen_club: row.chosen_club,
     previous_season_or: row.previous_season_or ?? null,
+    x_com: row.x_com ?? null,
   };
 }
 
@@ -734,15 +742,26 @@ export async function getDivisionStandings(
 
     const regularRaw = (fixturesRaw ?? []).filter((f) => !f.is_playoff);
 
-    const { data: teamsRaw, error: teamsError } = await supabase
+    let teamsQuery = await supabase
       .from("teams")
-      .select("id, manager_name, discord_nick, fpl_id, fpl_team_name, chosen_club")
+      .select(
+        "id, manager_name, discord_nick, fpl_id, fpl_team_name, chosen_club, x_com",
+      )
       .eq("division_id", divId)
       .order("manager_name", { ascending: true });
 
-    if (teamsError) throw new Error(teamsError.message);
+    if (teamsQuery.error && /x_com/i.test(teamsQuery.error.message)) {
+      teamsQuery = await supabase
+        .from("teams")
+        .select(
+          "id, manager_name, discord_nick, fpl_id, fpl_team_name, chosen_club",
+        )
+        .eq("division_id", divId)
+        .order("manager_name", { ascending: true });
+    }
+    if (teamsQuery.error) throw new Error(teamsQuery.error.message);
 
-    let teams = (teamsRaw ?? []).map(mapTeam);
+    let teams = (teamsQuery.data ?? []).map(mapTeam);
     const byId = new Map(teams.map((t) => [t.id, t]));
 
     // Po przejściu sezonu drużyny mają nowy division_id — odtwórz skład z fixtures
@@ -1404,4 +1423,142 @@ export async function getPublicSeasonSummary(
     playoffGameweek: playoffGw,
     error: null,
   };
+}
+
+/**
+ * The FA Ranking — klasyfikacja Classic (suma małych punktów FPL)
+ * z sezonów kampanii (Jesień + Wiosna) wokół kotwicy `seasonId`.
+ */
+export async function getFARankingData(
+  seasonId: string,
+): Promise<FARankingPayload> {
+  const supabase = createClient();
+  if (!seasonId) {
+    return {
+      anchorSeasonId: "",
+      campaignSeasonIds: [],
+      campaignLabel: "—",
+      finishedGameweeks: [],
+      formWindows: [{ id: "last6", label: "Ostatnie 6 GW" }],
+      rows: [],
+      latestFinishedGw: null,
+    };
+  }
+
+  const { data: seasonsRaw, error: seasonsError } = await supabase
+    .from("seasons")
+    .select("id, name, status, created_at")
+    .eq("status", "PUBLISHED")
+    .order("created_at", { ascending: true });
+
+  if (seasonsError) throw new Error(seasonsError.message);
+
+  const seasons = (seasonsRaw ?? []).map((s) => ({
+    id: String(s.id),
+    name: String(s.name ?? ""),
+    created_at: s.created_at ? String(s.created_at) : null,
+  }));
+
+  const campaignSeasonIds = resolveCampaignSeasonIds(seasons, seasonId);
+  const campaignSeasons = seasons.filter((s) =>
+    campaignSeasonIds.includes(s.id),
+  );
+  const campaignLabel =
+    campaignSeasons.map((s) => s.name).filter(Boolean).join(" + ") || "—";
+
+  if (!campaignSeasonIds.length) {
+    return {
+      anchorSeasonId: seasonId,
+      campaignSeasonIds: [],
+      campaignLabel,
+      finishedGameweeks: [],
+      formWindows: [{ id: "last6", label: "Ostatnie 6 GW" }],
+      rows: [],
+      latestFinishedGw: null,
+    };
+  }
+
+  const { data: divisionsRaw, error: divError } = await supabase
+    .from("divisions")
+    .select("id, name, season_id")
+    .in("season_id", campaignSeasonIds);
+
+  if (divError) throw new Error(divError.message);
+
+  const divisions = divisionsRaw ?? [];
+  const divisionIds = divisions.map((d) => d.id as string);
+  if (!divisionIds.length) {
+    return buildFARanking([], [], campaignSeasonIds, campaignLabel, seasonId);
+  }
+
+  const seasonMeta = new Map(
+    campaignSeasons.map((s) => [s.id, s]),
+  );
+  const divisionMeta = new Map(
+    divisions.map((d) => [
+      d.id as string,
+      {
+        name: String(d.name ?? ""),
+        season_id: String(d.season_id),
+      },
+    ]),
+  );
+
+  const { data: teamsRaw, error: teamsError } = await supabase
+    .from("teams")
+    .select(
+      "id, manager_name, discord_nick, fpl_id, fpl_team_name, chosen_club, division_id, previous_season_or",
+    )
+    .in("division_id", divisionIds);
+
+  if (teamsError) throw new Error(teamsError.message);
+
+  const teams: FARankingTeamInput[] = (teamsRaw ?? []).map((row) => {
+    const div = divisionMeta.get(row.division_id as string);
+    const season = div ? seasonMeta.get(div.season_id) : undefined;
+    return {
+      id: row.id as string,
+      manager_name: String(row.manager_name ?? ""),
+      discord_nick: String(row.discord_nick ?? ""),
+      fpl_id: (row.fpl_id as string | null) ?? null,
+      fpl_team_name: (row.fpl_team_name as string | null) ?? null,
+      chosen_club: String(row.chosen_club ?? ""),
+      previous_season_or:
+        row.previous_season_or != null ? Number(row.previous_season_or) : null,
+      division_id: row.division_id as string,
+      season_id: div?.season_id ?? "",
+      division_name: div?.name ?? null,
+      season_created_at: season?.created_at ?? null,
+    };
+  });
+
+  const { data: fixturesRaw, error: fixError } = await supabase
+    .from("fixtures")
+    .select(
+      "gameweek, home_team_id, away_team_id, home_fpl_points, away_fpl_points, is_finished, is_published, is_playoff",
+    )
+    .in("division_id", divisionIds);
+
+  if (fixError) throw new Error(fixError.message);
+
+  const fixtures = (fixturesRaw ?? []).map((f) => ({
+    gameweek: Number(f.gameweek),
+    home_team_id: f.home_team_id as string,
+    away_team_id: f.away_team_id as string,
+    home_fpl_points:
+      f.home_fpl_points != null ? Number(f.home_fpl_points) : null,
+    away_fpl_points:
+      f.away_fpl_points != null ? Number(f.away_fpl_points) : null,
+    is_finished: Boolean(f.is_finished),
+    is_published: f.is_published !== false,
+    is_playoff: Boolean(f.is_playoff),
+  }));
+
+  return buildFARanking(
+    teams,
+    fixtures,
+    campaignSeasonIds,
+    campaignLabel,
+    seasonId,
+  );
 }

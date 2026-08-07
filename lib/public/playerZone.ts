@@ -171,36 +171,153 @@ export async function getPlayerZoneProfile(teamId: string): Promise<PlayerZonePr
   if (!teamId) return null;
 
   try {
-    const [structure, logos] = await Promise.all([getPublicStructure(), getPublicClubLogos()]);
-    const season = pickActiveSeason(structure.seasons);
-    const seasonDivisions = structure.divisions.filter((d) =>
-      season ? d.season_id === season.id : true,
-    );
+    const { createClient } = await import("@/lib/supabase/server");
+    const supabase = createClient();
+    const [structure, logos] = await Promise.all([
+      getPublicStructure(),
+      getPublicClubLogos(),
+    ]);
 
-    for (const div of seasonDivisions) {
-      const bundle = await getDivisionStandings(div.id);
-      const team = bundle.teams.find((t) => t.id === teamId);
-      if (!team) continue;
+    // Bezpośrednio po id — działa dla dowolnego (opublikowanego) sezonu
+    let teamRow: {
+      id: string;
+      manager_name: string;
+      discord_nick: string;
+      fpl_id: string | null;
+      fpl_team_name: string | null;
+      chosen_club: string;
+      previous_season_or: number | null;
+      x_com: string | null;
+      division_id: string;
+    } | null = null;
 
-      const standing = bundle.standings.find((s) => s.teamId === teamId) ?? null;
-      const teamFixtures = bundle.fixtures.filter(
-        (f) => f.home_team_id === teamId || f.away_team_id === teamId,
-      );
+    {
+      const { data, error } = await supabase
+        .from("teams")
+        .select(
+          "id, manager_name, discord_nick, fpl_id, fpl_team_name, chosen_club, previous_season_or, x_com, division_id",
+        )
+        .eq("id", teamId)
+        .maybeSingle();
+
+      if (error && /x_com/i.test(error.message)) {
+        const { data: fb, error: err2 } = await supabase
+          .from("teams")
+          .select(
+            "id, manager_name, discord_nick, fpl_id, fpl_team_name, chosen_club, previous_season_or, division_id",
+          )
+          .eq("id", teamId)
+          .maybeSingle();
+        if (err2) throw new Error(err2.message);
+        if (fb) {
+          teamRow = { ...fb, x_com: null };
+        }
+      } else if (error) {
+        throw new Error(error.message);
+      } else if (data) {
+        teamRow = {
+          ...data,
+          previous_season_or:
+            data.previous_season_or != null ? Number(data.previous_season_or) : null,
+          x_com: (data.x_com as string | null) ?? null,
+        };
+      }
+    }
+
+    const { getFARankingData } = await import("@/lib/public/actions");
+    const { faPlayerKey } = await import("@/lib/public/faRanking");
+
+    if (teamRow) {
+      const division = structure.divisions.find((d) => d.id === teamRow.division_id);
+      const seasonId =
+        division?.season_id ??
+        structure.seasons.find((s) => !s.is_archived)?.id ??
+        structure.seasons[0]?.id ??
+        "";
+      const seasonName =
+        structure.seasons.find((s) => s.id === seasonId)?.name ?? "Sezon";
+
+      let standing: PublicStandingRow | null = null;
+      let teamFixtures: PublicFixture[] = [];
+      let divisionName = division?.name ?? "—";
+      let tier = division?.tier ?? 1;
+      let team: PublicTeam = {
+        id: teamRow.id,
+        manager_name: teamRow.manager_name,
+        discord_nick: teamRow.discord_nick,
+        fpl_id: teamRow.fpl_id,
+        fpl_team_name: teamRow.fpl_team_name,
+        chosen_club: teamRow.chosen_club,
+        previous_season_or: teamRow.previous_season_or,
+        x_com: teamRow.x_com,
+      };
+
+      try {
+        const bundle = await getDivisionStandings(teamRow.division_id);
+        const found = bundle.teams.find((t) => t.id === teamId);
+        if (found) team = { ...found, x_com: found.x_com ?? teamRow.x_com };
+        standing = bundle.standings.find((s) => s.teamId === teamId) ?? null;
+        teamFixtures = bundle.fixtures.filter(
+          (f) => f.home_team_id === teamId || f.away_team_id === teamId,
+        );
+        divisionName = division?.name ?? divisionName;
+        tier = bundle.tier ?? tier;
+      } catch {
+        // Dywizja niedostępna publicznie — zostaw podstawowe dane teamu
+      }
+
+      const matchHistory = buildMatchHistory(teamId, teamFixtures);
+      const played = matchHistory.length;
+      const overallFplPoints = matchHistory.reduce((s, m) => s + m.myFpl, 0);
+      const ppg =
+        played > 0
+          ? Math.round((overallFplPoints / played) * 10) / 10
+          : null;
+      let highScore: { points: number; gameweek: number } | null = null;
+      for (const m of matchHistory) {
+        if (!highScore || m.myFpl > highScore.points) {
+          highScore = { points: m.myFpl, gameweek: m.gameweek };
+        }
+      }
+
+      let faRankingPosition: number | null = null;
+      let faRankingPlayers = 0;
+      if (seasonId) {
+        try {
+          const fa = await getFARankingData(seasonId);
+          faRankingPlayers = fa.rows.length;
+          const key = faPlayerKey(team);
+          const row = key
+            ? fa.rows.find((r) => r.playerKey === key)
+            : fa.rows.find((r) => r.team.id === teamId);
+          faRankingPosition = row?.position ?? null;
+        } catch {
+          /* ignore */
+        }
+      }
 
       return {
         team,
-        divisionId: div.id,
-        divisionName: div.name,
-        tier: div.tier,
-        seasonName: season?.name ?? "Sezon",
+        divisionId: teamRow.division_id,
+        divisionName,
+        tier,
+        seasonId,
+        seasonName,
         standing,
         form: standing?.form ?? [],
         fixtures: teamFixtures,
-        matchHistory: buildMatchHistory(teamId, teamFixtures),
+        matchHistory,
         logos,
+        faRankingPosition,
+        faRankingPlayers,
+        ppg,
+        highScore,
+        overallFplPoints,
       };
     }
 
+    // Fallback: baza rekrutacyjna (bez fixtures)
+    const season = pickActiveSeason(structure.seasons);
     const baza = await getPublicDivisionsFromBaza();
     for (const block of baza.divisions) {
       const row = block.teams.find((t) => t.teamId === teamId);
@@ -215,16 +332,23 @@ export async function getPlayerZoneProfile(teamId: string): Promise<PlayerZonePr
           fpl_team_name: row.fpl_team_name,
           chosen_club: row.chosen_club,
           previous_season_or: row.previous_or,
+          x_com: null,
         },
         divisionId: block.divisionId,
         divisionName: block.name,
         tier: block.tier,
+        seasonId: season?.id ?? "",
         seasonName: baza.seasonName || season?.name || "Sezon",
         standing: null,
         form: [],
         fixtures: [],
         matchHistory: [],
         logos,
+        faRankingPosition: null,
+        faRankingPlayers: 0,
+        ppg: null,
+        highScore: null,
+        overallFplPoints: 0,
       };
     }
 

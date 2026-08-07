@@ -54,6 +54,7 @@ export default async function DywizjePage() {
           data={data}
           logos={logos}
           tierLogos={tierLogos}
+          linkToProfile
         />
       </div>
     </main>

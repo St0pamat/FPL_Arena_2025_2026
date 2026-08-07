@@ -20,6 +20,16 @@ export const PYRAMID_TIER_NAMES = [
 
 export type PyramidTierName = (typeof PYRAMID_TIER_NAMES)[number];
 
+/** Logo brandingowe The FA Ranking (ta sama biblioteka plików co dywizje). */
+export const FA_RANKING_LOGO_NAME = "The FA Ranking";
+
+export const BRANDING_LOGO_NAMES = [
+  ...PYRAMID_TIER_NAMES,
+  FA_RANKING_LOGO_NAME,
+] as const;
+
+export type BrandingLogoName = (typeof BRANDING_LOGO_NAMES)[number];
+
 export interface TierLogoRecord {
   tierKey: string;
   tierName: string;
@@ -61,6 +71,14 @@ export function emptyTierLogosIndex(): TierLogosIndex {
 
 export function isPyramidTierName(name: string): name is PyramidTierName {
   return (PYRAMID_TIER_NAMES as readonly string[]).includes(name);
+}
+
+export function isBrandingLogoName(name: string): name is BrandingLogoName {
+  return (BRANDING_LOGO_NAMES as readonly string[]).includes(name);
+}
+
+export function isFaRankingLogoName(name: string): boolean {
+  return name.trim() === FA_RANKING_LOGO_NAME;
 }
 
 /** Mapuje nazwę/tier dywizji na klucz logo piramidy (bez zależności od React). */

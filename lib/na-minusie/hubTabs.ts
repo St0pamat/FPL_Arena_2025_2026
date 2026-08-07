@@ -6,7 +6,8 @@ export type HubTab =
   | "terminarz"
   | "statystyki"
   | "uczestnicy"
-  | "podsumowanie";
+  | "podsumowanie"
+  | "fa-ranking";
 
 export const HUB_TABS: readonly HubTab[] = [
   "tabela",
@@ -15,6 +16,7 @@ export const HUB_TABS: readonly HubTab[] = [
   "statystyki",
   "uczestnicy",
   "podsumowanie",
+  "fa-ranking",
 ] as const;
 
 const LEGACY_TAB_ALIASES: Record<string, HubTab> = {
@@ -22,6 +24,8 @@ const LEGACY_TAB_ALIASES: Record<string, HubTab> = {
   profile: "uczestnicy",
   struktura: "tabela",
   rekordy: "statystyki",
+  "fa_ranking": "fa-ranking",
+  faranking: "fa-ranking",
 };
 
 export function parseHubTab(value: string | undefined | null): HubTab {
