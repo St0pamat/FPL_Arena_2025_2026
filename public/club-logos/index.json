@@ -86,6 +86,12 @@
       "updatedAt": "2026-07-30T00:00:00.000Z"
     },
     {
+      "clubKey": "chesterfield",
+      "clubName": "Chesterfield",
+      "fileName": "chesterfield.png",
+      "updatedAt": "2026-08-07T06:22:17.004Z"
+    },
+    {
       "clubKey": "coventry-city",
       "clubName": "Coventry City",
       "fileName": "coventry-city.png",
@@ -101,7 +107,7 @@
       "clubKey": "derby-county",
       "clubName": "Derby County",
       "fileName": "derby-county.png",
-      "updatedAt": "2026-07-31T07:19:52.129Z"
+      "updatedAt": "2026-08-07T06:43:42.970Z"
     },
     {
       "clubKey": "everton",
@@ -114,6 +120,12 @@
       "clubName": "Farnborough FC",
       "fileName": "farnborough-fc.png",
       "updatedAt": "2026-07-31T09:47:29.232Z"
+    },
+    {
+      "clubKey": "forest-green-rovers",
+      "clubName": "Forest Green Rovers",
+      "fileName": "forest-green-rovers.png",
+      "updatedAt": "2026-08-07T06:41:04.139Z"
     },
     {
       "clubKey": "fulham",
