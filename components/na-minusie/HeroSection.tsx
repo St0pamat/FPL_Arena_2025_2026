@@ -4,8 +4,29 @@ import { NA_MINUSIE_BRAND, NA_MINUSIE_LOGO, NA_MINUSIE_LOGO_ALT } from "@/lib/na
 
 export function HeroSection() {
   return (
-    <section className="relative flex min-h-[90vh] flex-col items-center justify-center px-6 py-28 sm:px-10 lg:px-16">
+    <section className="relative flex min-h-[90vh] flex-col items-center justify-start px-6 pb-28 pt-6 sm:px-10 sm:pt-8 lg:px-16">
       <div className="mx-auto flex w-full max-w-5xl flex-col items-center text-center">
+        <aside
+          role="status"
+          aria-label="Komunikat FA: Prezes na zgrupowaniu"
+          className="mb-8 w-full rounded-2xl border-2 border-amber-500/60 bg-amber-950/40 p-5 text-left shadow-lg shadow-amber-500/10 sm:p-6"
+        >
+          <p className="mb-2 flex flex-wrap items-center gap-2 text-base font-extrabold text-amber-400 sm:text-lg">
+            <span className="mr-0 animate-pulse rounded-md bg-amber-500 px-3 py-1 text-xs font-black uppercase tracking-wider text-slate-950 sm:mr-2">
+              ⚠️ UWAGA!
+            </span>
+            <span>🌴 Komunikat FA: Prezes na zgrupowaniu (09.08 - 15.08) 🍹</span>
+          </p>
+          <p className="text-sm leading-relaxed text-amber-100/90 sm:text-base">
+            W tych dniach główny organizator ładuje baterie, więc kontakt i aktualizacje list na
+            stronie mogą łapać lekkie opóźnienia (VAR wciąż analizuje). Spokojnie – nigdzie nie
+            uciekłem! Po prostu zbieram siły, by na tydzień przed deadlinem wrócić i dopiąć nasz
+            projekt na absolutny guzik. Proszę się nie martwić: każdy, kto wyśle zgłoszenie i
+            zmieści się w limicie 50 osób, zostanie bez problemu zapisany do ligi. Budujcie składy,
+            widzimy się niedługo! ⚽
+          </p>
+        </aside>
+
         <p className="nm-headline mb-8 text-3xl leading-[1.05] text-white sm:text-5xl lg:text-6xl xl:text-7xl">
           {NA_MINUSIE_BRAND}
         </p>
