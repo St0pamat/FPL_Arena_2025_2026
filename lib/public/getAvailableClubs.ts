@@ -25,8 +25,10 @@ export interface RecruitmentPlayer {
 
 export interface RecruitmentClubsData {
   players: RecruitmentPlayer[];
-  /** Kluby z formularza: jest „Zajęty klub”, status ≠ Potwierdzony */
+  /** Kluby z formularza: jest „Zajęty klub”, status ≠ Potwierdzony i ≠ Brak zgłoszenia */
   reservedClubs: string[];
+  /** Kluby ze statusem „Brak zgłoszenia” — niedostępne / zablokowane */
+  blockedClubs: string[];
   availableClubs: string[];
 }
 
@@ -285,11 +287,16 @@ export async function getPublicDivisionsFromBaza(): Promise<PublicSeasonDivision
 }
 
 /**
- * Kluby w trakcie rezerwacji z LIVE VIEW formularza.
- * Kolumna D (Zajęty klub) niepusta + kolumna C (Status udziału) ≠ „Potwierdzony”.
- * Kluby już potwierdzone w tym samym arkuszu są pomijane (bez dublowania).
+ * Kluby w trakcie rezerwacji + zablokowane z LIVE VIEW formularza.
+ * Kolumna D (Zajęty klub) niepusta + kolumna C (Status udziału):
+ * - „Potwierdzony” → pomijany (jest w Bazie)
+ * - „Brak zgłoszenia” → blockedClubs
+ * - pozostałe → reservedClubs
  */
-export function parseReservedClubsFromLiveForm(csvText: string): string[] {
+export function parseReservedClubsFromLiveForm(csvText: string): {
+  reservedClubs: string[];
+  blockedClubs: string[];
+} {
   const parsed = Papa.parse<string[]>(csvText, {
     header: false,
     skipEmptyLines: false,
@@ -297,6 +304,7 @@ export function parseReservedClubsFromLiveForm(csvText: string): string[] {
 
   const confirmed = new Set<string>();
   const reservedCandidates: string[] = [];
+  const blockedCandidates: string[] = [];
 
   for (let i = 0; i < parsed.data.length; i++) {
     const row = parsed.data[i];
@@ -307,26 +315,51 @@ export function parseReservedClubsFromLiveForm(csvText: string): string[] {
     if (!club) continue;
 
     const key = club.toLowerCase();
-    if (status.toLowerCase() === "potwierdzony") {
+    const statusLower = status.toLowerCase();
+
+    if (statusLower === "potwierdzony") {
       confirmed.add(key);
+      continue;
+    }
+
+    if (statusLower === "brak zgłoszenia") {
+      blockedCandidates.push(club);
       continue;
     }
 
     reservedCandidates.push(club);
   }
 
-  const reserved: string[] = [];
-  const seen = new Set<string>();
+  const reservedClubs: string[] = [];
+  const blockedClubs: string[] = [];
+  const seenReserved = new Set<string>();
+  const seenBlocked = new Set<string>();
 
   for (const club of reservedCandidates) {
     const key = club.toLowerCase();
-    if (confirmed.has(key) || seen.has(key)) continue;
-    seen.add(key);
-    reserved.push(club);
+    if (confirmed.has(key) || seenReserved.has(key)) continue;
+    seenReserved.add(key);
+    reservedClubs.push(club);
   }
 
-  console.log("[parseReservedClubsFromLiveForm] Zarezerwowane:", reserved.length, reserved);
-  return reserved;
+  for (const club of blockedCandidates) {
+    const key = club.toLowerCase();
+    if (confirmed.has(key) || seenBlocked.has(key) || seenReserved.has(key)) continue;
+    seenBlocked.add(key);
+    blockedClubs.push(club);
+  }
+
+  console.log(
+    "[parseReservedClubsFromLiveForm] Zarezerwowane:",
+    reservedClubs.length,
+    reservedClubs,
+  );
+  console.log(
+    "[parseReservedClubsFromLiveForm] Zablokowane (Brak zgłoszenia):",
+    blockedClubs.length,
+    blockedClubs,
+  );
+  return { reservedClubs, blockedClubs };
 }
 
 /**
@@ -367,6 +400,7 @@ export async function getRecruitmentClubsData(): Promise<RecruitmentClubsData> {
   const empty: RecruitmentClubsData = {
     players: [],
     reservedClubs: [],
+    blockedClubs: [],
     availableClubs: [],
   };
 
@@ -382,14 +416,22 @@ export async function getRecruitmentClubsData(): Promise<RecruitmentClubsData> {
   }
 
   if (liveResult.status === "fulfilled") {
-    empty.reservedClubs = parseReservedClubsFromLiveForm(liveResult.value);
-    const reservedKeys = new Set(empty.reservedClubs.map((c) => c.toLowerCase()));
+    const { reservedClubs, blockedClubs } = parseReservedClubsFromLiveForm(
+      liveResult.value,
+    );
+    empty.reservedClubs = reservedClubs;
+    empty.blockedClubs = blockedClubs;
+
+    const reservedKeys = new Set(reservedClubs.map((c) => c.toLowerCase()));
+    const blockedKeys = new Set(blockedClubs.map((c) => c.toLowerCase()));
     const playerKeys = new Set(empty.players.map((p) => p.discordClub.toLowerCase()));
 
     empty.availableClubs = parseAvailableClubsFromColumnS(liveResult.value).filter(
       (club) => {
         const key = club.toLowerCase();
-        return !reservedKeys.has(key) && !playerKeys.has(key);
+        return (
+          !reservedKeys.has(key) && !blockedKeys.has(key) && !playerKeys.has(key)
+        );
       },
     );
   } else {
@@ -399,12 +441,13 @@ export async function getRecruitmentClubsData(): Promise<RecruitmentClubsData> {
   return empty;
 }
 
-/** Unikalne nazwy klubów do panelu logo (uczestnicy + rezerwacje + kolumna S). */
+/** Unikalne nazwy klubów do panelu logo (uczestnicy + rezerwacje + zablokowane + kolumna S). */
 export async function getMarketingClubNames(): Promise<string[]> {
   const data = await getRecruitmentClubsData();
   const names = [
     ...data.players.map((p) => p.discordClub),
     ...data.reservedClubs,
+    ...data.blockedClubs,
     ...data.availableClubs,
   ];
   const seen = new Set<string>();

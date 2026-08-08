@@ -114,6 +114,39 @@ export function AvailableClubsGrid({
             </div>
           </div>
         ) : null}
+
+        {data.blockedClubs.length > 0 ? (
+          <div className="mt-12 mb-2">
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-400">
+              Kluby Niedostępne
+            </p>
+            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-500">
+              Użytkownicy serwera Na Minusie ™ niegrający w lidze.
+            </p>
+
+            <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 lg:gap-4">
+              {data.blockedClubs.map((club) => (
+                <article
+                  key={club}
+                  className="flex flex-col items-center gap-2 rounded-xl border border-slate-800/80 bg-slate-900/50 p-3 text-center opacity-80"
+                >
+                  <MarketingCrest
+                    clubName={club}
+                    logos={logos}
+                    size="md"
+                    dimmed
+                  />
+                  <h4 className="w-full truncate text-xs font-bold uppercase tracking-wide text-slate-300 sm:text-[13px]">
+                    {club}
+                  </h4>
+                  <span className="rounded border border-slate-700 bg-slate-800 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    Niedostępny
+                  </span>
+                </article>
+              ))}
+            </div>
+          </div>
+        ) : null}
       </SectionShell>
 
       <SectionShell id="dostepne-kluby" tight>
