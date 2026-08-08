@@ -158,23 +158,28 @@ export function StandingsTable({
   hideControls?: boolean;
   captureRef?: RefObject<HTMLDivElement | null>;
 }) {
+  const divisionTitle = exportMeta?.division?.trim() || "Tabela";
+  const seasonLine = exportMeta?.season?.trim() || undefined;
+  const fileName = `${slugForExport([
+    "tabela",
+    exportMeta?.division,
+    exportMeta?.pyramid,
+    exportMeta?.season,
+  ]) || "tabela-ogolna"}.png`;
+
+  const headerParticipants = rows.map((r) => ({
+    clubName: r.team?.chosen_club ?? "",
+    managerName: r.team?.manager_name ?? "",
+  }));
+
   if (!rows.length) {
     if (hideControls) {
       return (
         <DiscordExportFrame
           exportId="export-standings"
-          fileName={
-            `${slugForExport([
-              "tabela",
-              exportMeta?.division,
-              exportMeta?.pyramid,
-              exportMeta?.season,
-            ]) || "tabela-ogolna"}.png`
-          }
-          title="Tabela ogólna"
-          subtitle={[exportMeta?.season, exportMeta?.pyramid, exportMeta?.division]
-            .filter(Boolean)
-            .join(" · ")}
+          fileName={fileName}
+          title={divisionTitle}
+          subtitle={seasonLine}
           divisionId={divisionId}
           hideControls
           captureRef={captureRef}
@@ -192,29 +197,20 @@ export function StandingsTable({
     );
   }
 
-  const fileName = `${slugForExport([
-    "tabela",
-    exportMeta?.division,
-    exportMeta?.pyramid,
-    exportMeta?.season,
-  ]) || "tabela-ogolna"}.png`;
-
-  const subtitle = [exportMeta?.season, exportMeta?.pyramid, exportMeta?.division]
-    .filter(Boolean)
-    .join(" · ");
-
   return (
     <DiscordExportFrame
       exportId="export-standings"
       fileName={fileName}
-      title="Tabela ogólna"
-      subtitle={subtitle}
+      title={divisionTitle}
+      subtitle={seasonLine}
       divisionId={divisionId}
-      discordMessage="🏆 Aktualna Tabela Ogólna!"
+      discordMessage={`🏆 ${divisionTitle} — aktualna tabela!`}
       showDiscordSend={showDiscordSend}
       hasWebhook={hasWebhook}
       hideControls={hideControls}
       captureRef={captureRef}
+      headerParticipants={headerParticipants}
+      clubLogos={logos}
     >
       <table className="w-full text-left text-sm">
         <thead className="border-b border-slate-700 text-[10px] uppercase tracking-wider text-slate-500">
@@ -249,12 +245,12 @@ export function StandingsTable({
                 <td className="px-2 py-3">
                   <ZoneMark zone={r.zone} position={r.position} />
                 </td>
-                <td className="px-2 py-2.5">
+                <td className="px-2 py-2.5 align-middle">
                   <LinkedTeamCell
                     team={r.team}
                     logos={logos}
-                    crestSize="md"
                     identitySize="sm"
+                    crestColClass="w-11 sm:w-12"
                   />
                 </td>
                 <td className="px-2 py-3 text-center tabular-nums text-slate-300">{r.played}</td>

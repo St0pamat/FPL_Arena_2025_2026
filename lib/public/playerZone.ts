@@ -4,6 +4,7 @@ import {
   getDivisionStandings,
   getPublicClubLogos,
   getPublicStructure,
+  getPublicTierLogos,
 } from "@/lib/public/actions";
 import { getPublicDivisionsFromBaza } from "@/lib/public/getAvailableClubs";
 import { dedupePlayerSearchEntries } from "@/lib/public/dedupePlayers";
@@ -173,9 +174,10 @@ export async function getPlayerZoneProfile(teamId: string): Promise<PlayerZonePr
   try {
     const { createClient } = await import("@/lib/supabase/server");
     const supabase = createClient();
-    const [structure, logos] = await Promise.all([
+    const [structure, logos, tierLogos] = await Promise.all([
       getPublicStructure(),
       getPublicClubLogos(),
+      getPublicTierLogos(),
     ]);
 
     // Bezpośrednio po id — działa dla dowolnego (opublikowanego) sezonu
@@ -267,21 +269,32 @@ export async function getPlayerZoneProfile(teamId: string): Promise<PlayerZonePr
       }
 
       const matchHistory = buildMatchHistory(teamId, teamFixtures);
-      const played = matchHistory.length;
+      const playedFromMatches = new Set(matchHistory.map((m) => m.gameweek)).size;
       const overallFplPoints = matchHistory.reduce((s, m) => s + m.myFpl, 0);
+      const fplPointsDiff = matchHistory.reduce((s, m) => s + (m.myFpl - m.oppFpl), 0);
       const ppg =
-        played > 0
-          ? Math.round((overallFplPoints / played) * 10) / 10
+        matchHistory.length > 0
+          ? Math.round((overallFplPoints / matchHistory.length) * 10) / 10
           : null;
+
       let highScore: { points: number; gameweek: number } | null = null;
+      let lowScore: { points: number; gameweek: number } | null = null;
       for (const m of matchHistory) {
         if (!highScore || m.myFpl > highScore.points) {
           highScore = { points: m.myFpl, gameweek: m.gameweek };
+        }
+        if (!lowScore || m.myFpl < lowScore.points) {
+          lowScore = { points: m.myFpl, gameweek: m.gameweek };
         }
       }
 
       let faRankingPosition: number | null = null;
       let faRankingPlayers = 0;
+      let faTrendDelta: number | null = null;
+      let faTotalPoints = overallFplPoints;
+      let playedGameweeks = playedFromMatches;
+      const targetGameweeks = 38;
+
       if (seasonId) {
         try {
           const fa = await getFARankingData(seasonId);
@@ -290,11 +303,32 @@ export async function getPlayerZoneProfile(teamId: string): Promise<PlayerZonePr
           const row = key
             ? fa.rows.find((r) => r.playerKey === key)
             : fa.rows.find((r) => r.team.id === teamId);
-          faRankingPosition = row?.position ?? null;
+          if (row) {
+            faRankingPosition = row.position;
+            faTrendDelta = row.trendDelta;
+            faTotalPoints = row.totalPoints;
+            if (row.formHistory.length > 0) {
+              playedGameweeks = row.formHistory.length;
+              let faHigh = row.formHistory[0];
+              let faLow = row.formHistory[0];
+              for (const e of row.formHistory) {
+                if (e.points > faHigh.points) faHigh = e;
+                if (e.points < faLow.points) faLow = e;
+              }
+              highScore = { points: faHigh.points, gameweek: faHigh.gw };
+              lowScore = { points: faLow.points, gameweek: faLow.gw };
+            }
+          }
         } catch {
           /* ignore */
         }
       }
+
+      // PPG: prefer FA total / played when FA history exists
+      const faPpg =
+        playedGameweeks > 0 && faTotalPoints > 0
+          ? Math.round((faTotalPoints / playedGameweeks) * 10) / 10
+          : ppg;
 
       return {
         team,
@@ -308,10 +342,17 @@ export async function getPlayerZoneProfile(teamId: string): Promise<PlayerZonePr
         fixtures: teamFixtures,
         matchHistory,
         logos,
+        tierLogos,
         faRankingPosition,
         faRankingPlayers,
-        ppg,
+        faTrendDelta,
+        faTotalPoints,
+        ppg: faPpg,
         highScore,
+        lowScore,
+        playedGameweeks,
+        targetGameweeks,
+        fplPointsDiff,
         overallFplPoints,
       };
     }
@@ -344,10 +385,17 @@ export async function getPlayerZoneProfile(teamId: string): Promise<PlayerZonePr
         fixtures: [],
         matchHistory: [],
         logos,
+        tierLogos,
         faRankingPosition: null,
         faRankingPlayers: 0,
+        faTrendDelta: null,
+        faTotalPoints: 0,
         ppg: null,
         highScore: null,
+        lowScore: null,
+        playedGameweeks: 0,
+        targetGameweeks: 38,
+        fplPointsDiff: 0,
         overallFplPoints: 0,
       };
     }

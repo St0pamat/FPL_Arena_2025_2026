@@ -27,11 +27,20 @@ function useCountUp(target: number, enabled: boolean, durationMs = 900) {
   return value;
 }
 
+function pendingPeopleLabel(n: number): string {
+  if (n === 1) return "osoba";
+  if (n >= 2 && n <= 4) return "osoby";
+  return "osób";
+}
+
 export function LeagueCapacityMeter({
   occupied,
+  pending = 0,
   capacity = LEAGUE_STARTING_CAPACITY,
 }: {
   occupied: number;
+  /** Liczba klubów / osób z listy „Oczekują na potwierdzenie” */
+  pending?: number;
   capacity?: number;
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
@@ -39,9 +48,11 @@ export function LeagueCapacityMeter({
 
   const taken = Math.max(0, Math.min(occupied, capacity));
   const free = Math.max(0, capacity - taken);
+  const pendingCount = Math.max(0, pending);
   const pct = capacity > 0 ? (taken / capacity) * 100 : 0;
   const shownTaken = useCountUp(taken, visible);
   const shownFree = useCountUp(free, visible);
+  const shownPending = useCountUp(pendingCount, visible && pendingCount > 0);
 
   useEffect(() => {
     const el = rootRef.current;
@@ -66,7 +77,9 @@ export function LeagueCapacityMeter({
     <div
       ref={rootRef}
       className="relative mt-8 overflow-hidden rounded-2xl border border-[#39FF14]/20 bg-gradient-to-br from-slate-950 via-slate-900/90 to-slate-950 px-5 py-7 sm:mt-10 sm:px-8 sm:py-9"
-      aria-label={`Zajęte miejsca w lidze: ${taken} z ${capacity}`}
+      aria-label={`Zajęte miejsca w lidze: ${taken} z ${capacity}${
+        pendingCount > 0 ? `, oczekuje na potwierdzenie: ${pendingCount}` : ""
+      }`}
     >
       <div
         aria-hidden
@@ -110,6 +123,16 @@ export function LeagueCapacityMeter({
             </>
           )}
         </p>
+
+        {pendingCount > 0 ? (
+          <p className="mt-2 text-sm font-semibold text-slate-400 sm:text-base">
+            Oczekują na potwierdzenie:{" "}
+            <span className="font-black text-amber-400">{shownPending}</span>{" "}
+            <span className="font-medium text-amber-400/80">
+              {pendingPeopleLabel(pendingCount)}
+            </span>
+          </p>
+        ) : null}
 
         <div className="mt-6 h-2.5 w-full max-w-xl overflow-hidden rounded-full bg-slate-800/90 ring-1 ring-slate-700/60">
           <div

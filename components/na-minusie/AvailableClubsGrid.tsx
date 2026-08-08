@@ -34,7 +34,10 @@ export function AvailableClubsGrid({
           </p>
         </div>
 
-        <LeagueCapacityMeter occupied={data.players.length} />
+        <LeagueCapacityMeter
+          occupied={data.players.length}
+          pending={data.reservedClubs.length}
+        />
 
         {data.players.length === 0 ? (
           <p className="mt-8 text-sm text-slate-500">

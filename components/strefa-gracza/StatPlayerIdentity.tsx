@@ -34,13 +34,24 @@ export function StatPlayerIdentity({
   const club = (team.chosen_club || "—").trim();
   const fplTeam = team.fpl_team_name?.trim();
   const idSize: PlayerIdentitySize = size === "lg" ? "lg" : size === "sm" ? "sm" : "md";
-  const crestCls =
-    size === "lg" ? "!h-6 !w-6 sm:!h-7 sm:!w-7" : size === "sm" ? "!h-5 !w-5" : "!h-5 !w-5";
+  const crestCol =
+    size === "lg"
+      ? "w-6 sm:w-7"
+      : size === "sm"
+        ? "w-5"
+        : "w-5";
 
   const inner = (
-    <div className="flex min-w-0 items-start gap-2.5">
-      <ClubCrest clubName={club} logos={logos} size="sm" className={`${crestCls} shrink-0 mt-0.5`} />
-      <div className="min-w-0 flex-1">
+    <div className="flex min-w-0 items-stretch gap-2.5">
+      <div className={`flex shrink-0 items-center justify-center self-stretch ${crestCol}`}>
+        <ClubCrest
+          clubName={club}
+          logos={logos}
+          size="fill"
+          className="!h-full !w-full !min-h-0"
+        />
+      </div>
+      <div className="flex min-w-0 flex-1 flex-col justify-center">
         <p className={identityClubClass(idSize, "default", "truncate")}>{club}</p>
         <p className={identityManagerClass(idSize, "default", "truncate")}>{team.manager_name}</p>
         {showFplTeam && fplTeam ? (

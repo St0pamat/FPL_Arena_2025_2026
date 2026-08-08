@@ -49,13 +49,13 @@ export function MatchCard({
             : "border-slate-800"
       }`}
     >
-      <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 sm:gap-4">
+      <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-stretch gap-2.5 sm:gap-3">
         <div
-          className={`flex min-w-0 items-center justify-end gap-2.5 sm:gap-3 ${
+          className={`flex min-w-0 items-stretch justify-end gap-2 sm:gap-2.5 ${
             homeWon ? "opacity-100" : awayWon ? "opacity-50" : "opacity-90"
           }`}
         >
-          <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 flex-1 flex-col justify-center">
             <TeamIdentity
               team={fixture.home_team}
               align="right"
@@ -63,10 +63,14 @@ export function MatchCard({
               truncate={false}
             />
           </div>
-          <LinkedCrestOnly team={fixture.home_team} logos={logos} size="lg" />
+          <LinkedCrestOnly
+            team={fixture.home_team}
+            logos={logos}
+            colClass="w-12 sm:w-14"
+          />
         </div>
 
-        <div className="flex shrink-0 flex-col items-center gap-1 px-1">
+        <div className="flex shrink-0 flex-col items-center justify-center gap-1 px-1">
           <span className="font-athletic text-xl font-bold tabular-nums text-white sm:text-2xl">
             {fixture.is_finished
               ? `${fixture.home_fpl_points ?? 0} : ${fixture.away_fpl_points ?? 0}`
@@ -89,12 +93,16 @@ export function MatchCard({
         </div>
 
         <div
-          className={`flex min-w-0 items-center justify-start gap-2.5 sm:gap-3 ${
+          className={`flex min-w-0 items-stretch justify-start gap-2 sm:gap-2.5 ${
             awayWon ? "opacity-100" : homeWon ? "opacity-50" : "opacity-90"
           }`}
         >
-          <LinkedCrestOnly team={fixture.away_team} logos={logos} size="lg" />
-          <div className="min-w-0 flex-1">
+          <LinkedCrestOnly
+            team={fixture.away_team}
+            logos={logos}
+            colClass="w-12 sm:w-14"
+          />
+          <div className="flex min-w-0 flex-1 flex-col justify-center">
             <TeamIdentity
               team={fixture.away_team}
               align="left"
@@ -120,18 +128,24 @@ function FplMedianRanking({
       {details.fplRanking.map((row) => (
         <li
           key={row.team.id}
-          className={`grid min-h-0 flex-1 grid-cols-[1.75rem_minmax(0,1fr)_auto] items-center gap-2.5 rounded-xl border px-2.5 py-2 sm:gap-3 sm:px-3 sm:py-2.5 ${
+          className={`grid min-h-0 flex-1 grid-cols-[1.75rem_minmax(0,1fr)_auto] items-stretch gap-2.5 rounded-xl border px-2.5 py-2 sm:gap-3 sm:px-3 sm:py-2.5 ${
             row.position === 5 ? "border-emerald-500/50" : "border-slate-800"
           } ${row.inMedianZone ? "bg-emerald-500/5" : "bg-slate-950/40"}`}
         >
-          <span className="font-mono text-sm font-bold tabular-nums text-slate-400">
+          <span className="flex items-center font-mono text-sm font-bold tabular-nums text-slate-400">
             {row.position}
           </span>
-          <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
-            <LinkedCrestOnly team={row.team} logos={logos} size="lg" />
-            <TeamIdentity team={row.team} size="md" truncate />
+          <div className="flex min-w-0 items-stretch gap-2 sm:gap-2.5">
+            <LinkedCrestOnly
+              team={row.team}
+              logos={logos}
+              colClass="w-11 sm:w-12"
+            />
+            <div className="flex min-w-0 flex-1 flex-col justify-center">
+              <TeamIdentity team={row.team} size="md" truncate />
+            </div>
           </div>
-          <div className="flex shrink-0 flex-col items-end gap-1">
+          <div className="flex shrink-0 flex-col items-end justify-center gap-1">
             <span className="font-athletic text-2xl font-bold tabular-nums leading-none text-white sm:text-3xl">
               {row.fplPoints}
             </span>

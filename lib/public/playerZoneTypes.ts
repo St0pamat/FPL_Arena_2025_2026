@@ -1,4 +1,5 @@
 import type { ClubLogoRecord } from "@/lib/admin/clubLogos";
+import type { TierLogoRecord } from "@/lib/admin/tierLogos";
 import type { FormPill, PublicFixture, PublicStandingRow, PublicTeam } from "@/lib/public/types";
 import type { SeasonStatsPayload } from "@/lib/public/seasonStats";
 
@@ -61,14 +62,32 @@ export interface PlayerZoneProfile {
   fixtures: PublicFixture[];
   matchHistory: PlayerMatchRow[];
   logos: ClubLogoRecord[];
-  /** Pozycja w The FA Ranking (kampania) */
+  /** Logo dywizji (piramida) — nagłówek profilu */
+  tierLogos: TierLogoRecord[];
+
+  /** —— The FA Ranking (kampania) —— */
   faRankingPosition: number | null;
   faRankingPlayers: number;
-  /** Średnia małych punktów FPL / kolejkę */
+  /** Dodatnie = awans w rankingu */
+  faTrendDelta: number | null;
+  /** Suma małych punktów FPL w kampanii FA Ranking */
+  faTotalPoints: number;
+  /** Średnia małych punktów FPL / kolejkę (dywizja / mecze) */
   ppg: number | null;
   /** Najwyższy wynik FPL w jednej GW */
   highScore: { points: number; gameweek: number } | null;
-  /** Suma małych punktów FPL z opublikowanych meczów w dywizji */
+  /** Najsłabszy wynik FPL w jednej GW */
+  lowScore: { points: number; gameweek: number } | null;
+  /** Zaliczonych kolejek (unikalne GW) */
+  playedGameweeks: number;
+  /** Cel sezonu / kampanii (np. 38) */
+  targetGameweeks: number;
+
+  /** —— Dywizja H2H —— */
+  /** Różnica małych punktów FPL w meczach H2H (suma my − opp) */
+  fplPointsDiff: number;
+  /** Suma małych punktów FPL z meczów w dywizji */
   overallFplPoints: number;
+
   error?: string | null;
 }

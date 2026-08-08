@@ -175,15 +175,21 @@ export function ScheduleView({
                   return (
                     <li
                       key={f.id}
-                      className={`grid grid-cols-[1fr_auto_1fr] items-center gap-2 px-3 py-3 sm:gap-4 sm:px-5 ${
+                      className={`grid grid-cols-[1fr_auto_1fr] items-stretch gap-2 px-3 py-2.5 sm:gap-3 sm:px-5 sm:py-3 ${
                         highlight ? "bg-emerald-500/5" : ""
                       }`}
                     >
-                      <div className="flex min-h-[3.5rem] min-w-0 items-stretch justify-end gap-2">
-                        <TeamIdentity team={f.home_team} align="right" size="sm" />
-                        <LinkedCrestOnly team={f.home_team} logos={logos} size="md" />
+                      <div className="flex min-h-[3.25rem] min-w-0 items-stretch justify-end gap-2">
+                        <div className="flex min-w-0 flex-1 flex-col justify-center">
+                          <TeamIdentity team={f.home_team} align="right" size="sm" />
+                        </div>
+                        <LinkedCrestOnly
+                          team={f.home_team}
+                          logos={logos}
+                          colClass="w-11 sm:w-12"
+                        />
                       </div>
-                      <div className="flex flex-col items-center">
+                      <div className="flex flex-col items-center justify-center">
                         {f.is_finished ? (
                           <span className="font-mono text-sm font-black text-white">
                             {f.home_fpl_points ?? 0}:{f.away_fpl_points ?? 0}
@@ -194,9 +200,15 @@ export function ScheduleView({
                           </span>
                         )}
                       </div>
-                      <div className="flex min-h-[3.5rem] min-w-0 items-stretch justify-start gap-2">
-                        <LinkedCrestOnly team={f.away_team} logos={logos} size="md" />
-                        <TeamIdentity team={f.away_team} align="left" size="sm" />
+                      <div className="flex min-h-[3.25rem] min-w-0 items-stretch justify-start gap-2">
+                        <LinkedCrestOnly
+                          team={f.away_team}
+                          logos={logos}
+                          colClass="w-11 sm:w-12"
+                        />
+                        <div className="flex min-w-0 flex-1 flex-col justify-center">
+                          <TeamIdentity team={f.away_team} align="left" size="sm" />
+                        </div>
                       </div>
                     </li>
                   );

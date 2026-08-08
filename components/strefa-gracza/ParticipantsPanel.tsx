@@ -44,14 +44,16 @@ function ParticipantCard({
       href={`/strefa-gracza/gracz/${team.id}`}
       className="group flex flex-col justify-between rounded-lg border border-slate-800 bg-slate-900/60 p-3 transition-all hover:border-slate-700 sm:p-4"
     >
-      <div className="flex min-w-0 items-start gap-2">
-        <ClubCrest
-          clubName={club}
-          logos={logos}
-          size="sm"
-          className="!h-6 !w-6 shrink-0 mt-0.5"
-        />
-        <div className="min-w-0 flex-1">
+      <div className="flex min-h-[3.5rem] min-w-0 items-stretch gap-2.5">
+        <div className="flex w-12 shrink-0 items-center justify-center self-stretch sm:w-14">
+          <ClubCrest
+            clubName={club}
+            logos={logos}
+            size="fill"
+            className="!h-full !w-full !min-h-0"
+          />
+        </div>
+        <div className="flex min-w-0 flex-1 flex-col justify-center">
           <p className={identityClubClass("md", "default", "truncate")}>{club}</p>
           <p className={identityManagerClass("md", "default", "truncate")}>
             {team.manager_name}

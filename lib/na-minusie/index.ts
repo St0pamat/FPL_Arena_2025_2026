@@ -1,4 +1,9 @@
-export { NA_MINUSIE_BRAND, NA_MINUSIE_LOGO, NA_MINUSIE_LOGO_ALT } from "./branding";
+export {
+  NA_MINUSIE_BRAND,
+  NA_MINUSIE_EXPORT_BRAND,
+  NA_MINUSIE_LOGO,
+  NA_MINUSIE_LOGO_ALT,
+} from "./branding";
 export { NA_MINUSIE_CONTACT, NA_MINUSIE_LINKS, NA_MINUSIE_PATHS } from "./links";
 export {
   NA_MINUSIE_MAIN_NAV,

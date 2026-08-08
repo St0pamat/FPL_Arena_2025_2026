@@ -158,14 +158,19 @@ export function PlayerSearch({
                   type="button"
                   onMouseEnter={() => setActiveIndex(i)}
                   onClick={() => navigate(p.teamId)}
-                  className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-all duration-200 ${
+                  className={`flex w-full items-stretch gap-3 rounded-xl px-3 py-2.5 text-left transition-all duration-200 ${
                     isActive
                       ? "bg-sky-500/15 ring-1 ring-sky-500/30"
                       : "hover:bg-slate-800/80"
                   }`}
                 >
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white p-1">
-                    <ClubCrest clubName={p.chosen_club} logos={logos} size="md" />
+                  <span className="flex w-11 shrink-0 items-center justify-center self-stretch sm:w-12">
+                    <ClubCrest
+                      clubName={p.chosen_club}
+                      logos={logos}
+                      size="fill"
+                      className="!h-full !w-full !min-h-0"
+                    />
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-bold text-white">{label}</span>

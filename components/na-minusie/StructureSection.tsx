@@ -31,10 +31,17 @@ export async function StructureSection() {
         {pyramidTiers.map((tier) => (
           <article
             key={tier.name}
-            className="flex w-full items-center gap-4 rounded-2xl border border-slate-800 bg-slate-900/80 p-4 sm:gap-5 sm:p-5"
+            className="flex w-full items-stretch gap-3 rounded-2xl border border-slate-800 bg-slate-900/80 pr-4 sm:gap-4 sm:pr-5"
           >
-            <TierCrest tierName={tier.name} logos={logos} />
-            <div className="min-w-0 flex-1">
+            <div className="flex w-[4.25rem] shrink-0 items-center justify-center self-stretch py-1.5 pl-1.5 sm:w-[5rem] sm:py-2 sm:pl-2">
+              <TierCrest
+                tierName={tier.name}
+                logos={logos}
+                plain
+                className="!h-full !w-full !max-h-full !rounded-lg !p-0"
+              />
+            </div>
+            <div className="min-w-0 flex-1 py-3.5 sm:py-4">
               <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                 <h3 className="text-base font-extrabold text-white sm:text-lg">{tier.name}</h3>
                 <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 sm:text-xs">
@@ -43,7 +50,7 @@ export async function StructureSection() {
               </div>
               <p className="mt-1 text-xs text-slate-400 sm:text-sm">10 zespołów · Mecz i rewanż</p>
             </div>
-            <p className="shrink-0 font-mono text-xl font-black text-[#39FF14] sm:text-2xl">
+            <p className="flex shrink-0 items-center font-mono text-xl font-black text-[#39FF14] sm:text-2xl">
               D{tier.tier}
             </p>
           </article>

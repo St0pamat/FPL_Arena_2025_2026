@@ -78,17 +78,19 @@ export function PlayoffMatchRow({
       </div>
 
       <div
-        className={`grid grid-cols-[1fr_auto_1fr] items-center gap-2 sm:gap-4 ${
-          compact ? "pt-1" : `px-3 py-3 sm:px-5 ${highlight ? "bg-emerald-500/5" : ""}`
+        className={`grid grid-cols-[1fr_auto_1fr] items-stretch gap-2 sm:gap-3 ${
+          compact ? "pt-1" : `px-3 py-2.5 sm:px-5 sm:py-3 ${highlight ? "bg-emerald-500/5" : ""}`
         }`}
       >
-        <div className="flex min-h-[3.5rem] min-w-0 flex-col items-end justify-center gap-1">
+        <div className="flex min-h-[3.25rem] min-w-0 flex-col items-end justify-center gap-1">
           <div className="flex w-full min-w-0 items-stretch justify-end gap-2">
-            <TeamIdentity team={f.home_team} align="right" size="sm" truncate={false} />
+            <div className="flex min-w-0 flex-1 flex-col justify-center">
+              <TeamIdentity team={f.home_team} align="right" size="sm" truncate={false} />
+            </div>
             <LinkedCrestOnly
               team={f.home_team}
               logos={logos}
-              size={compact ? "lg" : "md"}
+              colClass={compact ? "w-12 sm:w-14" : "w-11 sm:w-12"}
             />
           </div>
           {f.home_division_name ? (
@@ -99,7 +101,7 @@ export function PlayoffMatchRow({
           {match.homeOutcome ? <OutcomeBadge outcome={match.homeOutcome} /> : null}
         </div>
 
-        <div className="flex flex-col items-center gap-0.5 px-1">
+        <div className="flex flex-col items-center justify-center gap-0.5 px-1">
           {hasScore ? (
             <>
               <p className="font-mono text-xl font-black tabular-nums text-white sm:text-2xl">
@@ -122,14 +124,16 @@ export function PlayoffMatchRow({
           )}
         </div>
 
-        <div className="flex min-h-[3.5rem] min-w-0 flex-col items-start justify-center gap-1">
+        <div className="flex min-h-[3.25rem] min-w-0 flex-col items-start justify-center gap-1">
           <div className="flex w-full min-w-0 items-stretch justify-start gap-2">
             <LinkedCrestOnly
               team={f.away_team}
               logos={logos}
-              size={compact ? "lg" : "md"}
+              colClass={compact ? "w-12 sm:w-14" : "w-11 sm:w-12"}
             />
-            <TeamIdentity team={f.away_team} align="left" size="sm" truncate={false} />
+            <div className="flex min-w-0 flex-1 flex-col justify-center">
+              <TeamIdentity team={f.away_team} align="left" size="sm" truncate={false} />
+            </div>
           </div>
           {f.away_division_name ? (
             <span className="rounded bg-slate-800 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-slate-400">

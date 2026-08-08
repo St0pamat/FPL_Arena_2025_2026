@@ -205,12 +205,12 @@ export function FARankingTable({
                       <LinkedTeamCell
                         team={row.team}
                         logos={logos}
-                        crestSize="md"
                         identitySize="sm"
                         linkToProfile={!compact}
+                        crestColClass="w-11 sm:w-12"
                       />
                       {row.divisionName && !compact ? (
-                        <p className="mt-0.5 truncate pl-12 text-[10px] text-slate-600">
+                        <p className="mt-0.5 truncate pl-[3.25rem] text-[10px] text-slate-600 sm:pl-14">
                           {row.divisionName}
                         </p>
                       ) : null}
@@ -292,9 +292,9 @@ export function FARankingExportSlice({
                 <LinkedTeamCell
                   team={row.team}
                   logos={logos}
-                  crestSize="md"
                   identitySize="sm"
                   linkToProfile={false}
+                  crestColClass="w-11 sm:w-12"
                 />
               </td>
               <td className="px-3 py-2.5 align-middle">

@@ -93,9 +93,14 @@ function HighlightBentoCard({
 
         <div className="mt-auto flex items-center gap-3">
           <span
-            className={`flex shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white p-1.5 transition-transform duration-300 group-hover:scale-105 ${isHero ? "h-16 w-16 sm:h-20 sm:w-20" : "h-12 w-12"}`}
+            className={`flex shrink-0 items-center justify-center transition-transform duration-300 group-hover:scale-105 ${isHero ? "h-16 w-16 sm:h-20 sm:w-20" : "h-12 w-12"}`}
           >
-            <ClubCrest clubName={card.team.chosen_club} logos={logos} size={isHero ? "lg" : "md"} />
+            <ClubCrest
+              clubName={card.team.chosen_club}
+              logos={logos}
+              size={isHero ? "lg" : "md"}
+              className="!h-full !w-full"
+            />
           </span>
           <div className="min-w-0">
             <p className="truncate text-sm font-bold text-white sm:text-base">{card.subtitle}</p>

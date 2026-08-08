@@ -26,22 +26,24 @@ export function PlayerCompactIdentity({
 }) {
   const club = (team.chosen_club || "—").trim();
   const idSize = size === "lg" ? "lg" : size === "sm" ? "sm" : "md";
-  const crestSize =
+  const crestCol =
     size === "lg"
-      ? "!h-14 !w-14 sm:!h-16 sm:!w-16"
+      ? "w-14 sm:w-16"
       : size === "sm"
-        ? "!h-9 !w-9"
-        : "!h-11 !w-11 sm:!h-12 sm:!w-12";
+        ? "w-9"
+        : "w-11 sm:w-12";
 
   const inner = (
-    <div className="flex min-w-0 items-center gap-3">
-      <ClubCrest
-        clubName={club}
-        logos={logos}
-        size={size === "lg" ? "lg" : size === "sm" ? "sm" : "md"}
-        className={`${crestSize} shrink-0`}
-      />
-      <div className="min-w-0 flex-1">
+    <div className="flex min-w-0 items-stretch gap-3">
+      <div className={`flex shrink-0 items-center justify-center self-stretch ${crestCol}`}>
+        <ClubCrest
+          clubName={club}
+          logos={logos}
+          size="fill"
+          className="!h-full !w-full !min-h-0"
+        />
+      </div>
+      <div className="flex min-w-0 flex-1 flex-col justify-center">
         <p className={identityClubClass(idSize, "default", "truncate")}>{club}</p>
         <p className={identityManagerClass(idSize, "default", "truncate")}>
           {team.manager_name}

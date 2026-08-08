@@ -32,24 +32,26 @@ function IdentityBlock({
 }) {
   const club = (team.chosen_club || "—").trim();
   const fplTeam = team.fpl_team_name?.trim();
-  const crestCls =
+  const crestCol =
     size === "lg"
-      ? "!h-16 !w-16 sm:!h-20 sm:!w-20"
+      ? "w-16 sm:w-20"
       : size === "sm"
-        ? "!h-10 !w-10"
-        : "!h-12 !w-12 sm:!h-14 sm:!w-14";
+        ? "w-10"
+        : "w-12 sm:w-14";
   const idSize = size === "lg" ? "lg" : size === "sm" ? "sm" : "md";
   const isRight = align === "right";
 
   if (centered) {
     return (
       <div className="flex min-w-0 flex-col items-center text-center">
-        <ClubCrest
-          clubName={club}
-          logos={logos}
-          size={size === "lg" ? "lg" : "md"}
-          className={`${crestCls} mb-2 shrink-0`}
-        />
+        <div className={`mb-2 aspect-square ${crestCol}`}>
+          <ClubCrest
+            clubName={club}
+            logos={logos}
+            size="fill"
+            className="!h-full !w-full !min-h-0"
+          />
+        </div>
         <div className="min-w-0 w-full">
           <p className={identityClubClass(idSize, "default", "truncate")}>{club}</p>
           <p className={identityManagerClass(idSize, "default", "truncate")}>
@@ -70,15 +72,17 @@ function IdentityBlock({
 
   return (
     <div
-      className={`flex min-w-0 items-start gap-2.5 ${isRight ? "flex-row-reverse text-right" : "text-left"}`}
+      className={`flex min-w-0 items-stretch gap-2.5 ${isRight ? "flex-row-reverse text-right" : "text-left"}`}
     >
-      <ClubCrest
-        clubName={club}
-        logos={logos}
-        size={size === "lg" ? "lg" : "md"}
-        className={`${crestCls} shrink-0`}
-      />
-      <div className="min-w-0 flex-1">
+      <div className={`flex shrink-0 items-center justify-center self-stretch ${crestCol}`}>
+        <ClubCrest
+          clubName={club}
+          logos={logos}
+          size="fill"
+          className="!h-full !w-full !min-h-0"
+        />
+      </div>
+      <div className="flex min-w-0 flex-1 flex-col justify-center">
         <p className={identityClubClass(idSize, "default", "truncate")}>{club}</p>
         <p className={identityManagerClass(idSize, "default", "truncate")}>
           {team.manager_name}
@@ -189,18 +193,18 @@ function MovementTile({
 
   return (
     <article
-      className={`flex w-full items-center gap-3 rounded-lg border p-3 sm:gap-4 sm:p-4 ${border}`}
+      className={`flex w-full items-stretch gap-3 rounded-lg border p-3 sm:gap-4 sm:p-4 ${border}`}
     >
-      {/* Herb — wysokość kafelka */}
-      <ClubCrest
-        clubName={club}
-        logos={logos}
-        size="lg"
-        className="!h-14 !w-14 shrink-0 self-center sm:!h-16 sm:!w-16"
-      />
+      <div className="flex w-14 shrink-0 items-center justify-center self-stretch sm:w-16">
+        <ClubCrest
+          clubName={club}
+          logos={logos}
+          size="fill"
+          className="!h-full !w-full !min-h-0"
+        />
+      </div>
 
-      {/* Nazwy — pionowo przy herbie */}
-      <div className="min-w-0 flex-1">
+      <div className="flex min-w-0 flex-1 flex-col justify-center">
         <p className={identityClubClass("sm", "default", "break-words")}>{club}</p>
         <p className={identityManagerClass("sm", "default", "break-words")}>
           {row.team.manager_name}
@@ -211,16 +215,14 @@ function MovementTile({
         <p className={identityDiscordClass("xs", "break-words")}>{discord}</p>
       </div>
 
-      {/* Badge — na prawo od nazw */}
       <span
-        className={`inline-flex w-fit shrink-0 items-center rounded-md px-2 py-1 text-center text-[10px] font-black uppercase tracking-wide sm:text-xs ${badge}`}
+        className={`inline-flex w-fit shrink-0 items-center self-center rounded-md px-2 py-1 text-center text-[10px] font-black uppercase tracking-wide sm:text-xs ${badge}`}
       >
         {message}
       </span>
 
-      {/* Punkty — duże, wyśrodkowane w pionie, po prawej */}
       {row.totalPoints != null ? (
-        <div className="flex shrink-0 flex-col items-end justify-center pl-1">
+        <div className="flex shrink-0 flex-col items-end justify-center self-center pl-1">
           <span className="text-2xl font-black tabular-nums leading-none text-white sm:text-3xl">
             {row.totalPoints}
           </span>
@@ -261,16 +263,17 @@ function PlayoffSideBlock({
       </p>
 
       <div
-        className={`flex max-w-full items-center gap-3 ${isLeft ? "flex-row-reverse" : "flex-row"}`}
+        className={`flex max-w-full items-stretch gap-3 ${isLeft ? "flex-row-reverse" : "flex-row"}`}
       >
-        {/* Herb od strony środka; nazwy przy zewnętrznej krawędzi kafelka */}
-        <ClubCrest
-          clubName={club}
-          logos={logos}
-          size="lg"
-          className="!h-14 !w-14 shrink-0 sm:!h-16 sm:!w-16"
-        />
-        <div className={`min-w-0 ${isLeft ? "text-left" : "text-right"}`}>
+        <div className="flex w-14 shrink-0 items-center justify-center self-stretch sm:w-16">
+          <ClubCrest
+            clubName={club}
+            logos={logos}
+            size="fill"
+            className="!h-full !w-full !min-h-0"
+          />
+        </div>
+        <div className={`flex min-w-0 flex-col justify-center ${isLeft ? "text-left" : "text-right"}`}>
           <p className={identityClubClass("md", "default", "break-words")}>{club}</p>
           <p className={identityManagerClass("md", "default", "break-words")}>
             {team.manager_name}
@@ -581,16 +584,18 @@ export function SeasonSummaryView({
               return (
                 <article
                   key={row.teamId}
-                  className="flex items-center gap-2.5 rounded-lg border border-amber-500/25 bg-slate-900/60 p-3"
+                  className="flex items-stretch gap-2.5 rounded-lg border border-amber-500/25 bg-slate-900/60 p-3"
                 >
-                  <ClubCrest
-                    clubName={club}
-                    logos={logos}
-                    size="lg"
-                    className="!h-14 !w-14 shrink-0 sm:!h-[4.25rem] sm:!w-[4.25rem]"
-                  />
+                  <div className="flex w-14 shrink-0 items-center justify-center self-stretch sm:w-[4.25rem]">
+                    <ClubCrest
+                      clubName={club}
+                      logos={logos}
+                      size="fill"
+                      className="!h-full !w-full !min-h-0"
+                    />
+                  </div>
 
-                  <div className="min-w-0 flex-1">
+                  <div className="flex min-w-0 flex-1 flex-col justify-center">
                     <p className={identityClubClass("xs", "default", "break-words")}>{club}</p>
                     <p className={identityManagerClass("xs", "default", "break-words")}>
                       {row.team.manager_name}

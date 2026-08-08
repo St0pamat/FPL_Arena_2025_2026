@@ -130,9 +130,16 @@ export function DivisionStructureView({
               key={block.divisionId}
               className="overflow-hidden rounded-2xl border border-slate-700/60 bg-slate-900/50"
             >
-              <header className="flex flex-wrap items-center gap-3 border-b border-slate-800 bg-slate-950/70 px-4 py-3.5 sm:px-5">
-                <TierCrest tierName={crestName} logos={tierLogos} size="sm" />
-                <div className="min-w-0">
+              <header className="flex flex-wrap items-stretch gap-3 border-b border-slate-800 bg-slate-950/70 px-4 py-3.5 sm:px-5">
+                <div className="flex w-11 shrink-0 items-center justify-center self-stretch sm:w-12">
+                  <TierCrest
+                    tierName={crestName}
+                    logos={tierLogos}
+                    plain
+                    className="!h-full !w-full !max-h-full !rounded-lg !p-0"
+                  />
+                </div>
+                <div className="flex min-w-0 flex-col justify-center">
                   <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#39FF14]">
                     {block.pyramidName !== "—" ? block.pyramidName : "Piramida"}
                   </p>
@@ -141,7 +148,7 @@ export function DivisionStructureView({
                   </h2>
                 </div>
                 <span
-                  className={`ml-auto rounded-lg px-2.5 py-1 font-mono text-xs font-bold ${
+                  className={`ml-auto self-center rounded-lg px-2.5 py-1 font-mono text-xs font-bold ${
                     full
                       ? "bg-emerald-500/15 text-emerald-300"
                       : "bg-slate-800 text-slate-300"
@@ -191,15 +198,17 @@ export function DivisionStructureView({
                             {linkToProfile ? (
                               <Link
                                 href={`/strefa-gracza/gracz/${row.teamId}`}
-                                className="flex min-w-0 items-center gap-3 rounded-lg transition-colors group-hover:text-emerald-300"
+                                className="flex min-h-[3.25rem] min-w-0 items-stretch gap-2.5 rounded-lg transition-colors group-hover:text-emerald-300"
                               >
-                                <ClubCrest
-                                  clubName={row.chosen_club}
-                                  logos={logos}
-                                  size="md"
-                                  className="!h-10 !w-10 shrink-0 sm:!h-11 sm:!w-11"
-                                />
-                                <div className="min-w-0 flex-1">
+                                <div className="flex w-11 shrink-0 items-center justify-center self-stretch sm:w-12">
+                                  <ClubCrest
+                                    clubName={row.chosen_club}
+                                    logos={logos}
+                                    size="fill"
+                                    className="!h-full !w-full !min-h-0"
+                                  />
+                                </div>
+                                <div className="flex min-w-0 flex-1 flex-col justify-center">
                                   <p className={identityClubClass("sm", "table", "truncate group-hover:text-emerald-200")}>
                                     {row.chosen_club || "—"}
                                   </p>
@@ -209,14 +218,16 @@ export function DivisionStructureView({
                                 </div>
                               </Link>
                             ) : (
-                              <div className="flex min-w-0 items-center gap-3">
-                                <ClubCrest
-                                  clubName={row.chosen_club}
-                                  logos={logos}
-                                  size="md"
-                                  className="!h-10 !w-10 shrink-0 sm:!h-11 sm:!w-11"
-                                />
-                                <div className="min-w-0 flex-1">
+                              <div className="flex min-h-[3.25rem] min-w-0 items-stretch gap-2.5">
+                                <div className="flex w-11 shrink-0 items-center justify-center self-stretch sm:w-12">
+                                  <ClubCrest
+                                    clubName={row.chosen_club}
+                                    logos={logos}
+                                    size="fill"
+                                    className="!h-full !w-full !min-h-0"
+                                  />
+                                </div>
+                                <div className="flex min-w-0 flex-1 flex-col justify-center">
                                   <p className={identityClubClass("sm", "table", "truncate")}>
                                     {row.chosen_club || "—"}
                                   </p>
