@@ -1,0 +1,1 @@
+export const LEAGUE_STARTING_CAPACITY = 50;

@@ -2,7 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 
-export const LEAGUE_STARTING_CAPACITY = 50;
+import { LEAGUE_STARTING_CAPACITY } from "@/lib/na-minusie/leagueCapacity";
+
+export { LEAGUE_STARTING_CAPACITY };
 
 function useCountUp(target: number, enabled: boolean, durationMs = 900) {
   const [value, setValue] = useState(0);
@@ -27,12 +29,6 @@ function useCountUp(target: number, enabled: boolean, durationMs = 900) {
   return value;
 }
 
-function pendingPeopleLabel(n: number): string {
-  if (n === 1) return "osoba";
-  if (n >= 2 && n <= 4) return "osoby";
-  return "osób";
-}
-
 export function LeagueCapacityMeter({
   occupied,
   pending = 0,
@@ -47,11 +43,14 @@ export function LeagueCapacityMeter({
   const [visible, setVisible] = useState(false);
 
   const taken = Math.max(0, Math.min(occupied, capacity));
-  const free = Math.max(0, capacity - taken);
   const pendingCount = Math.max(0, pending);
-  const pct = capacity > 0 ? (taken / capacity) * 100 : 0;
+  const freeSpots = Math.max(0, capacity - taken - pendingCount);
+  const pct =
+    capacity > 0
+      ? (Math.min(capacity, taken + pendingCount) / capacity) * 100
+      : 0;
   const shownTaken = useCountUp(taken, visible);
-  const shownFree = useCountUp(free, visible);
+  const shownFree = useCountUp(freeSpots, visible);
   const shownPending = useCountUp(pendingCount, visible && pendingCount > 0);
 
   useEffect(() => {
@@ -70,16 +69,11 @@ export function LeagueCapacityMeter({
     return () => io.disconnect();
   }, []);
 
-  const almostFull = free <= 5 && free > 0;
-  const full = free === 0;
-
   return (
     <div
       ref={rootRef}
       className="relative mt-8 overflow-hidden rounded-2xl border border-[#39FF14]/20 bg-gradient-to-br from-slate-950 via-slate-900/90 to-slate-950 px-5 py-7 sm:mt-10 sm:px-8 sm:py-9"
-      aria-label={`Zajęte miejsca w lidze: ${taken} z ${capacity}${
-        pendingCount > 0 ? `, oczekuje na potwierdzenie: ${pendingCount}` : ""
-      }`}
+      aria-label={`Potwierdzeni: ${taken}, weryfikacja: ${pendingCount}, wolne miejsca: ${freeSpots} z ${capacity}`}
     >
       <div
         aria-hidden
@@ -107,32 +101,23 @@ export function LeagueCapacityMeter({
           </span>
         </div>
 
-        <p className="mt-3 text-sm font-semibold text-slate-300 sm:text-base">
-          {full ? (
-            <>Limit startowy wyczerpany</>
-          ) : almostFull ? (
+        <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-sm sm:text-base">
+          <span className="font-semibold text-emerald-500">
+            Potwierdzeni: {shownTaken}
+          </span>
+          {pendingCount > 0 ? (
             <>
-              Zostało{" "}
-              <span className="font-black text-amber-300">{shownFree}</span>{" "}
-              {shownFree === 1 ? "miejsce" : shownFree < 5 ? "miejsca" : "miejsc"}
+              <span className="text-slate-500">·</span>
+              <span className="font-semibold text-amber-500">
+                Weryfikacja: {shownPending}
+              </span>
             </>
-          ) : (
-            <>
-              Potwierdzeni uczestnicy · wolnych:{" "}
-              <span className="font-black text-[#39FF14]">{shownFree}</span>
-            </>
-          )}
-        </p>
-
-        {pendingCount > 0 ? (
-          <p className="mt-2 text-sm font-semibold text-slate-400 sm:text-base">
-            Oczekują na potwierdzenie:{" "}
-            <span className="font-black text-amber-400">{shownPending}</span>{" "}
-            <span className="font-medium text-amber-400/80">
-              {pendingPeopleLabel(pendingCount)}
-            </span>
-          </p>
-        ) : null}
+          ) : null}
+          <span className="text-slate-500">·</span>
+          <span className="font-bold text-white">
+            Wolne miejsca: {shownFree}
+          </span>
+        </div>
 
         <div className="mt-6 h-2.5 w-full max-w-xl overflow-hidden rounded-full bg-slate-800/90 ring-1 ring-slate-700/60">
           <div

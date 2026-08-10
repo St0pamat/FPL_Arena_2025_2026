@@ -1,5 +1,10 @@
 import Image from "next/image";
+import { Suspense } from "react";
 import { ArrowDown } from "lucide-react";
+import {
+  HeroCapacityStrip,
+  HeroCapacityStripSkeleton,
+} from "@/components/na-minusie/HeroCapacityStrip";
 import { NA_MINUSIE_BRAND, NA_MINUSIE_LOGO, NA_MINUSIE_LOGO_ALT } from "@/lib/na-minusie/branding";
 
 export function HeroSection() {
@@ -26,6 +31,10 @@ export function HeroSection() {
             widzimy się niedługo! ⚽
           </p>
         </aside>
+
+        <Suspense fallback={<HeroCapacityStripSkeleton />}>
+          <HeroCapacityStrip />
+        </Suspense>
 
         <p className="nm-headline mb-8 text-3xl leading-[1.05] text-white sm:text-5xl lg:text-6xl xl:text-7xl">
           {NA_MINUSIE_BRAND}
