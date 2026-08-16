@@ -132,16 +132,14 @@ export function Footer() {
             <h3 className={headingClass}>Odnośniki</h3>
             <ul className="space-y-3">
               <li>
-                <a
-                  href={NA_MINUSIE_LINKS.form}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={linkClass}
+                <span
+                  role="status"
+                  aria-disabled="true"
+                  className="inline-flex cursor-not-allowed items-center gap-2 text-sm font-semibold text-slate-500"
                 >
-                  <ClipboardList className="h-4 w-4 shrink-0 text-emerald-400/80" aria-hidden />
-                  Formularz Zgłoszeniowy
-                  <ExternalLink className="h-3 w-3 shrink-0 opacity-50" aria-hidden />
-                </a>
+                  <ClipboardList className="h-4 w-4 shrink-0 text-slate-600" aria-hidden />
+                  FORMULARZ ZAMKNIĘTY - KONIEC REKRUTACJI
+                </span>
               </li>
               <li>
                 <Link href="/arena" className={linkClass}>

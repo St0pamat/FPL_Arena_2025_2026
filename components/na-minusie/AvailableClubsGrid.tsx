@@ -34,6 +34,13 @@ export function AvailableClubsGrid({
           </p>
         </div>
 
+        <p
+          role="status"
+          className="mb-6 mt-8 text-center font-black uppercase tracking-widest text-red-500 text-xl sm:text-2xl"
+        >
+          REKRUTACJA NA SEZON FPL 2026/2027 ZOSTAŁA ZAMKNIĘTA
+        </p>
+
         <LeagueCapacityMeter
           occupied={data.players.length}
           pending={data.reservedClubs.length}

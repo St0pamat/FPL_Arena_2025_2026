@@ -75,16 +75,25 @@ function BrandMark({
   circle = false,
   /** Arena → lewo, Na Minusie → prawo */
   side = "left",
+  /** Bez ujemnych marginesów — bezpieczne dla html-to-image */
+  safeEdges = false,
 }: {
   src: string;
   alt: string;
   circle?: boolean;
   side?: "left" | "right";
+  safeEdges?: boolean;
 }) {
   return (
     <div
-      className={`aspect-square h-[7rem] shrink-0 self-start sm:h-[8.5rem] ${
-        side === "left" ? "-ml-3 sm:-ml-5" : "-mr-3 sm:-mr-5"
+      className={`aspect-square h-[7rem] w-[7rem] shrink-0 sm:h-[8.5rem] sm:w-[8.5rem] ${
+        safeEdges ? "self-center" : "self-start"
+      } ${
+        safeEdges
+          ? ""
+          : side === "left"
+            ? "-ml-3 sm:-ml-5"
+            : "-mr-3 sm:-mr-5"
       } ${
         circle
           ? "overflow-hidden rounded-full bg-[#F5C542] ring-1 ring-white/10"
@@ -96,7 +105,11 @@ function BrandMark({
         src={src}
         alt={alt}
         className={`box-border h-full w-full object-center ${
-          circle ? "scale-110 object-cover" : "object-contain object-top"
+          circle
+            ? safeEdges
+              ? "object-cover"
+              : "scale-110 object-cover"
+            : "object-contain object-top"
         }`}
         crossOrigin="anonymous"
         decoding="async"
@@ -146,26 +159,76 @@ function TitleBlock({
 /**
  * Logotypy przyklejone do górnej krawędzi, podpisy tuż pod herbami.
  * Teksty na środku — bez zmian (wyśrodkowane w pionie).
+ * `safeEdges` — Grid 1fr|auto|1fr: tytuł zawsze w matematycznym środku (PNG).
  */
 export function StandingsPromoHeader({
   title,
   subtitle,
   participants = [],
   logos = [],
+  safeEdges = false,
 }: {
   title: string;
   subtitle?: string;
   participants?: PromoHeaderParticipant[];
   logos?: ClubLogoRecord[];
+  safeEdges?: boolean;
 }) {
   const top10 = participants.slice(0, 10);
   const left = top10.slice(0, 5);
   const right = top10.slice(5, 10);
   const withRoster = left.length > 0 || right.length > 0;
 
+  if (safeEdges) {
+    return (
+      <header className="mb-8 w-full overflow-visible border-b border-emerald-500/30 pb-4">
+        <div className="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-4">
+          <div className="justify-self-start">
+            <BrandMark
+              src={ARENA_PORTAL_LOGO}
+              alt={ARENA_PORTAL_ALT}
+              side="left"
+              safeEdges
+            />
+          </div>
+
+          <div className="justify-self-center flex max-w-[28rem] flex-col items-center px-2 text-center">
+            <p className="text-[10px] font-black uppercase leading-tight tracking-[0.12em] text-emerald-400 sm:text-[13px] sm:tracking-[0.16em]">
+              {NA_MINUSIE_EXPORT_BRAND}
+            </p>
+            {subtitle ? (
+              <p className="mt-1 text-[11px] font-semibold leading-tight text-slate-300 sm:text-sm">
+                {subtitle}
+              </p>
+            ) : null}
+            <h2 className="mt-2 max-w-full font-athletic text-[1.35rem] uppercase leading-[0.95] tracking-wide text-white sm:text-[2rem]">
+              {title}
+            </h2>
+            {withRoster ? (
+              <div className="mt-3 flex w-full max-w-xl items-start justify-center gap-2">
+                <CrestStrip participants={left} logos={logos} />
+                <CrestStrip participants={right} logos={logos} />
+              </div>
+            ) : null}
+          </div>
+
+          <div className="justify-self-end">
+            <BrandMark
+              src={NA_MINUSIE_LOGO}
+              alt={NA_MINUSIE_LOGO_ALT}
+              circle
+              side="right"
+              safeEdges
+            />
+          </div>
+        </div>
+      </header>
+    );
+  }
+
   return (
-    <header className="mb-5 overflow-visible border-b border-emerald-500/30">
-      <div className="flex h-[7.5rem] items-stretch gap-1 sm:h-[9rem] sm:gap-1.5">
+    <header className="mb-5 overflow-visible border-b border-emerald-500/30 pb-2">
+      <div className="flex h-[7.5rem] w-full items-stretch justify-between gap-2 sm:h-[9rem] sm:gap-3">
         <BrandMark src={ARENA_PORTAL_LOGO} alt={ARENA_PORTAL_ALT} side="left" />
 
         {withRoster ? (

@@ -274,6 +274,238 @@ export async function generateXComDraft(
   }
 }
 
+export type GeneratePreviewDiscordResult = ActionState & {
+  json?: string;
+};
+
+/**
+ * Szkic X.com — zapowiedź nadchodzącej kolejki (bez wyników).
+ * Oznacza 2–4 graczy z x_com z najciekawszych par.
+ */
+export async function generatePreviewXComDraft(
+  divisionId: string,
+  gameweek: number,
+): Promise<GenerateXDraftResult> {
+  try {
+    const supabase = await requireAuth();
+    if (!divisionId) return { error: "Wybierz dywizję." };
+    if (!Number.isFinite(gameweek) || gameweek < 1) {
+      return { error: "Wybierz kolejkę (GW)." };
+    }
+
+    const { data: division, error: divError } = await supabase
+      .from("divisions")
+      .select("id, name, tier")
+      .eq("id", divisionId)
+      .maybeSingle();
+    if (divError) return { error: divError.message };
+    if (!division) return { error: "Nie znaleziono dywizji." };
+
+    const { data: fixtures, error: fixError } = await supabase
+      .from("fixtures")
+      .select("home_team_id, away_team_id, is_playoff")
+      .eq("division_id", divisionId)
+      .eq("gameweek", gameweek);
+    if (fixError) return { error: fixError.message };
+
+    const regular = (fixtures ?? []).filter((f) => !f.is_playoff);
+    if (!regular.length) {
+      return {
+        error: `Brak meczów w terminarzu ${division.name} · GW${gameweek}.`,
+      };
+    }
+
+    const teamIds = [
+      ...new Set(
+        regular.flatMap((f) => [f.home_team_id, f.away_team_id].filter(Boolean)),
+      ),
+    ] as string[];
+
+    const { data: teams, error: teamsError } = await supabase
+      .from("teams")
+      .select("id, manager_name, x_com")
+      .in("id", teamIds);
+    if (teamsError) return { error: teamsError.message };
+
+    const byId = new Map(
+      (teams ?? []).map((t) => [
+        t.id as string,
+        {
+          manager_name: String(t.manager_name ?? ""),
+          x_com: (t.x_com as string | null) ?? null,
+        },
+      ]),
+    );
+
+    type Pair = { a: string; b: string; score: number };
+    const pairs: Pair[] = [];
+    for (const f of regular) {
+      const home = byId.get(f.home_team_id as string);
+      const away = byId.get(f.away_team_id as string);
+      if (!home || !away) continue;
+      const a = formatXMention(home.x_com, home.manager_name);
+      const b = formatXMention(away.x_com, away.manager_name);
+      const score =
+        (home.x_com?.trim() ? 2 : 0) + (away.x_com?.trim() ? 2 : 0);
+      pairs.push({ a, b, score });
+    }
+
+    pairs.sort((x, y) => y.score - x.score);
+    const highlight = pairs.slice(0, 2);
+    const highlightBlock =
+      highlight.length > 0
+        ? highlight.map((p) => `${p.a} vs ${p.b}`).join("\n")
+        : "(brak par do oznaczenia)";
+
+    let draft = [
+      `🔜 Zapowiedź GW${gameweek}!`,
+      `🏴󠁧󠁢󠁥󠁮󠁧󠁿 ${division.name} (FPL Arena: Na Minusie ™)`,
+      ``,
+      `Przed nami kolejne emocje! W tej kolejce zmierzą się m.in.:`,
+      highlightBlock,
+      ``,
+      `Kto zdobędzie cenne 3 punkty? 🔥`,
+      `#FPL #FPLpl`,
+    ].join("\n");
+
+    if (draft.length > 280) {
+      draft = [
+        `🔜 Zapowiedź GW${gameweek}!`,
+        `🏴󠁧󠁢󠁥󠁮󠁧󠁿 ${division.name} (FPL Arena: Na Minusie ™)`,
+        ``,
+        highlightBlock,
+        ``,
+        `Kto zdobędzie 3 pkt? 🔥 #FPL #FPLpl`,
+      ].join("\n");
+    }
+
+    if (draft.length > 280) {
+      draft = draft.slice(0, 277) + "…";
+    }
+
+    return { error: null, success: "Szkic zapowiedzi X.com gotowy.", draft };
+  } catch (e) {
+    console.error("[generatePreviewXComDraft]", e);
+    return {
+      error:
+        e instanceof Error
+          ? e.message
+          : "Nie udało się wygenerować zapowiedzi X.com.",
+    };
+  }
+}
+
+/**
+ * JSON embed Discord — zapowiedź kolejki (pomarańczowy / złoty).
+ */
+export async function generatePreviewDiscordJSON(
+  divisionId: string,
+  gameweek: number,
+): Promise<GeneratePreviewDiscordResult> {
+  try {
+    const supabase = await requireAuth();
+    if (!divisionId) return { error: "Wybierz dywizję." };
+    if (!Number.isFinite(gameweek) || gameweek < 1) {
+      return { error: "Wybierz kolejkę (GW)." };
+    }
+
+    const { data: division, error: divError } = await supabase
+      .from("divisions")
+      .select("id, name")
+      .eq("id", divisionId)
+      .maybeSingle();
+    if (divError) return { error: divError.message };
+    if (!division) return { error: "Nie znaleziono dywizji." };
+
+    const { data: fixtures, error: fixError } = await supabase
+      .from("fixtures")
+      .select("home_team_id, away_team_id, is_playoff")
+      .eq("division_id", divisionId)
+      .eq("gameweek", gameweek);
+    if (fixError) return { error: fixError.message };
+
+    const regular = (fixtures ?? []).filter((f) => !f.is_playoff);
+    if (!regular.length) {
+      return {
+        error: `Brak meczów w terminarzu ${division.name} · GW${gameweek}.`,
+      };
+    }
+
+    const teamIds = [
+      ...new Set(
+        regular.flatMap((f) => [f.home_team_id, f.away_team_id].filter(Boolean)),
+      ),
+    ] as string[];
+
+    const { data: teams, error: teamsError } = await supabase
+      .from("teams")
+      .select("id, manager_name, chosen_club")
+      .in("id", teamIds);
+    if (teamsError) return { error: teamsError.message };
+
+    const byId = new Map(
+      (teams ?? []).map((t) => [
+        t.id as string,
+        {
+          manager_name: String(t.manager_name ?? "—").trim() || "—",
+          club: String(t.chosen_club ?? "").trim(),
+        },
+      ]),
+    );
+
+    const fields = regular.map((f, i) => {
+      const home = byId.get(f.home_team_id as string);
+      const away = byId.get(f.away_team_id as string);
+      const homeLabel = home
+        ? `${home.manager_name}${home.club ? ` (${home.club})` : ""}`
+        : "—";
+      const awayLabel = away
+        ? `${away.manager_name}${away.club ? ` (${away.club})` : ""}`
+        : "—";
+      return {
+        name: `Mecz ${i + 1}`,
+        value: `**${homeLabel}** vs **${awayLabel}**`,
+        inline: false,
+      };
+    });
+
+    // Discord embed color: złoty / pomarańczowy (#EAB308)
+    const GOLD_ORANGE = 0xeab308;
+
+    const payload = {
+      content: `🔜 Deadline FPL się zbliża — czas ustawić składy!`,
+      embeds: [
+        {
+          title: `🔜 Zapowiedź Kolejki ${gameweek}! 🏆`,
+          description: [
+            `**${division.name}** · FPL Arena: Na Minusie ™`,
+            ``,
+            `Budujemy napięcie przed deadlinem Fantasy Premier League.`,
+            `Zmiany kapitanów, ostatnie ruchy transferowe i walka o ligowe punkty H2H — oto pary tej kolejki:`,
+          ].join("\n"),
+          color: GOLD_ORANGE,
+          fields,
+          footer: { text: "Content Hub · Zapowiedź kolejki" },
+        },
+      ],
+    };
+
+    return {
+      error: null,
+      success: "JSON zapowiedzi Discord gotowy.",
+      json: JSON.stringify(payload, null, 2),
+    };
+  } catch (e) {
+    console.error("[generatePreviewDiscordJSON]", e);
+    return {
+      error:
+        e instanceof Error
+          ? e.message
+          : "Nie udało się wygenerować JSON-a zapowiedzi.",
+    };
+  }
+}
+
 export type DiscordWebhookJsonResult = ActionState;
 
 function normalizeWebhookPayload(

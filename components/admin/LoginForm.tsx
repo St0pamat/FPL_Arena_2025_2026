@@ -1,12 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 export function LoginForm() {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -30,12 +28,11 @@ export function LoginForm() {
         console.error("[LoginForm] auth error:", signInError);
         setError(signInError.message);
         setDetails(JSON.stringify(signInError, null, 2));
-        setLoading(false);
         return;
       }
 
-      router.push("/admin/dashboard");
-      router.refresh();
+      // Pełne przejście — unika wiszącego spinnera przy redirect/middleware.
+      window.location.assign("/admin/dashboard");
     } catch (err) {
       console.error("[LoginForm] exception:", err);
       if (err instanceof Error) {
@@ -51,6 +48,7 @@ export function LoginForm() {
         setError("Unknown error");
         setDetails(JSON.stringify(err));
       }
+    } finally {
       setLoading(false);
     }
   }

@@ -6,7 +6,10 @@ import { useRouter } from "next/navigation";
 import {
   CheckCircle2,
   Loader2,
+  Pencil,
+  Plus,
   Shuffle,
+  Trash2,
   Upload,
   Users,
   X,
@@ -16,8 +19,10 @@ import {
   masterExcelImport,
   type DivisionScheduleMeta,
 } from "@/app/admin/actions/masterImport";
+import { deletePlayer } from "@/app/admin/actions/playerActions";
 import { ClubLogo } from "@/components/admin/ClubLogo";
 import { resolveLogoSrc } from "@/components/admin/ClubNameWithLogo";
+import { PlayerFormModal } from "@/components/admin/PlayerFormModal";
 import {
   resolveTierLogoName,
   TierCrest,
@@ -28,6 +33,25 @@ import type { Division, Pyramid, Season, Team } from "@/lib/admin/types";
 
 const selectClass =
   "w-full rounded-xl border border-slate-700/50 bg-slate-950 px-4 py-2.5 text-sm text-white outline-none focus:border-[#39FF14]";
+
+/** Sort OR rosnąco; brak / 0 / nie-liczba → na koniec. */
+function orSortKey(or: number | null | undefined): number {
+  if (or == null || !Number.isFinite(or) || or <= 0) {
+    return Number.POSITIVE_INFINITY;
+  }
+  return or;
+}
+
+function sortTeamsByOr(teams: Team[]): Team[] {
+  return [...teams].sort((a, b) => {
+    const oa = orSortKey(a.previous_season_or);
+    const ob = orSortKey(b.previous_season_or);
+    if (oa !== ob) return oa - ob;
+    return a.manager_name.localeCompare(b.manager_name, "pl", {
+      sensitivity: "base",
+    });
+  });
+}
 
 type DivisionGroup = {
   division: Division | null;
@@ -68,9 +92,15 @@ export function MasterImportPanel({
   const [raw, setRaw] = useState("");
   const [pending, setPending] = useState(false);
   const [bergerPendingId, setBergerPendingId] = useState<string | null>(null);
+  const [deletePendingId, setDeletePendingId] = useState<string | null>(null);
   const [toast, setToast] = useState<{ type: "ok" | "err"; text: string } | null>(
     null,
   );
+  const [playerModal, setPlayerModal] = useState<{
+    player: Team | null;
+    divisionId: string | null;
+    divisionLabel: string;
+  } | null>(null);
 
   useEffect(() => {
     if (seasons.length === 0) {
@@ -97,14 +127,10 @@ export function MasterImportPanel({
     const result: DivisionGroup[] = scopedDivisions.map((d) => ({
       division: d,
       label: `${seasonName(d.season_id)} · ${pyramidName(d.pyramid_id)} · D${d.tier} — ${d.name}`,
-      teams: teams
-        .filter((t) => t.division_id === d.id)
-        .sort((a, b) => a.manager_name.localeCompare(b.manager_name, "pl")),
+      teams: sortTeamsByOr(teams.filter((t) => t.division_id === d.id)),
     }));
 
-    const unassigned = teams
-      .filter((t) => !t.division_id)
-      .sort((a, b) => a.manager_name.localeCompare(b.manager_name, "pl"));
+    const unassigned = sortTeamsByOr(teams.filter((t) => !t.division_id));
     if (unassigned.length) {
       result.unshift({
         division: null,
@@ -208,6 +234,34 @@ export function MasterImportPanel({
       window.alert(text);
     } finally {
       setBergerPendingId(null);
+    }
+  }
+
+  async function runDeletePlayer(team: Team) {
+    if (
+      !window.confirm(
+        `Czy na pewno chcesz usunąć gracza „${team.manager_name}” (${team.discord_nick})?`,
+      )
+    ) {
+      return;
+    }
+    setDeletePendingId(team.id);
+    setToast(null);
+    try {
+      const result = await deletePlayer(team.id);
+      if (result.error) {
+        setToast({ type: "err", text: result.error });
+        window.alert(result.error);
+        return;
+      }
+      setToast({ type: "ok", text: result.success ?? "Gracz usunięty." });
+      router.refresh();
+    } catch (e) {
+      const text = e instanceof Error ? e.message : "Błąd usuwania.";
+      setToast({ type: "err", text });
+      window.alert(text);
+    } finally {
+      setDeletePendingId(null);
     }
   }
 
@@ -338,42 +392,64 @@ export function MasterImportPanel({
                       {g.teams.length} / 10
                     </span>
                     {g.division ? (
-                      g.teams.length < 10 ? (
-                        <p
-                          className="max-w-[220px] text-right text-[11px] font-semibold leading-snug text-amber-200"
-                          title="Terminarz Bergera wymaga równe 10 zespołów."
-                        >
-                          Berger zablokowany — wymagane 10/10
-                        </p>
-                      ) : hasSchedule ? (
+                      <>
                         <button
                           type="button"
-                          disabled={bergerPendingId === g.division.id}
-                          onClick={() => void runBerger(g.division!.id, true)}
-                          className="inline-flex items-center gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-[11px] font-black uppercase tracking-wider text-amber-200 disabled:opacity-40"
+                          disabled={g.teams.length >= 10}
+                          onClick={() =>
+                            setPlayerModal({
+                              player: null,
+                              divisionId: g.division!.id,
+                              divisionLabel: g.label,
+                            })
+                          }
+                          className="inline-flex items-center gap-1.5 rounded-xl border border-[#39FF14]/35 bg-[#39FF14]/10 px-3 py-2 text-[11px] font-black uppercase tracking-wider text-[#39FF14] disabled:cursor-not-allowed disabled:opacity-40"
+                          title={
+                            g.teams.length >= 10
+                              ? "Dywizja pełna (10/10)"
+                              : "Dodaj gracza do tej dywizji"
+                          }
                         >
-                          {bergerPendingId === g.division.id ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          ) : (
-                            <Shuffle className="h-3.5 w-3.5" />
-                          )}
-                          Regeneruj Terminarz
+                          <Plus className="h-3.5 w-3.5" />
+                          Dodaj gracza
                         </button>
-                      ) : (
-                        <button
-                          type="button"
-                          disabled={bergerPendingId === g.division.id}
-                          onClick={() => void runBerger(g.division!.id, false)}
-                          className="inline-flex items-center gap-2 rounded-xl border border-[#39FF14]/40 bg-[#39FF14]/10 px-3 py-2 text-[11px] font-black uppercase tracking-wider text-[#39FF14] disabled:opacity-40"
-                        >
-                          {bergerPendingId === g.division.id ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          ) : (
-                            <Shuffle className="h-3.5 w-3.5" />
-                          )}
-                          Generuj Terminarz (Berger)
-                        </button>
-                      )
+                        {g.teams.length < 10 ? (
+                          <p
+                            className="max-w-[220px] text-right text-[11px] font-semibold leading-snug text-amber-200"
+                            title="Terminarz Bergera wymaga równe 10 zespołów."
+                          >
+                            Berger zablokowany — wymagane 10/10
+                          </p>
+                        ) : hasSchedule ? (
+                          <button
+                            type="button"
+                            disabled={bergerPendingId === g.division.id}
+                            onClick={() => void runBerger(g.division!.id, true)}
+                            className="inline-flex items-center gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-[11px] font-black uppercase tracking-wider text-amber-200 disabled:opacity-40"
+                          >
+                            {bergerPendingId === g.division.id ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <Shuffle className="h-3.5 w-3.5" />
+                            )}
+                            Regeneruj Terminarz
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled={bergerPendingId === g.division.id}
+                            onClick={() => void runBerger(g.division!.id, false)}
+                            className="inline-flex items-center gap-2 rounded-xl border border-[#39FF14]/40 bg-[#39FF14]/10 px-3 py-2 text-[11px] font-black uppercase tracking-wider text-[#39FF14] disabled:opacity-40"
+                          >
+                            {bergerPendingId === g.division.id ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <Shuffle className="h-3.5 w-3.5" />
+                            )}
+                            Generuj Terminarz (Berger)
+                          </button>
+                        )}
+                      </>
                     ) : null}
                   </div>
                 </header>
@@ -384,7 +460,7 @@ export function MasterImportPanel({
                   </p>
                 ) : (
                   <div className="overflow-x-auto">
-                    <table className="w-full min-w-[920px] text-left text-sm">
+                    <table className="w-full min-w-[1280px] text-left text-sm">
                       <thead className="border-b border-slate-800 text-[10px] uppercase tracking-wider text-slate-500">
                         <tr>
                           <th className="px-4 py-3 font-bold">Manager</th>
@@ -394,24 +470,16 @@ export function MasterImportPanel({
                           <th className="px-4 py-3 font-bold">Klub</th>
                           <th className="px-4 py-3 font-bold">OR</th>
                           <th className="px-4 py-3 font-bold">Status</th>
+                          <th className="px-4 py-3 font-bold">X.com</th>
+                          <th className="px-4 py-3 font-bold">Email</th>
+                          <th className="px-4 py-3 text-right font-bold">Akcje</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-800/80">
                         {g.teams.map((t) => (
                           <tr key={t.id} className="hover:bg-slate-950/50">
                             <td className="px-4 py-2.5 font-semibold text-white">
-                              <span className="inline-flex items-center gap-1.5">
-                                {t.manager_name}
-                                {t.x_com?.trim() ? (
-                                  <span
-                                    className="inline-flex h-4 min-w-[1rem] items-center justify-center rounded bg-slate-800 px-1 text-[10px] font-black leading-none text-sky-300"
-                                    title={`X.com: ${t.x_com.trim()}`}
-                                    aria-label={`Profil X: ${t.x_com.trim()}`}
-                                  >
-                                    𝕏
-                                  </span>
-                                ) : null}
-                              </span>
+                              {t.manager_name}
                             </td>
                             <td className="px-4 py-2.5 text-slate-300">
                               {t.discord_nick}
@@ -456,6 +524,48 @@ export function MasterImportPanel({
                                   </span>
                                 );
                               })()}
+                            </td>
+                            <td className="px-4 py-2.5 font-mono text-sky-300/90">
+                              {t.x_com?.trim() || "—"}
+                            </td>
+                            <td
+                              className="max-w-[14rem] truncate px-4 py-2.5 text-slate-400"
+                              title={t.email?.trim() || undefined}
+                            >
+                              {t.email?.trim() || "—"}
+                            </td>
+                            <td className="px-4 py-2.5">
+                              <div className="flex items-center justify-end gap-1.5">
+                                <button
+                                  type="button"
+                                  title="Edytuj"
+                                  onClick={() =>
+                                    setPlayerModal({
+                                      player: t,
+                                      divisionId: t.division_id ?? g.division?.id ?? null,
+                                      divisionLabel: g.label,
+                                    })
+                                  }
+                                  className="inline-flex items-center gap-1 rounded-lg border border-sky-500/30 bg-sky-500/10 px-2 py-1.5 text-[11px] font-bold uppercase tracking-wider text-sky-300 hover:bg-sky-500/20"
+                                >
+                                  <Pencil className="h-3.5 w-3.5" />
+                                  Edytuj
+                                </button>
+                                <button
+                                  type="button"
+                                  title="Usuń"
+                                  disabled={deletePendingId === t.id}
+                                  onClick={() => void runDeletePlayer(t)}
+                                  className="inline-flex items-center gap-1 rounded-lg border border-rose-500/35 bg-rose-500/10 px-2 py-1.5 text-[11px] font-bold uppercase tracking-wider text-rose-300 hover:bg-rose-500/20 disabled:opacity-40"
+                                >
+                                  {deletePendingId === t.id ? (
+                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                  ) : (
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  )}
+                                  Usuń
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -542,6 +652,21 @@ export function MasterImportPanel({
             </div>
           </div>
         </div>
+      ) : null}
+
+      {playerModal ? (
+        <PlayerFormModal
+          open
+          player={playerModal.player}
+          divisionId={playerModal.divisionId}
+          divisionLabel={playerModal.divisionLabel}
+          onClose={() => setPlayerModal(null)}
+          onSaved={(message) => {
+            setToast({ type: "ok", text: message });
+            router.refresh();
+          }}
+          onError={(message) => setToast({ type: "err", text: message })}
+        />
       ) : null}
     </div>
   );

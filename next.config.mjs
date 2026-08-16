@@ -2,6 +2,11 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+// Dev na Windows: Node nie ma CA z antywirusa → fetch do Supabase/Google pada.
+if (process.env.NODE_ENV !== "production") {
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED ??= "0";
+}
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const nextConfig = {
@@ -10,6 +15,7 @@ const nextConfig = {
     serverActions: {
       bodySizeLimit: "4mb",
     },
+    instrumentationHook: true,
   },
   typescript: {
     // Legacy src/ ma luźniejsze typy (Vite); Next sprawdza tylko app/ + components/

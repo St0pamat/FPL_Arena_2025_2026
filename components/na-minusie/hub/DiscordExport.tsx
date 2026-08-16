@@ -36,6 +36,11 @@ export function DiscordExportFrame({
   /** Uczestnicy dywizji — po 5 herbów po lewej i prawej stronie tytułu */
   headerParticipants,
   clubLogos = [],
+  /**
+   * Bezpieczne krawędzie pod html-to-image: duży padding, overflow visible,
+   * logo bez ujemnych marginesów (zapowiedź / terminarz).
+   */
+  safeExportEdges = false,
 }: {
   fileName: string;
   title: string;
@@ -53,6 +58,7 @@ export function DiscordExportFrame({
   brandedHeader?: boolean;
   headerParticipants?: PromoHeaderParticipant[];
   clubLogos?: ClubLogoRecord[];
+  safeExportEdges?: boolean;
 }) {
   const localRef = useRef<HTMLDivElement>(null);
   const nodeRef = captureRef ?? localRef;
@@ -84,37 +90,52 @@ export function DiscordExportFrame({
         ref={nodeRef}
         id={id}
         className={`rounded-2xl border border-slate-800 shadow-2xl shadow-black/50 ${
-          fluid ? "overflow-hidden" : "overflow-x-auto"
+          safeExportEdges
+            ? "overflow-visible"
+            : fluid
+              ? "overflow-hidden"
+              : "overflow-x-auto"
         }`}
         style={{ backgroundColor: EXPORT_BG }}
       >
         <div
-          className={`p-4 sm:p-6 ${fluid ? "w-full min-w-0" : "min-w-[960px] sm:p-8"}`}
+          className={
+            safeExportEdges
+              ? "box-border flex w-[1200px] flex-col items-center justify-center bg-slate-950 p-12"
+              : `p-4 sm:p-6 ${fluid ? "w-full min-w-0" : "min-w-[960px] sm:p-8"}`
+          }
           style={{ backgroundColor: EXPORT_BG }}
         >
-          {usePromoBanner ? (
-            <StandingsPromoHeader
-              title={title}
-              subtitle={subtitle}
-              participants={headerParticipants}
-              logos={clubLogos}
-            />
-          ) : brandedHeader ? (
-            <StandingsPromoHeader title={title} subtitle={subtitle} />
-          ) : (
-            <header className="mb-5 border-b border-emerald-500/30 pb-4">
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.35em] text-emerald-400">
-                  {NA_MINUSIE_EXPORT_BRAND}
-                </p>
-                <h2 className="mt-1 font-athletic text-2xl uppercase tracking-wide text-white">
-                  {title}
-                </h2>
-                {subtitle ? <p className="mt-1 text-xs text-slate-400">{subtitle}</p> : null}
-              </div>
-            </header>
-          )}
-          {children}
+          <div className={safeExportEdges ? "flex w-full flex-col items-center" : undefined}>
+            {usePromoBanner ? (
+              <StandingsPromoHeader
+                title={title}
+                subtitle={subtitle}
+                participants={headerParticipants}
+                logos={clubLogos}
+                safeEdges={safeExportEdges}
+              />
+            ) : brandedHeader ? (
+              <StandingsPromoHeader
+                title={title}
+                subtitle={subtitle}
+                safeEdges={safeExportEdges}
+              />
+            ) : (
+              <header className="mb-5 border-b border-emerald-500/30 pb-4">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.35em] text-emerald-400">
+                    {NA_MINUSIE_EXPORT_BRAND}
+                  </p>
+                  <h2 className="mt-1 font-athletic text-2xl uppercase tracking-wide text-white">
+                    {title}
+                  </h2>
+                  {subtitle ? <p className="mt-1 text-xs text-slate-400">{subtitle}</p> : null}
+                </div>
+              </header>
+            )}
+            {children}
+          </div>
         </div>
       </div>
     </div>

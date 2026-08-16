@@ -4,9 +4,14 @@ import { createClient } from "@/lib/supabase/server";
 
 export default async function AdminPanelLayout({ children }: { children: React.ReactNode }) {
   const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+
+  let user = null;
+  try {
+    const { data } = await supabase.auth.getUser();
+    user = data.user;
+  } catch (err) {
+    console.error("[AdminPanelLayout] getUser failed:", err);
+  }
 
   if (!user) {
     redirect("/admin/login");

@@ -1,5 +1,6 @@
 "use server";
 
+import Papa from "papaparse";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { generateBergerFixtures, shuffleInPlace } from "@/lib/admin/berger";
@@ -8,6 +9,7 @@ import {
 } from "@/lib/admin/constants";
 import { DIVISION_CAPACITY } from "@/lib/admin/divisionCapacity";
 import { REGULAR_MAX_GAMEWEEK } from "@/lib/public/season";
+import { resolveDiscordDisplayNick } from "@/lib/public/resolveDiscordDisplayNick";
 import type { ActionState, Division, Pyramid, Team } from "@/lib/admin/types";
 
 async function requireAuth() {
@@ -53,12 +55,21 @@ function parseIsActive(statusRaw: string): boolean {
 }
 
 function optionalCell(raw: string | undefined): string | null {
-  const v = (raw ?? "").trim();
+  const v = cleanMasterCell(raw);
   return v || null;
 }
 
+/** Normalizacja komórki TSV — entery z Excela → spacja. */
+function cleanMasterCell(raw: string | undefined | null): string {
+  return String(raw ?? "")
+    .replace(/\r\n/g, "\n")
+    .replace(/\n+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function parseParticipantStatus(statusRaw: string): { status: string; isActive: boolean } {
-  const status = statusRaw.trim() || "Aktywny";
+  const status = cleanMasterCell(statusRaw) || "Aktywny";
   return { status, isActive: parseIsActive(statusRaw) };
 }
 
@@ -134,25 +145,59 @@ function parseMasterExcelTsv(raw: string): {
   const rows: MasterImportRow[] = [];
   const errors: string[] = [];
 
-  raw.split(/\r?\n/).forEach((line, idx) => {
-    const lineNumber = idx + 1;
-    const trimmed = line.trim();
-    if (!trimmed) return;
+  // PapaParse respektuje cudzysłowy Excela — entery wewnątrz komórki nie rozbijają wiersza.
+  let parsed = Papa.parse<string[]>(raw, {
+    delimiter: "\t",
+    quoteChar: '"',
+    escapeChar: '"',
+    skipEmptyLines: "greedy",
+    dynamicTyping: false,
+  });
 
-    // Prefer tab; fallbacks for paste quirks
-    let parts = trimmed.split("\t").map((p) => p.trim());
-    if (parts.length < 6) {
-      parts = trimmed.split(/;+/).map((p) => p.trim());
+  // Fallback: niektóre wklejki używają średników zamiast tabów
+  const firstData = (parsed.data ?? []).find(
+    (r) => Array.isArray(r) && r.some((c) => String(c ?? "").trim()),
+  );
+  if (
+    firstData &&
+    firstData.length < 6 &&
+    raw.includes(";") &&
+    !raw.includes("\t")
+  ) {
+    parsed = Papa.parse<string[]>(raw, {
+      delimiter: ";",
+      quoteChar: '"',
+      escapeChar: '"',
+      skipEmptyLines: "greedy",
+      dynamicTyping: false,
+    });
+  }
+
+  if (parsed.errors?.length) {
+    for (const err of parsed.errors.slice(0, 8)) {
+      errors.push(
+        `CSV/TSV wiersz ${err.row != null ? err.row + 1 : "?"}: ${err.message}`,
+      );
     }
+  }
+
+  (parsed.data ?? []).forEach((partsRaw, idx) => {
+    const lineNumber = idx + 1;
+    if (!Array.isArray(partsRaw)) return;
+
+    const parts = partsRaw.map((p) => cleanMasterCell(p));
+    if (!parts.some((p) => p)) return;
+
+    const joined = parts.join("\t");
 
     // Header row (14 kolumn SSOT)
     if (
-      /dywizja/i.test(trimmed) &&
-      (/piramida/i.test(trimmed) ||
-        /fpl\s*team/i.test(trimmed) ||
+      /dywizja/i.test(joined) &&
+      (/piramida/i.test(joined) ||
+        /fpl\s*team/i.test(joined) ||
         /^lp\b/i.test(parts[0] ?? "") ||
-        /x\.?com/i.test(trimmed) ||
-        /email/i.test(trimmed))
+        /x\.?com/i.test(joined) ||
+        /email/i.test(joined))
     ) {
       return;
     }
@@ -173,11 +218,10 @@ function parseMasterExcelTsv(raw: string): {
     const fplManager = parts[5] ?? "";
     const fplIdRaw = parts[6] ?? "";
     const orRaw = parts[7] ?? "";
-    const discordName = parts[8] ?? "";
+    const discordNameRaw = parts[8] ?? "";
     const discordClub = parts[9] ?? "";
     const discordIdRaw = parts[10] ?? "";
     const statusRaw = parts[11] ?? "";
-    // Indeks 12: x.com — bezpieczne przy krótszych wierszach TSV (puste końcówki)
     const xComRaw = parts[12] ?? "";
     const emailRaw = parts[13] ?? "";
 
@@ -194,19 +238,25 @@ function parseMasterExcelTsv(raw: string): {
       errors.push(`Wiersz ${lineNumber}: brak Nazwy dywizji.`);
       return;
     }
-    if (!fplManager && !discordName) {
-      errors.push(`Wiersz ${lineNumber}: brak FPL Manager i Discord Name.`);
-      return;
-    }
-    if (!discordName) {
-      errors.push(`Wiersz ${lineNumber}: brak Discord Name.`);
+
+    const discordName = resolveDiscordDisplayNick({
+      discordName: discordNameRaw,
+      xCom: xComRaw,
+      fplManager,
+    });
+
+    if (!fplManager.trim() && discordName === "Brak danych") {
+      errors.push(
+        `Wiersz ${lineNumber}: brak FPL Manager oraz Discord Name / x.com.`,
+      );
       return;
     }
 
     const fplIdNum = parseOptionalInt(fplIdRaw);
-    const fplId = fplIdNum != null ? String(fplIdNum) : fplIdRaw.trim() || null;
     if (fplIdRaw.trim() && fplIdNum == null && !/^\d+$/.test(fplIdRaw.trim())) {
-      errors.push(`Wiersz ${lineNumber}: FPL ID nie jest liczbą („${fplIdRaw}”) — ustawiam null.`);
+      errors.push(
+        `Wiersz ${lineNumber}: FPL ID nie jest liczbą („${fplIdRaw}”) — ustawiam null.`,
+      );
     }
 
     const { status, isActive } = parseParticipantStatus(statusRaw);

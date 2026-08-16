@@ -1,5 +1,8 @@
 import Papa from "papaparse";
+import { unstable_cache } from "next/cache";
+import https from "node:https";
 import { NA_MINUSIE_LINKS } from "@/lib/na-minusie/links";
+import { resolveDiscordDisplayNick } from "@/lib/public/resolveDiscordDisplayNick";
 import type {
   DivisionRosterBlock,
   DivisionRosterRow,
@@ -77,34 +80,78 @@ function isActiveStatus(statusRaw: string): boolean {
   return s === "aktywny" || s === "active" || s === "tak" || s === "yes" || s === "1";
 }
 
-async function fetchCsv(url: string): Promise<string> {
-  const res = await fetch(url, {
-    next: { revalidate: 60 },
-    headers: { Accept: "text/csv,text/plain,*/*" },
+/**
+ * HTTPS GET z obsługą redirectów.
+ * `rejectUnauthorized: false` — lokalny Windows / antivirus (SSL inspection)
+ * często psuje domyślny fetch() do Google Sheets (UNABLE_TO_VERIFY_LEAF_SIGNATURE).
+ */
+function httpsGetText(
+  url: string,
+  redirectsLeft = 5,
+): Promise<{ text: string; lastModified: string | null }> {
+  return new Promise((resolve, reject) => {
+    const req = https.get(
+      url,
+      {
+        headers: {
+          Accept: "text/csv,text/plain,*/*",
+          "User-Agent": "fpl-arena-skarb-kibica",
+        },
+        rejectUnauthorized: false,
+      },
+      (res) => {
+        const status = res.statusCode ?? 0;
+        if (status >= 300 && status < 400 && res.headers.location) {
+          res.resume();
+          if (redirectsLeft <= 0) {
+            reject(new Error(`Zbyt wiele przekierowań: ${url}`));
+            return;
+          }
+          const next = new URL(res.headers.location, url).toString();
+          resolve(httpsGetText(next, redirectsLeft - 1));
+          return;
+        }
+        if (status < 200 || status >= 300) {
+          res.resume();
+          reject(new Error(`Błąd pobierania CSV (${status}): ${url}`));
+          return;
+        }
+
+        const chunks: Buffer[] = [];
+        res.on("data", (chunk: Buffer) => chunks.push(chunk));
+        res.on("end", () => {
+          const lastModifiedHeader = res.headers["last-modified"];
+          let lastModified: string | null = null;
+          if (typeof lastModifiedHeader === "string") {
+            const d = new Date(lastModifiedHeader);
+            if (!Number.isNaN(d.getTime())) lastModified = d.toISOString();
+          }
+          resolve({
+            text: Buffer.concat(chunks).toString("utf8"),
+            lastModified,
+          });
+        });
+        res.on("error", reject);
+      },
+    );
+    req.on("error", reject);
   });
-  if (!res.ok) {
-    throw new Error(`Błąd pobierania CSV (${res.status}): ${url}`);
-  }
-  return res.text();
+}
+
+const fetchCsvCached = unstable_cache(
+  async (url: string) => (await httpsGetText(url)).text,
+  ["na-minusie-google-csv"],
+  { revalidate: 60 },
+);
+
+async function fetchCsv(url: string): Promise<string> {
+  return fetchCsvCached(url);
 }
 
 async function fetchCsvWithMeta(
   url: string,
 ): Promise<{ text: string; lastModified: string | null }> {
-  const res = await fetch(url, {
-    next: { revalidate: 60 },
-    headers: { Accept: "text/csv,text/plain,*/*" },
-  });
-  if (!res.ok) {
-    throw new Error(`Błąd pobierania CSV (${res.status}): ${url}`);
-  }
-  const lastModifiedHeader = res.headers.get("last-modified");
-  let lastModified: string | null = null;
-  if (lastModifiedHeader) {
-    const d = new Date(lastModifiedHeader);
-    if (!Number.isNaN(d.getTime())) lastModified = d.toISOString();
-  }
-  return { text: await res.text(), lastModified };
+  return httpsGetText(url);
 }
 
 /** Aktywni uczestnicy z arkusza NaMinusie Baza. */
@@ -179,15 +226,23 @@ export function parseBazaDivisionStructure(
     const divisionName = cellByHeader(row, "Nazwa dywizji");
     const pyramidName = cellByHeader(row, "Piramida") || "—";
     const fplManager = cellByHeader(row, "FPL Manager");
-    const discordNick = cellByHeader(row, "Discord Name");
+    const discordNickRaw = cellByHeader(row, "Discord Name");
+    const xComRaw =
+      cellByHeader(row, "x.com") ||
+      cellByHeader(row, "X.com") ||
+      cellByHeader(row, "x_com");
     const discordClub = cellByHeader(row, "Discord Club");
     const fplTeam = cellByHeader(row, "FPL Team");
     const previousOr = parseOptionalInt(cellOr(row));
 
     if (tier == null || tier < 1 || !divisionName) continue;
-    // Puste sloty w arkuszu (tylko LP/tier/nazwa, czasem śmieci w Discord Name)
+    // Puste sloty w arkuszu (tylko LP/tier/nazwa)
     if (!fplManager || !discordClub) continue;
-    const nick = (discordNick || fplManager).trim();
+    const nick = resolveDiscordDisplayNick({
+      discordName: discordNickRaw,
+      xCom: xComRaw,
+      fplManager,
+    });
     if (!nick || /^[`'"\-–—._\s]+$/.test(nick)) continue;
 
     const key = `${pyramidName.toLowerCase()}::${tier}::${divisionName.toLowerCase()}`;
@@ -419,12 +474,22 @@ export async function getRecruitmentClubsData(): Promise<RecruitmentClubsData> {
     const { reservedClubs, blockedClubs } = parseReservedClubsFromLiveForm(
       liveResult.value,
     );
-    empty.reservedClubs = reservedClubs;
-    empty.blockedClubs = blockedClubs;
 
-    const reservedKeys = new Set(reservedClubs.map((c) => c.toLowerCase()));
-    const blockedKeys = new Set(blockedClubs.map((c) => c.toLowerCase()));
-    const playerKeys = new Set(empty.players.map((p) => p.discordClub.toLowerCase()));
+    const playerKeys = new Set(
+      empty.players.map((p) => p.discordClub.toLowerCase()),
+    );
+
+    // Klub już przypisany w Bazie (Grają z Nami) — nie pokazuj go w rezerwacjach,
+    // nawet jeśli LIVE formularz ma niezaktualizowany status (np. „Oczekuje”).
+    empty.reservedClubs = reservedClubs.filter(
+      (club) => !playerKeys.has(club.toLowerCase()),
+    );
+    empty.blockedClubs = blockedClubs.filter(
+      (club) => !playerKeys.has(club.toLowerCase()),
+    );
+
+    const reservedKeys = new Set(empty.reservedClubs.map((c) => c.toLowerCase()));
+    const blockedKeys = new Set(empty.blockedClubs.map((c) => c.toLowerCase()));
 
     empty.availableClubs = parseAvailableClubsFromColumnS(liveResult.value).filter(
       (club) => {

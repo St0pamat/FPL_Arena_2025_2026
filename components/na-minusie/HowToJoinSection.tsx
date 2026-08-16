@@ -91,24 +91,15 @@ export function HowToJoinSection() {
                 </span>
                 <div className="min-w-0 flex-1">
                   <h3 className="text-xl font-extrabold text-white sm:text-2xl">
-                    Wypełnij Formularz Zgłoszeniowy
+                    Formularz Zgłoszeniowy
                   </h3>
-                  <p className="mt-3 text-base leading-relaxed text-slate-300 sm:text-lg">
-                    Na końcu formularza znajdziesz dane do wpłaty wpisowego{" "}
-                    <span className="font-bold text-white">
-                      (10 zł na cały rok na puchary/statuetki)
-                    </span>
-                    .
-                  </p>
-                  <Link
-                    href={NA_MINUSIE_LINKS.form}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="nm-btn-primary mt-6 inline-flex w-fit max-w-full gap-2 px-6 py-3 text-xs sm:px-8 sm:text-sm"
+                  <span
+                    role="status"
+                    aria-disabled="true"
+                    className="mt-6 inline-flex w-fit max-w-full cursor-not-allowed items-center gap-2 rounded-xl border border-slate-700 bg-slate-800 px-6 py-3 text-xs font-black uppercase tracking-wider text-slate-500 sm:px-8 sm:text-sm"
                   >
-                    Wypełnij Formularz Zgłoszeniowy
-                    <ExternalLink className="h-4 w-4" aria-hidden />
-                  </Link>
+                    FORMULARZ ZAMKNIĘTY - KONIEC REKRUTACJI
+                  </span>
                 </div>
               </div>
             </li>

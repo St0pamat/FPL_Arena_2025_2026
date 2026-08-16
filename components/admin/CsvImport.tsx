@@ -15,6 +15,7 @@ import type { Pyramid, Season } from "@/lib/admin/types";
 import type { ClubLogoRecord } from "@/lib/admin/clubLogos";
 import { ClubLogo } from "@/components/admin/ClubLogo";
 import { resolveLogoSrc } from "@/components/admin/ClubNameWithLogo";
+import { resolveDiscordDisplayNick } from "@/lib/public/resolveDiscordDisplayNick";
 
 const H = {
   division: "Dywizja",
@@ -23,6 +24,7 @@ const H = {
   fplId: "FPL ID",
   discordName: "Discord Name",
   discordClub: "Discord Club",
+  xCom: "x.com",
   paid: "Wpłacono",
 } as const;
 
@@ -48,8 +50,14 @@ interface CsvImportProps {
 }
 
 function cell(row: CsvRow, key: string): string {
-  const raw = row[key] ?? "";
-  return String(raw ?? "").trim();
+  if (Object.prototype.hasOwnProperty.call(row, key)) {
+    return String(row[key] ?? "").trim();
+  }
+  const target = key.toLowerCase();
+  const found = Object.keys(row).find(
+    (k) => k.replace(/_\d+$/, "").toLowerCase() === target || k.toLowerCase() === target,
+  );
+  return found ? String(row[found] ?? "").trim() : "";
 }
 
 /** "10,00 zł" / "10" / cokolwiek zawierającego "10" → true */
@@ -73,7 +81,11 @@ function validateRow(row: CsvRow, rowIndex: number): ParsedTeam | null {
   const fpl_id = cell(row, H.fplId);
   const chosen_club = cell(row, H.discordClub);
   const manager_name = cell(row, H.fplManager);
-  const discord_nick = cell(row, H.discordName);
+  const discord_nick = resolveDiscordDisplayNick({
+    discordName: cell(row, H.discordName),
+    xCom: cell(row, H.xCom) || cell(row, "X.com") || cell(row, "x_com"),
+    fplManager: manager_name,
+  });
   const fpl_team_name = cell(row, H.fplTeam);
   const fee_paid = parseFeePaid(cell(row, H.paid));
 
@@ -99,7 +111,7 @@ function validateRow(row: CsvRow, rowIndex: number): ParsedTeam | null {
     fpl_team_name,
     manager_name: manager_name || "—",
     fpl_id: fpl_id || "—",
-    discord_nick: discord_nick || "—",
+    discord_nick,
     chosen_club: chosen_club || "—",
     fee_paid,
     isValid: errors.length === 0,
@@ -221,7 +233,7 @@ export function CsvImport({ seasons, pyramids, logos = [] }: CsvImportProps) {
       const payload = validRows.map((r) => ({
         tier: r.tier,
         manager_name: r.manager_name,
-        discord_nick: r.discord_nick === "—" ? r.manager_name : r.discord_nick,
+        discord_nick: r.discord_nick,
         fpl_id: r.fpl_id,
         fpl_team_name: r.fpl_team_name,
         chosen_club: r.chosen_club,

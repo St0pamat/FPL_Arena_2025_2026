@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import {
   Check,
+  CalendarDays,
   Copy,
   Download,
   Flame,
@@ -16,6 +17,8 @@ import {
 } from "lucide-react";
 import type { RefObject } from "react";
 import {
+  generatePreviewDiscordJSON,
+  generatePreviewXComDraft,
   generateXComDraft,
   getContentHubCaptureData,
   sendDiscordWebhookJson,
@@ -29,6 +32,7 @@ import { getFARankingData } from "@/lib/public/actions";
 import type { FARankingPayload } from "@/lib/public/faRanking";
 import { DiscordEmbedPreview } from "@/components/admin/content-hub/DiscordEmbedPreview";
 import { FARankingExportCarousel } from "@/components/admin/content-hub/FARankingExportCarousel";
+import { GameweekPreviewExportNode } from "@/components/admin/content-hub/GameweekPreviewExportNode";
 import { MatchCard } from "@/components/na-minusie/hub/GameweekCenter";
 import { StandingsTable } from "@/components/na-minusie/hub/StandingsTable";
 import {
@@ -37,6 +41,8 @@ import {
 } from "@/components/na-minusie/hub/DiscordExport";
 import { captureExportNode } from "@/components/na-minusie/hub/ExportControls";
 import type { ClubLogoRecord } from "@/lib/admin/clubLogos";
+
+type ContentType = "summary" | "preview";
 
 const X_LIMIT = 280;
 
@@ -58,6 +64,21 @@ const SAMPLE_EMBED_JSON = `{
         { "name": "Mediana", "value": "—", "inline": true }
       ],
       "footer": { "text": "Content Hub · podgląd" }
+    }
+  ]
+}`;
+
+const SAMPLE_PREVIEW_EMBED_JSON = `{
+  "content": "🔜 Deadline FPL się zbliża — czas ustawić składy!",
+  "embeds": [
+    {
+      "title": "🔜 Zapowiedź Kolejki 5! 🏆",
+      "description": "**Premier League** · FPL Arena: Na Minusie ™\\n\\nBudujemy napięcie przed deadlinem Fantasy Premier League.",
+      "color": 15379208,
+      "fields": [
+        { "name": "Mecz 1", "value": "**Manager A** vs **Manager B**", "inline": false }
+      ],
+      "footer": { "text": "Content Hub · Zapowiedź kolejki" }
     }
   ]
 }`;
@@ -124,6 +145,7 @@ export function ContentHubClient({
   }, [divisions, seasons]);
 
   const [targetKey, setTargetKey] = useState<TargetKey>(defaultTarget);
+  const [contentType, setContentType] = useState<ContentType>("summary");
   const [gameweek, setGameweek] = useState(
     () => playedGameweeks[playedGameweeks.length - 1] ?? 1,
   );
@@ -140,20 +162,26 @@ export function ContentHubClient({
   );
   const [copied, setCopied] = useState(false);
   const [pending, startTransition] = useTransition();
+  const [discordGenPending, startDiscordGen] = useTransition();
   const [sendPending, setSendPending] = useState(false);
-  const [downloadBusy, setDownloadBusy] = useState<"wyniki" | "tabela" | null>(
-    null,
-  );
+  const [downloadBusy, setDownloadBusy] = useState<
+    "wyniki" | "tabela" | "terminarz" | null
+  >(null);
 
   const resultsRef = useRef<HTMLDivElement>(null);
   const standingsRef = useRef<HTMLDivElement>(null);
+  const previewRef = useRef<HTMLDivElement>(null);
   const faCarouselRefs = useRef<RefObject<HTMLDivElement | null>[]>([]);
 
   const sendTarget = useMemo(() => parseTargetKey(targetKey), [targetKey]);
   const isGlobal = sendTarget?.kind === "global";
+  const isPreview = contentType === "preview";
+  const isSummary = contentType === "summary";
   const isFaRanking =
     sendTarget?.kind === "global" && sendTarget.channel === "fa_ranking";
-  const canAttachGraphics = !isGlobal || isFaRanking;
+  /** Zapowiedź działa tylko dla dywizji H2H — FA Ranking zostaje przy podsumowaniu. */
+  const canAttachGraphics =
+    (!isGlobal || isFaRanking) && !(isPreview && isGlobal);
 
   const selectedDivision = useMemo(() => {
     if (sendTarget?.kind !== "division") return null;
@@ -192,9 +220,16 @@ export function ContentHubClient({
     sendTarget?.kind === "division" ? sendTarget.divisionId : "";
 
   const gwOptions = useMemo(() => {
+    if (isPreview) {
+      const maxPlayed = playedGameweeks.length
+        ? Math.max(...playedGameweeks)
+        : 0;
+      const max = Math.max(19, maxPlayed);
+      return Array.from({ length: max }, (_, i) => i + 1);
+    }
     if (playedGameweeks.length) return playedGameweeks;
     return Array.from({ length: 19 }, (_, i) => i + 1);
-  }, [playedGameweeks]);
+  }, [playedGameweeks, isPreview]);
 
   const xLen = xDraft.length;
   const xOver = xLen > X_LIMIT;
@@ -206,6 +241,17 @@ export function ContentHubClient({
   useEffect(() => {
     if (!canAttachGraphics && attachGraphics) setAttachGraphics(false);
   }, [canAttachGraphics, attachGraphics]);
+
+  useEffect(() => {
+    if (isPreview && isGlobal && divisions[0]?.id) {
+      setTargetKey(encodeDivision(divisions[0].id));
+    }
+  }, [isPreview, isGlobal, divisions]);
+
+  useEffect(() => {
+    setXDraft("");
+    setDiscordJson("");
+  }, [contentType]);
 
   // Off-screen: ładuj dane zawsze dla dywizji H2H (X download + Discord PNG)
   useEffect(() => {
@@ -238,9 +284,9 @@ export function ContentHubClient({
     };
   }, [isGlobal, divisionIdForTools, gameweek, showToast]);
 
-  // Off-screen: The FA Ranking (karuzela 10-osobowa)
+  // Off-screen: The FA Ranking (karuzela 10-osobowa) — tylko tryb Podsumowanie
   useEffect(() => {
-    if (!isFaRanking || !sendTarget || sendTarget.kind !== "global") {
+    if (!isSummary || !isFaRanking || !sendTarget || sendTarget.kind !== "global") {
       setFaRanking(null);
       faCarouselRefs.current = [];
       return;
@@ -266,7 +312,7 @@ export function ContentHubClient({
     return () => {
       cancelled = true;
     };
-  }, [isFaRanking, sendTarget, showToast]);
+  }, [isSummary, isFaRanking, sendTarget, showToast]);
 
   const onFaCarouselReady = useCallback(
     (refs: RefObject<HTMLDivElement | null>[]) => {
@@ -279,7 +325,7 @@ export function ContentHubClient({
     async (
       ref: RefObject<HTMLDivElement | null>,
       filename: string,
-      kind: "wyniki" | "tabela",
+      kind: "wyniki" | "tabela" | "terminarz",
     ) => {
       if (isGlobal || !divisionIdForTools) return;
       if (captureLoading || !capture) {
@@ -317,13 +363,34 @@ export function ContentHubClient({
       return;
     }
     startTransition(async () => {
-      const result = await generateXComDraft(divisionIdForTools, gameweek);
+      const result = isPreview
+        ? await generatePreviewXComDraft(divisionIdForTools, gameweek)
+        : await generateXComDraft(divisionIdForTools, gameweek);
       if (result.error) {
         showToast("err", result.error);
         return;
       }
       setXDraft(result.draft ?? "");
       showToast("ok", result.success ?? "Szkic gotowy.");
+    });
+  }
+
+  function onGenerateDiscordPreview() {
+    if (isGlobal || !divisionIdForTools) {
+      showToast("err", "Zapowiedź Discord działa tylko dla dywizji H2H.");
+      return;
+    }
+    startDiscordGen(async () => {
+      const result = await generatePreviewDiscordJSON(
+        divisionIdForTools,
+        gameweek,
+      );
+      if (result.error) {
+        showToast("err", result.error);
+        return;
+      }
+      setDiscordJson(result.json ?? "");
+      showToast("ok", result.success ?? "JSON zapowiedzi gotowy.");
     });
   }
 
@@ -352,13 +419,15 @@ export function ContentHubClient({
       );
       return;
     }
-    if (
+      if (
       !window.confirm(
         `Wysłać embed${
           attachGraphics && canAttachGraphics
             ? isFaRanking
               ? " + karuzelę PNG (FA Ranking)"
-              : " + grafiki PNG"
+              : isPreview
+                ? " + grafikę terminarza"
+                : " + grafiki PNG"
             : ""
         } na „${targetLabel}”?`,
       )
@@ -420,9 +489,37 @@ export function ContentHubClient({
       }
 
       if (captureLoading || !capture) {
-        showToast("err", "Poczekaj na załadowanie grafik (wyniki + tabela).");
+        showToast(
+          "err",
+          isPreview
+            ? "Poczekaj na załadowanie terminarza."
+            : "Poczekaj na załadowanie grafik (wyniki + tabela).",
+        );
         return;
       }
+
+      if (isPreview) {
+        const previewNode = previewRef.current;
+        if (!previewNode) {
+          showToast("err", "Brak węzła zapowiedzi do capture.");
+          return;
+        }
+        await waitForImages(previewNode);
+        await new Promise((r) => window.setTimeout(r, 80));
+        const terminarzPng = await captureExportNode(previewNode);
+        const result = await sendDiscordWebhookWithFiles(
+          sendTarget,
+          discordJson,
+          [{ fileName: "terminarz.png", base64: terminarzPng }],
+        );
+        if (result.error) {
+          showToast("err", result.error);
+          return;
+        }
+        showToast("ok", result.success ?? "Wysłano zapowiedź.");
+        return;
+      }
+
       const resultsNode = resultsRef.current;
       const standingsNode = standingsRef.current;
       if (!resultsNode || !standingsNode) {
@@ -494,8 +591,48 @@ export function ContentHubClient({
                 A · Kontekst
               </h2>
             </div>
+
+            <div className="mb-4">
+              <p className="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                Typ treści
+              </p>
+              <div
+                className="inline-flex w-full rounded-xl border border-slate-700/60 bg-slate-950 p-1 sm:w-auto"
+                role="group"
+                aria-label="Typ treści Content Hub"
+              >
+                <button
+                  type="button"
+                  onClick={() => setContentType("summary")}
+                  className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-xs font-black uppercase tracking-wider transition sm:flex-none ${
+                    isSummary
+                      ? "bg-[#39FF14] text-black shadow"
+                      : "text-slate-400 hover:bg-slate-900 hover:text-slate-200"
+                  }`}
+                >
+                  📊 Podsumowanie
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setContentType("preview")}
+                  className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-xs font-black uppercase tracking-wider transition sm:flex-none ${
+                    isPreview
+                      ? "bg-amber-400 text-black shadow"
+                      : "text-slate-400 hover:bg-slate-900 hover:text-slate-200"
+                  }`}
+                >
+                  🔜 Zapowiedź
+                </button>
+              </div>
+              <p className="mt-2 text-[11px] text-slate-500">
+                {isPreview
+                  ? "Tryb piątkowy: terminarz, napięcie przed deadlinem — bez wyników i tabeli."
+                  : "Tryb poniedziałkowy: wyniki H2H, tabela i chwalenie zwycięzców."}
+              </p>
+            </div>
+
             <div className="grid gap-4 sm:grid-cols-2">
-              <div className={isGlobal ? "sm:col-span-2" : ""}>
+              <div className={isGlobal && isSummary ? "sm:col-span-2" : ""}>
                 <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">
                   Cel wysyłki
                 </label>
@@ -504,30 +641,32 @@ export function ContentHubClient({
                   value={targetKey}
                   onChange={(e) => setTargetKey(e.target.value as TargetKey)}
                 >
-                  <optgroup label="Rozgrywki Globalne">
-                    {seasons.length === 0 ? (
-                      <option value="" disabled>
-                        Brak sezonów
-                      </option>
-                    ) : (
-                      seasons.flatMap((s) => [
-                        <option
-                          key={`${s.id}-ranking`}
-                          value={encodeGlobal(s.id, "fa_ranking")}
-                        >
-                          The FA Ranking · {s.name}
-                          {s.hasFaRankingWebhook ? "" : " · brak webhooka"}
-                        </option>,
-                        <option
-                          key={`${s.id}-cup`}
-                          value={encodeGlobal(s.id, "fa_cup")}
-                        >
-                          FA Cup · {s.name}
-                          {s.hasFaCupWebhook ? "" : " · brak webhooka"}
-                        </option>,
-                      ])
-                    )}
-                  </optgroup>
+                  {isSummary ? (
+                    <optgroup label="Rozgrywki Globalne">
+                      {seasons.length === 0 ? (
+                        <option value="" disabled>
+                          Brak sezonów
+                        </option>
+                      ) : (
+                        seasons.flatMap((s) => [
+                          <option
+                            key={`${s.id}-ranking`}
+                            value={encodeGlobal(s.id, "fa_ranking")}
+                          >
+                            The FA Ranking · {s.name}
+                            {s.hasFaRankingWebhook ? "" : " · brak webhooka"}
+                          </option>,
+                          <option
+                            key={`${s.id}-cup`}
+                            value={encodeGlobal(s.id, "fa_cup")}
+                          >
+                            FA Cup · {s.name}
+                            {s.hasFaCupWebhook ? "" : " · brak webhooka"}
+                          </option>,
+                        ])
+                      )}
+                    </optgroup>
+                  ) : null}
                   <optgroup label="Dywizje H2H">
                     {divisions.length === 0 ? (
                       <option value="" disabled>
@@ -568,7 +707,11 @@ export function ContentHubClient({
                     {gwOptions.map((gw) => (
                       <option key={gw} value={gw}>
                         GW {gw}
-                        {playedGameweeks.includes(gw) ? " · rozegrana" : ""}
+                        {playedGameweeks.includes(gw)
+                          ? " · rozegrana"
+                          : isPreview
+                            ? " · zapowiedź"
+                            : ""}
                       </option>
                     ))}
                   </select>
@@ -590,21 +733,27 @@ export function ContentHubClient({
                 <p className="mt-1 text-xs text-slate-500">
                   {isGlobal
                     ? "Niedostępne dla rozgrywek globalnych (brak H2H dywizji)."
-                    : "Limit 280 znaków · zwycięzcy z x_com · pobierz PNG wyników / tabeli."}
+                    : isPreview
+                      ? "Limit 280 znaków · zapowiedź GW · pobierz PNG terminarza."
+                      : "Limit 280 znaków · zwycięzcy z x_com · pobierz PNG wyników / tabeli."}
                 </p>
               </div>
               <button
                 type="button"
                 disabled={pending || isGlobal || !divisionIdForTools}
                 onClick={onGenerateX}
-                className="inline-flex items-center gap-2 rounded-xl bg-[#39FF14] px-4 py-2.5 text-xs font-black uppercase tracking-wider text-black transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-40"
+                className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-black uppercase tracking-wider transition disabled:cursor-not-allowed disabled:opacity-40 ${
+                  isPreview
+                    ? "bg-amber-400 text-black hover:bg-amber-300"
+                    : "bg-[#39FF14] text-black hover:bg-white"
+                }`}
               >
                 {pending ? (
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 ) : (
                   <Sparkles className="h-3.5 w-3.5" />
                 )}
-                Generuj Szkic X.com
+                {isPreview ? "Generuj Zapowiedź X.com" : "Generuj Szkic X.com"}
               </button>
             </div>
             <textarea
@@ -612,7 +761,11 @@ export function ContentHubClient({
               value={xDraft}
               onChange={(e) => setXDraft(e.target.value)}
               disabled={isGlobal}
-              placeholder={`🏆 Wyniki & Tabela - GW ${gameweek}\n🏴󠁧󠁢󠁥󠁮󠁧󠁿 … (FPL Arena: Na Minusie ™)\n\nSwoje mecze wygrali:\n@nick1, @nick2\n\n#FPL #FPLpl #FantasyPL`}
+              placeholder={
+                isPreview
+                  ? `🔜 Zapowiedź GW${gameweek}!\n🏴󠁧󠁢󠁥󠁮󠁧󠁿 … (FPL Arena: Na Minusie ™)\n\nPrzed nami kolejne emocje! W tej kolejce zmierzą się m.in.:\n@nick1 vs @nick2\n\nKto zdobędzie cenne 3 punkty? 🔥\n#FPL #FPLpl`
+                  : `🏆 Wyniki & Tabela - GW ${gameweek}\n🏴󠁧󠁢󠁥󠁮󠁧󠁿 … (FPL Arena: Na Minusie ™)\n\nSwoje mecze wygrali:\n@nick1, @nick2\n\n#FPL #FPLpl #FantasyPL`
+              }
               spellCheck={false}
             />
             <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
@@ -639,7 +792,7 @@ export function ContentHubClient({
               </button>
             </div>
 
-            {!isGlobal ? (
+            {!isGlobal && isSummary ? (
               <div className="mt-3 flex flex-wrap gap-3">
                 <button
                   type="button"
@@ -695,6 +848,38 @@ export function ContentHubClient({
                 </button>
               </div>
             ) : null}
+
+            {!isGlobal && isPreview ? (
+              <div className="mt-3 flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  disabled={
+                    Boolean(downloadBusy) ||
+                    captureLoading ||
+                    !capture ||
+                    !divisionIdForTools
+                  }
+                  onClick={() =>
+                    handleDownloadImage(
+                      previewRef,
+                      `terminarz-gw${gameweek}.png`,
+                      "terminarz",
+                    )
+                  }
+                  className="inline-flex items-center gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 px-3.5 py-2 text-xs font-bold uppercase tracking-wider text-amber-200 transition hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:opacity-40"
+                  title="Pobierz PNG terminarza / zapowiedzi (off-screen)"
+                >
+                  {downloadBusy === "terminarz" ||
+                  (captureLoading && !capture) ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <CalendarDays className="h-3.5 w-3.5" />
+                  )}
+                  <Download className="h-3.5 w-3.5 opacity-70" />
+                  Pobierz Terminarz
+                </button>
+              </div>
+            ) : null}
           </section>
 
           <section className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-5 sm:p-6">
@@ -704,16 +889,41 @@ export function ContentHubClient({
                   C · Discord Embed Editor
                 </h2>
                 <p className="mt-1 text-xs text-slate-500">
-                  Wklej JSON (Discohook / AI). Podgląd na żywo po prawej.
+                  {isPreview
+                    ? "Wygeneruj JSON zapowiedzi albo wklej własny. Podgląd na żywo po prawej."
+                    : "Wklej JSON (Discohook / AI). Podgląd na żywo po prawej."}
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={() => setDiscordJson(SAMPLE_EMBED_JSON)}
-                className="text-[10px] font-bold uppercase tracking-wider text-slate-500 underline-offset-2 hover:text-slate-300 hover:underline"
-              >
-                Wstaw przykładowy JSON
-              </button>
+              <div className="flex flex-wrap items-center gap-3">
+                {isPreview && !isGlobal ? (
+                  <button
+                    type="button"
+                    disabled={
+                      discordGenPending || isGlobal || !divisionIdForTools
+                    }
+                    onClick={onGenerateDiscordPreview}
+                    className="inline-flex items-center gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-amber-200 transition hover:bg-amber-500/20 disabled:opacity-40"
+                  >
+                    {discordGenPending ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-3.5 w-3.5" />
+                    )}
+                    Generuj JSON Zapowiedzi
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() =>
+                    setDiscordJson(
+                      isPreview ? SAMPLE_PREVIEW_EMBED_JSON : SAMPLE_EMBED_JSON,
+                    )
+                  }
+                  className="text-[10px] font-bold uppercase tracking-wider text-slate-500 underline-offset-2 hover:text-slate-300 hover:underline"
+                >
+                  Wstaw przykładowy JSON
+                </button>
+              </div>
             </div>
 
             <label
@@ -733,7 +943,9 @@ export function ContentHubClient({
                   <ImageIcon className="h-4 w-4 text-sky-300" />
                   {isFaRanking
                     ? "Generuj i załącz grafiki (karuzela The FA Ranking, po 10 graczy)"
-                    : "Dołącz wygenerowane grafiki (Wyniki H2H i Tabela z wybranego GW)"}
+                    : isPreview
+                      ? "Dołącz grafikę terminarza (Zapowiedź GW)"
+                      : "Dołącz wygenerowane grafiki (Wyniki H2H i Tabela z wybranego GW)"}
                   {!canAttachGraphics ? (
                     <span className="text-[11px] font-medium text-amber-400/90">
                       (Opcja niedostępna dla FA Cup)
@@ -743,7 +955,9 @@ export function ContentHubClient({
                 <span className="mt-1 block text-[11px] text-slate-500">
                   {isFaRanking
                     ? "Off-screen capture → multipart webhook (album Discord / grid X.com)."
-                    : "Off-screen capture → multipart webhook (te same PNG co „Pobierz” w sekcji X)."}
+                    : isPreview
+                      ? "Off-screen capture → jedna grafika terminarza (bez wyników)."
+                      : "Off-screen capture → multipart webhook (te same PNG co „Pobierz” w sekcji X)."}
                   {isFaRanking && faRankingLoading ? (
                     <span className="ml-1 text-amber-400"> Ładowanie FA Ranking…</span>
                   ) : null}
@@ -758,7 +972,10 @@ export function ContentHubClient({
                     <span className="ml-1 text-amber-400"> Ładowanie danych…</span>
                   ) : null}
                   {!isGlobal && !captureLoading && capture ? (
-                    <span className="ml-1 text-emerald-400"> Grafiki gotowe.</span>
+                    <span className="ml-1 text-emerald-400">
+                      {" "}
+                      {isPreview ? "Terminarz gotowy." : "Grafiki gotowe."}
+                    </span>
                   ) : null}
                 </span>
               </span>
@@ -820,8 +1037,8 @@ export function ContentHubClient({
         </div>
       </div>
 
-      {/* Off-screen: zawsze przy dywizji H2H (download X + opcjonalny Discord) */}
-      {!isGlobal && capture ? (
+      {/* Off-screen: H2H — podsumowanie (wyniki + tabela) lub zapowiedź (terminarz) */}
+      {!isGlobal && capture && isSummary ? (
         <div
           className="pointer-events-none absolute -left-[10000px] top-0 flex w-[920px] flex-col gap-8"
           aria-hidden
@@ -861,7 +1078,24 @@ export function ContentHubClient({
         </div>
       ) : null}
 
-      {isFaRanking && faRanking ? (
+      {!isGlobal && capture && isPreview ? (
+        <div
+          className="pointer-events-none absolute -left-[10000px] top-0 w-[1200px]"
+          aria-hidden
+        >
+          <GameweekPreviewExportNode
+            matches={capture.gwDetails.matches}
+            logos={clubLogos}
+            gameweek={capture.gameweek}
+            divisionName={capture.divisionName}
+            seasonName={capture.seasonName}
+            pyramidName={capture.pyramidName}
+            captureRef={previewRef}
+          />
+        </div>
+      ) : null}
+
+      {isFaRanking && faRanking && isSummary ? (
         <FARankingExportCarousel
           data={faRanking}
           logos={clubLogos}
