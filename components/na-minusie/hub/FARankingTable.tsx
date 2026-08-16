@@ -167,7 +167,7 @@ export function FARankingTable({
         </div>
       ) : null}
 
-      <div className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-950/40">
+      <div className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-950/40 no-scrollbar">
         <table className="w-full min-w-[720px] border-collapse text-left">
           <thead>
             <tr className="border-b border-slate-800 text-[10px] font-black uppercase tracking-wider text-slate-500">

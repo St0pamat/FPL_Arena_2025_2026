@@ -69,6 +69,15 @@
   .animate-fade-in {
     animation: fade-in 0.45s ease-out both;
   }
+
+  /* Ukrywa scrollbary (UI + html-to-image) bez blokady overflow w layoutcie */
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 @keyframes fade-in {

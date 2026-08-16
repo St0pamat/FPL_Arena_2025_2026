@@ -10,9 +10,11 @@ import {
   ImageIcon,
   Loader2,
   Megaphone,
+  Paperclip,
   Send,
   Sparkles,
   Table2,
+  Trash2,
   Swords,
 } from "lucide-react";
 import type { RefObject } from "react";
@@ -27,6 +29,7 @@ import {
   type ContentHubDivisionOption,
   type ContentHubSeasonOption,
   type ContentHubSendTarget,
+  type DiscordFileAttachment,
 } from "@/app/admin/actions/contentHub";
 import { getFARankingData } from "@/lib/public/actions";
 import type { FARankingPayload } from "@/lib/public/faRanking";
@@ -125,6 +128,30 @@ async function waitForImages(node: HTMLElement) {
   );
 }
 
+function readFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result ?? ""));
+    reader.onerror = () => reject(reader.error ?? new Error("Odczyt pliku nieudany."));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function customFilesToAttachments(
+  files: File[],
+): Promise<DiscordFileAttachment[]> {
+  const out: DiscordFileAttachment[] = [];
+  for (const file of files) {
+    const base64 = await readFileAsDataUrl(file);
+    if (!base64) continue;
+    out.push({ fileName: file.name || `custom-${out.length + 1}.png`, base64 });
+  }
+  return out;
+}
+
+/** Discord webhook: max 10 załączników na wiadomość. */
+const DISCORD_MAX_FILES = 10;
+
 export function ContentHubClient({
   divisions,
   seasons,
@@ -153,6 +180,8 @@ export function ContentHubClient({
   const [discordJson, setDiscordJson] = useState("");
   const [jsonError, setJsonError] = useState<string | null>(null);
   const [attachGraphics, setAttachGraphics] = useState(false);
+  const [customFiles, setCustomFiles] = useState<File[]>([]);
+  const customFileInputRef = useRef<HTMLInputElement>(null);
   const [capture, setCapture] = useState<ContentHubCapturePayload | null>(null);
   const [captureLoading, setCaptureLoading] = useState(false);
   const [faRanking, setFaRanking] = useState<FARankingPayload | null>(null);
@@ -240,7 +269,8 @@ export function ContentHubClient({
 
   useEffect(() => {
     if (!canAttachGraphics && attachGraphics) setAttachGraphics(false);
-  }, [canAttachGraphics, attachGraphics]);
+    if (!canAttachGraphics && customFiles.length > 0) setCustomFiles([]);
+  }, [canAttachGraphics, attachGraphics, customFiles.length]);
 
   useEffect(() => {
     if (isPreview && isGlobal && divisions[0]?.id) {
@@ -419,7 +449,12 @@ export function ContentHubClient({
       );
       return;
     }
-      if (
+
+    const extrasHint =
+      customFiles.length > 0
+        ? ` + ${customFiles.length} własne`
+        : "";
+    if (
       !window.confirm(
         `Wysłać embed${
           attachGraphics && canAttachGraphics
@@ -429,7 +464,7 @@ export function ContentHubClient({
                 ? " + grafikę terminarza"
                 : " + grafiki PNG"
             : ""
-        } na „${targetLabel}”?`,
+        }${extrasHint} na „${targetLabel}”?`,
       )
     ) {
       return;
@@ -437,13 +472,40 @@ export function ContentHubClient({
 
     setSendPending(true);
     try {
-      if (!attachGraphics || !canAttachGraphics) {
-        const result = await sendDiscordWebhookJson(sendTarget, discordJson);
+      const customAttachments = await customFilesToAttachments(customFiles);
+
+      const sendWithFiles = async (generated: DiscordFileAttachment[]) => {
+        const files = [...generated, ...customAttachments];
+        if (files.length > DISCORD_MAX_FILES) {
+          showToast(
+            "err",
+            `Discord przyjmuje max ${DISCORD_MAX_FILES} plików (masz ${files.length}). Usuń część załączników.`,
+          );
+          return;
+        }
+        if (!files.length) {
+          const result = await sendDiscordWebhookJson(sendTarget, discordJson);
+          if (result.error) {
+            showToast("err", result.error);
+            return;
+          }
+          showToast("ok", result.success ?? "Wysłano.");
+          return;
+        }
+        const result = await sendDiscordWebhookWithFiles(
+          sendTarget,
+          discordJson,
+          files,
+        );
         if (result.error) {
           showToast("err", result.error);
           return;
         }
         showToast("ok", result.success ?? "Wysłano.");
+      };
+
+      if (!attachGraphics || !canAttachGraphics) {
+        await sendWithFiles([]);
         return;
       }
 
@@ -458,7 +520,7 @@ export function ContentHubClient({
           return;
         }
         showToast("ok", `Generowanie ${refs.length} grafik…`);
-        const files: { fileName: string; base64: string }[] = [];
+        const files: DiscordFileAttachment[] = [];
         for (let i = 0; i < refs.length; i++) {
           const node = refs[i]?.current;
           if (!node) {
@@ -475,16 +537,7 @@ export function ContentHubClient({
             base64: png,
           });
         }
-        const result = await sendDiscordWebhookWithFiles(
-          sendTarget,
-          discordJson,
-          files,
-        );
-        if (result.error) {
-          showToast("err", result.error);
-          return;
-        }
-        showToast("ok", result.success ?? "Wysłano karuzelę FA Ranking.");
+        await sendWithFiles(files);
         return;
       }
 
@@ -507,16 +560,9 @@ export function ContentHubClient({
         await waitForImages(previewNode);
         await new Promise((r) => window.setTimeout(r, 80));
         const terminarzPng = await captureExportNode(previewNode);
-        const result = await sendDiscordWebhookWithFiles(
-          sendTarget,
-          discordJson,
-          [{ fileName: "terminarz.png", base64: terminarzPng }],
-        );
-        if (result.error) {
-          showToast("err", result.error);
-          return;
-        }
-        showToast("ok", result.success ?? "Wysłano zapowiedź.");
+        await sendWithFiles([
+          { fileName: "terminarz.png", base64: terminarzPng },
+        ]);
         return;
       }
 
@@ -534,15 +580,10 @@ export function ContentHubClient({
       const wynikiPng = await captureExportNode(resultsNode);
       const tabelaPng = await captureExportNode(standingsNode);
 
-      const result = await sendDiscordWebhookWithFiles(sendTarget, discordJson, [
+      await sendWithFiles([
         { fileName: "wyniki.png", base64: wynikiPng },
         { fileName: "tabela.png", base64: tabelaPng },
       ]);
-      if (result.error) {
-        showToast("err", result.error);
-        return;
-      }
-      showToast("ok", result.success ?? "Wysłano.");
     } catch (e) {
       console.error("[ContentHub] send", e);
       showToast(
@@ -981,6 +1022,85 @@ export function ContentHubClient({
               </span>
             </label>
 
+            <div className="mb-4 space-y-2">
+              <input
+                ref={customFileInputRef}
+                type="file"
+                multiple
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const picked = Array.from(e.target.files ?? []);
+                  if (!picked.length) return;
+                  setCustomFiles((prev) => {
+                    const next = [...prev];
+                    for (const file of picked) {
+                      const duplicate = next.some(
+                        (f) =>
+                          f.name === file.name &&
+                          f.size === file.size &&
+                          f.lastModified === file.lastModified,
+                      );
+                      if (!duplicate) next.push(file);
+                    }
+                    return next.slice(0, DISCORD_MAX_FILES);
+                  });
+                  e.target.value = "";
+                }}
+              />
+              <button
+                type="button"
+                disabled={!canAttachGraphics}
+                onClick={() => customFileInputRef.current?.click()}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-600/70 bg-slate-800 px-3.5 py-2.5 text-xs font-black uppercase tracking-wider text-slate-200 transition hover:border-slate-500 hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <Paperclip className="h-3.5 w-3.5 text-sky-300" aria-hidden />
+                Dodaj własne grafiki (opcjonalnie)
+              </button>
+              {!canAttachGraphics ? (
+                <p className="text-[11px] text-amber-400/90">
+                  FA Cup przyjmuje tylko JSON (bez załączników).
+                </p>
+              ) : customFiles.length > 0 ? (
+                <ul className="space-y-1.5 rounded-xl border border-slate-700/50 bg-slate-950/40 px-3 py-2.5">
+                  {customFiles.map((file, index) => (
+                    <li
+                      key={`${file.name}-${file.size}-${file.lastModified}-${index}`}
+                      className="flex items-center gap-2 text-xs text-slate-300"
+                    >
+                      <ImageIcon className="h-3.5 w-3.5 shrink-0 text-slate-500" />
+                      <span className="min-w-0 flex-1 truncate font-medium">
+                        {file.name}
+                      </span>
+                      <span className="shrink-0 tabular-nums text-slate-500">
+                        {file.size < 1024 * 1024
+                          ? `${Math.max(1, Math.round(file.size / 1024))} KB`
+                          : `${(file.size / (1024 * 1024)).toFixed(1)} MB`}
+                      </span>
+                      <button
+                        type="button"
+                        title="Usuń plik"
+                        onClick={() =>
+                          setCustomFiles((prev) =>
+                            prev.filter((_, i) => i !== index),
+                          )
+                        }
+                        className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-slate-700 bg-slate-900 text-slate-400 transition hover:border-rose-500/40 hover:bg-rose-500/10 hover:text-rose-300"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-[11px] text-slate-500">
+                  Memy, trash-talk, Menedżer Miesiąca itd. — doklejone do tej samej
+                  wiadomości Discord (max {DISCORD_MAX_FILES} plików łącznie z
+                  wygenerowanymi).
+                </p>
+              )}
+            </div>
+
             <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">
               Wklej kod JSON dla Discorda (Wygenerowany przez AI)
             </label>
@@ -1040,7 +1160,7 @@ export function ContentHubClient({
       {/* Off-screen: H2H — podsumowanie (wyniki + tabela) lub zapowiedź (terminarz) */}
       {!isGlobal && capture && isSummary ? (
         <div
-          className="pointer-events-none absolute -left-[10000px] top-0 flex w-[920px] flex-col gap-8"
+          className="pointer-events-none absolute -left-[10000px] top-0 flex w-[1200px] flex-col gap-8"
           aria-hidden
         >
           <DiscordExportFrame

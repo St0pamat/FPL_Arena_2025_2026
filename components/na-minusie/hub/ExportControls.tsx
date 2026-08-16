@@ -7,20 +7,161 @@ import { sendImageToDiscord } from "@/app/admin/actions/discord";
 
 const EXPORT_BG = "#0B0F19";
 
-export async function captureExportNode(node: HTMLElement): Promise<string> {
-  await toPng(node, {
-    quality: 1,
-    pixelRatio: 2,
-    backgroundColor: EXPORT_BG,
-    cacheBust: true,
-  });
-  return toPng(node, {
-    quality: 1,
-    pixelRatio: 2,
-    backgroundColor: EXPORT_BG,
-    cacheBust: true,
-    style: { transform: "none" },
-  });
+const CAPTURE_ROOT_STYLE: Record<string, string> = {
+  transform: "none",
+  overflow: "hidden",
+  overflowX: "hidden",
+  overflowY: "hidden",
+  scrollbarWidth: "none",
+  msOverflowStyle: "none",
+};
+
+type OverflowSnapshot = {
+  el: HTMLElement;
+  overflow: string;
+  overflowX: string;
+  overflowY: string;
+  scrollbarWidth: string;
+  msOverflowStyle: string;
+};
+
+async function waitForImages(root: HTMLElement): Promise<void> {
+  const imgs = Array.from(root.querySelectorAll("img"));
+  await Promise.all(
+    imgs.map(
+      (img) =>
+        img.complete
+          ? Promise.resolve()
+          : new Promise<void>((resolve) => {
+              const done = () => resolve();
+              img.addEventListener("load", done, { once: true });
+              img.addEventListener("error", done, { once: true });
+            }),
+    ),
+  );
+}
+
+/**
+ * html-to-image rzuca przy 404 (np. brak stoke.png w Championship).
+ * Na czas capture zamieniamy uszkodzone <img> na puste placeholdery.
+ */
+function replaceBrokenImages(root: HTMLElement): () => void {
+  const restores: Array<() => void> = [];
+
+  for (const img of Array.from(root.querySelectorAll("img"))) {
+    const broken = !img.complete || img.naturalWidth === 0 || img.naturalHeight === 0;
+    if (!broken) continue;
+
+    const parent = img.parentNode;
+    if (!parent) continue;
+
+    const placeholder = document.createElement("span");
+    placeholder.setAttribute("aria-hidden", "true");
+    placeholder.style.display = "inline-block";
+    placeholder.style.width = `${Math.max(img.offsetWidth, 32)}px`;
+    placeholder.style.height = `${Math.max(img.offsetHeight, 32)}px`;
+    placeholder.style.flexShrink = "0";
+
+    parent.replaceChild(placeholder, img);
+    restores.push(() => {
+      if (placeholder.parentNode === parent) {
+        parent.replaceChild(img, placeholder);
+      }
+    });
+  }
+
+  return () => {
+    for (const restore of restores) restore();
+  };
+}
+
+/**
+ * html-to-image kopiuje widoczne scrollbary z overflow-auto/x-auto.
+ * Na czas capture: rozszerz root do pełnej szerokości treści + ukryj overflow/scrollbary w poddrzewie.
+ */
+function lockOverflowForCapture(root: HTMLElement): () => void {
+  const snapshots: OverflowSnapshot[] = [];
+  const rootBox = {
+    width: root.style.width,
+    minWidth: root.style.minWidth,
+    maxWidth: root.style.maxWidth,
+  };
+
+  const fullWidth = Math.max(root.scrollWidth, root.offsetWidth, 1200);
+  root.style.width = `${fullWidth}px`;
+  root.style.minWidth = `${fullWidth}px`;
+  root.style.maxWidth = "none";
+
+  const elements: HTMLElement[] = [root, ...Array.from(root.querySelectorAll<HTMLElement>("*"))];
+
+  for (const el of elements) {
+    const cs = window.getComputedStyle(el);
+    const ox = cs.overflowX;
+    const oy = cs.overflowY;
+    const scrolls =
+      ox === "auto" ||
+      ox === "scroll" ||
+      ox === "overlay" ||
+      oy === "auto" ||
+      oy === "scroll" ||
+      oy === "overlay" ||
+      el.classList.contains("overflow-x-auto") ||
+      el.classList.contains("overflow-y-auto") ||
+      el.classList.contains("overflow-auto") ||
+      el.classList.contains("overflow-scroll");
+
+    if (!scrolls && el !== root) continue;
+
+    snapshots.push({
+      el,
+      overflow: el.style.overflow,
+      overflowX: el.style.overflowX,
+      overflowY: el.style.overflowY,
+      scrollbarWidth: el.style.scrollbarWidth,
+      msOverflowStyle: el.style.msOverflowStyle,
+    });
+    el.style.overflow = "hidden";
+    el.style.overflowX = "hidden";
+    el.style.overflowY = "hidden";
+    el.style.scrollbarWidth = "none";
+    el.style.msOverflowStyle = "none";
+  }
+
+  return () => {
+    root.style.width = rootBox.width;
+    root.style.minWidth = rootBox.minWidth;
+    root.style.maxWidth = rootBox.maxWidth;
+    for (const s of snapshots) {
+      s.el.style.overflow = s.overflow;
+      s.el.style.overflowX = s.overflowX;
+      s.el.style.overflowY = s.overflowY;
+      s.el.style.scrollbarWidth = s.scrollbarWidth;
+      s.el.style.msOverflowStyle = s.msOverflowStyle;
+    }
+  };
+}
+
+export async function captureExportNode(
+  node: HTMLElement,
+  backgroundColor: string = EXPORT_BG,
+): Promise<string> {
+  await waitForImages(node);
+  const restoreImages = replaceBrokenImages(node);
+  const restoreOverflow = lockOverflowForCapture(node);
+  try {
+    const options = {
+      quality: 1 as const,
+      pixelRatio: 2,
+      backgroundColor,
+      cacheBust: true,
+      style: CAPTURE_ROOT_STYLE,
+    };
+    await toPng(node, options);
+    return await toPng(node, options);
+  } finally {
+    restoreOverflow();
+    restoreImages();
+  }
 }
 
 function downloadDataUrl(dataUrl: string, fileName: string) {

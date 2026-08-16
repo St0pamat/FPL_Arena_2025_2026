@@ -67,6 +67,9 @@ export function ClubCrest({
         loading="eager"
         crossOrigin="anonymous"
         decoding="async"
+        onLoad={(e) => {
+          if (e.currentTarget.naturalWidth === 0) setFailed(true);
+        }}
         onError={() => setFailed(true)}
       />
     </span>

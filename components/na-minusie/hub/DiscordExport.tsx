@@ -89,10 +89,10 @@ export function DiscordExportFrame({
       <div
         ref={nodeRef}
         id={id}
-        className={`rounded-2xl border border-slate-800 shadow-2xl shadow-black/50 ${
+        className={`rounded-2xl border border-slate-800 shadow-2xl shadow-black/50 no-scrollbar ${
           safeExportEdges
             ? "overflow-visible"
-            : fluid
+            : hideControls || fluid
               ? "overflow-hidden"
               : "overflow-x-auto"
         }`}
@@ -102,7 +102,11 @@ export function DiscordExportFrame({
           className={
             safeExportEdges
               ? "box-border flex w-[1200px] flex-col items-center justify-center bg-slate-950 p-12"
-              : `p-4 sm:p-6 ${fluid ? "w-full min-w-0" : "min-w-[960px] sm:p-8"}`
+              : fluid
+                ? "w-full min-w-0 p-4 sm:p-6"
+                : hideControls
+                  ? "box-border w-[1200px] min-w-[1200px] p-4 sm:p-8"
+                  : "min-w-[960px] p-4 sm:p-8"
           }
           style={{ backgroundColor: EXPORT_BG }}
         >

@@ -69,8 +69,11 @@ export function TierCrest({
         src={src}
         alt={`Logo ${tierName}`}
         className="h-full w-full object-contain"
-        loading="lazy"
+        loading="eager"
         decoding="async"
+        onLoad={(e) => {
+          if (e.currentTarget.naturalWidth === 0) setFailed(true);
+        }}
         onError={() => setFailed(true)}
       />
     </div>

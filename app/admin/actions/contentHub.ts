@@ -866,18 +866,31 @@ export async function sendDiscordWebhookWithFiles(
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       let payload = file.base64.trim();
+      let mime = "image/png";
       const comma = payload.indexOf(",");
       if (payload.startsWith("data:") && comma !== -1) {
+        const header = payload.slice(0, comma);
+        const match = /^data:([^;]+)/i.exec(header);
+        if (match?.[1]) mime = match[1].trim() || mime;
         payload = payload.slice(comma + 1);
       }
       const buffer = Buffer.from(payload, "base64");
       if (!buffer.length) {
         return { error: `Pusty plik: ${file.fileName}` };
       }
-      const safeName = file.fileName.endsWith(".png")
-        ? file.fileName
-        : `${file.fileName}.png`;
-      const blob = new Blob([new Uint8Array(buffer)], { type: "image/png" });
+
+      const rawName = (file.fileName || `attachment-${i + 1}`).trim();
+      const hasExt = /\.[a-z0-9]{2,5}$/i.test(rawName);
+      const extFromMime =
+        mime === "image/jpeg" || mime === "image/jpg"
+          ? ".jpg"
+          : mime === "image/webp"
+            ? ".webp"
+            : mime === "image/gif"
+              ? ".gif"
+              : ".png";
+      const safeName = hasExt ? rawName : `${rawName}${extFromMime}`;
+      const blob = new Blob([new Uint8Array(buffer)], { type: mime });
       form.append(`files[${i}]`, blob, safeName);
     }
 
