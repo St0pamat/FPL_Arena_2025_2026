@@ -501,6 +501,38 @@ export async function generatePreviewDiscordJSON(
 
 export type DiscordWebhookJsonResult = ActionState;
 
+function formatDiscordReject(status: number, text: string): string {
+  const trimmed = (text ?? "").trim();
+  let discordMsg = "";
+  try {
+    const json = JSON.parse(trimmed) as { message?: string };
+    discordMsg = String(json.message ?? "").trim();
+  } catch {
+    discordMsg = trimmed.slice(0, 280);
+  }
+
+  if (status === 413 || /too large|payload/i.test(discordMsg)) {
+    return "Discord odrzucił wysyłkę: plik jest za duży (limit webhooka to zwykle 8–10 MB).";
+  }
+  if (status === 401 || status === 404) {
+    return "Brak skonfigurowanego lub nieprawidłowy adres Webhooka dla tej akcji. Ustaw w adminie → Webhooki Discord.";
+  }
+  if (discordMsg) {
+    return `Discord odrzucił wysyłkę (${status}): ${discordMsg}`;
+  }
+  return `Discord odrzucił wysyłkę (${status}). Sprawdź JSON / webhook / limity.`;
+}
+
+function unknownSendError(e: unknown): string {
+  if (e instanceof Error && e.message.trim()) return e.message;
+  if (typeof e === "object" && e !== null) {
+    const o = e as Record<string, unknown>;
+    if (typeof o.message === "string" && o.message.trim()) return o.message;
+    if (typeof o.error === "string" && o.error.trim()) return o.error;
+  }
+  return "Wystąpił nieznany błąd podczas wysyłki.";
+}
+
 function normalizeWebhookPayload(
   rawJson: string,
 ): { ok: true; body: Record<string, unknown> } | { ok: false; error: string } {
@@ -584,7 +616,19 @@ export async function sendDiscordWebhookJson(
     if (!normalized.ok) return { error: normalized.error };
 
     const dest = await resolveWebhookTarget(supabase, resolvedTarget);
-    if ("error" in dest) return { error: dest.error };
+    if (!dest || "error" in dest) {
+      return {
+        error:
+          dest && "error" in dest
+            ? dest.error
+            : "Brak skonfigurowanego adresu Webhooka dla tej akcji.",
+      };
+    }
+    if (!dest.webhook?.trim()) {
+      return {
+        error: "Brak skonfigurowanego adresu Webhooka dla tej akcji.",
+      };
+    }
 
     const res = await fetch(dest.webhook, {
       method: "POST",
@@ -595,9 +639,7 @@ export async function sendDiscordWebhookJson(
     if (!res.ok) {
       const text = await res.text().catch(() => "");
       console.error("[sendDiscordWebhookJson]", res.status, text);
-      return {
-        error: `Discord odrzucił wysyłkę (${res.status}). Sprawdź JSON / webhook.`,
-      };
+      return { error: formatDiscordReject(res.status, text) };
     }
 
     return {
@@ -606,9 +648,7 @@ export async function sendDiscordWebhookJson(
     };
   } catch (e) {
     console.error("[sendDiscordWebhookJson]", e);
-    return {
-      error: e instanceof Error ? e.message : "Błąd wysyłki Discord.",
-    };
+    return { error: unknownSendError(e) };
   }
 }
 
@@ -893,11 +933,25 @@ export async function sendDiscordWebhookWithFiles(
     }
 
     const dest = await resolveWebhookTarget(supabase, resolvedTarget);
-    if ("error" in dest) return { error: dest.error };
+    if (!dest || "error" in dest) {
+      return {
+        error:
+          dest && "error" in dest
+            ? dest.error
+            : "Brak skonfigurowanego adresu Webhooka dla tej akcji.",
+      };
+    }
+    if (!dest.webhook?.trim()) {
+      return {
+        error: "Brak skonfigurowanego adresu Webhooka dla tej akcji.",
+      };
+    }
 
+    const DISCORD_MAX_BYTES = 8 * 1024 * 1024;
     const form = new FormData();
     form.append("payload_json", JSON.stringify(normalized.body));
 
+    let totalBytes = 0;
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       let payload = file.base64.trim();
@@ -912,6 +966,13 @@ export async function sendDiscordWebhookWithFiles(
       const buffer = Buffer.from(payload, "base64");
       if (!buffer.length) {
         return { error: `Pusty plik: ${file.fileName}` };
+      }
+      totalBytes += buffer.length;
+      if (totalBytes > DISCORD_MAX_BYTES) {
+        return {
+          error:
+            "Plik jest za duży na webhook Discord (limit ~8 MB). Zmniejsz grafikę albo wyślij bez załącznika.",
+        };
       }
 
       const rawName = (file.fileName || `attachment-${i + 1}`).trim();
@@ -937,9 +998,7 @@ export async function sendDiscordWebhookWithFiles(
     if (!res.ok) {
       const text = await res.text().catch(() => "");
       console.error("[sendDiscordWebhookWithFiles]", res.status, text);
-      return {
-        error: `Discord odrzucił wysyłkę (${res.status}). Sprawdź JSON / webhook / limity.`,
-      };
+      return { error: formatDiscordReject(res.status, text) };
     }
 
     return {
@@ -948,8 +1007,6 @@ export async function sendDiscordWebhookWithFiles(
     };
   } catch (e) {
     console.error("[sendDiscordWebhookWithFiles]", e);
-    return {
-      error: e instanceof Error ? e.message : "Błąd wysyłki Discord z plikami.",
-    };
+    return { error: unknownSendError(e) };
   }
 }

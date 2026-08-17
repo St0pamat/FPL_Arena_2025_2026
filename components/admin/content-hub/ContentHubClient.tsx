@@ -146,6 +146,11 @@ async function customFilesToAttachments(
 ): Promise<DiscordFileAttachment[]> {
   const out: DiscordFileAttachment[] = [];
   for (const file of files) {
+    if (file.size > DISCORD_SAFE_FILE_BYTES) {
+      throw new Error(
+        `Plik „${file.name}” jest za duży (${(file.size / (1024 * 1024)).toFixed(1)} MB). Limit webhooka to ok. 8 MB.`,
+      );
+    }
     const base64 = await readFileAsDataUrl(file);
     if (!base64) continue;
     out.push({ fileName: file.name || `custom-${out.length + 1}.png`, base64 });
@@ -155,6 +160,42 @@ async function customFilesToAttachments(
 
 /** Discord webhook: max 10 załączników na wiadomość. */
 const DISCORD_MAX_FILES = 10;
+/** Bezpieczny limit rozmiaru plików (darmowy webhook Discord). */
+const DISCORD_SAFE_FILE_BYTES = 8 * 1024 * 1024;
+
+function dataUrlBytes(dataUrl: string): number {
+  const raw = dataUrl.includes(",") ? dataUrl.slice(dataUrl.indexOf(",") + 1) : dataUrl;
+  return Math.floor((raw.length * 3) / 4);
+}
+
+function unknownClientError(err: unknown): string {
+  console.error("Full Discord Error:", err);
+  if (err instanceof Error && err.message.trim()) {
+    if (/body exceeded|bodySizeLimit|4mb|25mb/i.test(err.message)) {
+      return "Plik jest za duży na wysyłkę. Zmniejsz grafikę albo wyślij bez załącznika.";
+    }
+    return err.message;
+  }
+  if (typeof err === "object" && err !== null) {
+    const o = err as Record<string, unknown>;
+    const data =
+      o.response && typeof o.response === "object"
+        ? (o.response as Record<string, unknown>).data
+        : null;
+    const nested =
+      data && typeof data === "object"
+        ? (data as Record<string, unknown>)
+        : null;
+    const fromNested =
+      (typeof nested?.message === "string" && nested.message) ||
+      (typeof nested?.error === "string" && nested.error) ||
+      "";
+    if (fromNested) return fromNested;
+    if (typeof o.message === "string" && o.message.trim()) return o.message;
+    if (typeof o.error === "string" && o.error.trim()) return o.error;
+  }
+  return "Wystąpił nieznany błąd podczas wysyłki.";
+}
 
 export function ContentHubClient({
   divisions,
@@ -521,9 +562,7 @@ export function ContentHubClient({
     if (!hasWebhook) {
       showToast(
         "err",
-        isGlobal
-          ? "Brak webhooka globalnego — ustaw w Strukturze Ligi → Kanały globalne."
-          : "Ta dywizja nie ma webhooka — ustaw w Strukturze Ligi.",
+        "Brak skonfigurowanego adresu Webhooka dla tej akcji. Ustaw w adminie → Webhooki Discord.",
       );
       return;
     }
@@ -561,13 +600,29 @@ export function ContentHubClient({
           );
           return;
         }
+        const totalBytes = files.reduce(
+          (sum, f) => sum + dataUrlBytes(f.base64),
+          0,
+        );
+        if (totalBytes > DISCORD_SAFE_FILE_BYTES) {
+          const mb = (totalBytes / (1024 * 1024)).toFixed(1);
+          showToast(
+            "err",
+            `Plik jest za duży (${mb} MB). Limit webhooka Discord to ok. 8 MB — zmniejsz grafikę albo wyślij bez załącznika.`,
+          );
+          return;
+        }
         if (!files.length) {
           const result = await sendDiscordWebhookJson(sendTarget, discordJson);
-          if (result.error) {
-            showToast("err", result.error);
+          if (!result?.error && result?.success) {
+            showToast("ok", result.success);
             return;
           }
-          showToast("ok", result.success ?? "Wysłano.");
+          showToast(
+            "err",
+            result?.error ??
+              "Wysyłka nie zwróciła odpowiedzi. Sprawdź webhook i spróbuj ponownie.",
+          );
           return;
         }
         const result = await sendDiscordWebhookWithFiles(
@@ -575,11 +630,15 @@ export function ContentHubClient({
           discordJson,
           files,
         );
-        if (result.error) {
-          showToast("err", result.error);
+        if (!result?.error && result?.success) {
+          showToast("ok", result.success);
           return;
         }
-        showToast("ok", result.success ?? "Wysłano.");
+        showToast(
+          "err",
+          result?.error ??
+            "Wysyłka z załącznikiem nie zwróciła odpowiedzi (plik za duży albo błąd sesji).",
+        );
       };
 
       if (!attachGraphics || !canAttachGraphics) {
@@ -663,11 +722,7 @@ export function ContentHubClient({
         { fileName: "tabela.png", base64: tabelaPng },
       ]);
     } catch (e) {
-      console.error("[ContentHub] send", e);
-      showToast(
-        "err",
-        e instanceof Error ? e.message : "Błąd capture / wysyłki Discord.",
-      );
+      showToast("err", unknownClientError(e));
     } finally {
       setSendPending(false);
     }
@@ -807,8 +862,7 @@ export function ContentHubClient({
                     <span className="text-emerald-400">OK · {targetLabel}</span>
                   ) : (
                     <span className="text-amber-400">
-                      brak — Struktura Ligi
-                      {isGlobal ? " → Kanały globalne" : ""}
+                      brak — Webhooki Discord
                     </span>
                   )}
                 </p>
