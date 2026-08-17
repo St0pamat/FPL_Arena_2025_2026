@@ -499,70 +499,38 @@ export async function generatePreviewDiscordJSON(
   }
 }
 
-export type DiscordWebhookJsonResult = ActionState;
-
-function formatDiscordReject(status: number, text: string): string {
-  const trimmed = (text ?? "").trim();
-  let discordMsg = "";
+/**
+ * Zwraca URL webhooka dla zalogowanego admina (wysyłka idzie z przeglądarki).
+ */
+export async function getDiscordWebhookForSend(
+  target: ContentHubSendTarget | string,
+): Promise<{ url: string; label: string } | { error: string }> {
   try {
-    const json = JSON.parse(trimmed) as { message?: string };
-    discordMsg = String(json.message ?? "").trim();
-  } catch {
-    discordMsg = trimmed.slice(0, 280);
-  }
-
-  if (status === 413 || /too large|payload/i.test(discordMsg)) {
-    return "Discord odrzucił wysyłkę: plik jest za duży (limit webhooka to zwykle 8–10 MB).";
-  }
-  if (status === 401 || status === 404) {
-    return "Brak skonfigurowanego lub nieprawidłowy adres Webhooka dla tej akcji. Ustaw w adminie → Webhooki Discord.";
-  }
-  if (discordMsg) {
-    return `Discord odrzucił wysyłkę (${status}): ${discordMsg}`;
-  }
-  return `Discord odrzucił wysyłkę (${status}). Sprawdź JSON / webhook / limity.`;
-}
-
-function unknownSendError(e: unknown): string {
-  if (e instanceof Error && e.message.trim()) return e.message;
-  if (typeof e === "object" && e !== null) {
-    const o = e as Record<string, unknown>;
-    if (typeof o.message === "string" && o.message.trim()) return o.message;
-    if (typeof o.error === "string" && o.error.trim()) return o.error;
-  }
-  return "Wystąpił nieznany błąd podczas wysyłki.";
-}
-
-function normalizeWebhookPayload(
-  rawJson: string,
-): { ok: true; body: Record<string, unknown> } | { ok: false; error: string } {
-  if (!rawJson.trim()) return { ok: false, error: "Wklej kod JSON dla Discorda." };
-
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(rawJson);
-  } catch {
-    return { ok: false, error: "Niepoprawny JSON — popraw składnię przed wysyłką." };
-  }
-
-  if (Array.isArray(parsed)) {
-    return { ok: true, body: { embeds: parsed } };
-  }
-  if (parsed && typeof parsed === "object") {
-    const obj = parsed as Record<string, unknown>;
-    if (Array.isArray(obj.embeds) || typeof obj.content === "string") {
-      return { ok: true, body: obj };
+    const supabase = await requireAuth();
+    const resolvedTarget: ContentHubSendTarget =
+      typeof target === "string"
+        ? { kind: "division", divisionId: target }
+        : target;
+    const dest = await resolveWebhookTarget(supabase, resolvedTarget);
+    if (!dest || "error" in dest) {
+      return {
+        error:
+          dest && "error" in dest
+            ? dest.error
+            : "Brak skonfigurowanego adresu Webhooka dla tej akcji.",
+      };
     }
-    if ("title" in obj || "description" in obj || "fields" in obj) {
-      return { ok: true, body: { embeds: [obj] } };
+    if (!dest.webhook?.trim()) {
+      return {
+        error: "Brak skonfigurowanego adresu Webhooka dla tej akcji.",
+      };
     }
+    return { url: dest.webhook, label: dest.label };
+  } catch (e) {
     return {
-      ok: false,
-      error:
-        "JSON musi zawierać `embeds` / `content`, tablicę embedów albo pojedynczy obiekt embed.",
+      error: e instanceof Error ? e.message : "Nie udało się pobrać webhooka.",
     };
   }
-  return { ok: false, error: "JSON musi być obiektem lub tablicą embedów." };
 }
 
 async function resolveWebhookTarget(
@@ -595,61 +563,6 @@ async function resolveWebhookTarget(
     webhook: dest.url,
     label: seasonName ? `${seasonName} · ${dest.label}` : dest.label,
   };
-}
-
-/**
- * Wysyła JSON payload (content + embeds) na webhook dywizji lub kanału globalnego.
- */
-export async function sendDiscordWebhookJson(
-  target: ContentHubSendTarget | string,
-  rawJson: string,
-): Promise<DiscordWebhookJsonResult> {
-  try {
-    const supabase = await requireAuth();
-    // Kompatybilność: stary kontrakt (divisionId: string)
-    const resolvedTarget: ContentHubSendTarget =
-      typeof target === "string"
-        ? { kind: "division", divisionId: target }
-        : target;
-
-    const normalized = normalizeWebhookPayload(rawJson);
-    if (!normalized.ok) return { error: normalized.error };
-
-    const dest = await resolveWebhookTarget(supabase, resolvedTarget);
-    if (!dest || "error" in dest) {
-      return {
-        error:
-          dest && "error" in dest
-            ? dest.error
-            : "Brak skonfigurowanego adresu Webhooka dla tej akcji.",
-      };
-    }
-    if (!dest.webhook?.trim()) {
-      return {
-        error: "Brak skonfigurowanego adresu Webhooka dla tej akcji.",
-      };
-    }
-
-    const res = await fetch(dest.webhook, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(normalized.body),
-    });
-
-    if (!res.ok) {
-      const text = await res.text().catch(() => "");
-      console.error("[sendDiscordWebhookJson]", res.status, text);
-      return { error: formatDiscordReject(res.status, text) };
-    }
-
-    return {
-      error: null,
-      success: `Wysłano embed na Discord · ${dest.label}`,
-    };
-  } catch (e) {
-    console.error("[sendDiscordWebhookJson]", e);
-    return { error: unknownSendError(e) };
-  }
 }
 
 export type ContentHubCapturePayload = {
@@ -895,118 +808,3 @@ export async function getFaRankingParticipantsRoster(): Promise<{
   }
 }
 
-export type DiscordFileAttachment = {
-  fileName: string;
-  /** data URL lub czysty base64 */
-  base64: string;
-};
-
-/**
- * Multipart: payload_json + files[0..] (Discord webhook).
- * Dywizje H2H oraz The FA Ranking (karuzela PNG). FA Cup = tylko JSON.
- */
-export async function sendDiscordWebhookWithFiles(
-  target: ContentHubSendTarget | string,
-  rawJson: string,
-  files: DiscordFileAttachment[],
-): Promise<DiscordWebhookJsonResult> {
-  try {
-    const supabase = await requireAuth();
-    const resolvedTarget: ContentHubSendTarget =
-      typeof target === "string"
-        ? { kind: "division", divisionId: target }
-        : target;
-
-    if (
-      resolvedTarget.kind === "global" &&
-      resolvedTarget.channel !== "fa_ranking"
-    ) {
-      return {
-        error: "Kanał FA Cup nie przyjmuje załączników PNG (tylko JSON embed).",
-      };
-    }
-
-    const normalized = normalizeWebhookPayload(rawJson);
-    if (!normalized.ok) return { error: normalized.error };
-    if (!files.length) {
-      return sendDiscordWebhookJson(resolvedTarget, rawJson);
-    }
-
-    const dest = await resolveWebhookTarget(supabase, resolvedTarget);
-    if (!dest || "error" in dest) {
-      return {
-        error:
-          dest && "error" in dest
-            ? dest.error
-            : "Brak skonfigurowanego adresu Webhooka dla tej akcji.",
-      };
-    }
-    if (!dest.webhook?.trim()) {
-      return {
-        error: "Brak skonfigurowanego adresu Webhooka dla tej akcji.",
-      };
-    }
-
-    const DISCORD_MAX_BYTES = 8 * 1024 * 1024;
-    const form = new FormData();
-    form.append("payload_json", JSON.stringify(normalized.body));
-
-    let totalBytes = 0;
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      let payload = file.base64.trim();
-      let mime = "image/png";
-      const comma = payload.indexOf(",");
-      if (payload.startsWith("data:") && comma !== -1) {
-        const header = payload.slice(0, comma);
-        const match = /^data:([^;]+)/i.exec(header);
-        if (match?.[1]) mime = match[1].trim() || mime;
-        payload = payload.slice(comma + 1);
-      }
-      const buffer = Buffer.from(payload, "base64");
-      if (!buffer.length) {
-        return { error: `Pusty plik: ${file.fileName}` };
-      }
-      totalBytes += buffer.length;
-      if (totalBytes > DISCORD_MAX_BYTES) {
-        return {
-          error:
-            "Plik jest za duży na webhook Discord (limit ~8 MB). Zmniejsz grafikę albo wyślij bez załącznika.",
-        };
-      }
-
-      const rawName = (file.fileName || `attachment-${i + 1}`).trim();
-      const hasExt = /\.[a-z0-9]{2,5}$/i.test(rawName);
-      const extFromMime =
-        mime === "image/jpeg" || mime === "image/jpg"
-          ? ".jpg"
-          : mime === "image/webp"
-            ? ".webp"
-            : mime === "image/gif"
-              ? ".gif"
-              : ".png";
-      const safeName = hasExt ? rawName : `${rawName}${extFromMime}`;
-      const blob = new Blob([new Uint8Array(buffer)], { type: mime });
-      form.append(`files[${i}]`, blob, safeName);
-    }
-
-    const res = await fetch(dest.webhook, {
-      method: "POST",
-      body: form,
-    });
-
-    if (!res.ok) {
-      const text = await res.text().catch(() => "");
-      console.error("[sendDiscordWebhookWithFiles]", res.status, text);
-      return { error: formatDiscordReject(res.status, text) };
-    }
-
-    return {
-      error: null,
-      success: `Wysłano embed + ${files.length} PNG · ${dest.label}`,
-    };
-  } catch (e) {
-    console.error("[sendDiscordWebhookWithFiles]", e);
-    return { error: unknownSendError(e) };
-  }
-}

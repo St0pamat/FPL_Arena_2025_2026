@@ -24,16 +24,20 @@ import {
   generatePreviewXComDraft,
   generateXComDraft,
   getContentHubCaptureData,
+  getDiscordWebhookForSend,
   getFaRankingParticipantsRoster,
-  sendDiscordWebhookJson,
-  sendDiscordWebhookWithFiles,
   type ContentHubCapturePayload,
   type ContentHubDivisionOption,
   type ContentHubSeasonOption,
   type ContentHubSendTarget,
-  type DiscordFileAttachment,
   type FaRankingParticipant,
 } from "@/app/admin/actions/contentHub";
+import {
+  dataUrlToFile,
+  DISCORD_MAX_FILE_BYTES,
+  DISCORD_MAX_FILES,
+  postDiscordWebhookFromClient,
+} from "@/lib/admin/discordClientSend";
 import { getFARankingData } from "@/lib/public/actions";
 import type { FARankingPayload } from "@/lib/public/faRanking";
 import { DiscordEmbedPreview } from "@/components/admin/content-hub/DiscordEmbedPreview";
@@ -132,69 +136,6 @@ async function waitForImages(node: HTMLElement) {
   );
 }
 
-function readFileAsDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result ?? ""));
-    reader.onerror = () => reject(reader.error ?? new Error("Odczyt pliku nieudany."));
-    reader.readAsDataURL(file);
-  });
-}
-
-async function customFilesToAttachments(
-  files: File[],
-): Promise<DiscordFileAttachment[]> {
-  const out: DiscordFileAttachment[] = [];
-  for (const file of files) {
-    if (file.size > DISCORD_SAFE_FILE_BYTES) {
-      throw new Error(
-        `Plik „${file.name}” jest za duży (${(file.size / (1024 * 1024)).toFixed(1)} MB). Limit webhooka to ok. 8 MB.`,
-      );
-    }
-    const base64 = await readFileAsDataUrl(file);
-    if (!base64) continue;
-    out.push({ fileName: file.name || `custom-${out.length + 1}.png`, base64 });
-  }
-  return out;
-}
-
-/** Discord webhook: max 10 załączników na wiadomość. */
-const DISCORD_MAX_FILES = 10;
-/** Bezpieczny limit rozmiaru plików (darmowy webhook Discord). */
-const DISCORD_SAFE_FILE_BYTES = 8 * 1024 * 1024;
-
-function dataUrlBytes(dataUrl: string): number {
-  const raw = dataUrl.includes(",") ? dataUrl.slice(dataUrl.indexOf(",") + 1) : dataUrl;
-  return Math.floor((raw.length * 3) / 4);
-}
-
-function unknownClientError(err: unknown): string {
-  console.error("Full Discord Error:", err);
-  if (err instanceof Error && err.message.trim()) {
-    if (/body exceeded|bodySizeLimit|4mb|25mb/i.test(err.message)) {
-      return "Plik jest za duży na wysyłkę. Zmniejsz grafikę albo wyślij bez załącznika.";
-    }
-    return err.message;
-  }
-  if (typeof err === "object" && err !== null) {
-    const o = err as Record<string, unknown>;
-    const data =
-      o.response && typeof o.response === "object"
-        ? (o.response as Record<string, unknown>).data
-        : null;
-    const nested =
-      data && typeof data === "object"
-        ? (data as Record<string, unknown>)
-        : null;
-    const fromNested =
-      (typeof nested?.message === "string" && nested.message) ||
-      (typeof nested?.error === "string" && nested.error) ||
-      "";
-    if (fromNested) return fromNested;
-    if (typeof o.message === "string" && o.message.trim()) return o.message;
-    if (typeof o.error === "string" && o.error.trim()) return o.error;
-  }
-  return "Wystąpił nieznany błąd podczas wysyłki.";
 }
 
 export function ContentHubClient({
@@ -589,10 +530,31 @@ export function ContentHubClient({
 
     setSendPending(true);
     try {
-      const customAttachments = await customFilesToAttachments(customFiles);
+      const dest = await getDiscordWebhookForSend(sendTarget);
+      if (!dest || "error" in dest) {
+        showToast(
+          "err",
+          dest && "error" in dest
+            ? dest.error
+            : "Brak skonfigurowanego adresu Webhooka dla tej akcji.",
+        );
+        return;
+      }
 
-      const sendWithFiles = async (generated: DiscordFileAttachment[]) => {
-        const files = [...generated, ...customAttachments];
+      const sendFiles = async (generated: File[]) => {
+        if (
+          sendTarget.kind === "global" &&
+          sendTarget.channel === "fa_cup" &&
+          (generated.length > 0 || customFiles.length > 0)
+        ) {
+          showToast(
+            "err",
+            "Kanał FA Cup nie przyjmuje załączników PNG (tylko JSON embed).",
+          );
+          return;
+        }
+
+        const files = [...generated, ...customFiles];
         if (files.length > DISCORD_MAX_FILES) {
           showToast(
             "err",
@@ -600,49 +562,31 @@ export function ContentHubClient({
           );
           return;
         }
-        const totalBytes = files.reduce(
-          (sum, f) => sum + dataUrlBytes(f.base64),
-          0,
-        );
-        if (totalBytes > DISCORD_SAFE_FILE_BYTES) {
+        const totalBytes = files.reduce((sum, f) => sum + f.size, 0);
+        if (totalBytes > DISCORD_MAX_FILE_BYTES) {
           const mb = (totalBytes / (1024 * 1024)).toFixed(1);
           showToast(
             "err",
-            `Plik jest za duży (${mb} MB). Limit webhooka Discord to ok. 8 MB — zmniejsz grafikę albo wyślij bez załącznika.`,
+            `Plik jest za duży (${mb} MB). Limit webhooka Discord to 25 MB.`,
           );
           return;
         }
-        if (!files.length) {
-          const result = await sendDiscordWebhookJson(sendTarget, discordJson);
-          if (!result?.error && result?.success) {
-            showToast("ok", result.success);
-            return;
-          }
-          showToast(
-            "err",
-            result?.error ??
-              "Wysyłka nie zwróciła odpowiedzi. Sprawdź webhook i spróbuj ponownie.",
-          );
-          return;
-        }
-        const result = await sendDiscordWebhookWithFiles(
-          sendTarget,
-          discordJson,
+
+        const posted = await postDiscordWebhookFromClient({
+          webhookUrl: dest.url,
+          rawJson: discordJson,
           files,
-        );
-        if (!result?.error && result?.success) {
-          showToast("ok", result.success);
+        });
+        if (!posted.ok) {
+          showToast("err", posted.error);
           return;
         }
-        showToast(
-          "err",
-          result?.error ??
-            "Wysyłka z załącznikiem nie zwróciła odpowiedzi (plik za duży albo błąd sesji).",
-        );
+        const extra = files.length ? ` + ${files.length} plik(ów)` : "";
+        showToast("ok", `Wysłano embed${extra} na Discord · ${dest.label}`);
       };
 
       if (!attachGraphics || !canAttachGraphics) {
-        await sendWithFiles([]);
+        await sendFiles([]);
         return;
       }
 
@@ -657,7 +601,7 @@ export function ContentHubClient({
           return;
         }
         showToast("ok", `Generowanie ${refs.length} grafik…`);
-        const files: DiscordFileAttachment[] = [];
+        const files: File[] = [];
         for (let i = 0; i < refs.length; i++) {
           const node = refs[i]?.current;
           if (!node) {
@@ -669,12 +613,9 @@ export function ContentHubClient({
           const png = await captureExportNode(node);
           const from = i * 10 + 1;
           const to = Math.min((i + 1) * 10, faRanking.rows.length);
-          files.push({
-            fileName: `fa-ranking-${from}-${to}.png`,
-            base64: png,
-          });
+          files.push(await dataUrlToFile(png, `fa-ranking-${from}-${to}.png`));
         }
-        await sendWithFiles(files);
+        await sendFiles(files);
         return;
       }
 
@@ -697,8 +638,8 @@ export function ContentHubClient({
         await waitForImages(previewNode);
         await new Promise((r) => window.setTimeout(r, 80));
         const terminarzPng = await captureExportNode(previewNode);
-        await sendWithFiles([
-          { fileName: "terminarz.png", base64: terminarzPng },
+        await sendFiles([
+          await dataUrlToFile(terminarzPng, "terminarz.png"),
         ]);
         return;
       }
@@ -717,12 +658,18 @@ export function ContentHubClient({
       const wynikiPng = await captureExportNode(resultsNode);
       const tabelaPng = await captureExportNode(standingsNode);
 
-      await sendWithFiles([
-        { fileName: "wyniki.png", base64: wynikiPng },
-        { fileName: "tabela.png", base64: tabelaPng },
+      await sendFiles([
+        await dataUrlToFile(wynikiPng, "wyniki.png"),
+        await dataUrlToFile(tabelaPng, "tabela.png"),
       ]);
     } catch (e) {
-      showToast("err", unknownClientError(e));
+      console.error("Full Discord Error:", e);
+      showToast(
+        "err",
+        e instanceof Error && e.message.trim()
+          ? e.message
+          : "Wystąpił nieznany błąd podczas wysyłki.",
+      );
     } finally {
       setSendPending(false);
     }
