@@ -631,29 +631,17 @@ export async function getDivisionStandings(
     season_id: string;
     pyramid_id: string;
     tier: number;
-    discord_webhook_url?: string | null;
   } | null = null;
 
   {
     const { data, error: divError } = await supabase
       .from("divisions")
-      .select("id, name, season_id, pyramid_id, tier, discord_webhook_url")
+      .select("id, name, season_id, pyramid_id, tier")
       .eq("id", divisionId)
       .maybeSingle();
 
-    if (divError && /discord_webhook_url/i.test(divError.message)) {
-      const { data: data2, error: err2 } = await supabase
-        .from("divisions")
-        .select("id, name, season_id, pyramid_id, tier")
-        .eq("id", divisionId)
-        .maybeSingle();
-      if (err2) throw new Error(err2.message);
-      division = data2;
-    } else if (divError) {
-      throw new Error(divError.message);
-    } else {
-      division = data;
-    }
+    if (divError) throw new Error(divError.message);
+    division = data;
   }
 
   if (!division) throw new Error("Nie znaleziono dywizji.");
@@ -703,7 +691,29 @@ export async function getDivisionStandings(
   }
 
   const tier = division.tier ?? 1;
-  const hasDiscordWebhook = Boolean((division.discord_webhook_url ?? "").trim());
+  let hasDiscordWebhook = false;
+  {
+    const { data: flag, error: flagErr } = await supabase.rpc(
+      "has_division_discord_webhook",
+      { p_level: tier },
+    );
+    if (!flagErr) {
+      hasDiscordWebhook = Boolean(flag);
+    } else {
+      // Fallback legacy: kolumna na divisions (przed migracją RPC)
+      const { data: legacy } = await supabase
+        .from("divisions")
+        .select("discord_webhook_url")
+        .eq("id", divisionId)
+        .maybeSingle();
+      hasDiscordWebhook = Boolean(
+        String(
+          (legacy as { discord_webhook_url?: string | null } | null)
+            ?.discord_webhook_url ?? "",
+        ).trim(),
+      );
+    }
+  }
 
   const { data: peersRaw, error: peersError } = await supabase
     .from("divisions")
@@ -721,6 +731,9 @@ export async function getDivisionStandings(
 
   const higherDivision = peers.find((d) => d.tier === tier - 1) ?? null;
   const lowerDivision = peers.find((d) => d.tier === tier + 1) ?? null;
+  const maxTier = peers.length
+    ? Math.max(...peers.map((d) => d.tier))
+    : tier;
 
   async function loadDivisionBundle(divId: string, divTier: number): Promise<{
     teams: PublicTeam[];
@@ -789,7 +802,10 @@ export async function getDivisionStandings(
 
     const fixtures = regularRaw.map((f) => mapFixture(f, byId));
     const publishedFixtures = fixtures.filter((f) => f.is_published !== false);
-    const standings = buildPublicStandings(publishedFixtures, teams, divTier);
+    const standings = buildPublicStandings(publishedFixtures, teams, divTier, {
+      maxTier,
+      isLowestDivision: divTier >= maxTier,
+    });
     return { teams, fixtures, publishedFixtures, standings };
   }
 
@@ -1554,11 +1570,28 @@ export async function getFARankingData(
     is_playoff: Boolean(f.is_playoff),
   }));
 
+  const { fetchPublishedTeamGameweekScores } = await import(
+    "@/lib/admin/teamGameweekScores"
+  );
+  const scoresRes = await fetchPublishedTeamGameweekScores(
+    supabase,
+    campaignSeasonIds,
+  );
+  if (scoresRes.error) throw new Error(scoresRes.error);
+
+  const scores = scoresRes.rows.map((r) => ({
+    team_id: r.team_id,
+    gameweek: r.gameweek,
+    fpl_points: r.fpl_points,
+    season_id: r.season_id,
+  }));
+
   return buildFARanking(
     teams,
     fixtures,
     campaignSeasonIds,
     campaignLabel,
     seasonId,
+    scores,
   );
 }

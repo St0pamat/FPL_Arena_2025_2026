@@ -1427,7 +1427,7 @@ export async function wipeLeagueData(confirmation: string): Promise<ActionState>
 
     const supabase = await requireAuth();
 
-    // Kolejność: dzieci → rodzice (Auth / admin_users zostaje)
+    // Kolejność: dzieci → rodzice (Auth / admin_users / discord_webhooks zostają)
     const tables = ["fixtures", "teams", "divisions", "seasons", "pyramids"] as const;
 
     for (const table of tables) {
@@ -1441,7 +1441,8 @@ export async function wipeLeagueData(confirmation: string): Promise<ActionState>
     revalidateAdmin();
     return {
       error: null,
-      success: "Pomyślnie wyczyszczono bazę graczy i strukturę ligową.",
+      success:
+        "Pomyślnie wyczyszczono bazę graczy i strukturę ligową. Webhooki Discord (admin → Webhooki) zostały zachowane.",
     };
   } catch (e) {
     console.error("[wipeLeagueData]", e);

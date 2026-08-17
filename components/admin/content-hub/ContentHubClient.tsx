@@ -16,6 +16,7 @@ import {
   Table2,
   Trash2,
   Swords,
+  Users,
 } from "lucide-react";
 import type { RefObject } from "react";
 import {
@@ -23,6 +24,7 @@ import {
   generatePreviewXComDraft,
   generateXComDraft,
   getContentHubCaptureData,
+  getFaRankingParticipantsRoster,
   sendDiscordWebhookJson,
   sendDiscordWebhookWithFiles,
   type ContentHubCapturePayload,
@@ -30,11 +32,13 @@ import {
   type ContentHubSeasonOption,
   type ContentHubSendTarget,
   type DiscordFileAttachment,
+  type FaRankingParticipant,
 } from "@/app/admin/actions/contentHub";
 import { getFARankingData } from "@/lib/public/actions";
 import type { FARankingPayload } from "@/lib/public/faRanking";
 import { DiscordEmbedPreview } from "@/components/admin/content-hub/DiscordEmbedPreview";
 import { FARankingExportCarousel } from "@/components/admin/content-hub/FARankingExportCarousel";
+import { FaRankingParticipantsExportNode } from "@/components/admin/content-hub/FaRankingParticipantsExportNode";
 import { GameweekPreviewExportNode } from "@/components/admin/content-hub/GameweekPreviewExportNode";
 import { MatchCard } from "@/components/na-minusie/hub/GameweekCenter";
 import { StandingsTable } from "@/components/na-minusie/hub/StandingsTable";
@@ -186,6 +190,9 @@ export function ContentHubClient({
   const [captureLoading, setCaptureLoading] = useState(false);
   const [faRanking, setFaRanking] = useState<FARankingPayload | null>(null);
   const [faRankingLoading, setFaRankingLoading] = useState(false);
+  const [faRoster, setFaRoster] = useState<FaRankingParticipant[]>([]);
+  const [faRosterSeasonLabel, setFaRosterSeasonLabel] = useState("2026/27");
+  const [faRosterLoading, setFaRosterLoading] = useState(false);
   const [toast, setToast] = useState<{ type: "ok" | "err"; text: string } | null>(
     null,
   );
@@ -194,12 +201,13 @@ export function ContentHubClient({
   const [discordGenPending, startDiscordGen] = useTransition();
   const [sendPending, setSendPending] = useState(false);
   const [downloadBusy, setDownloadBusy] = useState<
-    "wyniki" | "tabela" | "terminarz" | null
+    "wyniki" | "tabela" | "terminarz" | "fa-roster" | null
   >(null);
 
   const resultsRef = useRef<HTMLDivElement>(null);
   const standingsRef = useRef<HTMLDivElement>(null);
   const previewRef = useRef<HTMLDivElement>(null);
+  const faRosterRef = useRef<HTMLDivElement>(null);
   const faCarouselRefs = useRef<RefObject<HTMLDivElement | null>[]>([]);
 
   const sendTarget = useMemo(() => parseTargetKey(targetKey), [targetKey]);
@@ -344,12 +352,82 @@ export function ContentHubClient({
     };
   }, [isSummary, isFaRanking, sendTarget, showToast]);
 
+  // Off-screen: pełna lista uczestników FA Ranking (siatka 10×5)
+  useEffect(() => {
+    if (!isFaRanking) {
+      setFaRoster([]);
+      return;
+    }
+    let cancelled = false;
+    setFaRosterLoading(true);
+    getFaRankingParticipantsRoster()
+      .then((res) => {
+        if (cancelled) return;
+        if (res.error) {
+          setFaRoster([]);
+          showToast("err", res.error);
+          return;
+        }
+        setFaRoster(res.players);
+        setFaRosterSeasonLabel(res.seasonLabel);
+      })
+      .catch((e) => {
+        if (cancelled) return;
+        setFaRoster([]);
+        showToast(
+          "err",
+          e instanceof Error ? e.message : "Błąd listy uczestników FA Ranking.",
+        );
+      })
+      .finally(() => {
+        if (!cancelled) setFaRosterLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isFaRanking, showToast]);
+
   const onFaCarouselReady = useCallback(
     (refs: RefObject<HTMLDivElement | null>[]) => {
       faCarouselRefs.current = refs;
     },
     [],
   );
+
+  const handleDownloadFaRoster = useCallback(async () => {
+    if (!isFaRanking) return;
+    if (faRosterLoading || !faRoster.length) {
+      showToast("err", "Poczekaj na załadowanie listy uczestników…");
+      return;
+    }
+    if (!faRosterRef.current) {
+      showToast("err", "Brak węzła off-screen listy uczestników.");
+      return;
+    }
+    setDownloadBusy("fa-roster");
+    showToast("ok", "Generowanie listy The FA Ranking…");
+    try {
+      await waitForImages(faRosterRef.current);
+      await new Promise((r) => window.setTimeout(r, 80));
+      const dataUrl = await captureExportNode(faRosterRef.current);
+      const link = document.createElement("a");
+      link.download = `the-fa-ranking-uczestnicy-${faRosterSeasonLabel.replace(/\//g, "-")}.png`;
+      link.href = dataUrl;
+      link.click();
+      showToast("ok", `Pobrano ${link.download}`);
+    } catch (error) {
+      console.error("[ContentHub] FA roster PNG", error);
+      showToast("err", "Błąd podczas pobierania listy uczestników.");
+    } finally {
+      setDownloadBusy(null);
+    }
+  }, [
+    faRoster.length,
+    faRosterLoading,
+    faRosterSeasonLabel,
+    isFaRanking,
+    showToast,
+  ]);
 
   const handleDownloadImage = useCallback(
     async (
@@ -921,6 +999,35 @@ export function ContentHubClient({
                 </button>
               </div>
             ) : null}
+
+            {isFaRanking ? (
+              <div className="mt-3 flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  disabled={
+                    Boolean(downloadBusy) ||
+                    faRosterLoading ||
+                    faRoster.length === 0
+                  }
+                  onClick={handleDownloadFaRoster}
+                  className="inline-flex items-center gap-2 rounded-xl border border-[#39FF14]/40 bg-[#39FF14]/10 px-3.5 py-2 text-xs font-bold uppercase tracking-wider text-[#39FF14] transition hover:bg-[#39FF14]/20 disabled:cursor-not-allowed disabled:opacity-40"
+                  title="Pobierz PNG: lista The FA Ranking (grid 6 kolumn + karty statystyk)"
+                >
+                  {downloadBusy === "fa-roster" || faRosterLoading ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Users className="h-3.5 w-3.5" />
+                  )}
+                  <Download className="h-3.5 w-3.5 opacity-70" />
+                  Generuj listę The FA Ranking (PNG)
+                  {!faRosterLoading && faRoster.length > 0 ? (
+                    <span className="text-[10px] font-semibold text-emerald-400/90">
+                      ({faRoster.length})
+                    </span>
+                  ) : null}
+                </button>
+              </div>
+            ) : null}
           </section>
 
           <section className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-5 sm:p-6">
@@ -1221,6 +1328,20 @@ export function ContentHubClient({
           logos={clubLogos}
           onReady={onFaCarouselReady}
         />
+      ) : null}
+
+      {isFaRanking && faRoster.length > 0 ? (
+        <div
+          className="pointer-events-none absolute -left-[10000px] top-0 w-[1920px]"
+          aria-hidden
+        >
+          <FaRankingParticipantsExportNode
+            players={faRoster}
+            logos={clubLogos}
+            seasonLabel={faRosterSeasonLabel}
+            captureRef={faRosterRef}
+          />
+        </div>
       ) : null}
     </div>
   );

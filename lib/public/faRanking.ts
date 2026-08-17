@@ -155,9 +155,16 @@ function rankByPoints(
   return map;
 }
 
+export type FARankingScoreInput = {
+  team_id: string;
+  gameweek: number;
+  fpl_points: number;
+  season_id?: string;
+};
+
 /**
- * Buduje FA Ranking z opublikowanych meczów (małe punkty FPL).
- * Baraże wliczane — to też punkty FPL z kolejki.
+ * Buduje FA Ranking z opublikowanych punktów FPL.
+ * Preferuje `scores` (team_gameweek_scores); fallback: fixtures (legacy).
  */
 export function buildFARanking(
   teams: FARankingTeamInput[],
@@ -165,19 +172,8 @@ export function buildFARanking(
   campaignSeasonIds: string[],
   campaignLabel: string,
   anchorSeasonId: string,
+  scores: FARankingScoreInput[] = [],
 ): FARankingPayload {
-  const published = fixtures.filter(
-    (f) => f.is_published !== false && f.is_finished,
-  );
-
-  const finishedGameweeks = [
-    ...new Set(published.map((f) => f.gameweek)),
-  ].sort((a, b) => a - b);
-  const latestFinishedGw =
-    finishedGameweeks.length > 0
-      ? finishedGameweeks[finishedGameweeks.length - 1]
-      : null;
-
   type Acc = {
     total: number;
     byGw: Map<number, number>;
@@ -190,7 +186,6 @@ export function buildFARanking(
     const aCreated = String(a.season_created_at ?? "");
     const bCreated = String(b.season_created_at ?? "");
     if (aCreated !== bCreated) return bCreated.localeCompare(aCreated) > 0 ? b : a;
-    // Preferuj sezon kotwicy
     if (a.season_id === anchorSeasonId && b.season_id !== anchorSeasonId) return a;
     if (b.season_id === anchorSeasonId && a.season_id !== anchorSeasonId) return b;
     return a;
@@ -217,35 +212,46 @@ export function buildFARanking(
     if (key) teamIdToKey.set(team.id, key);
   }
 
-  for (const f of published) {
-    const homeKey = teamIdToKey.get(f.home_team_id);
-    const awayKey = teamIdToKey.get(f.away_team_id);
-    const homePts = Number(f.home_fpl_points ?? 0);
-    const awayPts = Number(f.away_fpl_points ?? 0);
-
-    if (homeKey) {
-      let acc = byPlayer.get(homeKey);
-      if (!acc) {
-        acc = { total: 0, byGw: new Map(), displayTeam: teams.find((t) => t.id === f.home_team_id)! };
-        if (acc.displayTeam) byPlayer.set(homeKey, acc);
-      }
-      if (acc) {
-        acc.total += homePts;
-        acc.byGw.set(f.gameweek, (acc.byGw.get(f.gameweek) ?? 0) + homePts);
-      }
+  const addPoints = (teamId: string, gameweek: number, pts: number) => {
+    const key = teamIdToKey.get(teamId);
+    if (!key) return;
+    let acc = byPlayer.get(key);
+    if (!acc) {
+      const displayTeam = teams.find((t) => t.id === teamId);
+      if (!displayTeam) return;
+      acc = { total: 0, byGw: new Map(), displayTeam };
+      byPlayer.set(key, acc);
     }
-    if (awayKey) {
-      let acc = byPlayer.get(awayKey);
-      if (!acc) {
-        acc = { total: 0, byGw: new Map(), displayTeam: teams.find((t) => t.id === f.away_team_id)! };
-        if (acc.displayTeam) byPlayer.set(awayKey, acc);
-      }
-      if (acc) {
-        acc.total += awayPts;
-        acc.byGw.set(f.gameweek, (acc.byGw.get(f.gameweek) ?? 0) + awayPts);
-      }
+    // Jedna wartość na GW (nie sumuj podwójnie przy fallbacku)
+    if (!acc.byGw.has(gameweek)) {
+      acc.total += pts;
+      acc.byGw.set(gameweek, pts);
+    }
+  };
+
+  if (scores.length > 0) {
+    for (const s of scores) {
+      addPoints(s.team_id, s.gameweek, Number(s.fpl_points ?? 0));
+    }
+  } else {
+    const published = fixtures.filter(
+      (f) => f.is_published !== false && f.is_finished,
+    );
+    for (const f of published) {
+      addPoints(f.home_team_id, f.gameweek, Number(f.home_fpl_points ?? 0));
+      addPoints(f.away_team_id, f.gameweek, Number(f.away_fpl_points ?? 0));
     }
   }
+
+  const finishedGameweeks = [
+    ...new Set(
+      [...byPlayer.values()].flatMap((acc) => [...acc.byGw.keys()]),
+    ),
+  ].sort((a, b) => a - b);
+  const latestFinishedGw =
+    finishedGameweeks.length > 0
+      ? finishedGameweeks[finishedGameweeks.length - 1]
+      : null;
 
   const currentEntries: { key: string; points: number }[] = [];
   const previousEntries: { key: string; points: number }[] = [];

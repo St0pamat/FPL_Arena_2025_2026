@@ -14,6 +14,12 @@ import {
 } from "@/lib/admin/medianEngine";
 import { resolvePlayoffWinner } from "@/lib/admin/playoffTiebreak";
 import { DIVISION_CAPACITY } from "@/lib/admin/divisionCapacity";
+import {
+  clearTeamGameweekScores,
+  publishTeamGameweekScores,
+  unpublishTeamGameweekScores,
+  upsertTeamGameweekScores,
+} from "@/lib/admin/teamGameweekScores";
 import type { ActionState, Division, TiebreakerMethod } from "@/lib/admin/types";
 import { isPlayoffGameweek } from "@/lib/public/season";
 
@@ -604,6 +610,13 @@ export async function publishGameweek(
 
     if (error) return { error: error.message };
 
+    const scorePubErr = await publishTeamGameweekScores(
+      supabase,
+      seasonId,
+      gameweek,
+    );
+    if (scorePubErr) return { error: scorePubErr };
+
     revalidateWorkspace();
     return {
       error: null,
@@ -632,6 +645,13 @@ export async function unpublishGameweek(
       .in("division_id", ids);
 
     if (error) return { error: error.message };
+
+    const scoreUnpubErr = await unpublishTeamGameweekScores(
+      supabase,
+      seasonId,
+      gameweek,
+    );
+    if (scoreUnpubErr) return { error: scoreUnpubErr };
 
     revalidateWorkspace();
     return {
@@ -688,6 +708,19 @@ export async function clearGameweekDraft(
       .in("division_id", ids);
 
     if (error) return { error: error.message };
+
+    const { data: scopeTeams } = await supabase
+      .from("teams")
+      .select("id")
+      .in("division_id", ids);
+    const teamIds = (scopeTeams ?? []).map((t) => t.id as string);
+    const scoreClearErr = await clearTeamGameweekScores(
+      supabase,
+      seasonId,
+      gameweek,
+      teamIds.length ? teamIds : undefined,
+    );
+    if (scoreClearErr) return { error: scoreClearErr };
 
     revalidateWorkspace();
     return {
@@ -866,6 +899,18 @@ async function saveDivisionScores(
       .eq("id", row.id);
     if (error) return { error: error.message };
   }
+
+  const scoreErr = await upsertTeamGameweekScores(
+    supabase,
+    [...pointsByTeam.entries()].map(([team_id, fpl_points]) => ({
+      season_id: seasonId,
+      team_id,
+      gameweek,
+      fpl_points,
+      is_published: false,
+    })),
+  );
+  if (scoreErr) return { error: scoreErr };
 
   revalidateWorkspace();
   return {
@@ -1269,6 +1314,28 @@ export async function importGlobalGameweekResults(
       };
     }
 
+    // KROK A: punkty Overall dla WSZYSTKICH dopasowanych (także bez meczu H2H w GW19/38)
+    const allScoreRows: {
+      season_id: string;
+      team_id: string;
+      gameweek: number;
+      fpl_points: number;
+      is_published: boolean;
+    }[] = [];
+    for (const [, scores] of scoresByDiv) {
+      for (const [teamId, pts] of Object.entries(scores)) {
+        allScoreRows.push({
+          season_id: seasonId,
+          team_id: teamId,
+          gameweek,
+          fpl_points: pts,
+          is_published: false,
+        });
+      }
+    }
+    const scoreErr = await upsertTeamGameweekScores(supabase, allScoreRows);
+    if (scoreErr) return { error: scoreErr, gameweek, playersMatched };
+
     let fixturesUpdated = 0;
     let divisionsUpdated = 0;
     const divErrors: string[] = [];
@@ -1290,9 +1357,9 @@ export async function importGlobalGameweekResults(
       fixturesUpdated += result.updated ?? 0;
     }
 
-    if (!fixturesUpdated && divErrors.length) {
+    if (!fixturesUpdated && !playersMatched) {
       return {
-        error: `Import nie zapisał meczów GW${gameweek}.\n${divErrors.slice(0, 8).join("\n")}`,
+        error: `Import nie zapisał nic dla GW${gameweek}.\n${divErrors.slice(0, 8).join("\n")}`,
         unmatched: unmatched.slice(0, 40),
         parseSkipped: skipped.slice(0, 20),
         gameweek,
@@ -1308,7 +1375,7 @@ export async function importGlobalGameweekResults(
 
     return {
       error: null,
-      success: `GW${gameweek}: dopasowano ${playersMatched} graczy → ${fixturesUpdated} meczów (brudnopis).${
+      success: `GW${gameweek}: dopasowano ${playersMatched} graczy → FA Ranking + ${fixturesUpdated} meczów H2H (brudnopis).${
         warnParts.length ? ` · ${warnParts.join(" · ")}` : ""
       }`,
       updated: fixturesUpdated,
@@ -1419,17 +1486,45 @@ export async function saveSeasonGameweekDraft(
       byDiv.set(t.division_id, bucket);
     }
 
+    const scoreErr = await upsertTeamGameweekScores(
+      supabase,
+      Object.entries(scores)
+        .filter(([, pts]) => Number.isFinite(pts))
+        .map(([team_id, fpl_points]) => ({
+          season_id: seasonId,
+          team_id,
+          gameweek,
+          fpl_points: Math.round(fpl_points),
+          is_published: false,
+        })),
+    );
+    if (scoreErr) return { error: scoreErr };
+
     let updated = 0;
+    const divErrors: string[] = [];
     for (const [divisionId, divScores] of byDiv) {
-      const r = await saveDivisionScores(seasonId, divisionId, gameweek, divScores);
-      if (r.error) return r;
+      const r = await saveDivisionScoresLenient(
+        seasonId,
+        divisionId,
+        gameweek,
+        divScores,
+      );
+      if (r.error) {
+        divErrors.push(r.error);
+        continue;
+      }
       updated += r.updated ?? 0;
     }
+
+    const matched = Object.keys(scores).length;
+    if (!matched) return { error: "Brak punktów do zapisu." };
 
     revalidateWorkspace();
     return {
       error: null,
-      success: `Zapisano brudnopis GW${gameweek}: ${updated} meczów (is_published=false).`,
+      success: `Zapisano brudnopis GW${gameweek}: ${matched} wyników FPL (FA Ranking) + ${updated} meczów H2H.${
+        divErrors.length ? ` · ${divErrors.length} ostrzeżeń H2H` : ""
+      }`,
       updated,
     };
   } catch (e) {
@@ -1478,6 +1573,12 @@ export async function publishSeasonGameweek(
       .eq("gameweek", gameweek);
 
     if (error) return { error: error.message };
+    const scorePubErr = await publishTeamGameweekScores(
+      supabase,
+      seasonId,
+      gameweek,
+    );
+    if (scorePubErr) return { error: scorePubErr };
     revalidateWorkspace();
     return {
       error: null,
@@ -1503,6 +1604,12 @@ export async function unpublishSeasonGameweek(
       .eq("gameweek", gameweek);
 
     if (error) return { error: error.message };
+    const scoreUnpubErr = await unpublishTeamGameweekScores(
+      supabase,
+      seasonId,
+      gameweek,
+    );
+    if (scoreUnpubErr) return { error: scoreUnpubErr };
     revalidateWorkspace();
     return {
       error: null,
@@ -1558,6 +1665,7 @@ export async function clearSeasonGameweekDraft(
       .eq("gameweek", gameweek);
 
     if (error) return { error: error.message };
+    await clearTeamGameweekScores(supabase, seasonId, gameweek);
     revalidateWorkspace();
     return {
       error: null,
@@ -1617,6 +1725,20 @@ export async function publishDivisionGameweek(
       .eq("gameweek", gameweek);
 
     if (error) return { error: error.message };
+
+    const { data: divTeams } = await supabase
+      .from("teams")
+      .select("id")
+      .eq("division_id", divisionId);
+    const teamIds = (divTeams ?? []).map((t) => t.id as string);
+    const scorePubErr = await publishTeamGameweekScores(
+      supabase,
+      seasonId,
+      gameweek,
+      teamIds,
+    );
+    if (scorePubErr) return { error: scorePubErr };
+
     revalidateWorkspace();
     return {
       error: null,
@@ -1644,6 +1766,20 @@ export async function unpublishDivisionGameweek(
       .eq("gameweek", gameweek);
 
     if (error) return { error: error.message };
+
+    const { data: divTeams } = await supabase
+      .from("teams")
+      .select("id")
+      .eq("division_id", divisionId);
+    const teamIds = (divTeams ?? []).map((t) => t.id as string);
+    const scoreUnpubErr = await unpublishTeamGameweekScores(
+      supabase,
+      seasonId,
+      gameweek,
+      teamIds,
+    );
+    if (scoreUnpubErr) return { error: scoreUnpubErr };
+
     revalidateWorkspace();
     return {
       error: null,
@@ -1703,6 +1839,20 @@ export async function clearDivisionGameweekDraft(
       .eq("gameweek", gameweek);
 
     if (error) return { error: error.message };
+
+    const { data: divTeams } = await supabase
+      .from("teams")
+      .select("id")
+      .eq("division_id", divisionId);
+    const teamIds = (divTeams ?? []).map((t) => t.id as string);
+    const scoreClearErr = await clearTeamGameweekScores(
+      supabase,
+      seasonId,
+      gameweek,
+      teamIds,
+    );
+    if (scoreClearErr) return { error: scoreClearErr };
+
     revalidateWorkspace();
     return {
       error: null,

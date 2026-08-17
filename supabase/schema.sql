@@ -129,6 +129,41 @@ CREATE TABLE public.fixtures (
   CONSTRAINT fixtures_unique_match UNIQUE (season_id, division_id, gameweek, home_team_id, away_team_id)
 );
 
+-- Trwałe webhooki Discord (NIE kasowane przez Hard Reset / wipeLeagueData)
+CREATE TABLE IF NOT EXISTS public.discord_webhooks (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  scope TEXT NOT NULL CHECK (scope IN ('GLOBAL', 'DIVISION')),
+  global_type TEXT NULL
+    CHECK (global_type IS NULL OR global_type IN ('FA_RANKING', 'FA_CUP')),
+  division_level INTEGER NULL CHECK (division_level IS NULL OR division_level >= 1),
+  url TEXT NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT discord_webhooks_global_requires_type CHECK (
+    (scope = 'GLOBAL' AND global_type IS NOT NULL AND division_level IS NULL)
+    OR (scope = 'DIVISION' AND division_level IS NOT NULL AND global_type IS NULL)
+  )
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS discord_webhooks_global_unique
+  ON public.discord_webhooks (global_type)
+  WHERE scope = 'GLOBAL';
+
+CREATE UNIQUE INDEX IF NOT EXISTS discord_webhooks_division_level_unique
+  ON public.discord_webhooks (division_level)
+  WHERE scope = 'DIVISION';
+
+-- Punkty FPL per gracz × kolejka (The FA Ranking / Overall) — niezależne od H2H fixtures
+CREATE TABLE public.team_gameweek_scores (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  season_id UUID NOT NULL REFERENCES public.seasons(id) ON DELETE CASCADE,
+  team_id UUID NOT NULL REFERENCES public.teams(id) ON DELETE CASCADE,
+  gameweek INTEGER NOT NULL CHECK (gameweek >= 1 AND gameweek <= 38),
+  fpl_points INTEGER NOT NULL,
+  is_published BOOLEAN NOT NULL DEFAULT false,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT team_gameweek_scores_unique UNIQUE (season_id, team_id, gameweek)
+);
+
 -- ---------------------------------------------------------------------------
 -- Indeksy
 -- ---------------------------------------------------------------------------
@@ -139,6 +174,9 @@ CREATE INDEX idx_teams_fpl_id ON public.teams(fpl_id);
 CREATE INDEX idx_fixtures_division_gw ON public.fixtures(division_id, gameweek);
 CREATE INDEX idx_fixtures_published ON public.fixtures(division_id, is_published);
 CREATE INDEX idx_seasons_status ON public.seasons(status);
+CREATE INDEX idx_team_gw_scores_season_gw ON public.team_gameweek_scores(season_id, gameweek);
+CREATE INDEX idx_team_gw_scores_team ON public.team_gameweek_scores(team_id);
+CREATE INDEX idx_team_gw_scores_published ON public.team_gameweek_scores(season_id, is_published);
 
 -- ---------------------------------------------------------------------------
 -- RLS
@@ -149,6 +187,8 @@ ALTER TABLE public.seasons ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.divisions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.teams ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.fixtures ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.team_gameweek_scores ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.discord_webhooks ENABLE ROW LEVEL SECURITY;
 
 -- admin_users: zalogowany widzi swój wpis
 CREATE POLICY "admin_users_select_authenticated"
@@ -205,12 +245,61 @@ CREATE POLICY "fixtures_write_authenticated"
   ON public.fixtures FOR ALL TO authenticated
   USING (true) WITH CHECK (true);
 
+-- team_gameweek_scores: anon tylko opublikowane; admin wszystko
+CREATE POLICY "team_gw_scores_select_anon"
+  ON public.team_gameweek_scores FOR SELECT TO anon
+  USING (is_published = true);
+CREATE POLICY "team_gw_scores_select_authenticated"
+  ON public.team_gameweek_scores FOR SELECT TO authenticated USING (true);
+CREATE POLICY "team_gw_scores_write_authenticated"
+  ON public.team_gameweek_scores FOR ALL TO authenticated
+  USING (true) WITH CHECK (true);
+
+-- discord_webhooks: tylko authenticated (URL-e niepubliczne)
+CREATE POLICY "discord_webhooks_select_authenticated"
+  ON public.discord_webhooks FOR SELECT TO authenticated
+  USING (true);
+CREATE POLICY "discord_webhooks_write_authenticated"
+  ON public.discord_webhooks FOR ALL TO authenticated
+  USING (true) WITH CHECK (true);
+
+CREATE OR REPLACE FUNCTION public.has_division_discord_webhook(p_level integer)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.discord_webhooks w
+    WHERE w.scope = 'DIVISION' AND w.division_level = p_level
+      AND length(trim(w.url)) > 0
+  );
+$$;
+
+CREATE OR REPLACE FUNCTION public.has_global_discord_webhook(p_type text)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.discord_webhooks w
+    WHERE w.scope = 'GLOBAL' AND w.global_type = p_type
+      AND length(trim(w.url)) > 0
+  );
+$$;
+
+GRANT EXECUTE ON FUNCTION public.has_division_discord_webhook(integer) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.has_global_discord_webhook(text) TO anon, authenticated;
+
 -- ---------------------------------------------------------------------------
 -- GRANTY
 -- ---------------------------------------------------------------------------
 GRANT USAGE ON SCHEMA public TO anon, authenticated;
 
-GRANT SELECT ON TABLE public.pyramids, public.seasons, public.divisions, public.teams, public.fixtures TO anon;
+GRANT SELECT ON TABLE public.pyramids, public.seasons, public.divisions, public.teams, public.fixtures, public.team_gameweek_scores TO anon;
 
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE
   public.admin_users,
@@ -218,7 +307,9 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE
   public.seasons,
   public.divisions,
   public.teams,
-  public.fixtures
+  public.fixtures,
+  public.team_gameweek_scores,
+  public.discord_webhooks
 TO authenticated;
 
 -- ---------------------------------------------------------------------------

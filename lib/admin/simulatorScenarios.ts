@@ -81,3 +81,8 @@ export function rollFplPair(scenario: SimulatorScenarioId): {
     }
   }
 }
+
+/** Pojedynczy wynik FPL (gracze bez meczu H2H w GW19/38). */
+export function rollFplSolo(scenario: SimulatorScenarioId): number {
+  return rollFplPair(scenario).home;
+}

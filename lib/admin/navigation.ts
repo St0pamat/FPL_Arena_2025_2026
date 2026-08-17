@@ -8,6 +8,7 @@ import {
   Swords,
   Trophy,
   Users,
+  Webhook,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -53,6 +54,12 @@ export const ADMIN_NAV_SECTIONS: AdminNavSection[] = [
         label: "Content Hub",
         icon: Megaphone,
         hint: "X.com + Discord Embed",
+      },
+      {
+        href: "/admin/webhooks",
+        label: "Webhooki Discord",
+        icon: Webhook,
+        hint: "Trwałe — Hard Reset ich nie kasuje",
       },
     ],
   },

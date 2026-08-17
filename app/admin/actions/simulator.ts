@@ -18,9 +18,16 @@ import { resolvePlayoffWinner } from "@/lib/admin/playoffTiebreak";
 import {
   randInt,
   rollFplPair,
+  rollFplSolo,
   scenarioLabel,
   type SimulatorScenarioId,
 } from "@/lib/admin/simulatorScenarios";
+import {
+  clearTeamGameweekScores,
+  publishTeamGameweekScores,
+  unpublishTeamGameweekScores,
+  upsertTeamGameweekScores,
+} from "@/lib/admin/teamGameweekScores";
 import type { ActionState } from "@/lib/admin/types";
 import {
   isPlayoffGameweek,
@@ -303,17 +310,18 @@ function simulatePlayoffDrawBreak(
 function buildSimUpdates(
   fixtures: FixtureSimRow[],
   scenario: SimulatorScenarioId,
+  /** Pre-rolled FPL per team×GW (wszyscy gracze, także bez meczu). */
+  pointsByTeamGw: Map<string, number>,
 ): FixtureUpdate[] {
-  // 1) Losowanie FPL per mecz
-  const rolled = fixtures.map((f) => {
-    const pair = rollFplPair(scenario);
-    return { fixture: f, home: pair.home, away: pair.away };
-  });
+  const pointKey = (teamId: string, gw: number) => `${teamId}:${gw}`;
 
-  // 2) Mediana per (division × GW) — bez baraży
+  // Mediana per (division × GW) — bez baraży
   const pointsByDivGw = new Map<string, Map<string, number>>();
-  for (const { fixture: f, home, away } of rolled) {
+  for (const f of fixtures) {
     if (f.is_playoff) continue;
+    const home = pointsByTeamGw.get(pointKey(f.home_team_id, f.gameweek));
+    const away = pointsByTeamGw.get(pointKey(f.away_team_id, f.gameweek));
+    if (home == null || away == null) continue;
     const key = `${f.division_id}:${f.gameweek}`;
     let bucket = pointsByDivGw.get(key);
     if (!bucket) {
@@ -335,9 +343,12 @@ function buildSimUpdates(
     }
   }
 
-  // 3) Payloady update
   const updates: FixtureUpdate[] = [];
-  for (const { fixture: f, home, away } of rolled) {
+  for (const f of fixtures) {
+    const home = pointsByTeamGw.get(pointKey(f.home_team_id, f.gameweek));
+    const away = pointsByTeamGw.get(pointKey(f.away_team_id, f.gameweek));
+    if (home == null || away == null) continue;
+
     const playoff = Boolean(f.is_playoff);
     const isDraw = home === away;
 
@@ -391,6 +402,40 @@ function buildSimUpdates(
   return updates;
 }
 
+/**
+ * Losuje punkty FPL dla WSZYSTKICH drużyn w zakresie GW
+ * (także graczy bez meczu H2H w GW19/38).
+ */
+function rollScoresForAllTeams(
+  teamIds: string[],
+  fixtures: FixtureSimRow[],
+  gwFrom: number,
+  gwTo: number,
+  scenario: SimulatorScenarioId,
+): Map<string, number> {
+  const pointKey = (teamId: string, gw: number) => `${teamId}:${gw}`;
+  const map = new Map<string, number>();
+
+  // Najpierw z meczów (pary H2H / baraże)
+  for (const f of fixtures) {
+    const pair = rollFplPair(scenario);
+    map.set(pointKey(f.home_team_id, f.gameweek), pair.home);
+    map.set(pointKey(f.away_team_id, f.gameweek), pair.away);
+  }
+
+  // Uzupełnij brakujące (gracze bez fixture w danym GW)
+  for (let gw = gwFrom; gw <= gwTo; gw++) {
+    for (const teamId of teamIds) {
+      const key = pointKey(teamId, gw);
+      if (!map.has(key)) {
+        map.set(key, rollFplSolo(scenario));
+      }
+    }
+  }
+
+  return map;
+}
+
 /** Generuj wyniki wg scenariusza → is_published = false (brudnopis). */
 export async function generateSimulatedResults(
   input: SimRangeInput & { scenario: SimulatorScenarioId },
@@ -406,26 +451,56 @@ export async function generateSimulatedResults(
     const incomplete = await assertDivisionsFull(supabase, range.divisionIds);
     if (incomplete) return { error: incomplete };
 
+    const { data: teamsRaw, error: teamsError } = await supabase
+      .from("teams")
+      .select("id, is_active")
+      .in("division_id", range.divisionIds);
+    if (teamsError) return { error: teamsError.message };
+    const teamIds = (teamsRaw ?? [])
+      .filter((t) => t.is_active !== false)
+      .map((t) => t.id as string);
+
     const { rows, error } = await fetchRangeFixtures(supabase, range);
     if (error) return { error };
-    if (!rows.length) {
-      const playoffHint =
-        range.gwFrom === range.gwTo && isPlayoffGameweek(range.gwFrom)
-          ? ` GW${range.gwFrom} to baraże — najpierw w Edytorze Kolejek użyj „Generuj Pary Barażowe” (po opublikowaniu fazy zasadniczej).`
-          : " Wygeneruj terminarz Berger.";
-      return {
-        error: `Brak meczów w zakresie GW${range.gwFrom}–${range.gwTo} dla zaznaczonych dywizji.${playoffHint}`,
-      };
+    if (!teamIds.length) {
+      return { error: "Brak aktywnych drużyn w zaznaczonych dywizjach." };
     }
 
-    const updates = buildSimUpdates(rows, input.scenario);
-    const writeError = await applyUpdatesInChunks(supabase, updates);
-    if (writeError) return { error: writeError };
+    const pointsByTeamGw = rollScoresForAllTeams(
+      teamIds,
+      rows,
+      range.gwFrom,
+      range.gwTo,
+      input.scenario,
+    );
+
+    const scoreRows = [...pointsByTeamGw.entries()].map(([key, fpl_points]) => {
+      const [team_id, gwStr] = key.split(":");
+      return {
+        season_id: range.seasonId,
+        team_id,
+        gameweek: Number(gwStr),
+        fpl_points,
+        is_published: false,
+      };
+    });
+    const scoreErr = await upsertTeamGameweekScores(supabase, scoreRows);
+    if (scoreErr) return { error: scoreErr };
+
+    let updates: ReturnType<typeof buildSimUpdates> = [];
+    if (rows.length) {
+      updates = buildSimUpdates(rows, input.scenario, pointsByTeamGw);
+      const writeError = await applyUpdatesInChunks(supabase, updates);
+      if (writeError) return { error: writeError };
+    }
 
     revalidateSim();
+    const fixtureNote = rows.length
+      ? `${updates.length} meczów H2H`
+      : "brak meczów H2H (tylko FA Ranking)";
     return {
       error: null,
-      success: `Wygenerowano brudnopis: ${updates.length} meczów · ${scenarioLabel(input.scenario)} · GW${range.gwFrom}–${range.gwTo} (is_published=false).`,
+      success: `Wygenerowano brudnopis: ${fixtureNote} + ${scoreRows.length} wyników FPL · ${scenarioLabel(input.scenario)} · GW${range.gwFrom}–${range.gwTo}.`,
       updated: updates.length,
     };
   } catch (e) {
@@ -466,10 +541,19 @@ export async function publishSimulatedRange(
       };
     }
 
+    for (let gw = range.gwFrom; gw <= range.gwTo; gw++) {
+      const scorePubErr = await publishTeamGameweekScores(
+        supabase,
+        range.seasonId,
+        gw,
+      );
+      if (scorePubErr) return { error: scorePubErr };
+    }
+
     revalidateSim();
     return {
       error: null,
-      success: `Opublikowano ${updated} meczów (GW${range.gwFrom}–${range.gwTo}) → Strefa Gracza.`,
+      success: `Opublikowano ${updated} meczów (GW${range.gwFrom}–${range.gwTo}) → Strefa Gracza + FA Ranking.`,
       updated,
     };
   } catch (e) {
@@ -508,10 +592,27 @@ export async function unpublishSimulatedRange(
 
     if (error) return { error: error.message };
     const updated = data?.length ?? 0;
+
+    const { data: teamsRaw } = await supabase
+      .from("teams")
+      .select("id")
+      .in("division_id", range.divisionIds);
+    const teamIds = (teamsRaw ?? []).map((t) => t.id as string);
+
+    for (let gw = range.gwFrom; gw <= range.gwTo; gw++) {
+      const scoreUnpubErr = await unpublishTeamGameweekScores(
+        supabase,
+        range.seasonId,
+        gw,
+        teamIds,
+      );
+      if (scoreUnpubErr) return { error: scoreUnpubErr };
+    }
+
     revalidateSim();
     return {
       error: null,
-      success: `Cofnięto publikację: ${updated} meczów → brudnopis.`,
+      success: `Cofnięto publikację: ${updated} meczów → brudnopis (+ FA Ranking).`,
       updated,
     };
   } catch (e) {
@@ -545,7 +646,24 @@ export async function clearSimulatedRange(
 
     if (error) return { error: error.message };
     const updated = data?.length ?? 0;
-    if (!updated) {
+
+    const { data: teamsRaw } = await supabase
+      .from("teams")
+      .select("id")
+      .in("division_id", range.divisionIds);
+    const teamIds = (teamsRaw ?? []).map((t) => t.id as string);
+
+    for (let gw = range.gwFrom; gw <= range.gwTo; gw++) {
+      const scoreClearErr = await clearTeamGameweekScores(
+        supabase,
+        range.seasonId,
+        gw,
+        teamIds,
+      );
+      if (scoreClearErr) return { error: scoreClearErr };
+    }
+
+    if (!updated && !teamIds.length) {
       return {
         error: `Brak meczów do wyczyszczenia w GW${range.gwFrom}–${range.gwTo}.`,
       };
@@ -554,7 +672,7 @@ export async function clearSimulatedRange(
     revalidateSim();
     return {
       error: null,
-      success: `Wyczyszczono ${updated} meczów (GW${range.gwFrom}–${range.gwTo}) → surowy terminarz.`,
+      success: `Wyczyszczono ${updated} meczów + wyniki FPL (GW${range.gwFrom}–${range.gwTo}) → surowy terminarz.`,
       updated,
     };
   } catch (e) {

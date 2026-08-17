@@ -39,14 +39,26 @@ function resultFromH2h(h2h: number): FormResult {
  * Strefy tabeli wg piramidy:
  * - Tier 1: 1 złoto, 2 srebro, 3 brąz (podium) · 3. od końca baraż · bottom 2 spadek
  * - Tier 2+: top 2 awans · 3. baraż w górę · 3. od końca baraż · bottom 2 spadek
+ * - Najniższa dywizja: brak barażu o utrzymanie i spadków (nie ma dokąd spaść)
  */
-export function zoneFor(position: number, total: number, tier: number): TableZone {
+export function zoneFor(
+  position: number,
+  total: number,
+  tier: number,
+  opts?: { isLowestDivision?: boolean; maxTier?: number },
+): TableZone {
   if (total <= 0) return "mid";
+
+  const isLowest =
+    opts?.isLowestDivision ??
+    (opts?.maxTier != null ? tier >= opts.maxTier : false);
 
   const fromBottom = total - position + 1; // 1 = last
 
-  if (fromBottom <= 2 && total >= 3) return "relegation";
-  if (fromBottom === 3 && total >= 4) return "playoff_down";
+  if (!isLowest) {
+    if (fromBottom <= 2 && total >= 3) return "relegation";
+    if (fromBottom === 3 && total >= 4) return "playoff_down";
+  }
 
   if (tier === 1) {
     if (position === 1) return "gold";
@@ -68,6 +80,7 @@ export function buildPublicStandings(
   fixtures: PublicFixture[],
   teams: PublicTeam[],
   tier = 2,
+  opts?: { isLowestDivision?: boolean; maxTier?: number },
 ): PublicStandingRow[] {
   const byId = new Map(teams.map((t) => [t.id, t]));
   const stats = new Map(teams.map((t) => [t.id, emptyStats(t.id)]));
@@ -138,7 +151,7 @@ export function buildPublicStandings(
     return {
       teamId: row.teamId,
       position,
-      zone: zoneFor(position, n, tier),
+      zone: zoneFor(position, n, tier, opts),
       played: row.played,
       won: row.won,
       drawn: row.drawn,

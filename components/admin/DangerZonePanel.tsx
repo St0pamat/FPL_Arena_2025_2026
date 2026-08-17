@@ -217,7 +217,7 @@ export function DangerZonePanel({ seasons }: { seasons: Season[] }) {
             <h2 className="text-xl font-extrabold text-red-300">Pełny Reset (Hard Reset)</h2>
             <p className="mt-2 max-w-2xl text-sm leading-relaxed text-red-200/80">
               Usuwa <strong>wszystkie</strong> piramidy, sezony, dywizje, drużyny i mecze. Konta Auth
-              zostają.
+              oraz <strong>trwałe Webhooki Discord</strong> (admin → Webhooki Discord) zostają.
             </p>
           </div>
         </div>

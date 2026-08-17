@@ -591,7 +591,7 @@ export function GameweekCenter({
           </div>
           {showDiscordSend && !hasWebhook ? (
             <p className="text-center text-[10px] text-amber-400/80">
-              Ustaw Discord Webhook URL dla tej dywizji w adminie → Struktura Ligi.
+              Ustaw Discord Webhook URL dla tej dywizji w adminie → Webhooki Discord (Level = tier).
             </p>
           ) : null}
         </div>

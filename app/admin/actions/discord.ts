@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { resolveDivisionWebhookById } from "@/app/admin/actions/discordWebhooks";
 
 export interface DiscordSendResult {
   error: string | null;
@@ -8,7 +9,7 @@ export interface DiscordSendResult {
 }
 
 /**
- * Wysyła PNG (data URL / base64) na webhook Discord przypisany do dywizji.
+ * Wysyła PNG (data URL / base64) na trwały webhook Discord (po tierze dywizji).
  * Wymaga zalogowanego admina.
  */
 export async function sendImageToDiscord(
@@ -29,23 +30,9 @@ export async function sendImageToDiscord(
     if (!divisionId) return { error: "Brak ID dywizji." };
     if (!base64Image?.trim()) return { error: "Brak obrazu do wysłania." };
 
-    const { data: division, error } = await supabase
-      .from("divisions")
-      .select("id, name, discord_webhook_url")
-      .eq("id", divisionId)
-      .maybeSingle();
-
-    if (error) {
-      console.error("[sendImageToDiscord]", error);
-      return { error: error.message };
-    }
-    if (!division) return { error: "Nie znaleziono dywizji." };
-
-    const webhook = (division.discord_webhook_url ?? "").trim();
-    if (!webhook) {
-      return {
-        error: "Brak skonfigurowanego webhooka dla tej dywizji.",
-      };
+    const dest = await resolveDivisionWebhookById(supabase, divisionId);
+    if ("error" in dest) {
+      return { error: dest.error };
     }
 
     let payload = base64Image.trim();
@@ -69,7 +56,7 @@ export async function sendImageToDiscord(
       form.append("content", content);
     }
 
-    const res = await fetch(webhook, {
+    const res = await fetch(dest.url, {
       method: "POST",
       body: form,
     });
@@ -84,7 +71,7 @@ export async function sendImageToDiscord(
 
     return {
       error: null,
-      success: `Wysłano na Discord · ${division.name}`,
+      success: `Wysłano na Discord · ${dest.label}`,
     };
   } catch (e) {
     console.error("[sendImageToDiscord]", e);

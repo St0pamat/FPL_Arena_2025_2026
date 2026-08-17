@@ -279,7 +279,7 @@ export function ExportControls({
             title={
               hasWebhook
                 ? "Wyślij grafikę na kanał Discord tej dywizji"
-                : "Brak webhooka — ustaw w panelu Struktura Ligi"
+                : "Brak webhooka — ustaw w adminie → Webhooki Discord"
             }
             className={`${btnBase} border border-sky-500/40 bg-sky-500/10 text-sky-300 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-40`}
           >
@@ -301,7 +301,7 @@ export function ExportControls({
       ) : null}
       {!hideWebhookHint && showDiscordSend && !hasWebhook ? (
         <p className="mt-1 text-[10px] text-amber-400/80">
-          Ustaw Discord Webhook URL dla tej dywizji w adminie → Struktura Ligi.
+          Ustaw Discord Webhook URL dla tej dywizji w adminie → Webhooki Discord (Level = tier).
         </p>
       ) : null}
     </div>

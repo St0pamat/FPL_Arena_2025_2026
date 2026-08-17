@@ -52,24 +52,28 @@ function formatXMention(
   return `@${handle}`;
 }
 
-/** Aktywne dywizje (sezon niezaarchiwizowany) + flaga webhooka. */
+/** Aktywne dywizje (sezon niezaarchiwizowany) + flaga webhooka (po tierze). */
 export async function getContentHubDivisions(): Promise<ContentHubDivisionOption[]> {
   const supabase = await requireAuth();
+  const { listDivisionWebhookLevels } = await import(
+    "@/app/admin/actions/discordWebhooks"
+  );
+  const webhookLevels = await listDivisionWebhookLevels(supabase);
+
   const { data, error } = await supabase
     .from("divisions")
     .select(
-      "id, name, tier, season_id, discord_webhook_url, pyramids(id, name), seasons(id, name, status, is_archived)",
+      "id, name, tier, season_id, pyramids(id, name), seasons(id, name, status, is_archived)",
     )
     .order("tier", { ascending: true });
 
   if (error) throw new Error(error.message);
 
-  const rows = (data ?? []) as Array<{
+  const rows = (data ?? []) as unknown as Array<{
     id: string;
     name: string;
     tier: number;
     season_id: string;
-    discord_webhook_url?: string | null;
     pyramids?: { id: string; name: string } | null;
     seasons?: {
       id: string;
@@ -91,7 +95,7 @@ export async function getContentHubDivisions(): Promise<ContentHubDivisionOption
         seasonId: d.season_id,
         seasonName,
         pyramidName,
-        hasWebhook: Boolean((d.discord_webhook_url ?? "").trim()),
+        hasWebhook: webhookLevels.has(Number(d.tier)),
         label: `${seasonName} · ${pyramidName} · D${d.tier} — ${d.name}`,
       };
     })
@@ -104,34 +108,23 @@ export async function getContentHubDivisions(): Promise<ContentHubDivisionOption
     });
 }
 
-/** Sezony niezaarchiwizowane + flagi webhooków FA Ranking / FA Cup. */
+/** Sezony niezaarchiwizowane + flagi trwałych webhooków FA Ranking / FA Cup. */
 export async function getContentHubSeasons(): Promise<ContentHubSeasonOption[]> {
   const supabase = await requireAuth();
+  const { hasGlobalWebhook } = await import(
+    "@/app/admin/actions/discordWebhooks"
+  );
+  const [hasFaRankingWebhook, hasFaCupWebhook] = await Promise.all([
+    hasGlobalWebhook(supabase, "FA_RANKING"),
+    hasGlobalWebhook(supabase, "FA_CUP"),
+  ]);
+
   const { data, error } = await supabase
     .from("seasons")
-    .select("id, name, status, is_archived, fa_ranking_webhook_url, fa_cup_webhook_url")
+    .select("id, name, status, is_archived")
     .order("created_at", { ascending: false });
 
-  if (error) {
-    // Migracja jeszcze nie odpalona — zwróć sezony bez flag
-    if (/fa_ranking_webhook_url|fa_cup_webhook_url/i.test(error.message)) {
-      const { data: fallback, error: err2 } = await supabase
-        .from("seasons")
-        .select("id, name, status, is_archived")
-        .order("created_at", { ascending: false });
-      if (err2) throw new Error(err2.message);
-      return (fallback ?? [])
-        .filter((s) => !s.is_archived)
-        .map((s) => ({
-          id: s.id,
-          name: s.name,
-          status: s.status,
-          hasFaRankingWebhook: false,
-          hasFaCupWebhook: false,
-        }));
-    }
-    throw new Error(error.message);
-  }
+  if (error) throw new Error(error.message);
 
   return (data ?? [])
     .filter((s) => !s.is_archived)
@@ -139,8 +132,8 @@ export async function getContentHubSeasons(): Promise<ContentHubSeasonOption[]> 
       id: s.id,
       name: s.name,
       status: s.status,
-      hasFaRankingWebhook: Boolean((s.fa_ranking_webhook_url ?? "").trim()),
-      hasFaCupWebhook: Boolean((s.fa_cup_webhook_url ?? "").trim()),
+      hasFaRankingWebhook,
+      hasFaCupWebhook,
     }));
 }
 
@@ -544,54 +537,32 @@ async function resolveWebhookTarget(
   supabase: Awaited<ReturnType<typeof requireAuth>>,
   target: ContentHubSendTarget,
 ): Promise<{ webhook: string; label: string } | { error: string }> {
+  const {
+    resolveDivisionWebhookById,
+    resolveGlobalWebhook,
+  } = await import("@/app/admin/actions/discordWebhooks");
+
   if (target.kind === "division") {
-    const { data: division, error } = await supabase
-      .from("divisions")
-      .select("id, name, discord_webhook_url")
-      .eq("id", target.divisionId)
-      .maybeSingle();
-    if (error) return { error: error.message };
-    if (!division) return { error: "Nie znaleziono dywizji." };
-    const webhook = (division.discord_webhook_url ?? "").trim();
-    if (!webhook) {
-      return { error: "Brak webhooka dla tej dywizji — ustaw w Strukturze Ligi." };
-    }
-    return { webhook, label: division.name };
+    const dest = await resolveDivisionWebhookById(supabase, target.divisionId);
+    if ("error" in dest) return dest;
+    return { webhook: dest.url, label: dest.label };
   }
 
-  const col =
-    target.channel === "fa_ranking"
-      ? "fa_ranking_webhook_url"
-      : "fa_cup_webhook_url";
-  const channelLabel =
-    target.channel === "fa_ranking" ? "The FA Ranking" : "FA Cup";
+  const globalType =
+    target.channel === "fa_ranking" ? "FA_RANKING" : "FA_CUP";
+  const dest = await resolveGlobalWebhook(supabase, globalType);
+  if ("error" in dest) return dest;
 
-  const { data: season, error } = await supabase
+  const { data: season } = await supabase
     .from("seasons")
-    .select(`id, name, ${col}`)
+    .select("name")
     .eq("id", target.seasonId)
     .maybeSingle();
-
-  if (error) {
-    if (/fa_ranking_webhook_url|fa_cup_webhook_url/i.test(error.message)) {
-      return {
-        error:
-          "Brak kolumn globalnych webhooków. Uruchom migrację: supabase/migrations/add_season_global_webhooks.sql",
-      };
-    }
-    return { error: error.message };
-  }
-  if (!season) return { error: "Nie znaleziono sezonu." };
-
-  const webhook = String(
-    (season as Record<string, unknown>)[col] ?? "",
-  ).trim();
-  if (!webhook) {
-    return {
-      error: `Brak webhooka „${channelLabel}” — ustaw w Strukturze Ligi → Kanały globalne.`,
-    };
-  }
-  return { webhook, label: `${season.name} · ${channelLabel}` };
+  const seasonName = season?.name ? String(season.name) : null;
+  return {
+    webhook: dest.url,
+    label: seasonName ? `${seasonName} · ${dest.label}` : dest.label,
+  };
 }
 
 /**
@@ -770,7 +741,21 @@ export async function getContentHubCaptureData(
     // Admin capture: bierz finished (nawet nieopublikowane)
     const forTable = regular.filter((f) => f.is_finished);
     const tier = division.tier ?? 1;
-    const standings = buildPublicStandings(forTable, [...byId.values()], tier);
+
+    let maxTier = tier;
+    const { data: peerTiers } = await supabase
+      .from("divisions")
+      .select("tier")
+      .eq("season_id", division.season_id)
+      .eq("pyramid_id", division.pyramid_id);
+    if (peerTiers?.length) {
+      maxTier = Math.max(...peerTiers.map((d) => Number(d.tier) || tier));
+    }
+
+    const standings = buildPublicStandings(forTable, [...byId.values()], tier, {
+      maxTier,
+      isLowestDivision: tier >= maxTier,
+    });
 
     const gwFixtures = regular.filter((f) => f.gameweek === gameweek);
     const isFinished =
@@ -816,6 +801,56 @@ export async function getContentHubCaptureData(
     console.error("[getContentHubCaptureData]", e);
     return {
       error: e instanceof Error ? e.message : "Nie udało się pobrać danych grafik.",
+    };
+  }
+}
+
+export type FaRankingParticipant = {
+  discordClub: string;
+  fplManager: string;
+  fplTeam: string;
+};
+
+/**
+ * Pełna lista uczestników Na Minusie (Baza CSV) — alfabetycznie po Discord Club.
+ * Do grafiki „Oficjalna lista uczestników The FA Ranking”.
+ */
+export async function getFaRankingParticipantsRoster(): Promise<{
+  players: FaRankingParticipant[];
+  seasonLabel: string;
+  error: string | null;
+}> {
+  try {
+    await requireAuth();
+    const { getRecruitmentClubsData } = await import(
+      "@/lib/public/getAvailableClubs"
+    );
+    const data = await getRecruitmentClubsData();
+    const players = [...data.players]
+      .map((p) => ({
+        discordClub: p.discordClub,
+        fplManager: p.fplManager,
+        fplTeam: p.fplTeam,
+      }))
+      .sort((a, b) =>
+        a.discordClub.localeCompare(b.discordClub, "pl", {
+          sensitivity: "base",
+        }),
+      );
+    return {
+      players,
+      seasonLabel: "2026/27",
+      error: null,
+    };
+  } catch (e) {
+    console.error("[getFaRankingParticipantsRoster]", e);
+    return {
+      players: [],
+      seasonLabel: "2026/27",
+      error:
+        e instanceof Error
+          ? e.message
+          : "Nie udało się pobrać listy uczestników.",
     };
   }
 }

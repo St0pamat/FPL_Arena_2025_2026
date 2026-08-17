@@ -10,7 +10,7 @@ import type { PublicSeasonDivisionStructurePayload } from "@/lib/public/types";
 export const metadata: Metadata = {
   title: `Dywizje — ${NA_MINUSIE_BRAND}`,
   description:
-    "Aktualny podział uczestników Na Minusie ™ na dywizje. Podgląd na żywo z bazy zapisów.",
+    "Oficjalny, zamknięty podział uczestników Na Minusie ™ na dywizje w sezonie 2026/27.",
 };
 
 /** Jak „Grają z Nami” — odświeżanie z CSV co ~60s (revalidate w fetch). */

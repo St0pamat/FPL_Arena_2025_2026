@@ -140,7 +140,7 @@ function rowTone(zone: TableZone): string {
 export function StandingsTable({
   rows,
   logos = [],
-  tier: _tier = 2,
+  tier = 2,
   exportMeta,
   divisionId = "",
   showDiscordSend = false,
@@ -167,12 +167,23 @@ export function StandingsTable({
     exportMeta?.season,
   ]) || "tabela-ogolna"}.png`;
 
-  const headerParticipants = rows.map((r) => ({
+  /** Najniższa dywizja (np. National League): bez spadków w UI, nawet gdy stare dane mają zone. */
+  const displayRows = rows.map((r) => {
+    if (
+      tier >= 5 &&
+      (r.zone === "relegation" || r.zone === "playoff_down")
+    ) {
+      return { ...r, zone: "mid" as const };
+    }
+    return r;
+  });
+
+  const headerParticipants = displayRows.map((r) => ({
     clubName: r.team?.chosen_club ?? "",
     managerName: r.team?.manager_name ?? "",
   }));
 
-  if (!rows.length) {
+  if (!displayRows.length) {
     if (hideControls) {
       return (
         <DiscordExportFrame
@@ -227,8 +238,8 @@ export function StandingsTable({
           </tr>
         </thead>
         <tbody>
-          {rows.map((r, idx) => {
-            const next = rows[idx + 1];
+          {displayRows.map((r, idx) => {
+            const next = displayRows[idx + 1];
             const cutPlayoffDown =
               r.zone !== "playoff_down" &&
               r.zone !== "relegation" &&

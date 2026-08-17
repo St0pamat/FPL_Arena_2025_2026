@@ -50,14 +50,14 @@ export function DivisionStructureView({
         <header className="space-y-4">
           <div>
             <p className="text-[10px] font-black uppercase tracking-[0.25em] text-emerald-400">
-              Live · Baza uczestników
+              Oficjalny · Sezon 2026/27
             </p>
             <h1 className="mt-1 font-athletic text-3xl uppercase tracking-wide text-white sm:text-4xl">
               Dywizje
             </h1>
             <p className="mt-2 max-w-2xl text-sm text-slate-400 sm:text-base">
-              Aktualny podział z arkusza zapisów. Sortowanie w dywizji wg OR
-              2025/26.
+              Potwierdzony podział uczestników na dywizje. Sortowanie w dywizji
+              wg OR 2025/26.
             </p>
           </div>
 
@@ -72,19 +72,20 @@ export function DivisionStructureView({
           ) : null}
 
           <aside
-            className="flex gap-3 rounded-2xl border border-amber-500/25 bg-amber-500/[0.07] px-4 py-3.5 sm:px-5"
+            className="flex gap-3 rounded-2xl border border-emerald-500/25 bg-emerald-500/[0.07] px-4 py-3.5 sm:px-5"
             role="note"
           >
             <Info
-              className="mt-0.5 h-5 w-5 shrink-0 text-amber-300"
+              className="mt-0.5 h-5 w-5 shrink-0 text-emerald-300"
               aria-hidden
             />
-            <div className="min-w-0 space-y-1 text-sm leading-relaxed text-amber-50/90">
-              <p className="font-bold text-amber-200">To tylko aktualny podgląd</p>
-              <p className="text-amber-100/75">
-                Wraz z postępem zapisów składy i poziomy lig będą się zmieniać.
-                Widok odświeża się automatycznie z bazy — ostateczny podział
-                zamkniemy po zakończeniu rekrutacji.
+            <div className="min-w-0 space-y-1 text-sm leading-relaxed text-emerald-50/90">
+              <p className="font-bold text-emerald-200">
+                Oficjalny, zamknięty podział
+              </p>
+              <p className="text-emerald-100/75">
+                Rekrutacja na sezon FPL 2026/2027 została zakończona. Poniższe
+                składy dywizji są potwierdzone i obowiązują w sezonie.
               </p>
             </div>
           </aside>
