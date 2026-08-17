@@ -136,8 +136,6 @@ async function waitForImages(node: HTMLElement) {
   );
 }
 
-}
-
 export function ContentHubClient({
   divisions,
   seasons,
