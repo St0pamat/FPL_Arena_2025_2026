@@ -77,24 +77,31 @@ function BrandMark({
   side = "left",
   /** Bez ujemnych marginesów — bezpieczne dla html-to-image */
   safeEdges = false,
+  size = "default",
 }: {
   src: string;
   alt: string;
   circle?: boolean;
   side?: "left" | "right";
   safeEdges?: boolean;
+  size?: "default" | "hero";
 }) {
+  const box =
+    size === "hero"
+      ? "aspect-square h-[220px] w-[220px] shrink-0"
+      : `aspect-square h-[7rem] w-[7rem] shrink-0 sm:h-[8.5rem] sm:w-[8.5rem] ${
+          safeEdges ? "self-center" : "self-start"
+        } ${
+          safeEdges
+            ? ""
+            : side === "left"
+              ? "-ml-3 sm:-ml-5"
+              : "-mr-3 sm:-mr-5"
+        }`;
+
   return (
     <div
-      className={`aspect-square h-[7rem] w-[7rem] shrink-0 sm:h-[8.5rem] sm:w-[8.5rem] ${
-        safeEdges ? "self-center" : "self-start"
-      } ${
-        safeEdges
-          ? ""
-          : side === "left"
-            ? "-ml-3 sm:-ml-5"
-            : "-mr-3 sm:-mr-5"
-      } ${
+      className={`${box} ${
         circle
           ? "overflow-hidden rounded-full bg-[#F5C542] ring-1 ring-white/10"
           : ""
@@ -106,10 +113,12 @@ function BrandMark({
         alt={alt}
         className={`box-border h-full w-full object-center ${
           circle
-            ? safeEdges
+            ? safeEdges || size === "hero"
               ? "object-cover"
               : "scale-110 object-cover"
-            : "object-contain object-top"
+            : size === "hero"
+              ? "object-contain"
+              : "object-contain object-top"
         }`}
         crossOrigin="anonymous"
         decoding="async"
@@ -160,6 +169,7 @@ function TitleBlock({
  * Logotypy przyklejone do górnej krawędzi, podpisy tuż pod herbami.
  * Teksty na środku — bez zmian (wyśrodkowane w pionie).
  * `safeEdges` — Grid 1fr|auto|1fr: tytuł zawsze w matematycznym środku (PNG).
+ * `centerLockup` — zwarty blok (loga otulają tytuł) — The FA Ranking 1920px.
  */
 export function StandingsPromoHeader({
   title,
@@ -167,17 +177,62 @@ export function StandingsPromoHeader({
   participants = [],
   logos = [],
   safeEdges = false,
+  centerLockup = false,
 }: {
   title: string;
   subtitle?: string;
   participants?: PromoHeaderParticipant[];
   logos?: ClubLogoRecord[];
   safeEdges?: boolean;
+  centerLockup?: boolean;
 }) {
   const top10 = participants.slice(0, 10);
   const left = top10.slice(0, 5);
   const right = top10.slice(5, 10);
   const withRoster = left.length > 0 || right.length > 0;
+
+  if (centerLockup) {
+    return (
+      <header className="mb-16 mt-8 w-full overflow-visible border-b border-emerald-500/30 pb-10">
+        <div className="grid w-full grid-cols-[1fr_auto_1fr] items-center">
+          <div className="flex w-full justify-center">
+            <BrandMark
+              src={ARENA_PORTAL_LOGO}
+              alt={ARENA_PORTAL_ALT}
+              side="left"
+              safeEdges
+              size="hero"
+            />
+          </div>
+
+          <div className="flex flex-col items-center justify-center px-8 text-center">
+            <h2 className="max-w-full font-athletic text-8xl font-black uppercase leading-[0.9] tracking-tight text-white">
+              {title}
+            </h2>
+            <p className="mt-5 text-3xl font-extrabold uppercase tracking-[0.2em] text-emerald-400">
+              {NA_MINUSIE_EXPORT_BRAND}
+            </p>
+            {subtitle ? (
+              <p className="mt-2 text-2xl font-bold uppercase tracking-widest text-slate-400">
+                {subtitle}
+              </p>
+            ) : null}
+          </div>
+
+          <div className="flex w-full justify-center">
+            <BrandMark
+              src={NA_MINUSIE_LOGO}
+              alt={NA_MINUSIE_LOGO_ALT}
+              circle
+              side="right"
+              safeEdges
+              size="hero"
+            />
+          </div>
+        </div>
+      </header>
+    );
+  }
 
   if (safeEdges) {
     return (
