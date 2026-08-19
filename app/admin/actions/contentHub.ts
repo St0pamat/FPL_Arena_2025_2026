@@ -363,7 +363,7 @@ export async function generatePreviewXComDraft(
       ]),
     );
 
-    type Pair = { a: string; b: string; score: number };
+    type Pair = { a: string; b: string };
     const pairs: Pair[] = [];
     for (const f of regular) {
       const home = byId.get(f.home_team_id as string);
@@ -371,40 +371,35 @@ export async function generatePreviewXComDraft(
       if (!home || !away) continue;
       const a = formatXMention(home.x_com, home.manager_name);
       const b = formatXMention(away.x_com, away.manager_name);
-      const score =
-        (home.x_com?.trim() ? 2 : 0) + (away.x_com?.trim() ? 2 : 0);
-      pairs.push({ a, b, score });
+      pairs.push({ a, b });
     }
 
-    pairs.sort((x, y) => y.score - x.score);
-    const highlight = pairs.slice(0, 2);
-    const highlightBlock =
-      highlight.length > 0
-        ? highlight.map((p) => `${p.a} vs ${p.b}`).join("\n")
-        : "(brak par do oznaczenia)";
+    const pairsBlock =
+      pairs.length > 0
+        ? pairs.map((p) => `${p.a} vs ${p.b}`).join("\n")
+        : "(brak par w terminarzu)";
 
+    // Pełna wersja z ozdobnikami
     let draft = [
       `🔜 Zapowiedź GW${gameweek}!`,
       `🏴󠁧󠁢󠁥󠁮󠁧󠁿 ${division.name} (FPL Arena: Na Minusie ™)`,
       ``,
-      `Przed nami kolejne emocje! W tej kolejce zmierzą się m.in.:`,
-      highlightBlock,
+      pairsBlock,
       ``,
-      `Kto zdobędzie cenne 3 punkty? 🔥`,
-      `#FPL #FPLpl`,
+      `Kto zdobędzie 3 punkty? 🔥 #FPL #FPLpl`,
     ].join("\n");
 
+    // Fallback: bez footer gdy za długi
     if (draft.length > 280) {
       draft = [
         `🔜 Zapowiedź GW${gameweek}!`,
         `🏴󠁧󠁢󠁥󠁮󠁧󠁿 ${division.name} (FPL Arena: Na Minusie ™)`,
         ``,
-        highlightBlock,
-        ``,
-        `Kto zdobędzie 3 pkt? 🔥 #FPL #FPLpl`,
+        pairsBlock,
       ].join("\n");
     }
 
+    // Ostateczność: twardy trim
     if (draft.length > 280) {
       draft = draft.slice(0, 277) + "…";
     }
