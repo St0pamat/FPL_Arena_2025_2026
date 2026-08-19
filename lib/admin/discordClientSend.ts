@@ -90,6 +90,44 @@ function destinationLabel(dest: DiscordSendDestination): string {
   return dest.label || "Discord";
 }
 
+/**
+ * Wiąże załączone pliki z embedami przez `attachment://filename`.
+ * Dzięki temu Discord wyświetla grafikę **pod** tekstem embeda,
+ * a nie jako osobny attachment nad embedem.
+ */
+function embedFilesInPayload(
+  body: Record<string, unknown>,
+  files: File[],
+): Record<string, unknown> {
+  if (!files.length) return body;
+
+  const embeds = Array.isArray(body.embeds) ? [...body.embeds] : [];
+  const imageFiles = files.filter((f) =>
+    /\.(png|jpe?g|gif|webp)$/i.test(f.name),
+  );
+
+  for (const file of imageFiles) {
+    const ref = `attachment://${file.name}`;
+    const alreadyReferenced = embeds.some(
+      (e: Record<string, unknown>) =>
+        (e.image as Record<string, unknown>)?.url === ref ||
+        (e.thumbnail as Record<string, unknown>)?.url === ref,
+    );
+    if (alreadyReferenced) continue;
+
+    const lastEmbed = embeds[embeds.length - 1] as
+      | Record<string, unknown>
+      | undefined;
+    if (lastEmbed && !lastEmbed.image) {
+      lastEmbed.image = { url: ref };
+    } else {
+      embeds.push({ image: { url: ref } });
+    }
+  }
+
+  return { ...body, embeds };
+}
+
 function buildPostInit(
   body: Record<string, unknown>,
   files: File[],
@@ -101,8 +139,9 @@ function buildPostInit(
       body: JSON.stringify(body),
     };
   }
+  const enriched = embedFilesInPayload(body, files);
   const form = new FormData();
-  form.append("payload_json", JSON.stringify(body));
+  form.append("payload_json", JSON.stringify(enriched));
   files.forEach((file, i) => {
     form.append(`files[${i}]`, file, file.name);
   });
