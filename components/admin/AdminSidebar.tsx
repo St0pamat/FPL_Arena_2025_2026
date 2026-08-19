@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { ChevronLeft, ExternalLink, Home, Lock, type LucideIcon } from "lucide-react";
 import {
   ADMIN_BRAND,
@@ -78,33 +78,9 @@ function ProjectButton({
   );
 }
 
-function findProjectForPath(pathname: string): AdminProject | null {
-  for (const project of ADMIN_PROJECTS) {
-    if (!project.enabled) continue;
-    for (const section of project.sections) {
-      for (const item of section.items) {
-        if (pathname === item.href || pathname.startsWith(`${item.href}/`)) {
-          return project;
-        }
-      }
-    }
-    for (const item of project.extra) {
-      if (pathname === item.href || pathname.startsWith(`${item.href}/`)) {
-        return project;
-      }
-    }
-  }
-  return null;
-}
-
 export function AdminSidebar({ userEmail }: { userEmail: string }) {
   const pathname = usePathname();
   const [activeProject, setActiveProject] = useState<AdminProject | null>(null);
-
-  useEffect(() => {
-    const detected = findProjectForPath(pathname);
-    if (detected) setActiveProject(detected);
-  }, [pathname]);
 
   return (
     <aside className="flex w-64 shrink-0 flex-col border-r border-[#1a1a1a] bg-[#0a0a0a]">
