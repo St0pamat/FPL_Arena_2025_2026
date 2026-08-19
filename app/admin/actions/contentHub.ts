@@ -171,7 +171,7 @@ export async function getContentHubSeasons(): Promise<ContentHubSeasonOption[]> 
     }));
 }
 
-/** Distinct GW z rozegranymi / opublikowanymi meczami (dla listy dropdown). */
+/** Distinct GW z rozegranymi meczami (is_finished = true) — dla listy dropdown. */
 export async function getContentHubPlayedGameweeks(
   divisionIds: string[],
 ): Promise<number[]> {
@@ -180,17 +180,16 @@ export async function getContentHubPlayedGameweeks(
 
   const { data, error } = await supabase
     .from("fixtures")
-    .select("gameweek, is_finished, is_published")
-    .in("division_id", divisionIds);
+    .select("gameweek")
+    .in("division_id", divisionIds)
+    .eq("is_finished", true);
 
   if (error) throw new Error(error.message);
 
   const set = new Set<number>();
   for (const row of data ?? []) {
-    if (row.is_finished || row.is_published) {
-      const gw = Number(row.gameweek);
-      if (Number.isFinite(gw) && gw >= 1) set.add(gw);
-    }
+    const gw = Number(row.gameweek);
+    if (Number.isFinite(gw) && gw >= 1) set.add(gw);
   }
   return [...set].sort((a, b) => a - b);
 }

@@ -1,5 +1,6 @@
 import {
   Calculator,
+  Gamepad2,
   Image,
   Layers,
   LayoutDashboard,
@@ -26,7 +27,23 @@ export interface AdminNavSection {
   items: AdminNavItem[];
 }
 
-export const ADMIN_NAV_SECTIONS: AdminNavSection[] = [
+/* ─────────────────────────────────────────────────
+ * Projekty (najwyższy poziom menu admina)
+ * ───────────────────────────────────────────────── */
+
+export interface AdminProject {
+  id: string;
+  label: string;
+  icon: LucideIcon;
+  /** Kolor akcentu — klasa Tailwind text-* */
+  accent: string;
+  /** false = coming soon (zablokowany) */
+  enabled: boolean;
+  sections: AdminNavSection[];
+  extra: AdminNavItem[];
+}
+
+const NA_MINUSIE_SECTIONS: AdminNavSection[] = [
   {
     id: "liga",
     label: "Liga (Live)",
@@ -112,8 +129,7 @@ export const ADMIN_NAV_SECTIONS: AdminNavSection[] = [
   },
 ];
 
-/** Link pomocniczy poza sekcjami masterplanu */
-export const ADMIN_NAV_EXTRA: AdminNavItem[] = [
+const NA_MINUSIE_EXTRA: AdminNavItem[] = [
   {
     href: "/admin/settings",
     label: "Danger Zone",
@@ -121,10 +137,45 @@ export const ADMIN_NAV_EXTRA: AdminNavItem[] = [
   },
 ];
 
+export const ADMIN_PROJECTS: AdminProject[] = [
+  {
+    id: "na-minusie",
+    label: "FPL Arena: Na Minusie ™",
+    icon: Trophy,
+    accent: "text-[#39FF14]",
+    enabled: true,
+    sections: NA_MINUSIE_SECTIONS,
+    extra: NA_MINUSIE_EXTRA,
+  },
+  {
+    id: "igrzyska",
+    label: "FPL Arena: Igrzyska Kapci Kłapcia",
+    icon: Gamepad2,
+    accent: "text-purple-400",
+    enabled: false,
+    sections: [],
+    extra: [],
+  },
+  {
+    id: "mates",
+    label: "FPL Arena: Mates",
+    icon: Users,
+    accent: "text-sky-400",
+    enabled: false,
+    sections: [],
+    extra: [],
+  },
+];
+
+/* ─── Kompatybilność wsteczna ─── */
+
+export const ADMIN_NAV_SECTIONS = NA_MINUSIE_SECTIONS;
+export const ADMIN_NAV_EXTRA = NA_MINUSIE_EXTRA;
+
 /** Płaska lista (kompatybilność) */
 export const ADMIN_NAV: AdminNavItem[] = [
   ...ADMIN_NAV_SECTIONS.flatMap((s) => s.items),
   ...ADMIN_NAV_EXTRA,
 ];
 
-export const ADMIN_BRAND = "Na Minusie ™ Admin";
+export const ADMIN_BRAND = "FPL Arena — Panel Admina";
