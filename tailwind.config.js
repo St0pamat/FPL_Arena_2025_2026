@@ -11,6 +11,7 @@ export default {
       fontFamily: {
         sans: ["Inter", "system-ui", "Segoe UI", "Roboto", "sans-serif"],
         athletic: ["Oswald", "Inter", "sans-serif"],
+        banner: ["Anton", "Oswald", "Impact", "sans-serif"],
         mono: ["ui-monospace", "SFMono-Regular", "Menlo", "Consolas", "monospace"],
       },
       fontSize: {

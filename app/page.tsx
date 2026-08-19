@@ -1,7 +1,6 @@
-import Image from "next/image";
 import { PortalCard } from "@/components/platform/PortalCard";
 import { SplashAdminLink } from "@/components/platform/SplashAdminLink";
-import { ARENA_PORTAL_ALT, ARENA_PORTAL_LOGO } from "@/lib/arena";
+import { SplashBrandLockup } from "@/components/platform/SplashBrandLockup";
 import { NA_MINUSIE_LOGO, NA_MINUSIE_LOGO_ALT } from "@/lib/na-minusie";
 
 export default function HomePage() {
@@ -10,26 +9,8 @@ export default function HomePage() {
       <SplashAdminLink />
       <div className="splash-grid pointer-events-none absolute inset-0" aria-hidden />
 
-      <div className="relative z-10 mb-10 max-w-3xl text-center sm:mb-14">
-        <div className="flex flex-col items-center justify-center gap-4 sm:flex-row sm:gap-5">
-          <div className="relative h-24 w-24 shrink-0 sm:h-28 sm:w-28 lg:h-36 lg:w-36">
-            <Image
-              src={ARENA_PORTAL_LOGO}
-              alt={ARENA_PORTAL_ALT}
-              fill
-              priority
-              quality={95}
-              sizes="(max-width: 640px) 96px, (max-width: 1024px) 112px, 144px"
-              className="object-contain drop-shadow-[0_0_28px_rgba(56,189,248,0.35)]"
-            />
-          </div>
-          <h1 className="font-athletic text-5xl font-bold tracking-[0.06em] text-white sm:text-6xl lg:text-7xl">
-            FPL ARENA
-          </h1>
-        </div>
-        <p className="mx-auto mt-5 max-w-xl text-base font-medium leading-relaxed text-slate-300 sm:mt-6 sm:text-lg">
-          Organizujemy ligi FPL, w których każdy punkt ma swoją cenę.
-        </p>
+      <div className="relative z-10 mb-10 w-full sm:mb-14">
+        <SplashBrandLockup />
       </div>
 
       <div className="relative z-10 grid w-full max-w-5xl grid-cols-1 gap-5 sm:gap-6 md:grid-cols-2 md:gap-8">

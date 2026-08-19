@@ -2,6 +2,12 @@
 
 import { createClient } from "@/lib/supabase/server";
 import type { ActionState } from "@/lib/admin/types";
+import {
+  DEFAULT_DISCORD_SERVER,
+  DISCORD_SERVER_LABELS,
+  normalizeDiscordServerTargets,
+  type DiscordServerTarget,
+} from "@/lib/admin/discordWebhooks";
 
 export type ContentHubDivisionOption = {
   id: string;
@@ -11,6 +17,7 @@ export type ContentHubDivisionOption = {
   seasonName: string;
   pyramidName: string;
   hasWebhook: boolean;
+  hasWebhookByServer: Record<DiscordServerTarget, boolean>;
   label: string;
 };
 
@@ -21,6 +28,8 @@ export type ContentHubSeasonOption = {
   status: string;
   hasFaRankingWebhook: boolean;
   hasFaCupWebhook: boolean;
+  hasFaRankingWebhookByServer: Record<DiscordServerTarget, boolean>;
+  hasFaCupWebhookByServer: Record<DiscordServerTarget, boolean>;
 };
 
 export type ContentHubGlobalChannel = "fa_ranking" | "fa_cup";
@@ -55,10 +64,11 @@ function formatXMention(
 /** Aktywne dywizje (sezon niezaarchiwizowany) + flaga webhooka (po tierze). */
 export async function getContentHubDivisions(): Promise<ContentHubDivisionOption[]> {
   const supabase = await requireAuth();
-  const { listDivisionWebhookLevels } = await import(
+  const { listDivisionWebhookLevelsByServer } = await import(
     "@/app/admin/actions/discordWebhooks"
   );
-  const webhookLevels = await listDivisionWebhookLevels(supabase);
+  const webhookLevelsByServer = await listDivisionWebhookLevelsByServer(supabase);
+  const naMinusieLevels = webhookLevelsByServer.NA_MINUSIE;
 
   const { data, error } = await supabase
     .from("divisions")
@@ -88,6 +98,11 @@ export async function getContentHubDivisions(): Promise<ContentHubDivisionOption
     .map((d) => {
       const seasonName = d.seasons?.name ?? "Sezon?";
       const pyramidName = d.pyramids?.name ?? "Piramida?";
+      const tier = Number(d.tier);
+      const hasWebhookByServer: Record<DiscordServerTarget, boolean> = {
+        NA_MINUSIE: webhookLevelsByServer.NA_MINUSIE.has(tier),
+        FPL_ARENA: webhookLevelsByServer.FPL_ARENA.has(tier),
+      };
       return {
         id: d.id,
         name: d.name,
@@ -95,7 +110,8 @@ export async function getContentHubDivisions(): Promise<ContentHubDivisionOption
         seasonId: d.season_id,
         seasonName,
         pyramidName,
-        hasWebhook: webhookLevels.has(Number(d.tier)),
+        hasWebhook: naMinusieLevels.has(tier) || hasWebhookByServer.FPL_ARENA,
+        hasWebhookByServer,
         label: `${seasonName} · ${pyramidName} · D${d.tier} — ${d.name}`,
       };
     })
@@ -114,10 +130,26 @@ export async function getContentHubSeasons(): Promise<ContentHubSeasonOption[]> 
   const { hasGlobalWebhook } = await import(
     "@/app/admin/actions/discordWebhooks"
   );
-  const [hasFaRankingWebhook, hasFaCupWebhook] = await Promise.all([
-    hasGlobalWebhook(supabase, "FA_RANKING"),
-    hasGlobalWebhook(supabase, "FA_CUP"),
+  const [
+    hasFaRankingNa,
+    hasFaCupNa,
+    hasFaRankingArena,
+    hasFaCupArena,
+  ] = await Promise.all([
+    hasGlobalWebhook(supabase, "FA_RANKING", "NA_MINUSIE"),
+    hasGlobalWebhook(supabase, "FA_CUP", "NA_MINUSIE"),
+    hasGlobalWebhook(supabase, "FA_RANKING", "FPL_ARENA"),
+    hasGlobalWebhook(supabase, "FA_CUP", "FPL_ARENA"),
   ]);
+
+  const hasFaRankingWebhookByServer: Record<DiscordServerTarget, boolean> = {
+    NA_MINUSIE: hasFaRankingNa,
+    FPL_ARENA: hasFaRankingArena,
+  };
+  const hasFaCupWebhookByServer: Record<DiscordServerTarget, boolean> = {
+    NA_MINUSIE: hasFaCupNa,
+    FPL_ARENA: hasFaCupArena,
+  };
 
   const { data, error } = await supabase
     .from("seasons")
@@ -132,8 +164,10 @@ export async function getContentHubSeasons(): Promise<ContentHubSeasonOption[]> 
       id: s.id,
       name: s.name,
       status: s.status,
-      hasFaRankingWebhook,
-      hasFaCupWebhook,
+      hasFaRankingWebhook: hasFaRankingNa || hasFaRankingArena,
+      hasFaCupWebhook: hasFaCupNa || hasFaCupArena,
+      hasFaRankingWebhookByServer,
+      hasFaCupWebhookByServer,
     }));
 }
 
@@ -499,33 +533,79 @@ export async function generatePreviewDiscordJSON(
   }
 }
 
+export type DiscordWebhookSendDestination = {
+  url: string;
+  label: string;
+  serverTarget: DiscordServerTarget;
+};
+
 /**
- * Zwraca URL webhooka dla zalogowanego admina (wysyłka idzie z przeglądarki).
+ * Zwraca URL-e webhooków dla zalogowanego admina (wysyłka idzie z przeglądarki).
+ * `serverTargets` — Na Minusie / FPL Arena / oba.
  */
 export async function getDiscordWebhookForSend(
   target: ContentHubSendTarget | string,
-): Promise<{ url: string; label: string } | { error: string }> {
+  serverTargets: DiscordServerTarget[] = [DEFAULT_DISCORD_SERVER],
+): Promise<
+  | {
+      destinations: DiscordWebhookSendDestination[];
+      label: string;
+    }
+  | { error: string }
+> {
   try {
+    const servers = normalizeDiscordServerTargets(serverTargets);
+    if (!servers.length) {
+      return { error: "Wybierz co najmniej jeden serwer Discord." };
+    }
+
     const supabase = await requireAuth();
     const resolvedTarget: ContentHubSendTarget =
       typeof target === "string"
         ? { kind: "division", divisionId: target }
         : target;
-    const dest = await resolveWebhookTarget(supabase, resolvedTarget);
-    if (!dest || "error" in dest) {
-      return {
-        error:
+
+    const destinations: DiscordWebhookSendDestination[] = [];
+    const missing: string[] = [];
+
+    for (const server of servers) {
+      const dest = await resolveWebhookTarget(supabase, resolvedTarget, server);
+      if (!dest || "error" in dest || !dest.webhook?.trim()) {
+        missing.push(
           dest && "error" in dest
             ? dest.error
-            : "Brak skonfigurowanego adresu Webhooka dla tej akcji.",
-      };
+            : `Brak webhooka · ${DISCORD_SERVER_LABELS[server]}`,
+        );
+        continue;
+      }
+      destinations.push({
+        url: dest.webhook,
+        label: dest.label,
+        serverTarget: server,
+      });
     }
-    if (!dest.webhook?.trim()) {
+
+    if (!destinations.length) {
       return {
-        error: "Brak skonfigurowanego adresu Webhooka dla tej akcji.",
+        error:
+          missing[0] ??
+          "Brak skonfigurowanego adresu Webhooka dla tej akcji.",
       };
     }
-    return { url: dest.webhook, label: dest.label };
+    if (missing.length) {
+      return {
+        error: `Brak webhooka dla części serwerów: ${missing.join(" ")}`,
+      };
+    }
+
+    const channelLabel = destinations[0]?.label ?? "Discord";
+    const serverNames = destinations
+      .map((d) => DISCORD_SERVER_LABELS[d.serverTarget])
+      .join(" + ");
+    return {
+      destinations,
+      label: `${channelLabel} · ${serverNames}`,
+    };
   } catch (e) {
     return {
       error: e instanceof Error ? e.message : "Nie udało się pobrać webhooka.",
@@ -536,6 +616,7 @@ export async function getDiscordWebhookForSend(
 async function resolveWebhookTarget(
   supabase: Awaited<ReturnType<typeof requireAuth>>,
   target: ContentHubSendTarget,
+  serverTarget: DiscordServerTarget,
 ): Promise<{ webhook: string; label: string } | { error: string }> {
   const {
     resolveDivisionWebhookById,
@@ -543,14 +624,18 @@ async function resolveWebhookTarget(
   } = await import("@/app/admin/actions/discordWebhooks");
 
   if (target.kind === "division") {
-    const dest = await resolveDivisionWebhookById(supabase, target.divisionId);
+    const dest = await resolveDivisionWebhookById(
+      supabase,
+      target.divisionId,
+      serverTarget,
+    );
     if ("error" in dest) return dest;
     return { webhook: dest.url, label: dest.label };
   }
 
   const globalType =
     target.channel === "fa_ranking" ? "FA_RANKING" : "FA_CUP";
-  const dest = await resolveGlobalWebhook(supabase, globalType);
+  const dest = await resolveGlobalWebhook(supabase, globalType, serverTarget);
   if ("error" in dest) return dest;
 
   const { data: season } = await supabase

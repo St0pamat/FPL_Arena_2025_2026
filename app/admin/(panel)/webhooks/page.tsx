@@ -18,9 +18,10 @@ export default async function AdminWebhooksPage() {
           Zarządzanie Webhookami
         </h1>
         <p className="mt-2 max-w-2xl text-sm text-slate-400">
-          Trwałe URL Discord — niezależne od sezonu i piramidy. Hard Reset w Danger Zone{" "}
-          <span className="text-slate-200">nie kasuje</span> tych ustawień. Po imporcie dywizji
-          Level N mapuje się na <code className="text-slate-300">tier = N</code>.
+          Dwa niezależne zestawy URL: <span className="text-slate-200">Na Minusie ™</span>{" "}
+          (liga live) i <span className="text-slate-200">FPL Arena</span> (ukryty backup /
+          test). Hard Reset w Danger Zone <span className="text-slate-200">nie kasuje</span>{" "}
+          tych ustawień. Level N = <code className="text-slate-300">tier = N</code>.
         </p>
       </header>
 

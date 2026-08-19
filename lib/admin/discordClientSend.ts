@@ -1,10 +1,28 @@
 /**
  * Client-side Discord webhook POST (CORS).
  * Pliki idą z przeglądarki prosto na Discord — bez limitu payloadu Next/Vercel.
+ * Wiele URL-i → równoległy Promise.all (ten sam JSON / te same pliki).
  */
+
+import {
+  DISCORD_SERVER_LABELS,
+  type DiscordServerTarget,
+} from "@/lib/admin/discordWebhooks";
 
 export const DISCORD_MAX_FILES = 10;
 export const DISCORD_MAX_FILE_BYTES = 25 * 1024 * 1024;
+
+export type DiscordSendDestination = {
+  url: string;
+  label: string;
+  serverTarget?: DiscordServerTarget;
+};
+
+export type DiscordMultiSendResult = {
+  destination: DiscordSendDestination;
+  ok: boolean;
+  error?: string;
+};
 
 export function normalizeDiscordWebhookPayload(
   rawJson: string,
@@ -67,14 +85,129 @@ function formatDiscordReject(status: number, body: unknown): string {
   return `Discord odrzucił wysyłkę (${status}). Sprawdź JSON / webhook / limity.`;
 }
 
-/** POST bezpośrednio na webhook Discord (JSON albo multipart z plikami). */
+function destinationLabel(dest: DiscordSendDestination): string {
+  if (dest.serverTarget) return DISCORD_SERVER_LABELS[dest.serverTarget];
+  return dest.label || "Discord";
+}
+
+function buildPostInit(
+  body: Record<string, unknown>,
+  files: File[],
+): RequestInit {
+  if (!files.length) {
+    return {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    };
+  }
+  const form = new FormData();
+  form.append("payload_json", JSON.stringify(body));
+  files.forEach((file, i) => {
+    form.append(`files[${i}]`, file, file.name);
+  });
+  return { method: "POST", body: form };
+}
+
+async function postOneWebhook(
+  dest: DiscordSendDestination,
+  body: Record<string, unknown>,
+  files: File[],
+): Promise<DiscordMultiSendResult> {
+  const url = dest.url.trim();
+  if (!url) {
+    return {
+      destination: dest,
+      ok: false,
+      error: "Brak skonfigurowanego adresu Webhooka dla tej akcji.",
+    };
+  }
+
+  try {
+    const res = await fetch(url, buildPostInit(body, files));
+    if (!res.ok) {
+      let parsed: unknown = null;
+      const text = await res.text().catch(() => "");
+      try {
+        parsed = text ? JSON.parse(text) : null;
+      } catch {
+        parsed = { message: text.slice(0, 280) };
+      }
+      console.error("Full Discord Error:", dest.label, res.status, parsed ?? text);
+      return {
+        destination: dest,
+        ok: false,
+        error: formatDiscordReject(res.status, parsed),
+      };
+    }
+    return { destination: dest, ok: true };
+  } catch (e) {
+    console.error("Full Discord Error:", dest.label, e);
+    return {
+      destination: dest,
+      ok: false,
+      error:
+        e instanceof Error && e.message.trim()
+          ? e.message
+          : "Wystąpił nieznany błąd podczas wysyłki.",
+    };
+  }
+}
+
+export function formatDiscordMultiSendToast(
+  results: DiscordMultiSendResult[],
+): { ok: boolean; message: string } {
+  const ok = results.filter((r) => r.ok);
+  const fail = results.filter((r) => !r.ok);
+  const names = (list: DiscordMultiSendResult[]) =>
+    list.map((r) => destinationLabel(r.destination)).join(" i ");
+
+  if (ok.length && !fail.length) {
+    return { ok: true, message: `Wysłano na Discord · ${names(ok)}` };
+  }
+  if (ok.length && fail.length) {
+    const failText = fail
+      .map((r) => `${destinationLabel(r.destination)}: ${r.error}`)
+      .join(" ");
+    return {
+      ok: false,
+      message: `Częściowy sukces: wysłano na ${names(ok)}. Błąd — ${failText}`,
+    };
+  }
+  const failText = fail.map((r) => r.error).filter(Boolean).join(" ");
+  return {
+    ok: false,
+    message: failText || "Nie udało się wysłać na żaden serwer Discord.",
+  };
+}
+
+function resolveDestinations(input: {
+  webhookUrl?: string;
+  destinations?: DiscordSendDestination[];
+}): DiscordSendDestination[] {
+  if (input.destinations?.length) {
+    return input.destinations.filter((d) => d.url.trim());
+  }
+  const single = input.webhookUrl?.trim();
+  if (single) return [{ url: single, label: "Discord" }];
+  return [];
+}
+
+/**
+ * POST bezpośrednio na webhook Discord (JSON albo multipart z plikami).
+ * `destinations` (lub pojedynczy `webhookUrl`) — przy 2+ URL-ach Promise.all.
+ */
 export async function postDiscordWebhookFromClient(input: {
-  webhookUrl: string;
+  webhookUrl?: string;
+  destinations?: DiscordSendDestination[];
   rawJson: string;
   files?: File[];
-}): Promise<{ ok: true } | { ok: false; error: string }> {
-  const url = input.webhookUrl.trim();
-  if (!url) {
+}): Promise<
+  | { ok: true; results: DiscordMultiSendResult[] }
+  | { ok: false; error: string; results?: DiscordMultiSendResult[] }
+> {
+  const destinations = resolveDestinations(input);
+  if (!destinations.length) {
     return {
       ok: false,
       error: "Brak skonfigurowanego adresu Webhooka dla tej akcji.",
@@ -101,47 +234,13 @@ export async function postDiscordWebhookFromClient(input: {
     };
   }
 
-  try {
-    let res: Response;
-    if (!files.length) {
-      res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(normalized.body),
-      });
-    } else {
-      const form = new FormData();
-      form.append("payload_json", JSON.stringify(normalized.body));
-      files.forEach((file, i) => {
-        form.append(`files[${i}]`, file, file.name);
-      });
-      res = await fetch(url, {
-        method: "POST",
-        body: form,
-      });
-    }
+  const results = await Promise.all(
+    destinations.map((dest) => postOneWebhook(dest, normalized.body, files)),
+  );
 
-    if (!res.ok) {
-      let parsed: unknown = null;
-      const text = await res.text().catch(() => "");
-      try {
-        parsed = text ? JSON.parse(text) : null;
-      } catch {
-        parsed = { message: text.slice(0, 280) };
-      }
-      console.error("Full Discord Error:", res.status, parsed ?? text);
-      return { ok: false, error: formatDiscordReject(res.status, parsed) };
-    }
-
-    return { ok: true };
-  } catch (e) {
-    console.error("Full Discord Error:", e);
-    return {
-      ok: false,
-      error:
-        e instanceof Error && e.message.trim()
-          ? e.message
-          : "Wystąpił nieznany błąd podczas wysyłki.",
-    };
+  const toast = formatDiscordMultiSendToast(results);
+  if (!toast.ok) {
+    return { ok: false, error: toast.message, results };
   }
+  return { ok: true, results };
 }

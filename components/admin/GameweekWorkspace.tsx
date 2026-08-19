@@ -9,6 +9,7 @@ import {
   Flame,
   Loader2,
   RefreshCw,
+  CalendarCheck,
   Send,
   Trophy,
   Undo2,
@@ -23,6 +24,7 @@ import {
   getSeasonGameweek,
   importGlobalGameweekResults,
   publishSeasonGameweek,
+  publishSeasonSchedule,
   saveDivisionGameweekDraft,
   saveSeasonGameweekDraft,
   unpublishSeasonGameweek,
@@ -989,6 +991,17 @@ export function GameweekWorkspace({
             >
               <Undo2 className="h-4 w-4" />
               Cofnij Publikację
+            </button>
+            <button
+              type="button"
+              disabled={busy || !seasonId}
+              onClick={() =>
+                void run("Opublikowano terminarz", () => publishSeasonSchedule(seasonId))
+              }
+              className="inline-flex items-center gap-2 rounded-xl border border-sky-500/50 bg-sky-500/10 px-4 py-2.5 text-xs font-black uppercase tracking-wider text-sky-300 disabled:opacity-40"
+            >
+              <CalendarCheck className="h-4 w-4" />
+              Opublikuj Terminarz Sezonu
             </button>
           </div>
         </div>

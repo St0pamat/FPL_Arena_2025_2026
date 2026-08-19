@@ -1589,6 +1589,31 @@ export async function publishSeasonGameweek(
   }
 }
 
+/** Publikuj sam terminarz (bez wymogu is_finished) — odsłania mecze gościom w Strefie Gracza. */
+export async function publishSeasonSchedule(
+  seasonId: string,
+): Promise<ActionState> {
+  try {
+    const supabase = await requireAuth();
+    if (!seasonId) return { error: "Wybierz sezon." };
+
+    const { error, count } = await supabase
+      .from("fixtures")
+      .update({ is_published: true }, { count: "exact" })
+      .eq("season_id", seasonId)
+      .eq("is_published", false);
+
+    if (error) return { error: error.message };
+    revalidateWorkspace();
+    return {
+      error: null,
+      success: `Opublikowano terminarz sezonu (${count ?? 0} meczów → widoczne w Strefie Gracza).`,
+    };
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Błąd publikacji terminarza." };
+  }
+}
+
 export async function unpublishSeasonGameweek(
   seasonId: string,
   gameweek: number,

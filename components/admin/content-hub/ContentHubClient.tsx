@@ -36,8 +36,14 @@ import {
   dataUrlToFile,
   DISCORD_MAX_FILE_BYTES,
   DISCORD_MAX_FILES,
+  formatDiscordMultiSendToast,
   postDiscordWebhookFromClient,
 } from "@/lib/admin/discordClientSend";
+import {
+  DISCORD_SERVER_LABELS,
+  DISCORD_SERVER_TARGETS,
+  type DiscordServerTarget,
+} from "@/lib/admin/discordWebhooks";
 import { getFARankingData } from "@/lib/public/actions";
 import type { FARankingPayload } from "@/lib/public/faRanking";
 import { DiscordEmbedPreview } from "@/components/admin/content-hub/DiscordEmbedPreview";
@@ -180,6 +186,12 @@ export function ContentHubClient({
   const [pending, startTransition] = useTransition();
   const [discordGenPending, startDiscordGen] = useTransition();
   const [sendPending, setSendPending] = useState(false);
+  const [sendServers, setSendServers] = useState<
+    Record<DiscordServerTarget, boolean>
+  >({
+    NA_MINUSIE: true,
+    FPL_ARENA: false,
+  });
   const [downloadBusy, setDownloadBusy] = useState<
     "wyniki" | "tabela" | "terminarz" | "fa-roster" | null
   >(null);
@@ -210,16 +222,32 @@ export function ContentHubClient({
     return seasons.find((s) => s.id === sendTarget.seasonId) ?? null;
   }, [seasons, sendTarget]);
 
-  const hasWebhook = useMemo(() => {
-    if (!sendTarget) return false;
+  const webhookByServer = useMemo((): Record<DiscordServerTarget, boolean> => {
+    const empty = { NA_MINUSIE: false, FPL_ARENA: false };
+    if (!sendTarget) return empty;
     if (sendTarget.kind === "division") {
-      return Boolean(selectedDivision?.hasWebhook);
+      return selectedDivision?.hasWebhookByServer ?? empty;
     }
     if (sendTarget.channel === "fa_ranking") {
-      return Boolean(selectedSeason?.hasFaRankingWebhook);
+      return selectedSeason?.hasFaRankingWebhookByServer ?? empty;
     }
-    return Boolean(selectedSeason?.hasFaCupWebhook);
+    return selectedSeason?.hasFaCupWebhookByServer ?? empty;
   }, [sendTarget, selectedDivision, selectedSeason]);
+
+  const selectedServerTargets = useMemo(
+    () => DISCORD_SERVER_TARGETS.filter((s) => sendServers[s]),
+    [sendServers],
+  );
+
+  const hasWebhook = useMemo(() => {
+    if (!selectedServerTargets.length) return false;
+    return selectedServerTargets.every((s) => webhookByServer[s]);
+  }, [selectedServerTargets, webhookByServer]);
+
+  const anyWebhookConfigured = useMemo(
+    () => DISCORD_SERVER_TARGETS.some((s) => webhookByServer[s]),
+    [webhookByServer],
+  );
 
   const targetLabel = useMemo(() => {
     if (sendTarget?.kind === "division") {
@@ -498,10 +526,14 @@ export function ContentHubClient({
       showToast("err", "Wybierz cel wysyłki.");
       return;
     }
+    if (!selectedServerTargets.length) {
+      showToast("err", "Zaznacz co najmniej jeden serwer Discord.");
+      return;
+    }
     if (!hasWebhook) {
       showToast(
         "err",
-        "Brak skonfigurowanego adresu Webhooka dla tej akcji. Ustaw w adminie → Webhooki Discord.",
+        "Brak webhooka na zaznaczonym serwerze. Ustaw w adminie → Webhooki Discord.",
       );
       return;
     }
@@ -510,6 +542,9 @@ export function ContentHubClient({
       customFiles.length > 0
         ? ` + ${customFiles.length} własne`
         : "";
+    const serverNames = selectedServerTargets
+      .map((s) => DISCORD_SERVER_LABELS[s])
+      .join(" + ");
     if (
       !window.confirm(
         `Wysłać embed${
@@ -520,7 +555,7 @@ export function ContentHubClient({
                 ? " + grafikę terminarza"
                 : " + grafiki PNG"
             : ""
-        }${extrasHint} na „${targetLabel}”?`,
+        }${extrasHint} na „${targetLabel}” → ${serverNames}?`,
       )
     ) {
       return;
@@ -528,7 +563,10 @@ export function ContentHubClient({
 
     setSendPending(true);
     try {
-      const dest = await getDiscordWebhookForSend(sendTarget);
+      const dest = await getDiscordWebhookForSend(
+        sendTarget,
+        selectedServerTargets,
+      );
       if (!dest || "error" in dest) {
         showToast(
           "err",
@@ -571,7 +609,7 @@ export function ContentHubClient({
         }
 
         const posted = await postDiscordWebhookFromClient({
-          webhookUrl: dest.url,
+          destinations: dest.destinations,
           rawJson: discordJson,
           files,
         });
@@ -580,7 +618,8 @@ export function ContentHubClient({
           return;
         }
         const extra = files.length ? ` + ${files.length} plik(ów)` : "";
-        showToast("ok", `Wysłano embed${extra} na Discord · ${dest.label}`);
+        const toast = formatDiscordMultiSendToast(posted.results);
+        showToast("ok", `${toast.message}${extra}`);
       };
 
       if (!attachGraphics || !canAttachGraphics) {
@@ -803,8 +842,13 @@ export function ContentHubClient({
                 </select>
                 <p className="mt-2 text-[11px] text-slate-500">
                   Webhook:{" "}
-                  {hasWebhook ? (
-                    <span className="text-emerald-400">OK · {targetLabel}</span>
+                  {anyWebhookConfigured ? (
+                    <span className="text-emerald-400">
+                      {DISCORD_SERVER_TARGETS.filter((s) => webhookByServer[s])
+                        .map((s) => DISCORD_SERVER_LABELS[s])
+                        .join(" · ")}{" "}
+                      · {targetLabel}
+                    </span>
                   ) : (
                     <span className="text-amber-400">
                       brak — Webhooki Discord
@@ -1222,6 +1266,54 @@ export function ContentHubClient({
                 {jsonError}
               </p>
             ) : null}
+
+            <fieldset className="mt-4 space-y-2 rounded-xl border border-slate-700/50 bg-slate-950/50 p-4">
+              <legend className="px-1 text-[10px] font-black uppercase tracking-wider text-slate-500">
+                Cel wysyłki Discord
+              </legend>
+              {DISCORD_SERVER_TARGETS.map((server) => {
+                const configured = webhookByServer[server];
+                const checked = sendServers[server];
+                return (
+                  <label
+                    key={server}
+                    className="flex cursor-pointer items-start gap-3 rounded-lg px-1 py-1.5 hover:bg-slate-900/80"
+                  >
+                    <input
+                      type="checkbox"
+                      className="mt-0.5 h-4 w-4 accent-[#39FF14]"
+                      checked={checked}
+                      onChange={(e) =>
+                        setSendServers((prev) => ({
+                          ...prev,
+                          [server]: e.target.checked,
+                        }))
+                      }
+                    />
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-bold text-white">
+                        Wyślij na {DISCORD_SERVER_LABELS[server]}
+                      </span>
+                      <span
+                        className={`text-[11px] ${
+                          configured ? "text-emerald-400" : "text-amber-400"
+                        }`}
+                      >
+                        {configured
+                          ? "Webhook OK"
+                          : "Brak webhooka — ustaw w adminie → Webhooki"}
+                      </span>
+                    </span>
+                  </label>
+                );
+              })}
+              {!selectedServerTargets.length ? (
+                <p className="text-[11px] font-semibold text-rose-400">
+                  Zaznacz co najmniej jeden serwer.
+                </p>
+              ) : null}
+            </fieldset>
+
             <button
               type="button"
               disabled={
@@ -1229,6 +1321,8 @@ export function ContentHubClient({
                 !sendTarget ||
                 !discordJson.trim() ||
                 Boolean(jsonError) ||
+                !selectedServerTargets.length ||
+                !hasWebhook ||
                 (attachGraphics &&
                   !isGlobal &&
                   (captureLoading || !capture)) ||

@@ -136,6 +136,8 @@ CREATE TABLE IF NOT EXISTS public.discord_webhooks (
   global_type TEXT NULL
     CHECK (global_type IS NULL OR global_type IN ('FA_RANKING', 'FA_CUP')),
   division_level INTEGER NULL CHECK (division_level IS NULL OR division_level >= 1),
+  server_target TEXT NOT NULL DEFAULT 'NA_MINUSIE'
+    CHECK (server_target IN ('NA_MINUSIE', 'FPL_ARENA')),
   url TEXT NOT NULL,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   CONSTRAINT discord_webhooks_global_requires_type CHECK (
@@ -145,12 +147,15 @@ CREATE TABLE IF NOT EXISTS public.discord_webhooks (
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS discord_webhooks_global_unique
-  ON public.discord_webhooks (global_type)
+  ON public.discord_webhooks (global_type, server_target)
   WHERE scope = 'GLOBAL';
 
 CREATE UNIQUE INDEX IF NOT EXISTS discord_webhooks_division_level_unique
-  ON public.discord_webhooks (division_level)
+  ON public.discord_webhooks (division_level, server_target)
   WHERE scope = 'DIVISION';
+
+CREATE INDEX IF NOT EXISTS idx_discord_webhooks_server_target
+  ON public.discord_webhooks (server_target);
 
 -- Punkty FPL per gracz × kolejka (The FA Ranking / Overall) — niezależne od H2H fixtures
 CREATE TABLE public.team_gameweek_scores (
@@ -273,6 +278,7 @@ AS $$
   SELECT EXISTS (
     SELECT 1 FROM public.discord_webhooks w
     WHERE w.scope = 'DIVISION' AND w.division_level = p_level
+      AND w.server_target = 'NA_MINUSIE'
       AND length(trim(w.url)) > 0
   );
 $$;
@@ -287,6 +293,7 @@ AS $$
   SELECT EXISTS (
     SELECT 1 FROM public.discord_webhooks w
     WHERE w.scope = 'GLOBAL' AND w.global_type = p_type
+      AND w.server_target = 'NA_MINUSIE'
       AND length(trim(w.url)) > 0
   );
 $$;

@@ -6,6 +6,7 @@ import {
   getPublicTierLogos,
 } from "@/lib/public/actions";
 import { getPlayerSearchList } from "@/lib/public/playerZone";
+import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +16,15 @@ type Props = {
 
 export default async function StrefaGraczaPage({ searchParams }: Props) {
   let loadError: string | null = null;
+
+  let isAdmin = false;
+  try {
+    const supabase = createClient();
+    const { data: auth } = await supabase.auth.getUser();
+    isAdmin = Boolean(auth.user);
+  } catch {
+    isAdmin = false;
+  }
 
   try {
     const { tab, seasonId } = await searchParams;
@@ -39,7 +49,7 @@ export default async function StrefaGraczaPage({ searchParams }: Props) {
             searchPlayers={searchList.players}
             initialTab={parseHubTab(tab)}
             initialSeasonId={seasonId}
-            isAdmin
+            isAdmin={isAdmin}
           />
         </div>
       </main>
