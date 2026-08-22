@@ -13,11 +13,18 @@ interface PortalCardProps {
   badge?: string;
 }
 
+const sharedLogoContainer =
+  "mt-5 mb-6 h-28 w-28 shrink-0 rounded-2xl bg-slate-950/70 p-3 ring-2 backdrop-blur-sm sm:mb-7 sm:mt-6 sm:h-36 sm:w-36";
+const sharedLogoImage =
+  "h-full w-full object-contain drop-shadow-[0_8px_24px_rgba(0,0,0,0.45)] transition-transform duration-500 group-hover:scale-110";
+
 const variantStyles: Record<
   PortalVariant,
   {
     card: string;
-    logoRing: string;
+    logoContainer: string;
+    logoImage: string;
+    showTitle: boolean;
     title: string;
     cta: string;
     badge: string;
@@ -26,7 +33,9 @@ const variantStyles: Record<
   arena: {
     card:
       "border-slate-700/80 bg-slate-900/50 shadow-none hover:border-fuchsia-500/40 hover:shadow-[0_0_40px_-12px_rgba(192,132,252,0.35)]",
-    logoRing: "ring-slate-600/40 group-hover:ring-fuchsia-400/40",
+    logoContainer: `${sharedLogoContainer} ring-slate-600/40 group-hover:ring-fuchsia-400/40`,
+    logoImage: sharedLogoImage,
+    showTitle: true,
     title: "text-slate-200 group-hover:text-white",
     cta:
       "border border-slate-600/70 bg-transparent text-slate-300 group-hover:border-fuchsia-400/50 group-hover:text-fuchsia-200",
@@ -36,7 +45,9 @@ const variantStyles: Record<
   "na-minusie": {
     card:
       "border-emerald-500/35 bg-slate-900/60 shadow-[0_0_30px_rgba(16,185,129,0.2)] hover:border-emerald-400/55 hover:shadow-[0_0_50px_rgba(16,185,129,0.4)]",
-    logoRing: "ring-emerald-500/35 group-hover:ring-emerald-400/60",
+    logoContainer: `${sharedLogoContainer} ring-emerald-500/35 group-hover:ring-emerald-400/60`,
+    logoImage: sharedLogoImage,
+    showTitle: true,
     title: "text-white",
     cta:
       "border border-emerald-600 bg-emerald-600 text-white group-hover:border-emerald-500 group-hover:bg-emerald-500 group-hover:shadow-[0_0_24px_rgba(16,185,129,0.45)]",
@@ -46,7 +57,9 @@ const variantStyles: Record<
   "no-big-six": {
     card:
       "border-amber-500/30 bg-slate-900/60 shadow-[0_0_30px_rgba(245,158,11,0.2)] hover:border-amber-400 hover:shadow-[0_0_50px_rgba(245,158,11,0.35)]",
-    logoRing: "ring-amber-500/30 group-hover:ring-amber-400/50",
+    logoContainer: `${sharedLogoContainer} ring-amber-500/30 group-hover:ring-amber-400/50`,
+    logoImage: sharedLogoImage,
+    showTitle: true,
     title: "text-amber-500 group-hover:text-amber-400",
     cta:
       "border border-amber-500/50 bg-amber-500/10 text-amber-500 group-hover:border-amber-400 group-hover:bg-amber-500/20 group-hover:shadow-[0_0_24px_rgba(245,158,11,0.35)]",
@@ -84,7 +97,7 @@ export function PortalCard({
         </div>
 
         <div
-          className={`relative mt-5 mb-6 flex h-28 w-28 shrink-0 items-center justify-center rounded-2xl bg-slate-950/70 p-3 ring-2 backdrop-blur-sm transition-all duration-500 group-hover:scale-105 sm:mb-7 sm:mt-6 sm:h-36 sm:w-36 ${styles.logoRing}`}
+          className={`relative flex items-center justify-center transition-all duration-500 group-hover:scale-105 ${styles.logoContainer}`}
         >
           <Image
             src={logoSrc}
@@ -93,16 +106,20 @@ export function PortalCard({
             height={144}
             quality={95}
             sizes="(max-width: 640px) 112px, 144px"
-            className="h-full w-full object-contain drop-shadow-[0_8px_24px_rgba(0,0,0,0.45)] transition-transform duration-500 group-hover:scale-110"
+            className={styles.logoImage}
             priority
           />
         </div>
 
-        <h2
-          className={`font-athletic min-h-[2.5rem] text-3xl font-bold tracking-wide sm:min-h-[2.75rem] sm:text-4xl ${styles.title}`}
-        >
-          {title}
-        </h2>
+        {styles.showTitle ? (
+          <h2
+            className={`font-athletic min-h-[2.5rem] text-3xl font-bold tracking-wide sm:min-h-[2.75rem] sm:text-4xl ${styles.title}`}
+          >
+            {title}
+          </h2>
+        ) : (
+          <span className="sr-only">{title}</span>
+        )}
 
         <p className="mt-4 flex-1 text-base leading-relaxed text-slate-400 transition-colors duration-300 group-hover:text-slate-300 sm:text-lg">
           {description}

@@ -61,6 +61,10 @@ const portalLogos = [
     src: path.join(root, "logo", "Na Minusie.png"),
     dest: path.join(imagesDir, "na-minusie-logo.png"),
   },
+  {
+    src: path.join(root, "logo", "No Big Six.png"),
+    dest: path.join(imagesDir, "no-big-six-logo.png"),
+  },
 ];
 
 for (const { src, dest } of portalLogos) {

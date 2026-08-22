@@ -2,6 +2,11 @@ import { PortalCard } from "@/components/platform/PortalCard";
 import { SplashAdminLink } from "@/components/platform/SplashAdminLink";
 import { SplashBrandLockup } from "@/components/platform/SplashBrandLockup";
 import { NA_MINUSIE_LOGO, NA_MINUSIE_LOGO_ALT } from "@/lib/na-minusie";
+import {
+  NO_BIG_SIX_LOGO,
+  NO_BIG_SIX_LOGO_ALT,
+  NO_BIG_SIX_PORTAL_TITLE,
+} from "@/lib/no-big-six/branding";
 
 export default function HomePage() {
   return (
@@ -35,11 +40,11 @@ export default function HomePage() {
           badge="Aktualny"
         />
         <PortalCard
-          title="FPL ARENA: NO BIG SIX"
+          title={NO_BIG_SIX_PORTAL_TITLE}
           description="Liga bez gigantów. Punktują tylko gracze spoza klasycznej Big Six. Czy potrafisz wygrać bez gwiazd z topu?"
           href="/no-big-six"
-          logoSrc="/images/fpl-arena-logo.png"
-          logoAlt="Logo FPL Arena: No Big Six"
+          logoSrc={NO_BIG_SIX_LOGO}
+          logoAlt={NO_BIG_SIX_LOGO_ALT}
           variant="no-big-six"
           ctaLabel="Wejdź do Ligi →"
           badge="SEZON 2026/27"
