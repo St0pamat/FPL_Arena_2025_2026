@@ -1,10 +1,13 @@
 import {
+  Ban,
   Calculator,
+  ExternalLink,
   Gamepad2,
   Image,
   Layers,
   LayoutDashboard,
   Megaphone,
+  RefreshCw,
   ShieldAlert,
   Swords,
   Trophy,
@@ -137,6 +140,39 @@ const NA_MINUSIE_EXTRA: AdminNavItem[] = [
   },
 ];
 
+const NO_BIG_SIX_SECTIONS: AdminNavSection[] = [
+  {
+    id: "sync",
+    label: "Synchronizacja",
+    items: [
+      {
+        href: "/admin/no-big-six/sync",
+        label: "Sync FPL",
+        icon: RefreshCw,
+        hint: "Pobierz składy, kary Big Six, wyniki GW",
+      },
+      {
+        href: "/no-big-six",
+        label: "Podgląd publiczny",
+        icon: ExternalLink,
+        hint: "Strona ligi /no-big-six",
+      },
+    ],
+  },
+  {
+    id: "assets",
+    label: "Assety",
+    items: [
+      {
+        href: "/admin/no-big-six/logos",
+        label: "Herby drużyn",
+        icon: Image,
+        hint: "Customowe herby — nie giną po synchronizacji",
+      },
+    ],
+  },
+];
+
 export const ADMIN_PROJECTS: AdminProject[] = [
   {
     id: "na-minusie",
@@ -148,12 +184,12 @@ export const ADMIN_PROJECTS: AdminProject[] = [
     extra: NA_MINUSIE_EXTRA,
   },
   {
-    id: "igrzyska",
-    label: "FPL Arena: Igrzyska Kapci Kłapcia",
-    icon: Gamepad2,
-    accent: "text-purple-400",
-    enabled: false,
-    sections: [],
+    id: "no-big-six",
+    label: "FPL Arena: No Big Six",
+    icon: Ban,
+    accent: "text-amber-500",
+    enabled: true,
+    sections: NO_BIG_SIX_SECTIONS,
     extra: [],
   },
   {
@@ -161,6 +197,15 @@ export const ADMIN_PROJECTS: AdminProject[] = [
     label: "FPL Arena: Mates",
     icon: Users,
     accent: "text-sky-400",
+    enabled: false,
+    sections: [],
+    extra: [],
+  },
+  {
+    id: "igrzyska",
+    label: "FPL Arena: Igrzyska Kapci Kłapcia",
+    icon: Gamepad2,
+    accent: "text-purple-400",
     enabled: false,
     sections: [],
     extra: [],

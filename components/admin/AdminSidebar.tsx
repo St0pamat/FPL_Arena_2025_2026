@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ChevronLeft, ExternalLink, Home, Lock, type LucideIcon } from "lucide-react";
 import {
   ADMIN_BRAND,
@@ -17,24 +17,25 @@ function NavLink({
   hint,
   icon: Icon,
   active,
+  external = false,
 }: {
   href: string;
   label: string;
   hint?: string;
   icon: LucideIcon;
   active: boolean;
+  external?: boolean;
 }) {
-  return (
-    <Link
-      href={href}
-      className={`flex items-start gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors ${
-        active
-          ? "bg-[#39FF14]/10 text-[#39FF14]"
-          : "text-[#aaa] hover:bg-[#161616] hover:text-white"
-      }`}
-    >
+  const className = `flex items-start gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors ${
+    active
+      ? "bg-[#39FF14]/10 text-[#39FF14]"
+      : "text-[#aaa] hover:bg-[#161616] hover:text-white"
+  }`;
+
+  const content = (
+    <>
       <Icon className="mt-0.5 h-4 w-4 shrink-0" strokeWidth={1.75} />
-      <span className="min-w-0 leading-tight">
+      <span className="min-w-0 flex-1 leading-tight">
         <span className="block">{label}</span>
         {hint ? (
           <span
@@ -46,8 +47,32 @@ function NavLink({
           </span>
         ) : null}
       </span>
+      {external ? (
+        <ExternalLink className="mt-0.5 h-3.5 w-3.5 shrink-0 opacity-60" aria-hidden />
+      ) : null}
+    </>
+  );
+
+  if (external) {
+    return (
+      <a href={href} target="_blank" rel="noopener noreferrer" className={className}>
+        {content}
+      </a>
+    );
+  }
+
+  return (
+    <Link href={href} className={className}>
+      {content}
     </Link>
   );
+}
+
+function findProjectForAdminPath(pathname: string): AdminProject | null {
+  if (pathname.startsWith("/admin/no-big-six")) {
+    return ADMIN_PROJECTS.find((p) => p.id === "no-big-six") ?? null;
+  }
+  return null;
 }
 
 function ProjectButton({
@@ -81,6 +106,11 @@ function ProjectButton({
 export function AdminSidebar({ userEmail }: { userEmail: string }) {
   const pathname = usePathname();
   const [activeProject, setActiveProject] = useState<AdminProject | null>(null);
+
+  useEffect(() => {
+    const detected = findProjectForAdminPath(pathname);
+    if (detected) setActiveProject(detected);
+  }, [pathname]);
 
   return (
     <aside className="flex w-64 shrink-0 flex-col border-r border-[#1a1a1a] bg-[#0a0a0a]">
@@ -134,7 +164,10 @@ export function AdminSidebar({ userEmail }: { userEmail: string }) {
                 </p>
                 <div className="space-y-0.5">
                   {section.items.map(({ href, label, hint, icon }) => {
-                    const active = pathname === href || pathname.startsWith(`${href}/`);
+                    const active =
+                      !href.startsWith("/no-big-six") &&
+                      (pathname === href || pathname.startsWith(`${href}/`));
+                    const external = !href.startsWith("/admin");
                     return (
                       <NavLink
                         key={href}
@@ -143,6 +176,7 @@ export function AdminSidebar({ userEmail }: { userEmail: string }) {
                         hint={hint}
                         icon={icon}
                         active={active}
+                        external={external}
                       />
                     );
                   })}

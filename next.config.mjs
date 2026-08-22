@@ -32,6 +32,10 @@ const nextConfig = {
         source: "/uploads/tier-logos/:file",
         destination: "/api/uploads/tier-logos/:file",
       },
+      {
+        source: "/uploads/no-big-six-logos/:file",
+        destination: "/api/uploads/no-big-six-logos/:file",
+      },
       // Seed + stare uploady do public/tier-logos/ (też przez API z dysku)
       {
         source: "/tier-logos/:file",

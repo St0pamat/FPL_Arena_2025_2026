@@ -13,7 +13,7 @@ export default function HomePage() {
         <SplashBrandLockup />
       </div>
 
-      <div className="relative z-10 grid w-full max-w-5xl grid-cols-1 gap-5 sm:gap-6 md:grid-cols-2 md:gap-8">
+      <div className="relative z-10 grid w-full max-w-6xl grid-cols-1 gap-5 sm:gap-6 md:grid-cols-2 lg:grid-cols-3 lg:gap-8">
         <PortalCard
           title="IGRZYSKA KAPCI KŁAPCIA"
           description="Zamknięty projekt. Skarb Kibica i archiwum sezonu 2025/2026."
@@ -33,6 +33,16 @@ export default function HomePage() {
           variant="na-minusie"
           ctaLabel="Dołącz do Ligi →"
           badge="Aktualny"
+        />
+        <PortalCard
+          title="FPL ARENA: NO BIG SIX"
+          description="Liga bez gigantów. Punktują tylko gracze spoza klasycznej Big Six. Czy potrafisz wygrać bez gwiazd z topu?"
+          href="/no-big-six"
+          logoSrc="/images/fpl-arena-logo.png"
+          logoAlt="Logo FPL Arena: No Big Six"
+          variant="no-big-six"
+          ctaLabel="Wejdź do Ligi →"
+          badge="SEZON 2026/27"
         />
       </div>
 

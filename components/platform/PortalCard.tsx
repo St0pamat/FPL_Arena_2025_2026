@@ -43,6 +43,16 @@ const variantStyles: Record<
     badge:
       "border-emerald-500/30 bg-emerald-500/10 text-emerald-300 shadow-[0_0_18px_rgba(16,185,129,0.25)]",
   },
+  "no-big-six": {
+    card:
+      "border-amber-500/30 bg-slate-900/60 shadow-[0_0_30px_rgba(245,158,11,0.2)] hover:border-amber-400 hover:shadow-[0_0_50px_rgba(245,158,11,0.35)]",
+    logoRing: "ring-amber-500/30 group-hover:ring-amber-400/50",
+    title: "text-amber-500 group-hover:text-amber-400",
+    cta:
+      "border border-amber-500/50 bg-amber-500/10 text-amber-500 group-hover:border-amber-400 group-hover:bg-amber-500/20 group-hover:shadow-[0_0_24px_rgba(245,158,11,0.35)]",
+    badge:
+      "border-amber-500/30 bg-amber-500/10 text-amber-500 shadow-[0_0_18px_rgba(245,158,11,0.2)]",
+  },
 };
 
 export function PortalCard({
