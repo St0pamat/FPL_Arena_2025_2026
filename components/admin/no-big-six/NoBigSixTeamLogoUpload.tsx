@@ -3,10 +3,6 @@
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
-  deleteNoBigSixLogo,
-  uploadNoBigSixLogo,
-} from "@/lib/no-big-six/actions";
-import {
   NO_BIG_SIX_LOGO_MAX_BYTES,
   isAllowedLogoMime,
 } from "@/lib/no-big-six/logos";
@@ -17,6 +13,53 @@ type Props = {
   customLogoUrl?: string | null;
   disabled?: boolean;
 };
+
+type LogoApiResult = {
+  ok?: boolean;
+  message?: string;
+  url?: string;
+};
+
+async function postLogo(
+  formData: FormData,
+): Promise<{ result: LogoApiResult | null; httpStatus: number; raw: string }> {
+  const res = await fetch("/api/admin/no-big-six/logo", {
+    method: "POST",
+    body: formData,
+    credentials: "same-origin",
+  });
+  const raw = await res.text();
+  try {
+    return {
+      result: JSON.parse(raw) as LogoApiResult,
+      httpStatus: res.status,
+      raw,
+    };
+  } catch {
+    return { result: null, httpStatus: res.status, raw };
+  }
+}
+
+async function deleteLogo(
+  entryId: number,
+): Promise<{ result: LogoApiResult | null; httpStatus: number; raw: string }> {
+  const res = await fetch("/api/admin/no-big-six/logo", {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ entryId }),
+    credentials: "same-origin",
+  });
+  const raw = await res.text();
+  try {
+    return {
+      result: JSON.parse(raw) as LogoApiResult,
+      httpStatus: res.status,
+      raw,
+    };
+  } catch {
+    return { result: null, httpStatus: res.status, raw };
+  }
+}
 
 export function NoBigSixTeamLogoUpload({
   entryId,
@@ -31,10 +74,17 @@ export function NoBigSixTeamLogoUpload({
   const [pending, startTransition] = useTransition();
   const hasLogo = Boolean(customLogoUrl);
 
-  function applyResult(result: { ok?: boolean; message?: string } | null | undefined) {
+  function applyResult(
+    result: LogoApiResult | null,
+    httpStatus: number,
+    raw: string,
+  ): boolean {
     if (!result || typeof result.ok !== "boolean") {
       setIsError(true);
-      setMessage("Brak odpowiedzi serwera. Spróbuj ponownie lub odśwież stronę.");
+      const snippet = raw.replace(/\s+/g, " ").trim().slice(0, 120);
+      setMessage(
+        `Błąd serwera (HTTP ${httpStatus})${snippet ? `: ${snippet}` : ". Sprawdź logi PM2 / nginx."}`,
+      );
       return false;
     }
     setIsError(!result.ok);
@@ -71,13 +121,14 @@ export function NoBigSixTeamLogoUpload({
 
       const formData = new FormData();
       formData.set("file", file);
+      formData.set("entryId", String(entryId));
 
       startTransition(() => {
         void (async () => {
           try {
             setMessage(null);
-            const result = await uploadNoBigSixLogo(formData, entryId);
-            if (applyResult(result)) {
+            const { result, httpStatus, raw } = await postLogo(formData);
+            if (applyResult(result, httpStatus, raw)) {
               if (input) input.value = "";
               router.refresh();
             }
@@ -105,8 +156,8 @@ export function NoBigSixTeamLogoUpload({
       void (async () => {
         try {
           setMessage(null);
-          const result = await deleteNoBigSixLogo(entryId);
-          if (applyResult(result)) {
+          const { result, httpStatus, raw } = await deleteLogo(entryId);
+          if (applyResult(result, httpStatus, raw)) {
             if (inputRef.current) inputRef.current.value = "";
             router.refresh();
           }
