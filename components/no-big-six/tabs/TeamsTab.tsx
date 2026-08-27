@@ -3,19 +3,12 @@ import {
   formatViolationLine,
   getIntentionalPenalties,
 } from "@/lib/no-big-six/penalties";
+import { NoBigSixTeamCrest } from "@/components/no-big-six/NoBigSixTeamCrest";
 
 type Props = {
   teams: NoBigSixTeam[];
   penalties: NoBigSixPenalty[];
 };
-
-function teamInitials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length >= 2) {
-    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-  }
-  return name.slice(0, 2).toUpperCase() || "?";
-}
 
 export function TeamsTab({ teams, penalties }: Props) {
   const sorted = [...teams].sort((a, b) => {
@@ -34,7 +27,10 @@ export function TeamsTab({ teams, penalties }: Props) {
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
       {sorted.map((team) => {
-        const intentionalViolations = getIntentionalPenalties(penalties, team.entry_id);
+        const intentionalViolations = getIntentionalPenalties(
+          penalties,
+          team.entry_id,
+        );
 
         return (
           <article
@@ -75,21 +71,13 @@ export function TeamsTab({ teams, penalties }: Props) {
               </div>
             ) : null}
 
-            {team.custom_logo_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={team.custom_logo_url}
-                alt={`Herb ${team.team_name}`}
-                className="mb-4 h-20 w-20 rounded-2xl border border-slate-700 object-cover"
-              />
-            ) : (
-              <div
-                className="mb-4 flex h-20 w-20 items-center justify-center rounded-2xl border-2 border-amber-500/40 bg-amber-500/10 font-athletic text-2xl font-bold text-amber-500"
-                aria-hidden
-              >
-                {teamInitials(team.team_name)}
-              </div>
-            )}
+            <NoBigSixTeamCrest
+              url={team.custom_logo_url}
+              teamName={team.team_name}
+              sizeClass="mb-4 h-20 w-20"
+              shape="circle"
+              initialsChars={2}
+            />
             <h3 className="font-semibold text-white">{team.team_name}</h3>
             <p className="mt-1 text-sm text-slate-400">{team.player_name}</p>
           </article>

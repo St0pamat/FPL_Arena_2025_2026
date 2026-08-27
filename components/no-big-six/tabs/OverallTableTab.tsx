@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import { ArrowDown, ArrowUp, Camera, Minus, Shield } from "lucide-react";
+import { ArrowDown, ArrowUp, Camera, Minus } from "lucide-react";
 import { toPng } from "html-to-image";
 import type {
   NoBigSixGwResult,
@@ -16,6 +16,7 @@ import {
   getIntentionalPenalties,
 } from "@/lib/no-big-six/penalties";
 import { DoZbanowaniaBadge } from "@/components/no-big-six/DoZbanowaniaBadge";
+import { NoBigSixTeamCrest } from "@/components/no-big-six/NoBigSixTeamCrest";
 import {
   NO_BIG_SIX_LOGO,
   NO_BIG_SIX_LOGO_ALT,
@@ -30,10 +31,6 @@ type Props = {
 
 const EXPORT_WIDTH_PX = 1080;
 
-function teamInitial(name: string): string {
-  return name.trim().charAt(0).toUpperCase() || "?";
-}
-
 function TrendIcon({ trend }: { trend: NoBigSixTrend }) {
   if (trend === "up") {
     return <ArrowUp className="h-3.5 w-3.5 text-emerald-500" aria-label="Awans" />;
@@ -42,34 +39,6 @@ function TrendIcon({ trend }: { trend: NoBigSixTrend }) {
     return <ArrowDown className="h-3.5 w-3.5 text-rose-500" aria-label="Spadek" />;
   }
   return <Minus className="h-3.5 w-3.5 text-slate-500" aria-label="Bez zmian" />;
-}
-
-function TeamCrest({
-  url,
-  teamName,
-}: {
-  url: string | null;
-  teamName: string;
-}) {
-  if (url) {
-    return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={url}
-        alt={`Herb ${teamName}`}
-        className="h-8 w-8 shrink-0 rounded-full border border-slate-700 object-cover"
-      />
-    );
-  }
-
-  return (
-    <div
-      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-amber-500/40 bg-slate-950 text-[11px] font-bold text-amber-500"
-      aria-hidden
-    >
-      {teamInitial(teamName) || <Shield className="h-3.5 w-3.5" />}
-    </div>
-  );
 }
 
 function podiumRowClass(rank: number | null, isBanned: boolean): string {
@@ -437,7 +406,13 @@ function StandingRow({
       </td>
       <td className="px-2 py-3 sm:px-3">
         <div className="flex items-start gap-3">
-          <TeamCrest url={row.custom_logo_url} teamName={row.team_name} />
+          <NoBigSixTeamCrest
+            url={row.custom_logo_url}
+            teamName={row.team_name}
+            sizeClass="h-8 w-8"
+            shape="circle"
+            initialsChars={1}
+          />
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <p

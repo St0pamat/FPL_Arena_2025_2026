@@ -1,11 +1,12 @@
 "use server";
 
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import {
   NO_BIG_SIX_LOGO_MAX_BYTES,
+  NO_BIG_SIX_LOGOS_PUBLIC_PATH,
   NO_BIG_SIX_LOGOS_UPLOAD_DIR,
   buildNoBigSixLogoFileName,
   isAllowedLogoMime,
@@ -417,6 +418,28 @@ function uploadDir() {
   return path.join(process.cwd(), "public", NO_BIG_SIX_LOGOS_UPLOAD_DIR);
 }
 
+/** Bezpieczna nazwa pliku z publicznego URL herbu No Big Six. */
+function fileNameFromLogoUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  const trimmed = url.trim();
+  const prefix = `${NO_BIG_SIX_LOGOS_PUBLIC_PATH}/`;
+  if (!trimmed.startsWith(prefix)) return null;
+  const name = trimmed.slice(prefix.length).split(/[?#]/)[0] ?? "";
+  if (!name || name.includes("..") || name.includes("/") || name.includes("\\")) {
+    return null;
+  }
+  if (!/^[a-zA-Z0-9._-]+$/.test(name)) return null;
+  return name;
+}
+
+async function tryUnlinkLogoFile(fileName: string): Promise<void> {
+  try {
+    await unlink(path.join(uploadDir(), fileName));
+  } catch {
+    /* plik mógł już nie istnieć (np. lokalny upload vs VPS) */
+  }
+}
+
 export async function uploadNoBigSixLogo(
   formData: FormData,
   entryId: number,
@@ -430,7 +453,7 @@ export async function uploadNoBigSixLogo(
 
     const { data: team, error: teamError } = await supabase
       .from("no_big_six_teams")
-      .select("entry_id, is_banned")
+      .select("entry_id, is_banned, custom_logo_url")
       .eq("entry_id", entryId)
       .maybeSingle();
 
@@ -485,7 +508,15 @@ export async function uploadNoBigSixLogo(
       .eq("entry_id", entryId);
 
     if (updateError) {
+      await tryUnlinkLogoFile(fileName);
       return { ok: false, message: updateError.message };
+    }
+
+    const previous = fileNameFromLogoUrl(
+      team.custom_logo_url != null ? String(team.custom_logo_url) : null,
+    );
+    if (previous && previous !== fileName) {
+      await tryUnlinkLogoFile(previous);
     }
 
     revalidatePath("/no-big-six");
@@ -496,7 +527,54 @@ export async function uploadNoBigSixLogo(
     console.error("[uploadNoBigSixLogo]", e);
     return {
       ok: false,
-      message: e instanceof Error ? e.message : "Nie udało się zapisać herbu.",
+      message:
+        "Wystąpił nieoczekiwany błąd serwera podczas wgrywania pliku.",
+    };
+  }
+}
+
+export async function deleteNoBigSixLogo(
+  entryId: number,
+): Promise<UploadNoBigSixLogoResult> {
+  try {
+    if (!Number.isFinite(entryId) || entryId < 1) {
+      return { ok: false, message: "Nieprawidłowy entry_id." };
+    }
+
+    const supabase = await requireAuth();
+
+    const { data: team, error: teamError } = await supabase
+      .from("no_big_six_teams")
+      .select("entry_id, custom_logo_url")
+      .eq("entry_id", entryId)
+      .maybeSingle();
+
+    if (teamError) return { ok: false, message: teamError.message };
+    if (!team) return { ok: false, message: "Nie znaleziono zespołu w bazie." };
+
+    const fileName = fileNameFromLogoUrl(
+      team.custom_logo_url != null ? String(team.custom_logo_url) : null,
+    );
+    if (fileName) {
+      await tryUnlinkLogoFile(fileName);
+    }
+
+    const { error: updateError } = await supabase
+      .from("no_big_six_teams")
+      .update({ custom_logo_url: null })
+      .eq("entry_id", entryId);
+
+    if (updateError) return { ok: false, message: updateError.message };
+
+    revalidatePath("/no-big-six");
+    revalidatePath("/admin/no-big-six/logos");
+
+    return { ok: true, message: "Herb usunięty." };
+  } catch (e) {
+    console.error("[deleteNoBigSixLogo]", e);
+    return {
+      ok: false,
+      message: "Wystąpił nieoczekiwany błąd serwera podczas usuwania herbu.",
     };
   }
 }
