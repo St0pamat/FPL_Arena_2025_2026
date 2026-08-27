@@ -1,5 +1,9 @@
 ﻿"use server";
 
+import {
+  fetchGameweekMetadata,
+  isGwSyncStatus,
+} from "@/lib/admin/gameweekMetadata";
 import { createClient } from "@/lib/supabase/server";
 import { listClubLogos } from "@/app/admin/actions/clubLogos";
 import { listTierLogos } from "@/app/admin/actions/tierLogos";
@@ -31,6 +35,7 @@ import type {
   PlayoffPreviewPayload,
   PublicDivision,
   PublicFixture,
+  PublicGameweekSyncMeta,
   PublicPyramid,
   PublicSeason,
   PublicSeasonDivisionStructurePayload,
@@ -960,6 +965,32 @@ export async function getDivisionStandings(
     ...publishedPlayoffFixtures,
   ];
 
+  let syncMetaByGw: Record<number, PublicGameweekSyncMeta> = {};
+  let latestSyncMeta: PublicGameweekSyncMeta | null = null;
+  {
+    const { rows } = await fetchGameweekMetadata(supabase, division.season_id);
+    for (const row of rows) {
+      if (!isGwSyncStatus(row.gw_status)) continue;
+      syncMetaByGw[row.gameweek] = {
+        gameweek: row.gameweek,
+        last_sync_at: row.last_sync_at,
+        gw_status: row.gw_status,
+      };
+    }
+    const targetGw =
+      finishedGameweeks.length > 0
+        ? finishedGameweeks[finishedGameweeks.length - 1]!
+        : playedGwCount || null;
+    if (targetGw != null && syncMetaByGw[targetGw]) {
+      latestSyncMeta = syncMetaByGw[targetGw]!;
+    } else {
+      const sorted = Object.keys(syncMetaByGw)
+        .map(Number)
+        .sort((a, b) => b - a);
+      if (sorted[0] != null) latestSyncMeta = syncMetaByGw[sorted[0]] ?? null;
+    }
+  }
+
   return {
     divisionId,
     tier,
@@ -975,6 +1006,8 @@ export async function getDivisionStandings(
     averageFpl: averageFplFromFinished(current.publishedFixtures),
     leader: current.standings[0] ?? null,
     playoffs,
+    syncMetaByGw,
+    latestSyncMeta,
   };
 }
 
@@ -1009,6 +1042,7 @@ export async function getGameweekDetails(
       medianThreshold: null,
       matches,
       fplRanking: [],
+      syncMeta: bundle.syncMetaByGw?.[gameweek] ?? null,
     };
   }
 
@@ -1082,6 +1116,7 @@ export async function getGameweekDetails(
     medianThreshold: threshold,
     matches,
     fplRanking,
+    syncMeta: bundle.syncMetaByGw?.[gameweek] ?? null,
   };
 }
 

@@ -3,12 +3,18 @@
 import { ArrowDown, ArrowUp, Medal } from "lucide-react";
 import type { RefObject } from "react";
 import type { ClubLogoRecord } from "@/lib/admin/clubLogos";
-import type { FormPill, PublicStandingRow, TableZone } from "@/lib/public/types";
+import type {
+  FormPill,
+  PublicGameweekSyncMeta,
+  PublicStandingRow,
+  TableZone,
+} from "@/lib/public/types";
 import { LinkedTeamCell } from "@/components/na-minusie/hub/LinkedTeamCell";
 import {
   DiscordExportFrame,
   slugForExport,
 } from "@/components/na-minusie/hub/DiscordExport";
+import { GameweekSyncStatusBadge } from "@/components/na-minusie/hub/GameweekSyncStatusBadge";
 
 function FormPills({ form }: { form: FormPill[] }) {
   if (!form.length) {
@@ -147,6 +153,7 @@ export function StandingsTable({
   hasWebhook = false,
   hideControls = false,
   captureRef,
+  syncMeta = null,
 }: {
   rows: PublicStandingRow[];
   logos?: ClubLogoRecord[];
@@ -157,6 +164,7 @@ export function StandingsTable({
   hasWebhook?: boolean;
   hideControls?: boolean;
   captureRef?: RefObject<HTMLDivElement | null>;
+  syncMeta?: PublicGameweekSyncMeta | null;
 }) {
   const divisionTitle = exportMeta?.division?.trim() || "Tabela";
   const seasonLine = exportMeta?.season?.trim() || undefined;
@@ -209,7 +217,9 @@ export function StandingsTable({
   }
 
   return (
-    <DiscordExportFrame
+    <div className="space-y-3">
+      <GameweekSyncStatusBadge meta={syncMeta} />
+      <DiscordExportFrame
       exportId="export-standings"
       fileName={fileName}
       title={divisionTitle}
@@ -291,5 +301,6 @@ export function StandingsTable({
         </tbody>
       </table>
     </DiscordExportFrame>
+    </div>
   );
 }

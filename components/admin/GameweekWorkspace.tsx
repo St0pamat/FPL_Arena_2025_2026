@@ -27,6 +27,7 @@ import {
   publishSeasonSchedule,
   saveDivisionGameweekDraft,
   saveSeasonGameweekDraft,
+  syncGameweekFromFplApi,
   unpublishSeasonGameweek,
   type SeasonWorkspacePayload,
   type WorkspaceFixtureRow,
@@ -370,6 +371,8 @@ export function GameweekWorkspace({
   } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isActionPending, setIsActionPending] = useState(false);
+  const [isFplSyncPending, setIsFplSyncPending] = useState(false);
+  const [fplSyncErrors, setFplSyncErrors] = useState<string[] | null>(null);
 
   useEffect(() => {
     if (!gwOptions.includes(gw)) {
@@ -621,6 +624,40 @@ export function GameweekWorkspace({
     }
   }
 
+  async function runFplApiSync() {
+    if (!seasonId) return;
+    setFplSyncErrors(null);
+    setMessage(null);
+    setIsFplSyncPending(true);
+    setIsActionPending(true);
+    try {
+      const r = await syncGameweekFromFplApi(seasonId, gw);
+      if (r.error) {
+        setMessage({ type: "err", text: r.error });
+        setFplSyncErrors(r.errors?.length ? r.errors : null);
+        window.alert(r.error);
+        return;
+      }
+      const n = r.playersMatched ?? r.updated ?? 0;
+      setMessage({
+        type: "ok",
+        text:
+          r.success ??
+          `Zaktualizowano ${n} zawodników z FPL API (GW${r.gameweek ?? gw}).`,
+      });
+      setFplSyncErrors(r.errors?.length ? r.errors : null);
+      await load(r.gameweek ?? gw);
+      router.refresh();
+    } catch (e) {
+      const text = errorMessage(e, "Błąd synchronizacji FPL API.");
+      setMessage({ type: "err", text });
+      window.alert(text);
+    } finally {
+      setIsFplSyncPending(false);
+      setIsActionPending(false);
+    }
+  }
+
   const busy = isLoading || isActionPending;
   const isPlayoffGw = isPlayoffGameweek(gw);
   const seasonPlayoffCount =
@@ -640,20 +677,60 @@ export function GameweekWorkspace({
           Rozliczanie kolejki
         </p>
 
-        <button
-          type="button"
-          disabled={busy || !seasonId}
-          onClick={() => {
-            setPasteRaw("");
-            setPasteImportGw(gw);
-            setPasteResult(null);
-            setPasteOpen(true);
-          }}
-          className="mb-5 inline-flex w-full items-center justify-center gap-3 rounded-2xl bg-[#39FF14] px-6 py-4 text-base font-black uppercase tracking-wider text-black transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto"
-        >
-          <ClipboardPaste className="h-5 w-5" />
-          📋 Wklej wyniki ze strony FPL
-        </button>
+        <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-stretch">
+          <button
+            type="button"
+            disabled={busy || !seasonId}
+            onClick={() => {
+              setPasteRaw("");
+              setPasteImportGw(gw);
+              setPasteResult(null);
+              setPasteOpen(true);
+            }}
+            className="inline-flex w-full items-center justify-center gap-3 rounded-2xl bg-[#39FF14] px-6 py-4 text-base font-black uppercase tracking-wider text-black transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto"
+          >
+            <ClipboardPaste className="h-5 w-5" />
+            📋 Wklej wyniki ze strony FPL
+          </button>
+          <button
+            type="button"
+            disabled={busy || !seasonId}
+            onClick={() => void runFplApiSync()}
+            className="inline-flex w-full items-center justify-center gap-3 rounded-2xl border-2 border-sky-400/60 bg-sky-500/15 px-6 py-4 text-base font-black uppercase tracking-wider text-sky-200 transition-colors hover:border-sky-300 hover:bg-sky-500/25 hover:text-white disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto"
+          >
+            {isFplSyncPending ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : (
+              <RefreshCw className="h-5 w-5" />
+            )}
+            🔄 Synchronizuj z FPL API
+          </button>
+        </div>
+
+        {isFplSyncPending ? (
+          <div className="mb-5 flex items-start gap-3 rounded-xl border border-sky-500/40 bg-sky-500/10 px-4 py-3 text-sm text-sky-100">
+            <Loader2 className="mt-0.5 h-5 w-5 shrink-0 animate-spin text-sky-300" />
+            <div>
+              <p className="font-bold">Pobieranie danych… Może to potrwać kilkanaście sekund</p>
+              <p className="mt-1 text-xs text-sky-200/80">
+                Nie odświeżaj strony — API FPL jest odpytywane paczkami z opóźnieniem.
+              </p>
+            </div>
+          </div>
+        ) : null}
+
+        {fplSyncErrors?.length ? (
+          <div className="mb-5 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-xs text-amber-100">
+            <p className="mb-1 font-bold uppercase tracking-wider text-amber-300">
+              Ostrzeżenia sync ({fplSyncErrors.length})
+            </p>
+            <ul className="max-h-32 list-disc space-y-0.5 overflow-y-auto pl-4">
+              {fplSyncErrors.map((e) => (
+                <li key={e}>{e}</li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
 
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <label className="block">

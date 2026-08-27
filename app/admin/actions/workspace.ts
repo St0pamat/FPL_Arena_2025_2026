@@ -19,9 +19,32 @@ import {
   publishTeamGameweekScores,
   unpublishTeamGameweekScores,
   upsertTeamGameweekScores,
+  upsertTeamGameweekScoresPreservePublished,
 } from "@/lib/admin/teamGameweekScores";
+import {
+  upsertGameweekMetadata,
+  type GwSyncStatus,
+} from "@/lib/admin/gameweekMetadata";
 import type { ActionState, Division, TiebreakerMethod } from "@/lib/admin/types";
 import { isPlayoffGameweek } from "@/lib/public/season";
+
+const FPL_API_BASE = "https://fantasy.premierleague.com/api";
+const FPL_SYNC_HEADERS: HeadersInit = {
+  Accept: "application/json",
+  "User-Agent": "FPLArena-NaMinusie/1.0",
+};
+const FPL_SYNC_CHUNK = 5;
+const FPL_SYNC_DELAY_MS = 750;
+
+function delay(ms: number) {
+  return new Promise<void>((resolve) => setTimeout(resolve, ms));
+}
+
+function chunkArray<T>(arr: T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+  return out;
+}
 
 async function assertDivisionRosterFull(
   supabase: Awaited<ReturnType<typeof requireAuth>>,
@@ -50,7 +73,8 @@ function fixtureScoreUpdatePayload(row: RecalcFixtureUpdate) {
     home_median_bonus: row.home_median_bonus,
     away_median_bonus: row.away_median_bonus,
     is_finished: row.is_finished,
-    is_published: false,
+    /** Domyślnie brudnopis; sync API może zachować true dla już opublikowanych. */
+    is_published: Boolean(row.is_published),
   };
 
   // Remis FPL barażu: nie nadpisuj pól TB (admin uzupełnia je osobno)
@@ -1398,8 +1422,10 @@ async function saveDivisionScoresLenient(
   divisionId: string,
   gameweek: number,
   scores: Record<string, number>,
+  options?: { preservePublished?: boolean },
 ): Promise<ActionState & { updated?: number }> {
   const supabase = await requireAuth();
+  const preservePublished = Boolean(options?.preservePublished);
 
   const { data: fixtures, error: fixError } = await supabase
     .from("fixtures")
@@ -1431,7 +1457,15 @@ async function saveDivisionScoresLenient(
     }
   }
 
-  const updates = applyRecalcToFixtures(fixtures, pointsByTeam);
+  const publishedIds = new Set(
+    preservePublished
+      ? fixtures.filter((f) => f.is_published).map((f) => f.id)
+      : [],
+  );
+
+  const updates = applyRecalcToFixtures(fixtures, pointsByTeam).map((row) =>
+    publishedIds.has(row.id) ? { ...row, is_published: true } : row,
+  );
   if (!updates.length) {
     return {
       error: "Za mało punktów, by rozliczyć jakikolwiek mecz w tej dywizji.",
@@ -1451,6 +1485,281 @@ async function saveDivisionScoresLenient(
     success: `OK ${updates.length} meczów`,
     updated: updates.length,
   };
+}
+
+async function fetchFplJsonSafe<T>(url: string): Promise<T> {
+  const res = await fetch(url, {
+    headers: FPL_SYNC_HEADERS,
+    next: { revalidate: 0 },
+  });
+  if (!res.ok) {
+    throw new Error(`FPL API ${res.status}`);
+  }
+  return res.json() as Promise<T>;
+}
+
+/** Status kolejki FPL: event-status + bootstrap-static. */
+async function resolveFplGwStatus(gameweek: number): Promise<GwSyncStatus> {
+  try {
+    type EventStatusPayload = {
+      status?: Array<{ event?: number; points?: string; bonus_added?: boolean }>;
+    };
+    const eventStatus = await fetchFplJsonSafe<EventStatusPayload>(
+      `${FPL_API_BASE}/event-status/`,
+    );
+    const match = (eventStatus.status ?? []).find(
+      (s) => Number(s.event) === gameweek,
+    );
+    if (match) {
+      const pts = String(match.points ?? "").toLowerCase();
+      if (pts === "r" || match.bonus_added === true) return "CONFIRMED";
+      if (pts === "p") return "PROVISIONAL";
+    }
+  } catch {
+    /* fallback poniżej */
+  }
+
+  try {
+    type BootstrapPayload = {
+      events?: Array<{
+        id?: number;
+        finished?: boolean;
+        data_checked?: boolean;
+        is_current?: boolean;
+        is_previous?: boolean;
+      }>;
+    };
+    const boot = await fetchFplJsonSafe<BootstrapPayload>(
+      `${FPL_API_BASE}/bootstrap-static/`,
+    );
+    const ev = (boot.events ?? []).find((e) => Number(e.id) === gameweek);
+    if (!ev) return "NOT_STARTED";
+    if (ev.finished && ev.data_checked) return "CONFIRMED";
+    if (ev.is_current || ev.is_previous || ev.finished) return "PROVISIONAL";
+    return "NOT_STARTED";
+  } catch {
+    return "PROVISIONAL";
+  }
+}
+
+/**
+ * Synchronizacja wyników GW z FPL API (picks → net_points) jako brudnopis.
+ * Nie odpublikowuje już opublikowanych rekordów (punkty update, flaga zostaje).
+ */
+export async function syncGameweekFromFplApi(
+  seasonId: string,
+  gameweek: number,
+): Promise<
+  ActionState & {
+    updated?: number;
+    playersMatched?: number;
+    gameweek?: number;
+    gwStatus?: GwSyncStatus;
+    errors?: string[];
+    fixturesUpdated?: number;
+  }
+> {
+  try {
+    const supabase = await requireAuth();
+    if (!seasonId) return { error: "Wybierz sezon." };
+    if (!gameweek || gameweek < 1 || gameweek > 38) {
+      return { error: "Wybierz numer kolejki (GW1–GW38)." };
+    }
+
+    const { data: divisions, error: divError } = await supabase
+      .from("divisions")
+      .select("id, name")
+      .eq("season_id", seasonId);
+    if (divError) return { error: divError.message };
+    if (!divisions?.length) {
+      return { error: "Brak dywizji w sezonie — najpierw Master Import." };
+    }
+
+    const divIds = divisions.map((d) => d.id);
+    const divName = new Map(divisions.map((d) => [d.id, d.name]));
+
+    const { data: teams, error: teamsError } = await supabase
+      .from("teams")
+      .select("id, fpl_id, manager_name, fpl_team_name, division_id, is_active")
+      .in("division_id", divIds)
+      .eq("is_active", true)
+      .not("fpl_id", "is", null);
+
+    if (teamsError) return { error: teamsError.message };
+
+    const syncTeams = (teams ?? []).filter((t) => {
+      const id = String(t.fpl_id ?? "").trim();
+      return id.length > 0 && /^\d+$/.test(id);
+    });
+
+    if (!syncTeams.length) {
+      return {
+        error:
+          "Brak aktywnych zawodników z ustawionym fpl_id w tym sezonie.",
+        gameweek,
+      };
+    }
+
+    const gwStatus = await resolveFplGwStatus(gameweek);
+    const errors: string[] = [];
+    const scoresByDiv = new Map<string, Record<string, number>>();
+    let playersMatched = 0;
+
+    const batches = chunkArray(syncTeams, FPL_SYNC_CHUNK);
+    for (let bi = 0; bi < batches.length; bi++) {
+      const batch = batches[bi]!;
+      const batchResults = await Promise.all(
+        batch.map(async (team) => {
+          const fplId = String(team.fpl_id).trim();
+          const label =
+            team.fpl_team_name || team.manager_name || team.id;
+          try {
+            type PicksPayload = {
+              entry_history?: {
+                points?: number;
+                event_transfers_cost?: number;
+              };
+            };
+            const picks = await fetchFplJsonSafe<PicksPayload>(
+              `${FPL_API_BASE}/entry/${fplId}/event/${gameweek}/picks/`,
+            );
+            const raw = Number(picks.entry_history?.points ?? 0);
+            const hit = Number(picks.entry_history?.event_transfers_cost ?? 0);
+            const net = Math.round(raw - hit);
+            if (!isValidFplPoints(net)) {
+              return {
+                ok: false as const,
+                error: `${label} (fpl_id=${fplId}): punkty poza zakresem (${net})`,
+              };
+            }
+            if (!team.division_id) {
+              return {
+                ok: false as const,
+                error: `${label}: brak division_id`,
+              };
+            }
+            return {
+              ok: true as const,
+              teamId: team.id,
+              divisionId: team.division_id as string,
+              net,
+            };
+          } catch (e) {
+            const msg = e instanceof Error ? e.message : "błąd pobierania";
+            return {
+              ok: false as const,
+              error: `${label} (fpl_id=${fplId}): ${msg}`,
+            };
+          }
+        }),
+      );
+
+      for (const r of batchResults) {
+        if (!r.ok) {
+          errors.push(r.error);
+          continue;
+        }
+        const bucket = scoresByDiv.get(r.divisionId) ?? {};
+        bucket[r.teamId] = r.net;
+        scoresByDiv.set(r.divisionId, bucket);
+        playersMatched += 1;
+      }
+
+      if (bi < batches.length - 1) {
+        await delay(FPL_SYNC_DELAY_MS);
+      }
+    }
+
+    if (!playersMatched) {
+      return {
+        error:
+          "Nie udało się pobrać punktów żadnego zawodnika z FPL API.",
+        gameweek,
+        errors: errors.slice(0, 40),
+        gwStatus,
+      };
+    }
+
+    const allScoreRows: {
+      season_id: string;
+      team_id: string;
+      gameweek: number;
+      fpl_points: number;
+    }[] = [];
+    for (const [, scores] of scoresByDiv) {
+      for (const [teamId, pts] of Object.entries(scores)) {
+        allScoreRows.push({
+          season_id: seasonId,
+          team_id: teamId,
+          gameweek,
+          fpl_points: pts,
+        });
+      }
+    }
+
+    const scoreErr = await upsertTeamGameweekScoresPreservePublished(
+      supabase,
+      allScoreRows,
+    );
+    if (scoreErr) {
+      return { error: scoreErr, gameweek, playersMatched, errors: errors.slice(0, 40) };
+    }
+
+    let fixturesUpdated = 0;
+    const divErrors: string[] = [];
+    for (const [divisionId, scores] of scoresByDiv) {
+      const result = await saveDivisionScoresLenient(
+        seasonId,
+        divisionId,
+        gameweek,
+        scores,
+        { preservePublished: true },
+      );
+      if (result.error) {
+        divErrors.push(
+          `${divName.get(divisionId) ?? divisionId}: ${result.error}`,
+        );
+        continue;
+      }
+      fixturesUpdated += result.updated ?? 0;
+    }
+
+    const lastSyncAt = new Date().toISOString();
+    const metaErr = await upsertGameweekMetadata(supabase, {
+      season_id: seasonId,
+      gameweek,
+      last_sync_at: lastSyncAt,
+      gw_status: gwStatus,
+    });
+    if (metaErr) {
+      errors.push(`metadata: ${metaErr}`);
+    }
+
+    revalidateWorkspace();
+
+    const warnParts = [
+      errors.length ? `${errors.length} błędów FPL` : null,
+      divErrors.length ? `${divErrors.length} ostrzeżeń H2H` : null,
+    ].filter(Boolean);
+
+    return {
+      error: null,
+      success: `GW${gameweek}: zsynchronizowano ${playersMatched} zawodników z FPL API → FA Ranking + ${fixturesUpdated} meczów H2H · status ${gwStatus}.${
+        warnParts.length ? ` · ${warnParts.join(" · ")}` : ""
+      }`,
+      updated: playersMatched,
+      playersMatched,
+      fixturesUpdated,
+      gameweek,
+      gwStatus,
+      errors: [...errors, ...divErrors.map((e) => `⚠ ${e}`)].slice(0, 40),
+    };
+  } catch (e) {
+    console.error("[syncGameweekFromFplApi]", e);
+    return {
+      error: e instanceof Error ? e.message : "Błąd synchronizacji FPL API.",
+    };
+  }
 }
 
 export async function saveSeasonGameweekDraft(

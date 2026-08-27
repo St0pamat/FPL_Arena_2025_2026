@@ -3,6 +3,10 @@
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { uploadNoBigSixLogo } from "@/lib/no-big-six/actions";
+import {
+  NO_BIG_SIX_LOGO_MAX_BYTES,
+  isAllowedLogoMime,
+} from "@/lib/no-big-six/logos";
 
 type Props = {
   entryId: number;
@@ -19,39 +23,68 @@ export function NoBigSixTeamLogoUpload({ entryId, teamName, disabled }: Props) {
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (disabled) return;
+    if (disabled || pending) return;
 
-    const input = inputRef.current;
-    const file = input?.files?.[0];
-    if (!file) {
-      setMessage("Wybierz plik obrazu.");
-      setIsError(true);
-      return;
-    }
-
-    if (!file.type.startsWith("image/")) {
-      setMessage("Dozwolone są tylko pliki obrazów (PNG, JPEG, WebP).");
-      setIsError(true);
-      return;
-    }
-
-    const formData = new FormData();
-    formData.set("file", file);
-
-    startTransition(async () => {
-      setMessage(null);
-      const result = await uploadNoBigSixLogo(formData, entryId);
-      setIsError(!result.ok);
-      setMessage(result.message);
-      if (result.ok) {
-        if (input) input.value = "";
-        router.refresh();
+    try {
+      const input = inputRef.current;
+      const file = input?.files?.[0];
+      if (!file) {
+        setMessage("Wybierz plik obrazu.");
+        setIsError(true);
+        return;
       }
-    });
+
+      if (!isAllowedLogoMime(file.type)) {
+        setMessage("Dozwolone formaty: PNG, JPEG, WebP.");
+        setIsError(true);
+        return;
+      }
+
+      if (file.size > NO_BIG_SIX_LOGO_MAX_BYTES) {
+        setMessage(
+          `Plik jest za duży (max ${NO_BIG_SIX_LOGO_MAX_BYTES / (1024 * 1024)} MB).`,
+        );
+        setIsError(true);
+        return;
+      }
+
+      const formData = new FormData();
+      formData.set("file", file);
+
+      startTransition(() => {
+        void (async () => {
+          try {
+            setMessage(null);
+            const result = await uploadNoBigSixLogo(formData, entryId);
+            setIsError(!result.ok);
+            setMessage(result.message);
+            if (result.ok) {
+              if (input) input.value = "";
+              router.refresh();
+            }
+          } catch (err) {
+            console.error("[NoBigSixTeamLogoUpload]", err);
+            setIsError(true);
+            setMessage(
+              err instanceof Error
+                ? err.message
+                : "Nie udało się wgrać herbu. Spróbuj ponownie.",
+            );
+          }
+        })();
+      });
+    } catch (err) {
+      console.error("[NoBigSixTeamLogoUpload] submit", err);
+      setIsError(true);
+      setMessage("Błąd formularza — odśwież stronę i spróbuj ponownie.");
+    }
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mt-4 w-full space-y-2 border-t border-slate-800 pt-4">
+    <form
+      onSubmit={handleSubmit}
+      className="mt-4 w-full space-y-2 border-t border-slate-800 pt-4"
+    >
       <input
         ref={inputRef}
         type="file"

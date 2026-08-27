@@ -245,6 +245,7 @@ export function HubShell({
         medianThreshold: null,
         matches: playoffMatches,
         fplRanking: [],
+        syncMeta: bundle.syncMetaByGw?.[selectedGw] ?? null,
       });
       return;
     }
@@ -580,6 +581,7 @@ export function HubShell({
                   divisionId={bundle.divisionId}
                   showDiscordSend={isAdmin}
                   hasWebhook={bundle.hasDiscordWebhook}
+                  syncMeta={bundle.latestSyncMeta ?? null}
                 />
               ) : null}
 

@@ -60,6 +60,49 @@ export async function upsertTeamGameweekScores(
   return null;
 }
 
+/**
+ * Upsert punktów z ochroną produkcji:
+ * jeśli rekord już ma is_published=true → aktualizuj tylko fpl_points (flaga zostaje true).
+ * nowe / brudnopis → is_published=false.
+ */
+export async function upsertTeamGameweekScoresPreservePublished(
+  supabase: any,
+  rows: Omit<TeamGwScoreRow, "is_published">[],
+): Promise<string | null> {
+  if (!rows.length) return null;
+
+  const seasonId = rows[0]!.season_id;
+  const gameweek = rows[0]!.gameweek;
+  const teamIds = [...new Set(rows.map((r) => r.team_id))];
+
+  const published = new Set<string>();
+  for (const idBatch of chunk(teamIds, 200)) {
+    const { data, error } = await supabase
+      .from("team_gameweek_scores")
+      .select("team_id, is_published")
+      .eq("season_id", seasonId)
+      .eq("gameweek", gameweek)
+      .in("team_id", idBatch);
+    if (error) {
+      if (isMissingTable(error.message)) {
+        return `Brak tabeli team_gameweek_scores — uruchom migrację: supabase/migrations/add_team_gameweek_scores.sql`;
+      }
+      return error.message;
+    }
+    for (const r of data ?? []) {
+      if (r.is_published) published.add(String(r.team_id));
+    }
+  }
+
+  return upsertTeamGameweekScores(
+    supabase,
+    rows.map((r) => ({
+      ...r,
+      is_published: published.has(r.team_id),
+    })),
+  );
+}
+
 export async function publishTeamGameweekScores(
   supabase: any,
   seasonId: string,

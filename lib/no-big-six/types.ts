@@ -27,6 +27,8 @@ export interface NoBigSixPenalty {
   is_auto_sub: boolean;
 }
 
+export type NoBigSixTrend = "up" | "down" | "same";
+
 export interface NoBigSixStandingRow {
   entry_id: number;
   team_name: string;
@@ -36,4 +38,11 @@ export interface NoBigSixStandingRow {
   official_points: number;
   played_gws: number;
   is_banned: boolean;
+  custom_logo_url: string | null;
+  /** Celowe naruszenie (DO ZBANOWANIA) — nie mylić z is_banned */
+  flag_for_ban: boolean;
+  /** null dla zbanowanych (UI: —) */
+  rank: number | null;
+  previous_rank: number | null;
+  trend: NoBigSixTrend;
 }

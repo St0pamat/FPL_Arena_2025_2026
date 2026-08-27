@@ -12,6 +12,7 @@ import { LinkedCrestOnly } from "@/components/na-minusie/hub/LinkedTeamCell";
 import { TeamIdentity } from "@/components/na-minusie/hub/TeamIdentity";
 import { ExportControls } from "@/components/na-minusie/hub/ExportControls";
 import { PlayoffMatchRow } from "@/components/na-minusie/hub/PlayoffMatchRow";
+import { GameweekSyncStatusBadge } from "@/components/na-minusie/hub/GameweekSyncStatusBadge";
 import { NA_MINUSIE_BRAND } from "@/lib/na-minusie";
 import { slugForExport } from "@/components/na-minusie/hub/DiscordExport";
 import {
@@ -286,6 +287,10 @@ export function GameweekCenter({
           })}
         </div>
       </div>
+
+      {!loading ? (
+        <GameweekSyncStatusBadge meta={details?.syncMeta ?? null} />
+      ) : null}
 
       {loading ? (
         <div className="flex items-center justify-center gap-2 rounded-2xl border border-slate-800 bg-slate-900/60 py-16 text-slate-400">

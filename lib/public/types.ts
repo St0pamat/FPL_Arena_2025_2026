@@ -205,30 +205,11 @@ export interface PublicFixture {
   away_team: PublicTeam | null;
 }
 
-export interface DivisionStandingsPayload {
-  divisionId: string;
-  tier: number;
-  /** Czy dywizja ma skonfigurowany webhook (bez ujawniania URL) */
-  hasDiscordWebhook: boolean;
-  teams: PublicTeam[];
-  standings: PublicStandingRow[];
-  /** Pełny terminarz (również nieopublikowane) — zakładka Terminarz */
-  fixtures: PublicFixture[];
-  /** Tylko opublikowane / rozliczone — Wyniki, Statystyki */
-  publishedFixtures: PublicFixture[];
-  finishedGameweeks: number[];
-  /**
-   * Wszystkie wygenerowane numery kolejek w fixtures (np. 1–19),
-   * BEZ filtra is_published — mianownik licznika „Kolejka X / Y”.
-   */
-  availableGameweeks: number[];
-  maxGameweek: number;
-  /** Najwyższa opublikowana/ukończona kolejka (licznik X) */
-  playedGwCount: number;
-  averageFpl: number | null;
-  leader: PublicStandingRow | null;
-  playoffs: PlayoffPreviewPayload;
-}
+export type PublicGameweekSyncMeta = {
+  gameweek: number;
+  last_sync_at: string;
+  gw_status: "PROVISIONAL" | "CONFIRMED" | "NOT_STARTED";
+};
 
 export interface GwMatchCard {
   fixture: PublicFixture;
@@ -252,6 +233,37 @@ export interface GameweekDetailsPayload {
   medianThreshold: number | null;
   matches: GwMatchCard[];
   fplRanking: GwFplRankRow[];
+  /** Status syncu FPL API (jeśli był uruchamiany dla tej GW). */
+  syncMeta?: PublicGameweekSyncMeta | null;
+}
+
+export interface DivisionStandingsPayload {
+  divisionId: string;
+  tier: number;
+  /** Czy dywizja ma skonfigurowany webhook (bez ujawniania URL) */
+  hasDiscordWebhook: boolean;
+  teams: PublicTeam[];
+  standings: PublicStandingRow[];
+  /** Pełny terminarz (również nieopublikowane) — zakładka Terminarz */
+  fixtures: PublicFixture[];
+  /** Tylko opublikowane / rozliczone — Wyniki, Statystyki */
+  publishedFixtures: PublicFixture[];
+  finishedGameweeks: number[];
+  /**
+   * Wszystkie wygenerowane numery kolejek w fixtures (np. 1–19),
+   * BEZ filtra is_published — mianownik licznika „Kolejka X / Y”.
+   */
+  availableGameweeks: number[];
+  maxGameweek: number;
+  /** Najwyższa opublikowana/ukończona kolejka (licznik X) */
+  playedGwCount: number;
+  averageFpl: number | null;
+  leader: PublicStandingRow | null;
+  playoffs: PlayoffPreviewPayload;
+  /** Metadane syncu FPL per kolejka (klucz = gameweek). */
+  syncMetaByGw?: Record<number, PublicGameweekSyncMeta>;
+  /** Metadane syncu FPL dla najnowszej rozliczonej / zsynchronizowanej GW. */
+  latestSyncMeta?: PublicGameweekSyncMeta | null;
 }
 
 export interface TeamSchedulePayload {

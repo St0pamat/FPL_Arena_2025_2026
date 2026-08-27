@@ -64,6 +64,19 @@ async function fetchFplJson<T>(url: string): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+/** Picks dla GW — 404 = brak historii (np. nowy gracz dołączył później). */
+async function fetchPicksOrNull<T>(url: string): Promise<T | null> {
+  const res = await fetch(url, {
+    headers: FPL_HEADERS,
+    next: { revalidate: 0 },
+  });
+  if (res.status === 404) return null;
+  if (!res.ok) {
+    throw new Error(`FPL API ${res.status}: ${url}`);
+  }
+  return res.json() as Promise<T>;
+}
+
 async function requireAuth() {
   const supabase = createClient();
   const {
@@ -238,9 +251,42 @@ export async function syncNoBigSixGameweek(gwNumber: number): Promise<SyncNoBigS
       try {
         await delay(FETCH_DELAY_MS);
 
-        const picksData = await fetchFplJson<PicksPayload>(
-          `${FPL_BASE}/entry/${entryId}/event/${gwNumber}/picks/`,
-        );
+        const picksUrl = `${FPL_BASE}/entry/${entryId}/event/${gwNumber}/picks/`;
+        const picksData = await fetchPicksOrNull<PicksPayload>(picksUrl);
+
+        // Nowy gracz bez historii tej GW (FPL 404) → 0 pkt, bez kar, sync idzie dalej
+        if (picksData == null) {
+          const { error: zeroResultError } = await supabase
+            .from("no_big_six_gw_results")
+            .upsert(
+              {
+                entry_id: entryId,
+                event: gwNumber,
+                raw_fpl_points: 0,
+                penalty_points: 0,
+                official_points: 0,
+                updated_at: new Date().toISOString(),
+              },
+              { onConflict: "entry_id,event" },
+            );
+
+          if (zeroResultError) {
+            throw new Error(zeroResultError.message);
+          }
+
+          const { error: deletePenaltiesError } = await supabase
+            .from("no_big_six_penalties")
+            .delete()
+            .eq("entry_id", entryId)
+            .eq("event", gwNumber);
+
+          if (deletePenaltiesError) {
+            throw new Error(deletePenaltiesError.message);
+          }
+
+          synced += 1;
+          continue;
+        }
 
         const subbedInIds = new Set(
           (picksData.automatic_subs ?? []).map((sub) => sub.element_in),
@@ -394,12 +440,23 @@ export async function uploadNoBigSixLogo(
       return { ok: false, message: "Nie można wgrać herbu dla zbanowanego gracza." };
     }
 
-    const file = formData.get("file");
-    if (!(file instanceof File) || file.size === 0) {
+    const rawFile = formData.get("file");
+    // Na produkcji `instanceof File` bywa zawodne — sprawdzamy duck-typing Blob/File
+    const file =
+      rawFile != null &&
+      typeof rawFile === "object" &&
+      "arrayBuffer" in rawFile &&
+      "size" in rawFile &&
+      typeof (rawFile as Blob).arrayBuffer === "function"
+        ? (rawFile as Blob & { type?: string; name?: string })
+        : null;
+
+    if (!file || file.size === 0) {
       return { ok: false, message: "Wybierz plik obrazu (PNG, JPEG lub WebP)." };
     }
 
-    if (!isAllowedLogoMime(file.type)) {
+    const mime = String(file.type ?? "");
+    if (!isAllowedLogoMime(mime)) {
       return { ok: false, message: "Dozwolone formaty: PNG, JPEG, WebP." };
     }
 
@@ -411,11 +468,7 @@ export async function uploadNoBigSixLogo(
     }
 
     const ext =
-      file.type === "image/png"
-        ? ".png"
-        : file.type === "image/webp"
-          ? ".webp"
-          : ".jpg";
+      mime === "image/png" ? ".png" : mime === "image/webp" ? ".webp" : ".jpg";
 
     const fileName = buildNoBigSixLogoFileName(entryId, ext);
     const dir = uploadDir();
