@@ -133,6 +133,8 @@ export interface PublicTeam {
   id: string;
   manager_name: string;
   discord_nick: string;
+  /** Discord snowflake (Master Import) — opcjonalny */
+  discord_id?: string | null;
   fpl_id: string | null;
   fpl_team_name: string | null;
   chosen_club: string;

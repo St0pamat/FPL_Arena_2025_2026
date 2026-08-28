@@ -10,6 +10,7 @@ export type PlayerFormInput = {
   fpl_team_name?: string | null;
   fpl_id?: string | null;
   discord_nick: string;
+  discord_id?: string | null;
   x_com?: string | null;
   email?: string | null;
   previous_season_or?: number | null;
@@ -56,6 +57,8 @@ function parseIsActive(statusRaw: string): boolean {
 function normalizePayload(data: PlayerFormInput) {
   const manager_name = String(data.manager_name ?? "").trim();
   const discord_nick = String(data.discord_nick ?? "").trim();
+  const discordIdRaw = String(data.discord_id ?? "").trim();
+  const discord_id = discordIdRaw || null;
   const chosen_club = String(data.chosen_club ?? "").trim();
   const fpl_team_name = String(data.fpl_team_name ?? "").trim() || null;
   const fpl_idRaw = String(data.fpl_id ?? "").trim();
@@ -78,6 +81,7 @@ function normalizePayload(data: PlayerFormInput) {
   return {
     manager_name,
     discord_nick,
+    discord_id,
     chosen_club,
     fpl_team_name,
     fpl_id,
@@ -92,6 +96,10 @@ function normalizePayload(data: PlayerFormInput) {
 
 function stripOptionalTeamColumns(p: Record<string, unknown>, msg: string) {
   let changed = false;
+  if (/discord_id/i.test(msg)) {
+    delete p.discord_id;
+    changed = true;
+  }
   if (/x_com/i.test(msg)) {
     delete p.x_com;
     changed = true;
@@ -148,6 +156,14 @@ async function assertDivisionCapacity(
   return null;
 }
 
+function validateDiscordId(discord_id: string | null): string | null {
+  if (!discord_id) return null;
+  if (!/^\d+$/.test(discord_id)) {
+    return "Discord ID musi składać się wyłącznie z cyfr (snowflake).";
+  }
+  return null;
+}
+
 /** Dodaje gracza do wskazanej dywizji (bez auto-przekierowania do innej ligi). */
 export async function createPlayer(data: PlayerFormInput): Promise<ActionState> {
   try {
@@ -160,6 +176,9 @@ export async function createPlayer(data: PlayerFormInput): Promise<ActionState> 
     if (!payload.division_id) {
       return { error: "Wybierz dywizję docelową." };
     }
+
+    const discordIdError = validateDiscordId(payload.discord_id);
+    if (discordIdError) return { error: discordIdError };
 
     const cap = await assertDivisionCapacity(supabase, payload.division_id);
     if (cap) return cap;
@@ -198,6 +217,9 @@ export async function updatePlayer(
     if (!payload.manager_name) return { error: "Podaj FPL Manager." };
     if (!payload.discord_nick) return { error: "Podaj Discord Name." };
     if (!payload.chosen_club) return { error: "Podaj nazwę klubu." };
+
+    const discordIdError = validateDiscordId(payload.discord_id);
+    if (discordIdError) return { error: discordIdError };
 
     if (payload.division_id) {
       const cap = await assertDivisionCapacity(

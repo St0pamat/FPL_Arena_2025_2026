@@ -460,11 +460,12 @@ export function MasterImportPanel({
                   </p>
                 ) : (
                   <div className="overflow-x-auto">
-                    <table className="w-full min-w-[1280px] text-left text-sm">
+                    <table className="w-full min-w-[1400px] text-left text-sm">
                       <thead className="border-b border-slate-800 text-[10px] uppercase tracking-wider text-slate-500">
                         <tr>
                           <th className="px-4 py-3 font-bold">Manager</th>
                           <th className="px-4 py-3 font-bold">Discord</th>
+                          <th className="px-4 py-3 font-bold">Discord ID</th>
                           <th className="px-4 py-3 font-bold">FPL Team</th>
                           <th className="px-4 py-3 font-bold">FPL ID</th>
                           <th className="px-4 py-3 font-bold">Klub</th>
@@ -483,6 +484,16 @@ export function MasterImportPanel({
                             </td>
                             <td className="px-4 py-2.5 text-slate-300">
                               {t.discord_nick}
+                            </td>
+                            <td
+                              className="px-4 py-2.5 font-mono text-xs text-violet-300/90"
+                              title={t.discord_id?.trim() || undefined}
+                            >
+                              {t.discord_id?.trim() ? (
+                                t.discord_id.trim()
+                              ) : (
+                                <span className="text-slate-600">—</span>
+                              )}
                             </td>
                             <td className="px-4 py-2.5 text-slate-400">
                               {t.fpl_team_name || "—"}

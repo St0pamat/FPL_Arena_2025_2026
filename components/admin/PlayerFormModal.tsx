@@ -39,6 +39,7 @@ function emptyForm(divisionId: string | null): PlayerFormInput {
     fpl_team_name: "",
     fpl_id: "",
     discord_nick: "",
+    discord_id: "",
     x_com: "",
     email: "",
     previous_season_or: null,
@@ -54,6 +55,7 @@ function fromTeam(player: Team): PlayerFormInput {
     fpl_team_name: player.fpl_team_name ?? "",
     fpl_id: player.fpl_id ?? "",
     discord_nick: player.discord_nick ?? "",
+    discord_id: player.discord_id ?? "",
     x_com: player.x_com ?? "",
     email: player.email ?? "",
     previous_season_or: player.previous_season_or ?? null,
@@ -211,6 +213,21 @@ export function PlayerFormModal({
                 className={inputClass}
                 value={form.discord_nick}
                 onChange={(e) => setField("discord_nick", e.target.value)}
+                disabled={pending}
+              />
+            </div>
+
+            <div>
+              <label className={labelClass} htmlFor="pf-discord-id">
+                Discord ID
+              </label>
+              <input
+                id="pf-discord-id"
+                inputMode="numeric"
+                className={inputClass}
+                placeholder="Snowflake (opcjonalnie)"
+                value={form.discord_id ?? ""}
+                onChange={(e) => setField("discord_id", e.target.value)}
                 disabled={pending}
               />
             </div>

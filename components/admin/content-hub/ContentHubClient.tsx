@@ -1,27 +1,24 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import {
-  Check,
-  CalendarDays,
-  Copy,
-  Download,
-  Flame,
-  ImageIcon,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+  type RefObject,
+} from "react";
+import {
   Loader2,
   Megaphone,
-  Paperclip,
-  Send,
   Sparkles,
-  Table2,
-  Trash2,
-  Swords,
   Users,
 } from "lucide-react";
-import type { RefObject } from "react";
 import {
   generatePreviewDiscordJSON,
   generatePreviewXComDraft,
+  generateSummaryDiscordJSONForDivision,
   generateXComDraft,
   getContentHubCaptureData,
   getDiscordWebhookForSend,
@@ -46,7 +43,7 @@ import {
 } from "@/lib/admin/discordWebhooks";
 import { getFARankingData } from "@/lib/public/actions";
 import type { FARankingPayload } from "@/lib/public/faRanking";
-import { DiscordEmbedPreview } from "@/components/admin/content-hub/DiscordEmbedPreview";
+import { ContentHubSendPanel } from "@/components/admin/content-hub/ContentHubSendPanel";
 import { FARankingExportCarousel } from "@/components/admin/content-hub/FARankingExportCarousel";
 import { FaRankingParticipantsExportNode } from "@/components/admin/content-hub/FaRankingParticipantsExportNode";
 import { GameweekPreviewExportNode } from "@/components/admin/content-hub/GameweekPreviewExportNode";
@@ -61,70 +58,28 @@ import type { ClubLogoRecord } from "@/lib/admin/clubLogos";
 
 type ContentType = "summary" | "preview";
 
-const X_LIMIT = 280;
-
 const selectClass =
   "w-full rounded-xl border border-slate-700/50 bg-slate-950 px-4 py-2.5 text-sm text-white outline-none focus:border-[#39FF14]";
 const textareaClass =
   "w-full rounded-xl border border-slate-700/50 bg-slate-950 px-4 py-3 font-mono text-sm text-slate-200 outline-none placeholder:text-slate-600 focus:border-[#39FF14]";
 
-const SAMPLE_EMBED_JSON = `{
-  "content": "🏆 Wyniki H2H właśnie wpadły!",
-  "embeds": [
-    {
-      "title": "Premier League · GW 5",
-      "description": "Tabela i wyniki dostępne w **Strefie Gracza**.\\nNa Minusie ™",
-      "color": 5763719,
-      "author": { "name": "Na Minusie ™" },
-      "fields": [
-        { "name": "Zwycięzcy", "value": "Lista @ z X", "inline": true },
-        { "name": "Mediana", "value": "—", "inline": true }
-      ],
-      "footer": { "text": "Content Hub · podgląd" }
+type GlobalChannel = "fa_ranking" | "fa_cup";
+
+function useStableRefMap() {
+  const mapRef = useRef(new Map<string, RefObject<HTMLDivElement | null>>());
+  const getRef = useCallback((key: string): RefObject<HTMLDivElement | null> => {
+    let ref = mapRef.current.get(key);
+    if (!ref) {
+      ref = { current: null };
+      mapRef.current.set(key, ref);
     }
-  ]
-}`;
-
-const SAMPLE_PREVIEW_EMBED_JSON = `{
-  "content": "🔜 Deadline FPL się zbliża — czas ustawić składy!",
-  "embeds": [
-    {
-      "title": "🔜 Zapowiedź Kolejki 5! 🏆",
-      "description": "**Premier League** · FPL Arena: Na Minusie ™\\n\\nBudujemy napięcie przed deadlinem Fantasy Premier League.",
-      "color": 15379208,
-      "fields": [
-        { "name": "Mecz 1", "value": "**Manager A** vs **Manager B**", "inline": false }
-      ],
-      "footer": { "text": "Content Hub · Zapowiedź kolejki" }
-    }
-  ]
-}`;
-
-type TargetKey =
-  | `div:${string}`
-  | `global:${string}:fa_ranking`
-  | `global:${string}:fa_cup`;
-
-function parseTargetKey(key: string): ContentHubSendTarget | null {
-  if (key.startsWith("div:")) {
-    const divisionId = key.slice(4);
-    return divisionId ? { kind: "division", divisionId } : null;
-  }
-  const m = /^global:([^:]+):(fa_ranking|fa_cup)$/.exec(key);
-  if (!m) return null;
-  return {
-    kind: "global",
-    seasonId: m[1],
-    channel: m[2] as "fa_ranking" | "fa_cup",
-  };
+    return ref;
+  }, []);
+  return getRef;
 }
 
-function encodeDivision(id: string): TargetKey {
-  return `div:${id}`;
-}
-
-function encodeGlobal(seasonId: string, channel: "fa_ranking" | "fa_cup"): TargetKey {
-  return `global:${seasonId}:${channel}`;
+function sleep(ms: number) {
+  return new Promise<void>((resolve) => window.setTimeout(resolve, ms));
 }
 
 async function waitForImages(node: HTMLElement) {
@@ -153,27 +108,35 @@ export function ContentHubClient({
   playedGameweeks: number[];
   clubLogos?: ClubLogoRecord[];
 }) {
-  const defaultTarget = useMemo((): TargetKey => {
-    if (divisions[0]?.id) return encodeDivision(divisions[0].id);
-    const s =
-      seasons.find((x) => x.status === "PUBLISHED") ?? seasons[0] ?? null;
-    if (s) return encodeGlobal(s.id, "fa_ranking");
-    return "div:" as TargetKey;
-  }, [divisions, seasons]);
+  const defaultGlobalSeasonId = useMemo(
+    () =>
+      seasons.find((x) => x.status === "PUBLISHED")?.id ?? seasons[0]?.id ?? "",
+    [seasons],
+  );
 
-  const [targetKey, setTargetKey] = useState<TargetKey>(defaultTarget);
+  const [selectedDivisionIds, setSelectedDivisionIds] = useState<string[]>([]);
+  const [selectedGlobalTarget, setSelectedGlobalTarget] =
+    useState<GlobalChannel | null>(null);
+  const [selectedGlobalSeasonId, setSelectedGlobalSeasonId] = useState(
+    defaultGlobalSeasonId,
+  );
   const [contentType, setContentType] = useState<ContentType>("summary");
   const [gameweek, setGameweek] = useState(
     () => playedGameweeks[playedGameweeks.length - 1] ?? 1,
   );
-  const [xDraft, setXDraft] = useState("");
-  const [discordJson, setDiscordJson] = useState("");
-  const [jsonError, setJsonError] = useState<string | null>(null);
+  const [xComDrafts, setXComDrafts] = useState<Record<string, string>>({});
+  const [discordJsons, setDiscordJsons] = useState<Record<string, string>>({});
+  const [globalDiscordJson, setGlobalDiscordJson] = useState("");
+  const [globalJsonError, setGlobalJsonError] = useState<string | null>(null);
+  const [capturesByDivision, setCapturesByDivision] = useState<
+    Record<string, ContentHubCapturePayload | null>
+  >({});
+  const [captureLoadingByDivision, setCaptureLoadingByDivision] = useState<
+    Record<string, boolean>
+  >({});
   const [attachGraphics, setAttachGraphics] = useState(false);
   const [customFiles, setCustomFiles] = useState<File[]>([]);
   const customFileInputRef = useRef<HTMLInputElement>(null);
-  const [capture, setCapture] = useState<ContentHubCapturePayload | null>(null);
-  const [captureLoading, setCaptureLoading] = useState(false);
   const [faRanking, setFaRanking] = useState<FARankingPayload | null>(null);
   const [faRankingLoading, setFaRankingLoading] = useState(false);
   const [faRoster, setFaRoster] = useState<FaRankingParticipant[]>([]);
@@ -182,10 +145,14 @@ export function ContentHubClient({
   const [toast, setToast] = useState<{ type: "ok" | "err"; text: string } | null>(
     null,
   );
-  const [copied, setCopied] = useState(false);
-  const [pending, startTransition] = useTransition();
-  const [discordGenPending, startDiscordGen] = useTransition();
+  const [copiedGlobalX, setCopiedGlobalX] = useState(false);
+  const [bulkXPending, setBulkXPending] = useState(false);
+  const [bulkDiscordPending, setBulkDiscordPending] = useState(false);
+  const [singleXPending, startSingleX] = useTransition();
+  const [singleDiscordPending, startSingleDiscord] = useTransition();
   const [sendPending, setSendPending] = useState(false);
+  const [sendAllPending, setSendAllPending] = useState(false);
+  const [sendProgress, setSendProgress] = useState<string | null>(null);
   const [sendServers, setSendServers] = useState<
     Record<DiscordServerTarget, boolean>
   >({
@@ -196,43 +163,73 @@ export function ContentHubClient({
     "wyniki" | "tabela" | "terminarz" | "fa-roster" | null
   >(null);
 
-  const resultsRef = useRef<HTMLDivElement>(null);
-  const standingsRef = useRef<HTMLDivElement>(null);
-  const previewRef = useRef<HTMLDivElement>(null);
+  const getResultsRef = useStableRefMap();
+  const getStandingsRef = useStableRefMap();
+  const getPreviewRef = useStableRefMap();
+
   const faRosterRef = useRef<HTMLDivElement>(null);
   const faCarouselRefs = useRef<RefObject<HTMLDivElement | null>[]>([]);
 
-  const sendTarget = useMemo(() => parseTargetKey(targetKey), [targetKey]);
-  const isGlobal = sendTarget?.kind === "global";
+  const isGlobalMode = selectedGlobalTarget !== null;
+  const isDivisionMode = !isGlobalMode && selectedDivisionIds.length > 0;
   const isPreview = contentType === "preview";
   const isSummary = contentType === "summary";
-  const isFaRanking =
-    sendTarget?.kind === "global" && sendTarget.channel === "fa_ranking";
-  /** Zapowiedź działa tylko dla dywizji H2H — FA Ranking zostaje przy podsumowaniu. */
-  const canAttachGraphics =
-    (!isGlobal || isFaRanking) && !(isPreview && isGlobal);
 
-  const selectedDivision = useMemo(() => {
-    if (sendTarget?.kind !== "division") return null;
-    return divisions.find((d) => d.id === sendTarget.divisionId) ?? null;
-  }, [divisions, sendTarget]);
+  const globalSendTarget = useMemo((): ContentHubSendTarget | null => {
+    if (!selectedGlobalTarget || !selectedGlobalSeasonId) return null;
+    return {
+      kind: "global",
+      seasonId: selectedGlobalSeasonId,
+      channel: selectedGlobalTarget,
+    };
+  }, [selectedGlobalTarget, selectedGlobalSeasonId]);
+
+  const isFaRanking = selectedGlobalTarget === "fa_ranking";
+
+  const canAttachGraphics = isDivisionMode || (isGlobalMode && isFaRanking);
+
+  const selectedDivisions = useMemo(
+    () =>
+      selectedDivisionIds
+        .map((id) => divisions.find((d) => d.id === id))
+        .filter((d): d is ContentHubDivisionOption => Boolean(d)),
+    [divisions, selectedDivisionIds],
+  );
 
   const selectedSeason = useMemo(() => {
-    if (sendTarget?.kind !== "global") return null;
-    return seasons.find((s) => s.id === sendTarget.seasonId) ?? null;
-  }, [seasons, sendTarget]);
+    if (!selectedGlobalSeasonId) return null;
+    return seasons.find((s) => s.id === selectedGlobalSeasonId) ?? null;
+  }, [seasons, selectedGlobalSeasonId]);
 
   const webhookByServer = useMemo((): Record<DiscordServerTarget, boolean> => {
     const empty = { NA_MINUSIE: false, FPL_ARENA: false };
-    if (!sendTarget) return empty;
-    if (sendTarget.kind === "division") {
-      return selectedDivision?.hasWebhookByServer ?? empty;
+    if (isDivisionMode) {
+      if (selectedDivisions.length === 0) return empty;
+      return {
+        NA_MINUSIE: selectedDivisions.every(
+          (d) => d.hasWebhookByServer.NA_MINUSIE,
+        ),
+        FPL_ARENA: selectedDivisions.every(
+          (d) => d.hasWebhookByServer.FPL_ARENA,
+        ),
+      };
     }
-    if (sendTarget.channel === "fa_ranking") {
-      return selectedSeason?.hasFaRankingWebhookByServer ?? empty;
+    if (globalSendTarget?.kind === "global") {
+      if (globalSendTarget.channel === "fa_ranking") {
+        return selectedSeason?.hasFaRankingWebhookByServer ?? empty;
+      }
+      return selectedSeason?.hasFaCupWebhookByServer ?? empty;
     }
-    return selectedSeason?.hasFaCupWebhookByServer ?? empty;
-  }, [sendTarget, selectedDivision, selectedSeason]);
+    return empty;
+  }, [isDivisionMode, selectedDivisions, globalSendTarget, selectedSeason]);
+
+  const divisionWebhookById = useCallback(
+    (divisionId: string): Record<DiscordServerTarget, boolean> => {
+      const d = divisions.find((x) => x.id === divisionId);
+      return d?.hasWebhookByServer ?? { NA_MINUSIE: false, FPL_ARENA: false };
+    },
+    [divisions],
+  );
 
   const selectedServerTargets = useMemo(
     () => DISCORD_SERVER_TARGETS.filter((s) => sendServers[s]),
@@ -250,19 +247,21 @@ export function ContentHubClient({
   );
 
   const targetLabel = useMemo(() => {
-    if (sendTarget?.kind === "division") {
-      return selectedDivision?.name ?? "Dywizja";
+    if (isDivisionMode) {
+      if (selectedDivisions.length === 1) return selectedDivisions[0].name;
+      return `${selectedDivisions.length} dywizji H2H`;
     }
-    if (sendTarget?.kind === "global") {
+    if (globalSendTarget?.kind === "global") {
       const ch =
-        sendTarget.channel === "fa_ranking" ? "The FA Ranking" : "FA Cup";
+        globalSendTarget.channel === "fa_ranking" ? "The FA Ranking" : "FA Cup";
       return `${selectedSeason?.name ?? "Sezon"} · ${ch}`;
     }
     return "—";
-  }, [sendTarget, selectedDivision, selectedSeason]);
+  }, [isDivisionMode, selectedDivisions, globalSendTarget, selectedSeason]);
 
-  const divisionIdForTools =
-    sendTarget?.kind === "division" ? sendTarget.divisionId : "";
+  const primaryDivisionId = selectedDivisionIds[0] ?? "";
+  const globalXDraft = primaryDivisionId ? xComDrafts[primaryDivisionId] ?? "" : "";
+  const xLen = globalXDraft.length;
 
   const gwOptions = useMemo(() => {
     if (isPreview) {
@@ -276,12 +275,39 @@ export function ContentHubClient({
     return Array.from({ length: 19 }, (_, i) => i + 1);
   }, [playedGameweeks, isPreview]);
 
-  const xLen = xDraft.length;
-  const xOver = xLen > X_LIMIT;
+  const allDivisionIds = useMemo(() => divisions.map((d) => d.id), [divisions]);
+
+  const toggleDivision = useCallback((divisionId: string) => {
+    setSelectedGlobalTarget(null);
+    setSelectedDivisionIds((prev) =>
+      prev.includes(divisionId)
+        ? prev.filter((id) => id !== divisionId)
+        : [...prev, divisionId],
+    );
+  }, []);
+
+  const selectAllDivisions = useCallback(() => {
+    setSelectedGlobalTarget(null);
+    setSelectedDivisionIds(allDivisionIds);
+  }, [allDivisionIds]);
+
+  const selectGlobal = useCallback((channel: GlobalChannel) => {
+    setSelectedDivisionIds([]);
+    setSelectedGlobalTarget(channel);
+  }, []);
 
   const showToast = useCallback((type: "ok" | "err", text: string) => {
     setToast({ type, text });
   }, []);
+
+  useEffect(() => {
+    if (isPreview && isGlobalMode && divisions.length) {
+      setSelectedGlobalTarget(null);
+      setSelectedDivisionIds((prev) =>
+        prev.length ? prev : [divisions[0]!.id],
+      );
+    }
+  }, [isPreview, isGlobalMode, divisions]);
 
   useEffect(() => {
     if (!canAttachGraphics && attachGraphics) setAttachGraphics(false);
@@ -289,57 +315,79 @@ export function ContentHubClient({
   }, [canAttachGraphics, attachGraphics, customFiles.length]);
 
   useEffect(() => {
-    if (isPreview && isGlobal && divisions[0]?.id) {
-      setTargetKey(encodeDivision(divisions[0].id));
-    }
-  }, [isPreview, isGlobal, divisions]);
-
-  useEffect(() => {
-    setXDraft("");
-    setDiscordJson("");
+    setXComDrafts({});
+    setDiscordJsons({});
+    setGlobalDiscordJson("");
   }, [contentType]);
 
-  // Off-screen: ładuj dane zawsze dla dywizji H2H (X download + Discord PNG)
   useEffect(() => {
-    if (isGlobal || !divisionIdForTools) {
-      setCapture(null);
+    if (isGlobalMode || selectedDivisionIds.length === 0) {
+      setCapturesByDivision({});
+      setCaptureLoadingByDivision({});
       return;
     }
+
     let cancelled = false;
-    setCaptureLoading(true);
-    getContentHubCaptureData(divisionIdForTools, gameweek)
-      .then((res) => {
+    const loadingState: Record<string, boolean> = {};
+    for (const id of selectedDivisionIds) loadingState[id] = true;
+    setCaptureLoadingByDivision(loadingState);
+    setCapturesByDivision((prev) => {
+      const next = { ...prev };
+      for (const id of selectedDivisionIds) {
+        if (!(id in next)) next[id] = null;
+      }
+      return next;
+    });
+
+    (async () => {
+      for (const divId of selectedDivisionIds) {
         if (cancelled) return;
-        if (res.error || !res.data) {
-          setCapture(null);
-          showToast("err", res.error ?? "Brak danych do grafik.");
-          return;
+        try {
+          const res = await getContentHubCaptureData(divId, gameweek);
+          if (cancelled) return;
+          if (res.error || !res.data) {
+            setCapturesByDivision((prev) => ({ ...prev, [divId]: null }));
+            showToast(
+              "err",
+              res.error ??
+                `Brak danych grafik dla ${divisions.find((d) => d.id === divId)?.name ?? divId}.`,
+            );
+          } else {
+            setCapturesByDivision((prev) => ({ ...prev, [divId]: res.data! }));
+          }
+        } catch (e) {
+          if (cancelled) return;
+          setCapturesByDivision((prev) => ({ ...prev, [divId]: null }));
+          showToast(
+            "err",
+            e instanceof Error ? e.message : "Błąd ładowania grafik.",
+          );
+        } finally {
+          if (!cancelled) {
+            setCaptureLoadingByDivision((prev) => ({
+              ...prev,
+              [divId]: false,
+            }));
+          }
         }
-        setCapture(res.data);
-      })
-      .catch((e) => {
-        if (cancelled) return;
-        setCapture(null);
-        showToast("err", e instanceof Error ? e.message : "Błąd ładowania grafik.");
-      })
-      .finally(() => {
-        if (!cancelled) setCaptureLoading(false);
-      });
+      }
+    })();
+
     return () => {
       cancelled = true;
     };
-  }, [isGlobal, divisionIdForTools, gameweek, showToast]);
+  }, [isGlobalMode, selectedDivisionIds, gameweek, divisions, showToast]);
 
   // Off-screen: The FA Ranking (karuzela 10-osobowa) — tylko tryb Podsumowanie
   useEffect(() => {
-    if (!isSummary || !isFaRanking || !sendTarget || sendTarget.kind !== "global") {
+    if (!isSummary || !isFaRanking || !selectedGlobalSeasonId) {
       setFaRanking(null);
       faCarouselRefs.current = [];
       return;
     }
     let cancelled = false;
     setFaRankingLoading(true);
-    getFARankingData(sendTarget.seasonId)
+    getFARankingData(selectedGlobalSeasonId)
       .then((data) => {
         if (cancelled) return;
         setFaRanking(data);
@@ -358,7 +406,7 @@ export function ContentHubClient({
     return () => {
       cancelled = true;
     };
-  }, [isSummary, isFaRanking, sendTarget, showToast]);
+  }, [isSummary, isFaRanking, selectedGlobalSeasonId, showToast]);
 
   // Off-screen: pełna lista uczestników FA Ranking (siatka 10×5)
   useEffect(() => {
@@ -439,12 +487,15 @@ export function ContentHubClient({
 
   const handleDownloadImage = useCallback(
     async (
+      divisionId: string,
       ref: RefObject<HTMLDivElement | null>,
       filename: string,
       kind: "wyniki" | "tabela" | "terminarz",
     ) => {
-      if (isGlobal || !divisionIdForTools) return;
-      if (captureLoading || !capture) {
+      if (!divisionId) return;
+      const capture = capturesByDivision[divisionId];
+      const loading = captureLoadingByDivision[divisionId];
+      if (loading || !capture) {
         showToast("err", "Poczekaj na załadowanie grafik…");
         return;
       }
@@ -456,7 +507,7 @@ export function ContentHubClient({
       showToast("ok", "Generowanie grafiki…");
       try {
         await waitForImages(ref.current);
-        await new Promise((r) => window.setTimeout(r, 60));
+        await sleep(60);
         const dataUrl = await captureExportNode(ref.current);
         const link = document.createElement("a");
         link.download = filename.endsWith(".png") ? filename : `${filename}.png`;
@@ -470,60 +521,286 @@ export function ContentHubClient({
         setDownloadBusy(null);
       }
     },
-    [isGlobal, divisionIdForTools, captureLoading, capture, showToast],
+    [capturesByDivision, captureLoadingByDivision, showToast],
   );
 
-  function onGenerateX() {
-    if (isGlobal || !divisionIdForTools) {
-      showToast("err", "Generator X.com działa tylko dla dywizji H2H.");
-      return;
-    }
-    startTransition(async () => {
-      const result = isPreview
-        ? await generatePreviewXComDraft(divisionIdForTools, gameweek)
-        : await generateXComDraft(divisionIdForTools, gameweek);
-      if (result.error) {
-        showToast("err", result.error);
-        return;
+  const captureDivisionFiles = useCallback(
+    async (divisionId: string): Promise<File[]> => {
+      const capture = capturesByDivision[divisionId];
+      if (!capture) {
+        throw new Error("Brak danych capture dla dywizji.");
       }
-      setXDraft(result.draft ?? "");
-      showToast("ok", result.success ?? "Szkic gotowy.");
-    });
+
+      if (isPreview) {
+        const previewNode = getPreviewRef(divisionId).current;
+        if (!previewNode) throw new Error("Brak węzła zapowiedzi do capture.");
+        await waitForImages(previewNode);
+        await sleep(80);
+        const terminarzPng = await captureExportNode(previewNode);
+        return [await dataUrlToFile(terminarzPng, "terminarz.png")];
+      }
+
+      const resultsNode = getResultsRef(divisionId).current;
+      const standingsNode = getStandingsRef(divisionId).current;
+      if (!resultsNode || !standingsNode) {
+        throw new Error("Brak węzłów off-screen do capture.");
+      }
+      await waitForImages(resultsNode);
+      await waitForImages(standingsNode);
+      await sleep(80);
+      const wynikiPng = await captureExportNode(resultsNode);
+      const tabelaPng = await captureExportNode(standingsNode);
+      return [
+        await dataUrlToFile(wynikiPng, "wyniki.png"),
+        await dataUrlToFile(tabelaPng, "tabela.png"),
+      ];
+    },
+    [capturesByDivision, getPreviewRef, getResultsRef, getStandingsRef, isPreview],
+  );
+
+  async function generateXForDivision(divisionId: string): Promise<string | null> {
+    const result = isPreview
+      ? await generatePreviewXComDraft(divisionId, gameweek)
+      : await generateXComDraft(divisionId, gameweek);
+    if (result.error) {
+      showToast("err", result.error);
+      return null;
+    }
+    return result.draft ?? "";
   }
 
-  function onGenerateDiscordPreview() {
-    if (isGlobal || !divisionIdForTools) {
-      showToast("err", "Zapowiedź Discord działa tylko dla dywizji H2H.");
-      return;
+  async function generateDiscordForDivision(
+    divisionId: string,
+  ): Promise<string | null> {
+    const result = isPreview
+      ? await generatePreviewDiscordJSON(divisionId, gameweek)
+      : await generateSummaryDiscordJSONForDivision(divisionId, gameweek);
+    if (result.error) {
+      showToast("err", result.error);
+      return null;
     }
-    startDiscordGen(async () => {
-      const result = await generatePreviewDiscordJSON(
-        divisionIdForTools,
-        gameweek,
-      );
-      if (result.error) {
-        showToast("err", result.error);
-        return;
-      }
-      setDiscordJson(result.json ?? "");
-      showToast("ok", result.success ?? "JSON zapowiedzi gotowy.");
-    });
+    return result.json ?? "";
   }
 
-  async function onCopyX() {
-    if (!xDraft.trim()) return;
+  async function onGenerateAllX() {
+    if (!selectedDivisionIds.length) {
+      showToast("err", "Zaznacz co najmniej jedną dywizję H2H.");
+      return;
+    }
+    setBulkXPending(true);
     try {
-      await navigator.clipboard.writeText(xDraft);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 2000);
+      const next = { ...xComDrafts };
+      for (const divId of selectedDivisionIds) {
+        const draft = await generateXForDivision(divId);
+        if (draft != null) next[divId] = draft;
+      }
+      setXComDrafts(next);
+      showToast("ok", `Wygenerowano szkice X.com (${selectedDivisionIds.length}).`);
+    } finally {
+      setBulkXPending(false);
+    }
+  }
+
+  async function onGenerateAllDiscord() {
+    if (!selectedDivisionIds.length) {
+      showToast("err", "Zaznacz co najmniej jedną dywizję H2H.");
+      return;
+    }
+    setBulkDiscordPending(true);
+    try {
+      const next = { ...discordJsons };
+      for (const divId of selectedDivisionIds) {
+        const json = await generateDiscordForDivision(divId);
+        if (json != null) next[divId] = json;
+      }
+      setDiscordJsons(next);
+      showToast(
+        "ok",
+        `Wygenerowano JSON Discord (${selectedDivisionIds.length}).`,
+      );
+    } finally {
+      setBulkDiscordPending(false);
+    }
+  }
+
+  function onGenerateXSingle(divisionId: string) {
+    startSingleX(async () => {
+      const draft = await generateXForDivision(divisionId);
+      if (draft == null) return;
+      setXComDrafts((prev) => ({ ...prev, [divisionId]: draft }));
+      showToast("ok", "Szkic X.com gotowy.");
+    });
+  }
+
+  function onGenerateDiscordSingle(divisionId: string) {
+    startSingleDiscord(async () => {
+      const json = await generateDiscordForDivision(divisionId);
+      if (json == null) return;
+      setDiscordJsons((prev) => ({ ...prev, [divisionId]: json }));
+      showToast("ok", "JSON Discord gotowy.");
+    });
+  }
+
+  async function onCopyGlobalX() {
+    if (!globalXDraft.trim()) return;
+    try {
+      await navigator.clipboard.writeText(globalXDraft);
+      setCopiedGlobalX(true);
+      window.setTimeout(() => setCopiedGlobalX(false), 2000);
     } catch {
       showToast("err", "Nie udało się skopiować do schowka.");
     }
   }
 
-  async function onSendDiscord() {
-    if (!sendTarget) {
-      showToast("err", "Wybierz cel wysyłki.");
+  async function postDiscordPayload(
+    sendTarget: ContentHubSendTarget,
+    rawJson: string,
+    generatedFiles: File[],
+  ): Promise<boolean> {
+    if (
+      sendTarget.kind === "global" &&
+      sendTarget.channel === "fa_cup" &&
+      (generatedFiles.length > 0 || customFiles.length > 0)
+    ) {
+      showToast("err", "Kanał FA Cup nie przyjmuje załączników PNG.");
+      return false;
+    }
+
+    const dest = await getDiscordWebhookForSend(
+      sendTarget,
+      selectedServerTargets,
+    );
+    if (!dest || "error" in dest) {
+      showToast(
+        "err",
+        dest && "error" in dest
+          ? dest.error
+          : "Brak skonfigurowanego webhooka.",
+      );
+      return false;
+    }
+
+    const files = [...generatedFiles, ...customFiles];
+    if (files.length > DISCORD_MAX_FILES) {
+      showToast(
+        "err",
+        `Discord przyjmuje max ${DISCORD_MAX_FILES} plików (masz ${files.length}).`,
+      );
+      return false;
+    }
+    const totalBytes = files.reduce((sum, f) => sum + f.size, 0);
+    if (totalBytes > DISCORD_MAX_FILE_BYTES) {
+      showToast("err", "Pliki przekraczają limit 25 MB webhooka Discord.");
+      return false;
+    }
+
+    const posted = await postDiscordWebhookFromClient({
+      destinations: dest.destinations,
+      rawJson,
+      files,
+    });
+    if (!posted.ok) {
+      showToast("err", posted.error);
+      return false;
+    }
+    const extra = files.length ? ` + ${files.length} plik(ów)` : "";
+    const toastMsg = formatDiscordMultiSendToast(posted.results);
+    showToast("ok", `${toastMsg.message}${extra}`);
+    return true;
+  }
+
+  async function onSendAllDivisions() {
+    if (!selectedDivisionIds.length) {
+      showToast("err", "Zaznacz co najmniej jedną dywizję H2H.");
+      return;
+    }
+    if (!selectedServerTargets.length) {
+      showToast("err", "Zaznacz co najmniej jeden serwer Discord.");
+      return;
+    }
+
+    const serverNames = selectedServerTargets
+      .map((s) => DISCORD_SERVER_LABELS[s])
+      .join(" + ");
+    if (
+      !window.confirm(
+        `Wysłać ${selectedDivisionIds.length} wiadomości (Discord) → ${serverNames}?${
+          attachGraphics ? " Z załączonymi grafikami PNG." : ""
+        }`,
+      )
+    ) {
+      return;
+    }
+
+    setSendAllPending(true);
+    let sent = 0;
+    try {
+      for (let i = 0; i < selectedDivisionIds.length; i++) {
+        const divId = selectedDivisionIds[i];
+        const division = divisions.find((d) => d.id === divId);
+        const label = division?.name ?? `Dywizja ${i + 1}`;
+        setSendProgress(`Wysyłanie: ${label} (${i + 1}/${selectedDivisionIds.length})…`);
+        showToast(
+          "ok",
+          `Wysyłanie: ${label} (${i + 1}/${selectedDivisionIds.length})…`,
+        );
+
+        const rawJson = discordJsons[divId]?.trim();
+        if (!rawJson) {
+          showToast("err", `Pominięto ${label}: brak JSON Discord.`);
+          continue;
+        }
+
+        const hooks = divisionWebhookById(divId);
+        if (!selectedServerTargets.every((s) => hooks[s])) {
+          showToast("err", `Pominięto ${label}: brak webhooka na serwerze.`);
+          continue;
+        }
+
+        let generatedFiles: File[] = [];
+        if (attachGraphics) {
+          if (captureLoadingByDivision[divId] || !capturesByDivision[divId]) {
+            showToast("err", `Pominięto ${label}: grafiki niegotowe.`);
+            continue;
+          }
+          try {
+            generatedFiles = await captureDivisionFiles(divId);
+          } catch (e) {
+            showToast(
+              "err",
+              `Pominięto ${label}: ${e instanceof Error ? e.message : "błąd PNG"}`,
+            );
+            continue;
+          }
+        }
+
+        const ok = await postDiscordPayload(
+          { kind: "division", divisionId: divId },
+          rawJson,
+          generatedFiles,
+        );
+        if (ok) sent += 1;
+
+        if (i < selectedDivisionIds.length - 1) {
+          await sleep(1000);
+        }
+      }
+      showToast("ok", `Zakończono masową wysyłkę (${sent}/${selectedDivisionIds.length}).`);
+    } catch (e) {
+      console.error("[ContentHub] bulk send", e);
+      showToast(
+        "err",
+        e instanceof Error ? e.message : "Błąd masowej wysyłki.",
+      );
+    } finally {
+      setSendAllPending(false);
+      setSendProgress(null);
+    }
+  }
+
+  async function onSendDiscordGlobal() {
+    if (!globalSendTarget) {
+      showToast("err", "Wybierz cel globalny (FA Ranking / FA Cup).");
       return;
     }
     if (!selectedServerTargets.length) {
@@ -531,31 +808,16 @@ export function ContentHubClient({
       return;
     }
     if (!hasWebhook) {
-      showToast(
-        "err",
-        "Brak webhooka na zaznaczonym serwerze. Ustaw w adminie → Webhooki Discord.",
-      );
+      showToast("err", "Brak webhooka na zaznaczonym serwerze.");
       return;
     }
 
-    const extrasHint =
-      customFiles.length > 0
-        ? ` + ${customFiles.length} własne`
-        : "";
     const serverNames = selectedServerTargets
       .map((s) => DISCORD_SERVER_LABELS[s])
       .join(" + ");
     if (
       !window.confirm(
-        `Wysłać embed${
-          attachGraphics && canAttachGraphics
-            ? isFaRanking
-              ? " + karuzelę PNG (FA Ranking)"
-              : isPreview
-                ? " + grafikę terminarza"
-                : " + grafiki PNG"
-            : ""
-        }${extrasHint} na „${targetLabel}” → ${serverNames}?`,
+        `Wysłać embed${attachGraphics && canAttachGraphics ? " + grafiki" : ""} na „${targetLabel}” → ${serverNames}?`,
       )
     ) {
       return;
@@ -563,82 +825,18 @@ export function ContentHubClient({
 
     setSendPending(true);
     try {
-      const dest = await getDiscordWebhookForSend(
-        sendTarget,
-        selectedServerTargets,
-      );
-      if (!dest || "error" in dest) {
-        showToast(
-          "err",
-          dest && "error" in dest
-            ? dest.error
-            : "Brak skonfigurowanego adresu Webhooka dla tej akcji.",
-        );
-        return;
-      }
+      let generatedFiles: File[] = [];
 
-      const sendFiles = async (generated: File[]) => {
-        if (
-          sendTarget.kind === "global" &&
-          sendTarget.channel === "fa_cup" &&
-          (generated.length > 0 || customFiles.length > 0)
-        ) {
-          showToast(
-            "err",
-            "Kanał FA Cup nie przyjmuje załączników PNG (tylko JSON embed).",
-          );
-          return;
-        }
-
-        const files = [...generated, ...customFiles];
-        if (files.length > DISCORD_MAX_FILES) {
-          showToast(
-            "err",
-            `Discord przyjmuje max ${DISCORD_MAX_FILES} plików (masz ${files.length}). Usuń część załączników.`,
-          );
-          return;
-        }
-        const totalBytes = files.reduce((sum, f) => sum + f.size, 0);
-        if (totalBytes > DISCORD_MAX_FILE_BYTES) {
-          const mb = (totalBytes / (1024 * 1024)).toFixed(1);
-          showToast(
-            "err",
-            `Plik jest za duży (${mb} MB). Limit webhooka Discord to 25 MB.`,
-          );
-          return;
-        }
-
-        const posted = await postDiscordWebhookFromClient({
-          destinations: dest.destinations,
-          rawJson: discordJson,
-          files,
-        });
-        if (!posted.ok) {
-          showToast("err", posted.error);
-          return;
-        }
-        const extra = files.length ? ` + ${files.length} plik(ów)` : "";
-        const toast = formatDiscordMultiSendToast(posted.results);
-        showToast("ok", `${toast.message}${extra}`);
-      };
-
-      if (!attachGraphics || !canAttachGraphics) {
-        await sendFiles([]);
-        return;
-      }
-
-      if (isFaRanking) {
+      if (attachGraphics && canAttachGraphics && isFaRanking) {
         if (faRankingLoading || !faRanking) {
           showToast("err", "Poczekaj na załadowanie The FA Ranking…");
           return;
         }
         const refs = faCarouselRefs.current;
         if (!refs.length) {
-          showToast("err", "Brak węzłów karuzeli FA Ranking do capture.");
+          showToast("err", "Brak węzłów karuzeli FA Ranking.");
           return;
         }
-        showToast("ok", `Generowanie ${refs.length} grafik…`);
-        const files: File[] = [];
         for (let i = 0; i < refs.length; i++) {
           const node = refs[i]?.current;
           if (!node) {
@@ -646,84 +844,38 @@ export function ContentHubClient({
             return;
           }
           await waitForImages(node);
-          await new Promise((r) => window.setTimeout(r, 40));
+          await sleep(40);
           const png = await captureExportNode(node);
           const from = i * 10 + 1;
           const to = Math.min((i + 1) * 10, faRanking.rows.length);
-          files.push(await dataUrlToFile(png, `fa-ranking-${from}-${to}.png`));
+          generatedFiles.push(
+            await dataUrlToFile(png, `fa-ranking-${from}-${to}.png`),
+          );
         }
-        await sendFiles(files);
-        return;
       }
 
-      if (captureLoading || !capture) {
-        showToast(
-          "err",
-          isPreview
-            ? "Poczekaj na załadowanie terminarza."
-            : "Poczekaj na załadowanie grafik (wyniki + tabela).",
-        );
-        return;
-      }
-
-      if (isPreview) {
-        const previewNode = previewRef.current;
-        if (!previewNode) {
-          showToast("err", "Brak węzła zapowiedzi do capture.");
-          return;
-        }
-        await waitForImages(previewNode);
-        await new Promise((r) => window.setTimeout(r, 80));
-        const terminarzPng = await captureExportNode(previewNode);
-        await sendFiles([
-          await dataUrlToFile(terminarzPng, "terminarz.png"),
-        ]);
-        return;
-      }
-
-      const resultsNode = resultsRef.current;
-      const standingsNode = standingsRef.current;
-      if (!resultsNode || !standingsNode) {
-        showToast("err", "Brak węzłów off-screen do capture.");
-        return;
-      }
-
-      await waitForImages(resultsNode);
-      await waitForImages(standingsNode);
-      await new Promise((r) => window.setTimeout(r, 80));
-
-      const wynikiPng = await captureExportNode(resultsNode);
-      const tabelaPng = await captureExportNode(standingsNode);
-
-      await sendFiles([
-        await dataUrlToFile(wynikiPng, "wyniki.png"),
-        await dataUrlToFile(tabelaPng, "tabela.png"),
-      ]);
+      await postDiscordPayload(
+        globalSendTarget,
+        globalDiscordJson,
+        generatedFiles,
+      );
     } catch (e) {
       console.error("Full Discord Error:", e);
       showToast(
         "err",
-        e instanceof Error && e.message.trim()
-          ? e.message
-          : "Wystąpił nieznany błąd podczas wysyłki.",
+        e instanceof Error ? e.message : "Błąd wysyłki Discord.",
       );
     } finally {
       setSendPending(false);
     }
   }
 
-  const exportMeta = capture
-    ? {
-        season: capture.seasonName,
-        pyramid: capture.pyramidName,
-        division: capture.divisionName,
-      }
-    : undefined;
-
-  const resultsTitle = capture
-    ? `Wyniki H2H · GW${capture.gameweek}`
-    : `Wyniki H2H · GW${gameweek}`;
-  const resultsFile = `${slugForExport(["wyniki", `gw${gameweek}`, selectedDivision?.name]) || "wyniki"}.png`;
+  const anyCaptureLoading = selectedDivisionIds.some(
+    (id) => captureLoadingByDivision[id],
+  );
+  const allCapturesReady =
+    selectedDivisionIds.length > 0 &&
+    selectedDivisionIds.every((id) => capturesByDivision[id]);
 
   return (
     <div className="relative space-y-6">
@@ -739,8 +891,13 @@ export function ContentHubClient({
           {toast.text}
         </p>
       ) : null}
+      {sendProgress ? (
+        <p className="rounded-xl border border-amber-500/30 bg-amber-950/30 px-4 py-2 text-sm font-semibold text-amber-200" role="status">
+          {sendProgress}
+        </p>
+      ) : null}
 
-      <div className="grid gap-6 xl:grid-cols-2">
+      <div className="space-y-5">
         <div className="space-y-5">
           <section className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-5 sm:p-6">
             <div className="mb-4 flex items-center gap-2">
@@ -789,74 +946,121 @@ export function ContentHubClient({
               </p>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className={isGlobal && isSummary ? "sm:col-span-2" : ""}>
-                <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                  Cel wysyłki
-                </label>
-                <select
-                  className={selectClass}
-                  value={targetKey}
-                  onChange={(e) => setTargetKey(e.target.value as TargetKey)}
+            {isSummary ? (
+              <div className="mb-4 space-y-3">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                  Rozgrywki globalne (pojedynczy wybór)
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {seasons.map((s) => (
+                    <div key={s.id} className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedGlobalSeasonId(s.id);
+                          selectGlobal("fa_ranking");
+                        }}
+                        className={`rounded-xl border px-3 py-2 text-[10px] font-black uppercase tracking-wider transition ${
+                          selectedGlobalTarget === "fa_ranking" &&
+                          selectedGlobalSeasonId === s.id
+                            ? "border-[#39FF14] bg-[#39FF14]/15 text-[#39FF14]"
+                            : "border-slate-700 text-slate-400 hover:border-slate-500"
+                        }`}
+                      >
+                        FA Ranking · {s.name}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedGlobalSeasonId(s.id);
+                          selectGlobal("fa_cup");
+                        }}
+                        className={`rounded-xl border px-3 py-2 text-[10px] font-black uppercase tracking-wider transition ${
+                          selectedGlobalTarget === "fa_cup" &&
+                          selectedGlobalSeasonId === s.id
+                            ? "border-[#39FF14] bg-[#39FF14]/15 text-[#39FF14]"
+                            : "border-slate-700 text-slate-400 hover:border-slate-500"
+                        }`}
+                      >
+                        FA Cup · {s.name}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            <div className="mb-4 space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                  Dywizje H2H (multi-select)
+                </p>
+                <button
+                  type="button"
+                  disabled={!divisions.length}
+                  onClick={selectAllDivisions}
+                  className="rounded-lg border border-slate-600 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-300 hover:bg-slate-800 disabled:opacity-40"
                 >
-                  {isSummary ? (
-                    <optgroup label="Rozgrywki Globalne">
-                      {seasons.length === 0 ? (
-                        <option value="" disabled>
-                          Brak sezonów
-                        </option>
-                      ) : (
-                        seasons.flatMap((s) => [
-                          <option
-                            key={`${s.id}-ranking`}
-                            value={encodeGlobal(s.id, "fa_ranking")}
-                          >
-                            The FA Ranking · {s.name}
-                            {s.hasFaRankingWebhook ? "" : " · brak webhooka"}
-                          </option>,
-                          <option
-                            key={`${s.id}-cup`}
-                            value={encodeGlobal(s.id, "fa_cup")}
-                          >
-                            FA Cup · {s.name}
-                            {s.hasFaCupWebhook ? "" : " · brak webhooka"}
-                          </option>,
-                        ])
-                      )}
-                    </optgroup>
-                  ) : null}
-                  <optgroup label="Dywizje H2H">
-                    {divisions.length === 0 ? (
-                      <option value="" disabled>
-                        Brak dywizji
-                      </option>
-                    ) : (
-                      divisions.map((d) => (
-                        <option key={d.id} value={encodeDivision(d.id)}>
-                          {d.label}
-                          {d.hasWebhook ? "" : " · brak webhooka"}
-                        </option>
-                      ))
-                    )}
-                  </optgroup>
-                </select>
+                  Zaznacz wszystkie ({divisions.length})
+                </button>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {divisions.map((d) => {
+                  const checked = selectedDivisionIds.includes(d.id);
+                  return (
+                    <label
+                      key={d.id}
+                      className={`flex cursor-pointer items-start gap-3 rounded-xl border px-3 py-2.5 transition ${
+                        checked
+                          ? "border-[#39FF14]/40 bg-[#39FF14]/5"
+                          : "border-slate-700/60 bg-slate-950/40 hover:border-slate-600"
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        className="mt-0.5 h-4 w-4 accent-[#39FF14]"
+                        checked={checked}
+                        onChange={() => toggleDivision(d.id)}
+                      />
+                      <span className="min-w-0">
+                        <span className="block text-sm font-semibold text-white">
+                          {d.name}
+                        </span>
+                        <span className="text-[11px] text-slate-500">{d.label}</span>
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <p className="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                  Aktywny tryb
+                </p>
+                <p className="text-sm text-slate-300">
+                  {isGlobalMode
+                    ? targetLabel
+                    : isDivisionMode
+                      ? `${selectedDivisionIds.length} dywizji · GW${gameweek}`
+                      : "— wybierz dywizje lub cel globalny"}
+                </p>
                 <p className="mt-2 text-[11px] text-slate-500">
                   Webhook:{" "}
                   {anyWebhookConfigured ? (
                     <span className="text-emerald-400">
                       {DISCORD_SERVER_TARGETS.filter((s) => webhookByServer[s])
                         .map((s) => DISCORD_SERVER_LABELS[s])
-                        .join(" · ")}{" "}
+                        .join(" · ") || "częściowo"}{" "}
                       · {targetLabel}
                     </span>
                   ) : (
-                    <span className="text-amber-400">
-                      brak — Webhooki Discord
-                    </span>
+                    <span className="text-amber-400">brak — Webhooki Discord</span>
                   )}
                 </p>
               </div>
-              {!isGlobal ? (
+              {!isGlobalMode ? (
                 <div>
                   <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">
                     Kolejka (GW)
@@ -880,540 +1084,190 @@ export function ContentHubClient({
                 </div>
               ) : null}
             </div>
-          </section>
 
-          <section
-            className={`rounded-2xl border border-slate-700/50 bg-slate-900/60 p-5 sm:p-6 ${
-              isGlobal ? "opacity-50" : ""
-            }`}
-          >
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h2 className="text-sm font-bold uppercase tracking-wider text-slate-300">
-                  B · Generator X.com
-                </h2>
-                <p className="mt-1 text-xs text-slate-500">
-                  {isGlobal
-                    ? "Niedostępne dla rozgrywek globalnych (brak H2H dywizji)."
-                    : isPreview
-                      ? "Limit 280 znaków · zapowiedź GW · pobierz PNG terminarza."
-                      : "Limit 280 znaków · zwycięzcy z x_com · pobierz PNG wyników / tabeli."}
-                </p>
-              </div>
-              <button
-                type="button"
-                disabled={pending || isGlobal || !divisionIdForTools}
-                onClick={onGenerateX}
-                className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-black uppercase tracking-wider transition disabled:cursor-not-allowed disabled:opacity-40 ${
-                  isPreview
-                    ? "bg-amber-400 text-black hover:bg-amber-300"
-                    : "bg-[#39FF14] text-black hover:bg-white"
-                }`}
-              >
-                {pending ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <Sparkles className="h-3.5 w-3.5" />
-                )}
-                {isPreview ? "Generuj Zapowiedź X.com" : "Generuj Szkic X.com"}
-              </button>
-            </div>
-            <textarea
-              className={`${textareaClass} min-h-[180px]`}
-              value={xDraft}
-              onChange={(e) => setXDraft(e.target.value)}
-              disabled={isGlobal}
-              placeholder={
-                isPreview
-                  ? `🔜 Zapowiedź GW${gameweek}!\n🏴󠁧󠁢󠁥󠁮󠁧󠁿 … (FPL Arena: Na Minusie ™)\n\nPrzed nami kolejne emocje! W tej kolejce zmierzą się m.in.:\n@nick1 vs @nick2\n\nKto zdobędzie cenne 3 punkty? 🔥\n#FPL #FPLpl`
-                  : `🏆 Wyniki & Tabela - GW ${gameweek}\n🏴󠁧󠁢󠁥󠁮󠁧󠁿 … (FPL Arena: Na Minusie ™)\n\nSwoje mecze wygrali:\n@nick1, @nick2\n\n#FPL #FPLpl #FantasyPL`
-              }
-              spellCheck={false}
-            />
-            <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-              <p
-                className={`text-xs font-semibold tabular-nums ${
-                  xOver ? "text-rose-500" : "text-slate-500"
-                }`}
-                aria-live="polite"
-              >
-                {xLen} / {X_LIMIT} znaków
-              </p>
-              <button
-                type="button"
-                disabled={isGlobal || !xDraft.trim()}
-                onClick={onCopyX}
-                className="inline-flex items-center gap-2 rounded-xl border border-slate-600 px-3 py-2 text-xs font-bold uppercase tracking-wider text-slate-300 hover:bg-slate-800 disabled:opacity-40"
-              >
-                {copied ? (
-                  <Check className="h-3.5 w-3.5 text-emerald-400" />
-                ) : (
-                  <Copy className="h-3.5 w-3.5" />
-                )}
-                {copied ? "Skopiowano" : "Kopiuj"}
-              </button>
-            </div>
-
-            {!isGlobal && isSummary ? (
-              <div className="mt-3 flex flex-wrap gap-3">
+            {isDivisionMode ? (
+              <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-800 pt-4">
                 <button
                   type="button"
-                  disabled={
-                    Boolean(downloadBusy) ||
-                    captureLoading ||
-                    !capture ||
-                    !divisionIdForTools
-                  }
-                  onClick={() =>
-                    handleDownloadImage(
-                      resultsRef,
-                      `wyniki-gw${gameweek}.png`,
-                      "wyniki",
-                    )
-                  }
-                  className="inline-flex items-center gap-2 rounded-xl border border-sky-500/35 bg-sky-500/10 px-3.5 py-2 text-xs font-bold uppercase tracking-wider text-sky-200 transition hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-40"
-                  title="Pobierz PNG wyników H2H (off-screen)"
+                  disabled={bulkXPending || !selectedDivisionIds.length}
+                  onClick={onGenerateAllX}
+                  className="inline-flex items-center gap-2 rounded-xl bg-[#39FF14] px-4 py-2.5 text-xs font-black uppercase tracking-wider text-black disabled:opacity-40"
                 >
-                  {downloadBusy === "wyniki" || (captureLoading && !capture) ? (
+                  {bulkXPending ? (
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
                   ) : (
-                    <Swords className="h-3.5 w-3.5" />
+                    <Sparkles className="h-3.5 w-3.5" />
                   )}
-                  <Download className="h-3.5 w-3.5 opacity-70" />
-                  Pobierz Wyniki
+                  Generuj wszystkie szkice X.com
                 </button>
                 <button
                   type="button"
-                  disabled={
-                    Boolean(downloadBusy) ||
-                    captureLoading ||
-                    !capture ||
-                    !divisionIdForTools
-                  }
-                  onClick={() =>
-                    handleDownloadImage(
-                      standingsRef,
-                      `tabela-gw${gameweek}.png`,
-                      "tabela",
-                    )
-                  }
-                  className="inline-flex items-center gap-2 rounded-xl border border-emerald-500/35 bg-emerald-500/10 px-3.5 py-2 text-xs font-bold uppercase tracking-wider text-emerald-200 transition hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-40"
-                  title="Pobierz PNG tabeli (off-screen)"
+                  disabled={bulkDiscordPending || !selectedDivisionIds.length}
+                  onClick={onGenerateAllDiscord}
+                  className="inline-flex items-center gap-2 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-2.5 text-xs font-black uppercase tracking-wider text-emerald-200 disabled:opacity-40"
                 >
-                  {downloadBusy === "tabela" || (captureLoading && !capture) ? (
+                  {bulkDiscordPending ? (
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
                   ) : (
-                    <Table2 className="h-3.5 w-3.5" />
+                    <Sparkles className="h-3.5 w-3.5" />
                   )}
-                  <Download className="h-3.5 w-3.5 opacity-70" />
-                  Pobierz Tabelę
-                </button>
-              </div>
-            ) : null}
-
-            {!isGlobal && isPreview ? (
-              <div className="mt-3 flex flex-wrap gap-3">
-                <button
-                  type="button"
-                  disabled={
-                    Boolean(downloadBusy) ||
-                    captureLoading ||
-                    !capture ||
-                    !divisionIdForTools
-                  }
-                  onClick={() =>
-                    handleDownloadImage(
-                      previewRef,
-                      `terminarz-gw${gameweek}.png`,
-                      "terminarz",
-                    )
-                  }
-                  className="inline-flex items-center gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 px-3.5 py-2 text-xs font-bold uppercase tracking-wider text-amber-200 transition hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:opacity-40"
-                  title="Pobierz PNG terminarza / zapowiedzi (off-screen)"
-                >
-                  {downloadBusy === "terminarz" ||
-                  (captureLoading && !capture) ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <CalendarDays className="h-3.5 w-3.5" />
-                  )}
-                  <Download className="h-3.5 w-3.5 opacity-70" />
-                  Pobierz Terminarz
-                </button>
-              </div>
-            ) : null}
-
-            {isFaRanking ? (
-              <div className="mt-3 flex flex-wrap gap-3">
-                <button
-                  type="button"
-                  disabled={
-                    Boolean(downloadBusy) ||
-                    faRosterLoading ||
-                    faRoster.length === 0
-                  }
-                  onClick={handleDownloadFaRoster}
-                  className="inline-flex items-center gap-2 rounded-xl border border-[#39FF14]/40 bg-[#39FF14]/10 px-3.5 py-2 text-xs font-bold uppercase tracking-wider text-[#39FF14] transition hover:bg-[#39FF14]/20 disabled:cursor-not-allowed disabled:opacity-40"
-                  title="Pobierz PNG: lista The FA Ranking (grid 6 kolumn + karty statystyk)"
-                >
-                  {downloadBusy === "fa-roster" || faRosterLoading ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Users className="h-3.5 w-3.5" />
-                  )}
-                  <Download className="h-3.5 w-3.5 opacity-70" />
-                  Generuj listę The FA Ranking (PNG)
-                  {!faRosterLoading && faRoster.length > 0 ? (
-                    <span className="text-[10px] font-semibold text-emerald-400/90">
-                      ({faRoster.length})
-                    </span>
-                  ) : null}
+                  Generuj wszystkie JSON (Discord)
                 </button>
               </div>
             ) : null}
           </section>
 
-          <section className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-5 sm:p-6">
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h2 className="text-sm font-bold uppercase tracking-wider text-slate-300">
-                  C · Discord Embed Editor
-                </h2>
-                <p className="mt-1 text-xs text-slate-500">
-                  {isPreview
-                    ? "Wygeneruj JSON zapowiedzi albo wklej własny. Podgląd na żywo po prawej."
-                    : "Wklej JSON (Discohook / AI). Podgląd na żywo po prawej."}
-                </p>
-              </div>
-              <div className="flex flex-wrap items-center gap-3">
-                {isPreview && !isGlobal ? (
-                  <button
-                    type="button"
-                    disabled={
-                      discordGenPending || isGlobal || !divisionIdForTools
-                    }
-                    onClick={onGenerateDiscordPreview}
-                    className="inline-flex items-center gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-amber-200 transition hover:bg-amber-500/20 disabled:opacity-40"
-                  >
-                    {discordGenPending ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <Sparkles className="h-3.5 w-3.5" />
-                    )}
-                    Generuj JSON Zapowiedzi
-                  </button>
-                ) : null}
-                <button
-                  type="button"
-                  onClick={() =>
-                    setDiscordJson(
-                      isPreview ? SAMPLE_PREVIEW_EMBED_JSON : SAMPLE_EMBED_JSON,
-                    )
-                  }
-                  className="text-[10px] font-bold uppercase tracking-wider text-slate-500 underline-offset-2 hover:text-slate-300 hover:underline"
-                >
-                  Wstaw przykładowy JSON
-                </button>
-              </div>
-            </div>
-
-            <label
-              className={`mb-4 flex items-start gap-3 rounded-xl border border-slate-700/60 bg-slate-950/50 px-4 py-3 ${
-                canAttachGraphics ? "cursor-pointer" : "cursor-not-allowed opacity-60"
-              }`}
-            >
-              <input
-                type="checkbox"
-                className="mt-0.5 h-4 w-4 rounded border-slate-600 bg-slate-900 text-[#39FF14] focus:ring-[#39FF14] disabled:opacity-50"
-                checked={attachGraphics && canAttachGraphics}
-                disabled={!canAttachGraphics}
-                onChange={(e) => setAttachGraphics(e.target.checked)}
-              />
-              <span className="min-w-0">
-                <span className="flex flex-wrap items-center gap-2 text-sm font-semibold text-slate-200">
-                  <ImageIcon className="h-4 w-4 text-sky-300" />
-                  {isFaRanking
-                    ? "Generuj i załącz grafiki (karuzela The FA Ranking, po 10 graczy)"
-                    : isPreview
-                      ? "Dołącz grafikę terminarza (Zapowiedź GW)"
-                      : "Dołącz wygenerowane grafiki (Wyniki H2H i Tabela z wybranego GW)"}
-                  {!canAttachGraphics ? (
-                    <span className="text-[11px] font-medium text-amber-400/90">
-                      (Opcja niedostępna dla FA Cup)
-                    </span>
-                  ) : null}
-                </span>
-                <span className="mt-1 block text-[11px] text-slate-500">
-                  {isFaRanking
-                    ? "Off-screen capture → multipart webhook (album Discord / grid X.com)."
-                    : isPreview
-                      ? "Off-screen capture → jedna grafika terminarza (bez wyników)."
-                      : "Off-screen capture → multipart webhook (te same PNG co „Pobierz” w sekcji X)."}
-                  {isFaRanking && faRankingLoading ? (
-                    <span className="ml-1 text-amber-400"> Ładowanie FA Ranking…</span>
-                  ) : null}
-                  {isFaRanking && !faRankingLoading && faRanking ? (
-                    <span className="ml-1 text-emerald-400">
-                      {" "}
-                      Gotowe ({Math.max(1, Math.ceil(faRanking.rows.length / 10))}{" "}
-                      PNG).
-                    </span>
-                  ) : null}
-                  {!isGlobal && captureLoading ? (
-                    <span className="ml-1 text-amber-400"> Ładowanie danych…</span>
-                  ) : null}
-                  {!isGlobal && !captureLoading && capture ? (
-                    <span className="ml-1 text-emerald-400">
-                      {" "}
-                      {isPreview ? "Terminarz gotowy." : "Grafiki gotowe."}
-                    </span>
-                  ) : null}
-                </span>
-              </span>
-            </label>
-
-            <div className="mb-4 space-y-2">
-              <input
-                ref={customFileInputRef}
-                type="file"
-                multiple
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => {
-                  const picked = Array.from(e.target.files ?? []);
-                  if (!picked.length) return;
-                  setCustomFiles((prev) => {
-                    const next = [...prev];
-                    for (const file of picked) {
-                      const duplicate = next.some(
-                        (f) =>
-                          f.name === file.name &&
-                          f.size === file.size &&
-                          f.lastModified === file.lastModified,
-                      );
-                      if (!duplicate) next.push(file);
-                    }
-                    return next.slice(0, DISCORD_MAX_FILES);
-                  });
-                  e.target.value = "";
-                }}
-              />
-              <button
-                type="button"
-                disabled={!canAttachGraphics}
-                onClick={() => customFileInputRef.current?.click()}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-600/70 bg-slate-800 px-3.5 py-2.5 text-xs font-black uppercase tracking-wider text-slate-200 transition hover:border-slate-500 hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                <Paperclip className="h-3.5 w-3.5 text-sky-300" aria-hidden />
-                Dodaj własne grafiki (opcjonalnie)
-              </button>
-              {!canAttachGraphics ? (
-                <p className="text-[11px] text-amber-400/90">
-                  FA Cup przyjmuje tylko JSON (bez załączników).
-                </p>
-              ) : customFiles.length > 0 ? (
-                <ul className="space-y-1.5 rounded-xl border border-slate-700/50 bg-slate-950/40 px-3 py-2.5">
-                  {customFiles.map((file, index) => (
-                    <li
-                      key={`${file.name}-${file.size}-${file.lastModified}-${index}`}
-                      className="flex items-center gap-2 text-xs text-slate-300"
-                    >
-                      <ImageIcon className="h-3.5 w-3.5 shrink-0 text-slate-500" />
-                      <span className="min-w-0 flex-1 truncate font-medium">
-                        {file.name}
-                      </span>
-                      <span className="shrink-0 tabular-nums text-slate-500">
-                        {file.size < 1024 * 1024
-                          ? `${Math.max(1, Math.round(file.size / 1024))} KB`
-                          : `${(file.size / (1024 * 1024)).toFixed(1)} MB`}
-                      </span>
-                      <button
-                        type="button"
-                        title="Usuń plik"
-                        onClick={() =>
-                          setCustomFiles((prev) =>
-                            prev.filter((_, i) => i !== index),
-                          )
-                        }
-                        className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-slate-700 bg-slate-900 text-slate-400 transition hover:border-rose-500/40 hover:bg-rose-500/10 hover:text-rose-300"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-[11px] text-slate-500">
-                  Memy, trash-talk, Menedżer Miesiąca itd. — doklejone do tej samej
-                  wiadomości Discord (max {DISCORD_MAX_FILES} plików łącznie z
-                  wygenerowanymi).
-                </p>
-              )}
-            </div>
-
-            <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">
-              Wklej kod JSON dla Discorda (Wygenerowany przez AI)
-            </label>
-            <textarea
-              className={`${textareaClass} min-h-[260px]`}
-              value={discordJson}
-              onChange={(e) => setDiscordJson(e.target.value)}
-              placeholder='{ "content": "<@…>", "embeds": [ { "title": "…", "color": 5763719 } ] }'
-              spellCheck={false}
-            />
-            {jsonError ? (
-              <p className="mt-2 text-xs font-semibold text-rose-500" role="alert">
-                {jsonError}
-              </p>
-            ) : null}
-
-            <fieldset className="mt-4 space-y-2 rounded-xl border border-slate-700/50 bg-slate-950/50 p-4">
-              <legend className="px-1 text-[10px] font-black uppercase tracking-wider text-slate-500">
-                Cel wysyłki Discord
-              </legend>
-              {DISCORD_SERVER_TARGETS.map((server) => {
-                const configured = webhookByServer[server];
-                const checked = sendServers[server];
-                return (
-                  <label
-                    key={server}
-                    className="flex cursor-pointer items-start gap-3 rounded-lg px-1 py-1.5 hover:bg-slate-900/80"
-                  >
-                    <input
-                      type="checkbox"
-                      className="mt-0.5 h-4 w-4 accent-[#39FF14]"
-                      checked={checked}
-                      onChange={(e) =>
-                        setSendServers((prev) => ({
-                          ...prev,
-                          [server]: e.target.checked,
-                        }))
-                      }
-                    />
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-sm font-bold text-white">
-                        Wyślij na {DISCORD_SERVER_LABELS[server]}
-                      </span>
-                      <span
-                        className={`text-[11px] ${
-                          configured ? "text-emerald-400" : "text-amber-400"
-                        }`}
-                      >
-                        {configured
-                          ? "Webhook OK"
-                          : "Brak webhooka — ustaw w adminie → Webhooki"}
-                      </span>
-                    </span>
-                  </label>
-                );
-              })}
-              {!selectedServerTargets.length ? (
-                <p className="text-[11px] font-semibold text-rose-400">
-                  Zaznacz co najmniej jeden serwer.
-                </p>
-              ) : null}
-            </fieldset>
-
-            <button
-              type="button"
-              disabled={
-                sendPending ||
-                !sendTarget ||
-                !discordJson.trim() ||
-                Boolean(jsonError) ||
-                !selectedServerTargets.length ||
-                !hasWebhook ||
-                (attachGraphics &&
-                  !isGlobal &&
-                  (captureLoading || !capture)) ||
-                (attachGraphics &&
-                  isFaRanking &&
-                  (faRankingLoading || !faRanking))
-              }
-              onClick={onSendDiscord}
-              className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-orange-500/40 bg-orange-500/15 px-4 py-3 text-sm font-black uppercase tracking-wider text-orange-200 transition hover:bg-orange-500/25 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              {sendPending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Flame className="h-4 w-4" />
-              )}
-              Wyślij przez Webhook
-              <Send className="h-3.5 w-3.5 opacity-70" />
-            </button>
-          </section>
-        </div>
-
-        <div className="xl:sticky xl:top-6 xl:self-start">
-          <section className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-5 sm:p-6">
-            <h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-slate-300">
-              Live Preview · Discord
-            </h2>
-            <DiscordEmbedPreview
-              rawJson={discordJson}
-              onParseError={setJsonError}
-            />
-          </section>
-        </div>
-      </div>
-
-      {/* Off-screen: H2H — podsumowanie (wyniki + tabela) lub zapowiedź (terminarz) */}
-      {!isGlobal && capture && isSummary ? (
-        <div
-          className="pointer-events-none absolute -left-[10000px] top-0 flex w-[1200px] flex-col gap-8"
-          aria-hidden
-        >
-          <DiscordExportFrame
-            fileName={resultsFile}
-            title={resultsTitle}
-            subtitle={[exportMeta?.season, exportMeta?.pyramid, exportMeta?.division]
-              .filter(Boolean)
-              .join(" · ")}
-            hideControls
-            captureRef={resultsRef}
-            exportId="content-hub-wyniki"
-          >
-            {capture.gwDetails.matches.length === 0 ? (
-              <p className="py-6 text-center text-sm text-slate-500">
-                Brak meczów dla GW{capture.gameweek}.
-              </p>
-            ) : (
-              <div className="flex w-full flex-col gap-2.5">
-                {capture.gwDetails.matches.map((m) => (
-                  <MatchCard key={m.fixture.id} match={m} logos={clubLogos} />
-                ))}
-              </div>
-            )}
-          </DiscordExportFrame>
-
-          <StandingsTable
-            rows={capture.standings}
-            logos={clubLogos}
-            tier={capture.tier}
-            exportMeta={exportMeta}
-            divisionId={capture.divisionId}
-            hideControls
-            captureRef={standingsRef}
+          <ContentHubSendPanel
+            isDivisionMode={isDivisionMode}
+            isGlobalMode={isGlobalMode}
+            isPreview={isPreview}
+            isSummary={isSummary}
+            isFaRanking={isFaRanking}
+            gameweek={gameweek}
+            selectedDivisions={selectedDivisions}
+            xComDrafts={xComDrafts}
+            discordJsons={discordJsons}
+            globalDiscordJson={globalDiscordJson}
+            globalJsonError={globalJsonError}
+            capturesByDivision={capturesByDivision}
+            captureLoadingByDivision={captureLoadingByDivision}
+            bulkXPending={bulkXPending}
+            bulkDiscordPending={bulkDiscordPending}
+            singleXPending={singleXPending}
+            singleDiscordPending={singleDiscordPending}
+            attachGraphics={attachGraphics}
+            canAttachGraphics={canAttachGraphics}
+            customFiles={customFiles}
+            customFileInputRef={customFileInputRef}
+            sendServers={sendServers}
+            webhookByServer={webhookByServer}
+            selectedServerTargets={selectedServerTargets}
+            hasWebhook={hasWebhook}
+            sendPending={sendPending}
+            sendAllPending={sendAllPending}
+            sendProgress={sendProgress}
+            anyCaptureLoading={anyCaptureLoading}
+            allCapturesReady={allCapturesReady}
+            faRankingLoading={faRankingLoading}
+            faRankingReady={Boolean(faRanking)}
+            faRosterLoading={faRosterLoading}
+            faRosterCount={faRoster.length}
+            downloadBusy={downloadBusy}
+            copiedGlobalX={copiedGlobalX}
+            globalXDraft={globalXDraft}
+            xLen={xLen}
+            onXChange={(id, v) => setXComDrafts((p) => ({ ...p, [id]: v }))}
+            onDiscordChange={(id, v) => setDiscordJsons((p) => ({ ...p, [id]: v }))}
+            onGlobalDiscordChange={setGlobalDiscordJson}
+            onGenerateXSingle={onGenerateXSingle}
+            onGenerateDiscordSingle={onGenerateDiscordSingle}
+            onCopyGlobalX={onCopyGlobalX}
+            onAttachGraphicsChange={setAttachGraphics}
+            onSendServersChange={(server, checked) =>
+              setSendServers((prev) => ({ ...prev, [server]: checked }))
+            }
+            onCustomFilesChange={setCustomFiles}
+            onSendAllDivisions={onSendAllDivisions}
+            onSendGlobal={onSendDiscordGlobal}
+            onDownloadImage={handleDownloadImage}
+            onDownloadFaRoster={handleDownloadFaRoster}
+            getResultsRef={getResultsRef}
+            getStandingsRef={getStandingsRef}
+            getPreviewRef={getPreviewRef}
+            onGlobalJsonError={setGlobalJsonError}
           />
         </div>
-      ) : null}
 
-      {!isGlobal && capture && isPreview ? (
-        <div
-          className="pointer-events-none absolute -left-[10000px] top-0 w-[1200px]"
-          aria-hidden
-        >
-          <GameweekPreviewExportNode
-            matches={capture.gwDetails.matches}
-            logos={clubLogos}
-            gameweek={capture.gameweek}
-            divisionName={capture.divisionName}
-            seasonName={capture.seasonName}
-            pyramidName={capture.pyramidName}
-            captureRef={previewRef}
-          />
-        </div>
-      ) : null}
+      {/* Off-screen: H2H — per dywizja (unikalne ref-y do capture) */}
+      {isDivisionMode && isSummary
+        ? selectedDivisionIds.map((divId) => {
+            const capture = capturesByDivision[divId];
+            if (!capture) return null;
+            const division = divisions.find((d) => d.id === divId);
+            const exportMeta = {
+              season: capture.seasonName,
+              pyramid: capture.pyramidName,
+              division: capture.divisionName,
+            };
+            const resultsTitle = `Wyniki H2H · GW${capture.gameweek}`;
+            const resultsFile = `${
+              slugForExport(["wyniki", `gw${gameweek}`, division?.name]) ||
+              "wyniki"
+            }.png`;
+            return (
+              <div
+                key={`summary-${divId}`}
+                className="pointer-events-none absolute -left-[10000px] top-0 flex w-[1200px] flex-col gap-8"
+                aria-hidden
+              >
+                <DiscordExportFrame
+                  fileName={resultsFile}
+                  title={resultsTitle}
+                  subtitle={[
+                    exportMeta.season,
+                    exportMeta.pyramid,
+                    exportMeta.division,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                  hideControls
+                  captureRef={getResultsRef(divId)}
+                  exportId={`content-hub-wyniki-${divId}`}
+                >
+                  {capture.gwDetails.matches.length === 0 ? (
+                    <p className="py-6 text-center text-sm text-slate-500">
+                      Brak meczów dla GW{capture.gameweek}.
+                    </p>
+                  ) : (
+                    <div className="flex w-full flex-col gap-2.5">
+                      {capture.gwDetails.matches.map((m) => (
+                        <MatchCard
+                          key={m.fixture.id}
+                          match={m}
+                          logos={clubLogos}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </DiscordExportFrame>
+
+                <StandingsTable
+                  rows={capture.standings}
+                  logos={clubLogos}
+                  tier={capture.tier}
+                  exportMeta={exportMeta}
+                  divisionId={capture.divisionId}
+                  hideControls
+                  captureRef={getStandingsRef(divId)}
+                />
+              </div>
+            );
+          })
+        : null}
+
+      {isDivisionMode && isPreview
+        ? selectedDivisionIds.map((divId) => {
+            const capture = capturesByDivision[divId];
+            if (!capture) return null;
+            return (
+              <div
+                key={`preview-${divId}`}
+                className="pointer-events-none absolute -left-[10000px] top-0 w-[1200px]"
+                aria-hidden
+              >
+                <GameweekPreviewExportNode
+                  matches={capture.gwDetails.matches}
+                  logos={clubLogos}
+                  gameweek={capture.gameweek}
+                  divisionName={capture.divisionName}
+                  seasonName={capture.seasonName}
+                  pyramidName={capture.pyramidName}
+                  captureRef={getPreviewRef(divId)}
+                />
+              </div>
+            );
+          })
+        : null}
 
       {isFaRanking && faRanking && isSummary ? (
         <FARankingExportCarousel
@@ -1436,6 +1290,7 @@ export function ContentHubClient({
           />
         </div>
       ) : null}
+    </div>
     </div>
   );
 }

@@ -3,6 +3,11 @@
 import { createClient } from "@/lib/supabase/server";
 import type { ActionState } from "@/lib/admin/types";
 import {
+  generateSummaryDiscordJSON,
+  type SummaryDiscordFixtureInput,
+  type SummaryDiscordTeamInput,
+} from "@/lib/admin/discordSummary";
+import {
   DEFAULT_DISCORD_SERVER,
   DISCORD_SERVER_LABELS,
   normalizeDiscordServerTargets,
@@ -304,6 +309,10 @@ export type GeneratePreviewDiscordResult = ActionState & {
   json?: string;
 };
 
+export type GenerateSummaryDiscordResult = ActionState & {
+  json?: string;
+};
+
 /**
  * Szkic X.com — zapowiedź nadchodzącej kolejki (bez wyników).
  * Oznacza 2–4 graczy z x_com z najciekawszych par.
@@ -527,6 +536,113 @@ export async function generatePreviewDiscordJSON(
   }
 }
 
+/**
+ * JSON embed Discord — podsumowanie kolejki (wyniki FPL, ping roli dywizji).
+ */
+export async function generateSummaryDiscordJSONForDivision(
+  divisionId: string,
+  gameweek: number,
+): Promise<GenerateSummaryDiscordResult> {
+  try {
+    const supabase = await requireAuth();
+    if (!divisionId) return { error: "Wybierz dywizję." };
+    if (!Number.isFinite(gameweek) || gameweek < 1) {
+      return { error: "Wybierz kolejkę (GW)." };
+    }
+
+    const { data: division, error: divError } = await supabase
+      .from("divisions")
+      .select("id, name, tier")
+      .eq("id", divisionId)
+      .maybeSingle();
+    if (divError) return { error: divError.message };
+    if (!division) return { error: "Nie znaleziono dywizji." };
+
+    const { data: fixturesRaw, error: fixError } = await supabase
+      .from("fixtures")
+      .select(
+        "home_team_id, away_team_id, home_fpl_points, away_fpl_points, is_finished, is_published, is_playoff",
+      )
+      .eq("division_id", divisionId)
+      .eq("gameweek", gameweek);
+    if (fixError) return { error: fixError.message };
+
+    const fixtures: SummaryDiscordFixtureInput[] = (fixturesRaw ?? []).map(
+      (f) => ({
+        home_team_id: String(f.home_team_id ?? ""),
+        away_team_id: String(f.away_team_id ?? ""),
+        home_fpl_points:
+          f.home_fpl_points != null ? Number(f.home_fpl_points) : null,
+        away_fpl_points:
+          f.away_fpl_points != null ? Number(f.away_fpl_points) : null,
+        is_finished: Boolean(f.is_finished),
+        is_published: f.is_published !== false,
+        is_playoff: Boolean(f.is_playoff),
+      }),
+    );
+
+    const played = fixtures.filter(
+      (f) => f.is_finished || f.is_published,
+    );
+    if (!played.length) {
+      return {
+        error: `Brak rozegranych meczów w ${division.name} · GW${gameweek}.`,
+      };
+    }
+
+    const teamIds = [
+      ...new Set(
+        played.flatMap((f) => [f.home_team_id, f.away_team_id].filter(Boolean)),
+      ),
+    ];
+
+    const { data: teamsRaw, error: teamsError } = await supabase
+      .from("teams")
+      .select("id, manager_name, discord_id")
+      .in("id", teamIds);
+    if (teamsError) return { error: teamsError.message };
+
+    const teamsById = new Map<string, SummaryDiscordTeamInput>(
+      (teamsRaw ?? []).map((t) => [
+        String(t.id),
+        {
+          manager_name: String(t.manager_name ?? "").trim() || "—",
+          discord_id: (t.discord_id as string | null) ?? null,
+        },
+      ]),
+    );
+
+    const tier = Number(division.tier) || 1;
+    const { payload, matchCount } = generateSummaryDiscordJSON(
+      String(division.name ?? "—"),
+      tier,
+      gameweek,
+      fixtures,
+      teamsById,
+    );
+
+    if (matchCount === 0) {
+      return {
+        error: `Brak rozegranych meczów ligowych w ${division.name} · GW${gameweek}.`,
+      };
+    }
+
+    return {
+      error: null,
+      success: "JSON podsumowania Discord gotowy.",
+      json: JSON.stringify(payload, null, 2),
+    };
+  } catch (e) {
+    console.error("[generateSummaryDiscordJSONForDivision]", e);
+    return {
+      error:
+        e instanceof Error
+          ? e.message
+          : "Nie udało się wygenerować JSON-a podsumowania.",
+    };
+  }
+}
+
 export type DiscordWebhookSendDestination = {
   url: string;
   label: string;
@@ -679,7 +795,9 @@ export async function getContentHubCaptureData(
 
     const { data: teamsRaw, error: teamsError } = await supabase
       .from("teams")
-      .select("id, manager_name, discord_nick, fpl_id, fpl_team_name, chosen_club")
+      .select(
+        "id, manager_name, discord_nick, discord_id, fpl_id, fpl_team_name, chosen_club",
+      )
       .eq("division_id", divisionId)
       .order("manager_name", { ascending: true });
     if (teamsError) return { error: teamsError.message };
@@ -703,6 +821,7 @@ export async function getContentHubCaptureData(
       id: row.id,
       manager_name: row.manager_name,
       discord_nick: row.discord_nick,
+      discord_id: (row.discord_id as string | null) ?? null,
       fpl_id: row.fpl_id,
       fpl_team_name: row.fpl_team_name,
       chosen_club: row.chosen_club,
@@ -722,13 +841,16 @@ export async function getContentHubCaptureData(
     if (missing.length) {
       const { data: hist } = await supabase
         .from("teams")
-        .select("id, manager_name, discord_nick, fpl_id, fpl_team_name, chosen_club")
+        .select(
+          "id, manager_name, discord_nick, discord_id, fpl_id, fpl_team_name, chosen_club",
+        )
         .in("id", missing);
       for (const row of hist ?? []) {
         const t: PublicTeam = {
           id: row.id,
           manager_name: row.manager_name,
           discord_nick: row.discord_nick,
+          discord_id: (row.discord_id as string | null) ?? null,
           fpl_id: row.fpl_id,
           fpl_team_name: row.fpl_team_name,
           chosen_club: row.chosen_club,
