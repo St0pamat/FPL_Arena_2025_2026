@@ -3,10 +3,12 @@
 import { createClient } from "@/lib/supabase/server";
 import type { ActionState } from "@/lib/admin/types";
 import {
+  formatSummaryDiscordPlayer,
   generateSummaryDiscordJSON,
   type SummaryDiscordFixtureInput,
   type SummaryDiscordTeamInput,
 } from "@/lib/admin/discordSummary";
+import { getDivisionRoleMention } from "@/lib/admin/discordRoles";
 import {
   DEFAULT_DISCORD_SERVER,
   DISCORD_SERVER_LABELS,
@@ -441,7 +443,7 @@ export async function generatePreviewDiscordJSON(
 
     const { data: division, error: divError } = await supabase
       .from("divisions")
-      .select("id, name")
+      .select("id, name, tier")
       .eq("id", divisionId)
       .maybeSingle();
     if (divError) return { error: divError.message };
@@ -469,7 +471,7 @@ export async function generatePreviewDiscordJSON(
 
     const { data: teams, error: teamsError } = await supabase
       .from("teams")
-      .select("id, manager_name, chosen_club")
+      .select("id, manager_name, discord_id")
       .in("id", teamIds);
     if (teamsError) return { error: teamsError.message };
 
@@ -478,44 +480,44 @@ export async function generatePreviewDiscordJSON(
         t.id as string,
         {
           manager_name: String(t.manager_name ?? "—").trim() || "—",
-          club: String(t.chosen_club ?? "").trim(),
+          discord_id: (t.discord_id as string | null) ?? null,
         },
       ]),
     );
 
-    const fields = regular.map((f, i) => {
-      const home = byId.get(f.home_team_id as string);
-      const away = byId.get(f.away_team_id as string);
-      const homeLabel = home
-        ? `${home.manager_name}${home.club ? ` (${home.club})` : ""}`
-        : "—";
-      const awayLabel = away
-        ? `${away.manager_name}${away.club ? ` (${away.club})` : ""}`
-        : "—";
-      return {
-        name: `Mecz ${i + 1}`,
-        value: `**${homeLabel}** vs **${awayLabel}**`,
-        inline: false,
-      };
-    });
+    const matchesText = regular
+      .map((f) => {
+        const home = byId.get(f.home_team_id as string);
+        const away = byId.get(f.away_team_id as string);
+        const homeMention = formatSummaryDiscordPlayer(home);
+        const awayMention = formatSummaryDiscordPlayer(away);
+        return `**${homeMention}** vs **${awayMention}**`;
+      })
+      .join("\n");
 
     // Discord embed color: złoty / pomarańczowy (#EAB308)
     const GOLD_ORANGE = 0xeab308;
+    const roleMention = getDivisionRoleMention(Number(division.tier));
+    const content = roleMention
+      ? `🚨 **UWAGA ${roleMention} !** 🚨\n\n🔜 Deadline FPL się zbliża — czas ustawić składy!`
+      : `🚨 **UWAGA !** 🚨\n\n🔜 Deadline FPL się zbliża — czas ustawić składy!`;
 
     const payload = {
-      content: `🔜 Deadline FPL się zbliża — czas ustawić składy!`,
+      content,
       embeds: [
         {
           title: `🔜 Zapowiedź Kolejki ${gameweek}! 🏆`,
           description: [
             `**${division.name}** · FPL Arena: Na Minusie ™`,
             ``,
-            `Budujemy napięcie przed deadlinem Fantasy Premier League.`,
-            `Zmiany kapitanów, ostatnie ruchy transferowe i walka o ligowe punkty H2H — oto pary tej kolejki:`,
+            `Oto pary meczowe na nadchodzącą kolejkę (GW ${gameweek}):`,
+            ``,
+            matchesText,
           ].join("\n"),
           color: GOLD_ORANGE,
-          fields,
-          footer: { text: "Content Hub · Zapowiedź kolejki" },
+          footer: {
+            text: "www.fpl-arena.com • Powered by St0pa | FPL Arena",
+          },
         },
       ],
     };

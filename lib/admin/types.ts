@@ -91,6 +91,25 @@ export interface Team {
   }) | null;
 }
 
+/**
+ * Decyzje FPL gracza w danej kolejce sezonu (chip, ławka, hit, kapitan).
+ * Tabela: team_gw_decisions — unikalność (season_id, gameweek, team_id).
+ */
+export interface TeamGwDecision {
+  id: string;
+  season_id: string;
+  gameweek: number;
+  team_id: string;
+  points_total: number;
+  points_benched: number;
+  hit_cost: number;
+  /** np. 'Wildcard', 'Bench Boost', 'Triple Captain', 'Free Hit', 'None' */
+  chip_used: string | null;
+  captain_points: number;
+  created_at: string;
+  updated_at: string;
+}
+
 /** Aliasy nazw z Excela (używane przez Master Import). */
 export type ExcelTeamFieldAliases = {
   discord_name: Team["discord_nick"];
