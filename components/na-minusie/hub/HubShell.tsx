@@ -338,7 +338,7 @@ export function HubShell({
           href={NA_MINUSIE_PATHS.home}
           className="mt-8 inline-flex text-sm font-bold text-emerald-400 hover:underline"
         >
-          ← Wróć na stronę Na Minusie
+          ← Wróć na stronę The FA League
         </Link>
       </div>
     );

@@ -1,5 +1,5 @@
 /**
- * Discord Role ID per division tier (Na Minusie ™).
+ * Discord Role ID per division tier (The FA League).
  * tier 1 = najwyższa dywizja (Premier League).
  */
 

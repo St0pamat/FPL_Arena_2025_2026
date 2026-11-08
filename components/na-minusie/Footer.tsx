@@ -29,17 +29,26 @@ const contactItems = [
   {
     id: "discord",
     label: "Discord",
-    value: NA_MINUSIE_CONTACT.discordNick,
-    hint: "Główny koordynator",
-    href: NA_MINUSIE_LINKS.discordProfile,
+    value: "FPL Arena",
+    hint: "Dołącz do serwera",
+    href: NA_MINUSIE_LINKS.discord,
     external: true,
     Icon: MessageSquare,
   },
   {
-    id: "x",
-    label: "X (Twitter)",
+    id: "x-arena",
+    label: "X · FPL Arena",
+    value: NA_MINUSIE_CONTACT.xFplArenaHandle,
+    hint: "Oficjalny profil ligi",
+    href: NA_MINUSIE_LINKS.xFplArena,
+    external: true,
+    Icon: XIcon,
+  },
+  {
+    id: "x-stopa",
+    label: "X · St0pa",
     value: NA_MINUSIE_CONTACT.xHandle,
-    hint: null,
+    hint: "St0pa | FPL Arena",
     href: NA_MINUSIE_LINKS.x,
     external: true,
     Icon: XIcon,
@@ -69,7 +78,7 @@ export function Footer() {
           {/* Kolumna 1 — Brand */}
           <div className="space-y-4 sm:col-span-2 lg:col-span-1">
             <p className="font-athletic text-xl font-bold uppercase tracking-wide text-emerald-400 sm:text-2xl">
-              NA MINUSIE <span className="text-emerald-400/90">™</span>
+              {NA_MINUSIE_BRAND}
             </p>
             <p className="text-sm leading-relaxed text-slate-400">
               Nowy wymiar rozgrywek Head to Head w Fantasy Premier League. Autorski system Mediana
@@ -172,8 +181,7 @@ export function Footer() {
             Architektura &amp; Organizacja:{" "}
             <span className="font-semibold text-slate-400">St0pa</span>
             {" | "}
-            Społeczność:{" "}
-            <span className="font-semibold text-slate-400">Baldwiniasty</span>
+            <span className="font-semibold text-slate-400">FPL Arena</span>
           </p>
         </div>
         <p className="mt-4 text-center text-[11px] leading-relaxed text-slate-600 md:text-left">

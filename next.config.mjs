@@ -21,6 +21,20 @@ const nextConfig = {
     // Legacy src/ ma luźniejsze typy (Vite); Next sprawdza tylko app/ + components/
     ignoreBuildErrors: true,
   },
+  async redirects() {
+    return [
+      {
+        source: "/na-minusie",
+        destination: "/The-FA-League",
+        permanent: true,
+      },
+      {
+        source: "/na-minusie/:path*",
+        destination: "/The-FA-League/:path*",
+        permanent: true,
+      },
+    ];
+  },
   async rewrites() {
     // Runtime uploads → API (niezawodne serwowanie plików dopisanych po buildzie)
     return [

@@ -18,7 +18,7 @@ export default async function AdminWebhooksPage() {
           Zarządzanie Webhookami
         </h1>
         <p className="mt-2 max-w-2xl text-sm text-slate-400">
-          Dwa niezależne zestawy URL: <span className="text-slate-200">Na Minusie ™</span>{" "}
+          Dwa niezależne zestawy URL: <span className="text-slate-200">The FA League</span>{" "}
           (liga live) i <span className="text-slate-200">FPL Arena</span> (ukryty backup /
           test). Hard Reset w Danger Zone <span className="text-slate-200">nie kasuje</span>{" "}
           tych ustawień. Level N = <code className="text-slate-300">tier = N</code>.

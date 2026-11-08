@@ -16,39 +16,25 @@ function norm(value: string): string {
   return value.trim().toLowerCase();
 }
 
-function isFounderRichmond(p: FaRankingParticipant): boolean {
+function isOrganizerRichmond(p: FaRankingParticipant): boolean {
   const club = norm(p.discordClub);
   const manager = norm(p.fplManager);
   return club.includes("afc richmond") || manager.includes("st0pa");
 }
 
-function isFounderWatford(p: FaRankingParticipant): boolean {
-  const club = norm(p.discordClub);
-  const manager = norm(p.fplManager);
-  return club.includes("watford") || manager.includes("baldwiniasty");
-}
-
-/** Górny rząd: założyciele; reszta alfabetycznie po FPL Manager. */
-function splitFounders(players: FaRankingParticipant[]): {
-  founderLeft: FaRankingParticipant | null;
-  founderRight: FaRankingParticipant | null;
+/** Górny rząd: organizator (St0pa); reszta alfabetycznie po FPL Manager. */
+function splitOrganizer(players: FaRankingParticipant[]): {
+  organizer: FaRankingParticipant | null;
   remaining: FaRankingParticipant[];
 } {
-  const founderLeft = players.find(isFounderRichmond) ?? null;
-  const founderRight =
-    players.find(
-      (p) =>
-        isFounderWatford(p) &&
-        p !== founderLeft,
-    ) ?? null;
-
+  const organizer = players.find(isOrganizerRichmond) ?? null;
   const remaining = players
-    .filter((p) => p !== founderLeft && p !== founderRight)
+    .filter((p) => p !== organizer)
     .sort((a, b) =>
       a.fplManager.localeCompare(b.fplManager, "pl", { sensitivity: "base" }),
     );
 
-  return { founderLeft, founderRight, remaining };
+  return { organizer, remaining };
 }
 
 function StatBlock({
@@ -144,7 +130,7 @@ export function FaRankingParticipantsExportNode({
   seasonLabel?: string;
   captureRef: RefObject<HTMLDivElement | null>;
 }) {
-  const { founderLeft, founderRight, remaining } = splitFounders(players);
+  const { organizer, remaining } = splitOrganizer(players);
   const managerCount = players.length || 50;
 
   return (
@@ -186,25 +172,18 @@ export function FaRankingParticipantsExportNode({
               />
             </div>
 
-            {founderLeft ? (
+            {organizer ? (
               <PlayerTile
-                key={`${founderLeft.discordClub}-${founderLeft.fplManager}`}
-                player={founderLeft}
+                key={`${organizer.discordClub}-${organizer.fplManager}`}
+                player={organizer}
                 logos={logos}
               />
             ) : (
               <div className="col-span-1 min-h-[320px]" aria-hidden />
             )}
 
-            {founderRight ? (
-              <PlayerTile
-                key={`${founderRight.discordClub}-${founderRight.fplManager}`}
-                player={founderRight}
-                logos={logos}
-              />
-            ) : (
-              <div className="col-span-1 min-h-[320px]" aria-hidden />
-            )}
+            {/* Zachowanie siatki 6 kolumn — bez drugiego „foundera”. */}
+            <div className="col-span-1 min-h-[320px]" aria-hidden />
 
             <div className="col-span-2 flex min-h-[320px] flex-row items-center justify-around rounded-2xl border border-slate-700 bg-slate-800/30 px-6 py-8">
               <StatBlock

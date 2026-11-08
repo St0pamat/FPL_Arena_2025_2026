@@ -1,11 +1,17 @@
-/** Ścieżki wewnętrzne Na Minusie ™ */
+import {
+  PLATFORM_DISCORD_INVITE,
+  PLATFORM_X_FPL_ARENA,
+  PLATFORM_X_STOPA,
+} from "@/lib/platform/socialLinks";
+
+/** Ścieżki wewnętrzne The FA League */
 export const NA_MINUSIE_PATHS = {
-  home: "/na-minusie",
-  dywizje: "/na-minusie/dywizje",
+  home: "/The-FA-League",
+  dywizje: "/The-FA-League/dywizje",
   /** @deprecated alias — używaj strefaGracza; stary URL przekierowuje */
   hub: "/strefa-gracza",
   strefaGracza: "/strefa-gracza",
-  regulamin: "/na-minusie/regulamin",
+  regulamin: "/The-FA-League/regulamin",
   admin: "/admin/dashboard",
   adminLogin: "/admin/login",
 } as const;
@@ -17,13 +23,15 @@ export const NA_MINUSIE_CONTACT = {
   /** Snowflake ID — otwiera profil użytkownika w Discord */
   discordUserId: "1097839268405194833",
   email: "st0pamat@gmail.com",
-  xHandle: "@st0pamat",
-  xUrl: "https://x.com/st0pamat",
+  xHandle: PLATFORM_X_STOPA.handle,
+  xUrl: PLATFORM_X_STOPA.href,
+  xFplArenaHandle: PLATFORM_X_FPL_ARENA.handle,
+  xFplArenaUrl: PLATFORM_X_FPL_ARENA.href,
 } as const;
 
-/** Oficjalne linki rekrutacyjne Na Minusie ™ */
+/** Oficjalne linki rekrutacyjne The FA League */
 export const NA_MINUSIE_LINKS = {
-  discord: "https://discord.gg/8SADF9pHaA",
+  discord: PLATFORM_DISCORD_INVITE,
   /** Bezpośredni profil Discord (DM / dodanie znajomego) */
   discordProfile: `https://discord.com/users/${NA_MINUSIE_CONTACT.discordUserId}`,
   form: "https://docs.google.com/forms/d/e/1FAIpQLSef8QScJGz801roGR5-wlXSikqsWE4OnT8mCCyEvmQ6W4Ok1w/viewform?usp=dialog",
@@ -37,5 +45,6 @@ export const NA_MINUSIE_LINKS = {
   bazaCsv:
     "https://docs.google.com/spreadsheets/d/e/2PACX-1vT3fetAUT-1ZaBK47qUKOGwRDsX9G8RdHEUJVDW8a9lstOOKl3MtCLc7CI8Y3fZvg/pub?gid=1080423590&single=true&output=csv",
   emailMailto: `mailto:${NA_MINUSIE_CONTACT.email}`,
-  x: NA_MINUSIE_CONTACT.xUrl,
+  x: PLATFORM_X_STOPA.href,
+  xFplArena: PLATFORM_X_FPL_ARENA.href,
 } as const;

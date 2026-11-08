@@ -21,7 +21,7 @@ export async function StructureSection() {
         Struktura Dywizji: Każdy z każdym (Mecz i Rewanż)
       </h2>
       <p className="mt-5 w-full text-base leading-relaxed text-slate-300 sm:text-lg">
-        Nie gramy w jednej wielkiej lidze. Struktura Na Minusie ™ jest pionowa i przejrzysta –
+        Nie gramy w jednej wielkiej lidze. Struktura The FA League jest pionowa i przejrzysta –
         odwzorowuje angielską piramidę piłkarską. Gramy w zamkniętych, 10-osobowych dywizjach. Każdy
         sezon to 18 kolejek, w których rozgrywasz mecz i rewanż z każdym rywalem w swojej lidze.
         Liczba dywizji zależy od liczby graczy — piramida rośnie wraz z ligą.

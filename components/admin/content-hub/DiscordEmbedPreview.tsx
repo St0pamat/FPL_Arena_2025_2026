@@ -258,7 +258,7 @@ function MessagePreview({ data }: { data: DiscordWebhookParsed }) {
         </div>
         <div>
           <p className="text-sm font-semibold text-white">
-            Na Minusie{" "}
+            The FA League{" "}
             <span className="ml-1 rounded bg-[#5865F2]/20 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[#949cf7]">
               BOT
             </span>

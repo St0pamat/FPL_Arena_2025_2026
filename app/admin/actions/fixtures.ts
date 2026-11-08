@@ -640,7 +640,7 @@ function revalidatePlayoffs() {
   revalidatePath("/admin/simulator");
   revalidatePath("/admin/gw-results");
   revalidatePath("/strefa-gracza");
-  revalidatePath("/na-minusie/hub");
+  revalidatePath("/The-FA-League/hub");
   revalidatePath("/admin", "layout");
 }
 

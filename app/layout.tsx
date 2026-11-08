@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "FPL Platform — Arena & Na Minusie ™",
+  title: "FPL Platform — Arena & The FA League",
   description:
-    "Platforma lig Fantasy Premier League: archiwum FPL Arena (Skarb Kibica) oraz nowa liga H2H Na Minusie ™.",
+    "Platforma lig Fantasy Premier League: archiwum FPL Arena (Skarb Kibica) oraz nowa liga H2H The FA League.",
   icons: {
     icon: [{ url: "/images/fpl-arena-logo.png", type: "image/png" }],
     apple: [{ url: "/images/fpl-arena-logo.png", type: "image/png" }],

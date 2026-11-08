@@ -95,8 +95,9 @@ export const AppFooter = ({ onTabChange }: { onTabChange: (tab: AppTab) => void 
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-slate-200 font-semibold hover:text-emerald-400 transition-colors"
+                  title="St0pa | FPL Arena"
                 >
-                  St0pa ↗
+                  St0pa | FPL Arena ↗
                 </a>
               </li>
               <li>

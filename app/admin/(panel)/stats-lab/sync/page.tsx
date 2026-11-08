@@ -25,7 +25,7 @@ export default async function AdminStatsLabSyncPage() {
             przyrostowo dociąga historię meczową tylko dla aktywnych zawodników
             (minuty &gt; 0) z{" "}
             <code className="text-slate-300">element-summary</code>. Hard Reset
-            ligi Na Minusie nie kasuje tabel <code>fpl_lab_*</code>.
+            ligi The FA League nie kasuje tabel <code>fpl_lab_*</code>.
           </p>
         </header>
 

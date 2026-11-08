@@ -154,7 +154,7 @@ function revalidateLogoSurfaces() {
   revalidatePath("/admin/uczestnicy");
   revalidatePath("/admin/struktura");
   revalidatePath("/admin/fixture-draw");
-  revalidatePath("/na-minusie");
+  revalidatePath("/The-FA-League");
   revalidatePath("/strefa-gracza");
 }
 

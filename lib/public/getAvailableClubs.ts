@@ -9,7 +9,7 @@ import type {
   PublicSeasonDivisionStructurePayload,
 } from "@/lib/public/types";
 
-/** Baza uczestników Na Minusie (FPL Manager / Team / Discord Club) */
+/** Baza uczestników The FA League (FPL Manager / Team / Discord Club) */
 export const NAMINUSIE_BAZA_CSV_URL =
   NA_MINUSIE_LINKS.bazaCsv ??
   "https://docs.google.com/spreadsheets/d/e/2PACX-1vT3fetAUT-1ZaBK47qUKOGwRDsX9G8RdHEUJVDW8a9lstOOKl3MtCLc7CI8Y3fZvg/pub?gid=1080423590&single=true&output=csv";
@@ -320,7 +320,7 @@ export async function getPublicDivisionsFromBaza(): Promise<PublicSeasonDivision
     const divisions = parseBazaDivisionStructure(text);
     return {
       seasonId: "baza-live",
-      seasonName: "Na Minusie",
+      seasonName: "The FA League",
       divisions,
       updatedAt: lastModified ?? new Date().toISOString(),
       isPreview: true,

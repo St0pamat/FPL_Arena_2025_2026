@@ -1,12 +1,12 @@
 /** Główne menu aplikacji (Header) */
 export const NA_MINUSIE_MAIN_NAV = [
-  { id: "o-lidze", label: "O lidze", href: "/na-minusie" },
-  { id: "dywizje", label: "Dywizje", href: "/na-minusie/dywizje" },
+  { id: "o-lidze", label: "O lidze", href: "/The-FA-League" },
+  { id: "dywizje", label: "Dywizje", href: "/The-FA-League/dywizje" },
   { id: "strefa-gracza", label: "Strefa Gracza", href: "/strefa-gracza" },
 ] as const;
 
 /**
- * Sticky scroll-spy na stronie reklamowej `/na-minusie`.
+ * Sticky scroll-spy na stronie reklamowej `/The-FA-League`.
  * To nie są pozycje głównego menu — tylko pod-nawigacja landingu.
  */
 export const NA_MINUSIE_SECTION_NAV = [

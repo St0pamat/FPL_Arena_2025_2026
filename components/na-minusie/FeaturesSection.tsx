@@ -73,7 +73,7 @@ export function FeaturesSection() {
           icon={Users}
           title="Aktywna i Przyjazna Społeczność"
           paragraphs={[
-            "Na Minusie ™ to nie tylko tabele – to żywy serwer Discord, na którym znajdziesz wielu doświadczonych graczy. To idealne miejsce do wspólnego śledzenia wyników live, dyskusji i wymiany tipów przed każdą kolejką.",
+            "The FA League to nie tylko tabele – to żywy serwer Discord, na którym znajdziesz wielu doświadczonych graczy. To idealne miejsce do wspólnego śledzenia wyników live, dyskusji i wymiany tipów przed każdą kolejką.",
           ]}
           footer={
             <Link
@@ -82,7 +82,7 @@ export function FeaturesSection() {
               rel="noopener noreferrer"
               className="nm-btn-primary w-full"
             >
-              Dołącz do Discorda Na Minusie 💬
+              Dołącz do Discorda The FA League 💬
             </Link>
           }
         />

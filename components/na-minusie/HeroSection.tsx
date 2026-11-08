@@ -1,11 +1,11 @@
-import Image from "next/image";
 import { Suspense } from "react";
 import { ArrowDown } from "lucide-react";
 import {
   HeroCapacityStrip,
   HeroCapacityStripSkeleton,
 } from "@/components/na-minusie/HeroCapacityStrip";
-import { NA_MINUSIE_BRAND, NA_MINUSIE_LOGO, NA_MINUSIE_LOGO_ALT } from "@/lib/na-minusie/branding";
+import { TheFaLeagueMark } from "@/components/na-minusie/TheFaLeagueMark";
+import { NA_MINUSIE_BRAND } from "@/lib/na-minusie/branding";
 
 export function HeroSection() {
   return (
@@ -19,15 +19,7 @@ export function HeroSection() {
           {NA_MINUSIE_BRAND}
         </p>
 
-        <Image
-          src={NA_MINUSIE_LOGO}
-          alt={NA_MINUSIE_LOGO_ALT}
-          width={200}
-          height={200}
-          priority
-          quality={95}
-          className="mb-10 h-32 w-32 object-contain sm:mb-12 sm:h-40 sm:w-40 lg:h-48 lg:w-48"
-        />
+        <TheFaLeagueMark size="hero" className="mb-10 sm:mb-12" />
 
         <h1 className="nm-headline text-3xl leading-[1.05] sm:text-5xl lg:text-6xl xl:text-7xl">
           <span className="nm-green nm-glow">Twój Wynik Ma Znaczenie</span>
@@ -36,7 +28,7 @@ export function HeroSection() {
         <div className="mt-10 max-w-4xl text-left text-base leading-relaxed text-slate-300 sm:mt-12 sm:text-lg">
           <p>
             W tradycyjnych ligach Head to Head ślepy los i pechowy terminarz potrafią odebrać całą
-            satysfakcję z gry. W Na Minusie ™ zmieniamy zasady – łączymy bezpośrednią rywalizację z
+            satysfakcję z gry. W The FA League zmieniamy zasady – łączymy bezpośrednią rywalizację z
             dodatkowym punktowaniem za dobrą formę. Wybierz swój ulubiony angielski klub piłkarski –
             od Premier League po najniższe ligi, a nawet kultowe drużyny z seriali, filmów, komiksów
             czy książek (też angielskie kluby piłkarskie). Klimat i wspólna zabawa na Discordzie

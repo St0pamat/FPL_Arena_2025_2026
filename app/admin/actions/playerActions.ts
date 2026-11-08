@@ -36,7 +36,7 @@ function revalidatePlayers() {
   revalidatePath("/admin/teams");
   revalidatePath("/admin/struktura");
   revalidatePath("/admin/fixture-draw");
-  revalidatePath("/na-minusie/dywizje");
+  revalidatePath("/The-FA-League/dywizje");
 }
 
 function parseIsActive(statusRaw: string): boolean {

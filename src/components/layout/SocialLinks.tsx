@@ -18,18 +18,23 @@ const XIcon = () => (
   </svg>
 );
 
-const ICONS = [DiscordIcon, YouTubeIcon, XIcon] as const;
+const ICONS = {
+  discord: DiscordIcon,
+  youtube: YouTubeIcon,
+  "x-fpl-arena": XIcon,
+  "x-stopa": XIcon,
+} as const;
 
 export const SocialLinks = ({ variant = "header" }: { variant?: "header" | "footer" }) => (
   <div
     className={variant === "footer" ? "flex flex-col gap-2.5" : "flex flex-wrap items-center gap-2"}
     aria-label="Społeczność i media"
   >
-    {SOCIAL_LINKS.map(({ href, label, shortLabel, description, className }, i) => {
-      const Icon = ICONS[i];
+    {SOCIAL_LINKS.map(({ id, href, label, shortLabel, description, className }) => {
+      const Icon = ICONS[id];
       return (
         <a
-          key={href}
+          key={id}
           href={href}
           target="_blank"
           rel="noopener noreferrer"

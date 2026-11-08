@@ -110,7 +110,7 @@ function revalidateWorkspace() {
   revalidatePath("/admin/gw-results");
   revalidatePath("/admin/data-ingestion");
   revalidatePath("/strefa-gracza");
-  revalidatePath("/na-minusie/hub");
+  revalidatePath("/The-FA-League/hub");
   revalidatePath("/admin", "layout");
 }
 

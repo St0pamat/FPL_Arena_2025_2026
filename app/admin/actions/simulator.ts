@@ -135,7 +135,7 @@ function revalidateSim() {
   revalidatePath("/admin/workspace");
   revalidatePath("/admin/gw-results");
   revalidatePath("/strefa-gracza");
-  revalidatePath("/na-minusie/hub");
+  revalidatePath("/The-FA-League/hub");
   revalidatePath("/admin", "layout");
 }
 

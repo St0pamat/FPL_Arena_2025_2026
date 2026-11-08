@@ -24,7 +24,7 @@ function revalidateAdmin() {
   revalidatePath("/admin/fixture-draw");
   revalidatePath("/admin/dashboard");
   revalidatePath("/admin/settings");
-  revalidatePath("/na-minusie/dywizje");
+  revalidatePath("/The-FA-League/dywizje");
 }
 
 async function requireAuth() {

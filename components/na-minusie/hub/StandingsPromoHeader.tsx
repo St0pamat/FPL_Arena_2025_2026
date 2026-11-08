@@ -2,12 +2,9 @@
 
 import type { ClubLogoRecord } from "@/lib/admin/clubLogos";
 import { ARENA_PORTAL_ALT, ARENA_PORTAL_LOGO } from "@/lib/arena";
-import {
-  NA_MINUSIE_EXPORT_BRAND,
-  THE_FA_LEAGUE_MARK_ALT,
-  THE_FA_LEAGUE_MARK_LABEL,
-} from "@/lib/na-minusie";
+import { NA_MINUSIE_EXPORT_BRAND } from "@/lib/na-minusie";
 import { ClubCrest } from "@/components/na-minusie/hub/ClubCrest";
+import { TheFaLeagueMark } from "@/components/na-minusie/TheFaLeagueMark";
 
 export type PromoHeaderParticipant = {
   clubName: string;
@@ -134,7 +131,7 @@ function BrandMark({
   );
 }
 
-/** Placeholder w miejscu logo Na Minusie — napis The FA League w żółtym okręgu. */
+/** Placeholder marki — ten sam żółty okrąg co na WWW (`TheFaLeagueMark`). */
 function FaLeagueBrandMark({
   side = "right",
   safeEdges = false,
@@ -151,13 +148,11 @@ function FaLeagueBrandMark({
       : "px-2 text-center text-[0.7rem] font-black uppercase leading-[1.05] tracking-[0.04em] text-slate-950 sm:text-[0.8rem]";
 
   return (
-    <div
-      className={`${box} flex items-center justify-center overflow-hidden rounded-full bg-[#F5C542] ring-1 ring-white/10`}
-      role="img"
-      aria-label={THE_FA_LEAGUE_MARK_ALT}
-    >
-      <span className={textClass}>{THE_FA_LEAGUE_MARK_LABEL}</span>
-    </div>
+    <TheFaLeagueMark
+      size="fill"
+      className={`!h-auto !w-auto ${box}`}
+      textClassName={textClass}
+    />
   );
 }
 

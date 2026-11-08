@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import "../na-minusie/na-minusie.css";
+import "../The-FA-League/na-minusie.css";
 import { Footer } from "@/components/na-minusie/Footer";
 import { StickyNavbar } from "@/components/na-minusie/StickyNavbar";
 import { NA_MINUSIE_BRAND } from "@/lib/na-minusie";
@@ -9,7 +9,7 @@ import { NM_BELOW_STICKY_HEADER } from "@/lib/na-minusie/theme";
 export const metadata: Metadata = {
   title: `Strefa Gracza — ${NA_MINUSIE_BRAND}`,
   description:
-    "Tabele ligowe, wyniki H2H, terminarz, centrum kolejki i profile graczy — Na Minusie ™.",
+    "Tabele ligowe, wyniki H2H, terminarz, centrum kolejki i profile graczy — The FA League.",
 };
 
 export const dynamic = "force-dynamic";

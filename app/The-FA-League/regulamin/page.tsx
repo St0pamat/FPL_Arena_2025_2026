@@ -9,7 +9,7 @@ import { NM_CONTAINER } from "@/lib/na-minusie/theme";
 export const metadata: Metadata = {
   title: `Regulamin — ${NA_MINUSIE_BRAND}`,
   description:
-    "Oficjalny regulamin ligi H2H Na Minusie ™. Format rozgrywek, zapisy, system Mediana 2+1, awanse i spadki.",
+    "Oficjalny regulamin ligi H2H The FA League. Format rozgrywek, zapisy, system Mediana 2+1, awanse i spadki.",
 };
 
 export default function RegulaminPage() {

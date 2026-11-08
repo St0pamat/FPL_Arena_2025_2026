@@ -1,4 +1,4 @@
-/** Paleta Na Minusie ™ — 2026 dark premium */
+/** Paleta The FA League — 2026 dark premium */
 export const NM = {
   bg: "#050505",
   card: "#111111",
@@ -13,9 +13,5 @@ export const NM = {
 
 export const NM_CONTAINER = "mx-auto w-full max-w-7xl px-6 sm:px-10 lg:px-16";
 
-/**
- * Offset sticky elementów pod StickyNavbar + CollaborationCredits.
- * Nav: 4rem / 4.5rem · credits: ~2.25rem
- */
-export const NM_BELOW_STICKY_HEADER =
-  "top-[calc(4rem+2.25rem)] sm:top-[calc(4.5rem+2.25rem)]";
+/** Offset sticky elementów bezpośrednio pod StickyNavbar. */
+export const NM_BELOW_STICKY_HEADER = "top-16 sm:top-[4.5rem]";

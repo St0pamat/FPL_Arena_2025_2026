@@ -119,7 +119,7 @@ async function safeUnlinkTierLogoFile(logo: TierLogoRecord) {
 function revalidateTierLogoSurfaces() {
   revalidatePath("/admin", "layout");
   revalidatePath("/admin/tier-logos");
-  revalidatePath("/na-minusie");
+  revalidatePath("/The-FA-League");
   revalidatePath("/strefa-gracza");
 }
 

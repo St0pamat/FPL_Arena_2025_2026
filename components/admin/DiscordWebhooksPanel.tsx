@@ -208,7 +208,7 @@ export function DiscordWebhooksPanel({
       {activeServer === "FPL_ARENA" ? (
         <p className="rounded-xl border border-sky-500/25 bg-sky-950/25 px-4 py-2.5 text-xs leading-relaxed text-sky-100/90">
           Ukryty serwer backup / test. Te same 2 kanały globalne i poziomy dywizji
-          co Na Minusie — osobne URL-e. Hard Reset ich nie kasuje.
+          co The FA League — osobne URL-e. Hard Reset ich nie kasuje.
         </p>
       ) : (
         <p className="rounded-xl border border-slate-700/40 bg-slate-900/40 px-4 py-2.5 text-xs leading-relaxed text-slate-400">

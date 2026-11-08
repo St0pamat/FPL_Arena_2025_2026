@@ -35,8 +35,8 @@ function revalidateAll() {
   revalidatePath("/admin/season-settlement");
   revalidatePath("/admin/workspace");
   revalidatePath("/strefa-gracza");
-  revalidatePath("/na-minusie/hub");
-  revalidatePath("/na-minusie/dywizje");
+  revalidatePath("/The-FA-League/hub");
+  revalidatePath("/The-FA-League/dywizje");
 }
 
 export async function markSeasonCompleted(

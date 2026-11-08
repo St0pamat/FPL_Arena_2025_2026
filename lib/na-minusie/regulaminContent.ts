@@ -11,9 +11,9 @@ export interface RegulaminSection {
 }
 
 export const REGULAMIN_INTRO = {
-  title: "OFICJALNY REGULAMIN LIGI H2H „NA MINUSIE ™”",
+  title: "OFICJALNY REGULAMIN LIGI H2H „The FA League”",
   paragraphs: [
-    'Społeczność „Na Minusie ™” to miejsce dla graczy, którzy podchodzą do Fantasy Premier League z prawdziwą pasją i zaangażowaniem. Stawiamy na jakość, merytorykę i innowacyjność. Powstała w wyniku fuzji serwerów liga ma jasny podział: Baldwiniasty odpowiada za tętniącą życiem społeczność i zarządzanie serwerem, a St0pa pełni rolę architekta, czuwając nad organizacją, logistyką i funkcjonowaniem systemu ligowego.',
+    "Społeczność „The FA League” to miejsce dla graczy, którzy podchodzą do Fantasy Premier League z prawdziwą pasją i zaangażowaniem. Stawiamy na jakość, merytorykę i innowacyjność. Ligę projektuje i prowadzi St0pa (FPL Arena) — architektura systemu, organizacja rozgrywek, logistyka oraz opieka nad społecznością.",
     "Odrzucamy losowe, frustrujące formaty ligowe na rzecz unikalnego systemu, który nagradza realne umiejętności i utrzymuje zaangażowanie przez cały rok.",
   ],
 };
@@ -49,9 +49,9 @@ export const REGULAMIN_SECTIONS: RegulaminSection[] = [
           "Wybór Klubu: Każdy gracz przed startem sezonu wybiera jeden oficjalny angielski klub piłkarski, pod którego szyldem będzie występował. Obowiązuje zasada unikalności – jeden klub może reprezentować tylko jedna osoba na całym serwerze (kto pierwszy, ten lepszy). Herby wybranych przez Was drużyn będą oficjalnie używane do oprawy wizualnej na Discordzie oraz w innych narzędziach, które będziemy wykorzystywać w przyszłości.",
           "Wyjątek organizatora (tzw. Lex St0pa): Jako że główny architekt ligi nie przepada za żadnym realnym angielskim klubem, ale sam ustalał ten regulamin i coś wybrać musiał, skorzystał z absolutnego weta organizatora. Tym samym St0pa oficjalnie przejmuje stery w AFC Richmond. W końcu jakby nie patrzeć, grali w Premier League, prawda? Wierzymy w Teda Lasso!",
           "Wpisowe: Udział w lidze wymaga opłacenia symbolicznej składki w wysokości 10 zł na CAŁY ROK (obejmuje oba sezony: jesienny i wiosenny). Tytuł przelewu BLIK: Przy wykonywaniu przelewu na telefon należy koniecznie wpisać w tytuł przelewu swój Nick z Discorda. W przypadku, gdy aplikacja bankowa automatycznie nadpisze tytuł przelewu (np. standardowym komunikatem „Przelew BLIK na telefon”), administracja zastrzega sobie prawo do zgłoszenia się do gracza w wiadomości prywatnej (DM) z prośbą o przesłanie potwierdzenia przelewu, lub zrzutu ekranu w celu weryfikacji.",
-          "Wydanie Kodu do Ligi Classic i weryfikacja uczestnictwa: Tajny kod dostępu do naszej ogólnej ligi w aplikacji FPL (The FA Ranking) zostanie wysłany w wiadomości prywatnej DOPIERO PO ZAKSIĘGOWANIU WPŁATY wpisowego przez administrację (lub po pozytywnej weryfikacji miejsca darmowego). Wraz z nim gracz otrzymuje tajny kod lub automatyczny link (auto-join) do ligi Classic o nazwie „Na Minusie ™”. Rygorystyczna zasada 24 godzin: Od momentu otrzymania wiadomości, gracz ma dokładnie 24 godziny na dołączenie do ligi w aplikacji FPL. Konsekwencje braku dołączenia w ciągu 24h: Gracz zostaje usunięty z projektu, jego wpisowe podlega zwrotowi (lub darmowe miejsce przepada), a jego slot trafia do puli rekrutacji uzupełniającej.",
-          "Nagrody: 100% zebranej puli przeznaczane jest na fizyczne, personalizowane statuetki i puchary dla Mistrzów poszczególnych dywizji H2H. Nagrody dostarczane są po zakończeniu sezonu kurierem lub do Paczkomatu. Uwaga: Na dzień dzisiejszy nie przewidujemy nagród rzeczowych za zwycięstwo w Wielkim Pucharze (The FA Cup) oraz w ogólnej lidze Classic (The FA Ranking). Triumfatorzy tych rozgrywek zostaną jednak oficjalnie uwiecznieni i wyróżnieni w serwerowej Galeri Sław (Hall of Fame) społeczności „Na Minusie ™”.",
-          "Darmowe Miejsca (Jednorazowy Bonus Powitalny): Z okazji startu ligi i fuzji serwerów (przed Sezonem 1), administracja przygotowała pulę 20 darmowych wejściówek na cały rok. Baldwiniasty sponsoruje wpisowe dla pierwszych 10 osób z serwera \"Na Minusie\", a St0pa dla pierwszych 10 osób z serwera \"FPL Arena\". Opublikowana zostanie transparentna lista graczy zwolnionych z opłaty. Pozostali uczestnicy mają 3 dni na wpłatę od momentu zgłoszenia.",
+          "Wydanie Kodu do Ligi Classic i weryfikacja uczestnictwa: Tajny kod dostępu do naszej ogólnej ligi w aplikacji FPL (The FA Ranking) zostanie wysłany w wiadomości prywatnej DOPIERO PO ZAKSIĘGOWANIU WPŁATY wpisowego przez administrację (lub po pozytywnej weryfikacji miejsca darmowego). Wraz z nim gracz otrzymuje tajny kod lub automatyczny link (auto-join) do ligi Classic o nazwie „The FA League”. Rygorystyczna zasada 24 godzin: Od momentu otrzymania wiadomości, gracz ma dokładnie 24 godziny na dołączenie do ligi w aplikacji FPL. Konsekwencje braku dołączenia w ciągu 24h: Gracz zostaje usunięty z projektu, jego wpisowe podlega zwrotowi (lub darmowe miejsce przepada), a jego slot trafia do puli rekrutacji uzupełniającej.",
+          "Nagrody: 100% zebranej puli przeznaczane jest na fizyczne, personalizowane statuetki i puchary dla Mistrzów poszczególnych dywizji H2H. Nagrody dostarczane są po zakończeniu sezonu kurierem lub do Paczkomatu. Uwaga: Na dzień dzisiejszy nie przewidujemy nagród rzeczowych za zwycięstwo w Wielkim Pucharze (The FA Cup) oraz w ogólnej lidze Classic (The FA Ranking). Triumfatorzy tych rozgrywek zostaną jednak oficjalnie uwiecznieni i wyróżnieni w serwerowej Galeri Sław (Hall of Fame) społeczności „The FA League”.",
+          "Darmowe Miejsca (Jednorazowy Bonus Powitalny): Z okazji startu ligi (przed Sezonem 1) administracja przygotowała pulę darmowych wejściówek na cały rok. St0pa (FPL Arena) przyznaje je wybranym uczestnikom startowym. Opublikowana zostanie transparentna lista graczy zwolnionych z opłaty. Pozostali uczestnicy mają 3 dni na wpłatę od momentu zgłoszenia.",
           "Nowi gracze i podział początkowy: W pierwszym sezonie dywizje tworzone są na podstawie Overall Rank (OR) graczy z poprzedniego sezonu FPL. W kolejnych sezonach o rozstawieniu decydują uzyskane awanse i spadki. Zupełnie nowi gracze, dołączający w kolejnych sezonach, zaczynają grę od najniższych utworzonych dywizji. Jeśli nowych graczy będzie więcej niż 10 (co oznacza otwarcie kilku nowych, najniższych lig), zostaną oni rozstawieni w tych ligach na podstawie ich OR z poprzedniego sezonu FPL. W przypadku, gdy nowi gracze nie posiadają OR (całkowicie nowe konta w FPL), a jest ich więcej niż 10, o przypisaniu do dywizji decyduje kolejność zgłoszeń z opłaconą składką.",
         ],
       },
@@ -77,7 +77,7 @@ export const REGULAMIN_SECTIONS: RegulaminSection[] = [
       },
       {
         type: "paragraph",
-        text: "Uruchamiana jest wyłącznie w przypadku zwolnienia się miejsc (np. z powodu braku dołączenia przez innych graczy w ciągu 24h) lub niepełnej dywizji (brak 10 graczy w dywizji). Osoby dołączające w ramach tej rekrutacji mają czas na wpłatę i natychmiastowe dołączenie do ligi „Na Minusie ™” maksymalnie do twardego deadline'u 1. kolejki (GW1).",
+        text: "Uruchamiana jest wyłącznie w przypadku zwolnienia się miejsc (np. z powodu braku dołączenia przez innych graczy w ciągu 24h) lub niepełnej dywizji (brak 10 graczy w dywizji). Osoby dołączające w ramach tej rekrutacji mają czas na wpłatę i natychmiastowe dołączenie do ligi „The FA League” maksymalnie do twardego deadline'u 1. kolejki (GW1).",
       },
     ],
   },
@@ -223,7 +223,7 @@ export const REGULAMIN_SECTIONS: RegulaminSection[] = [
           "Automatyzacja: Puchar rozgrywany jest automatycznie wewnątrz oficjalnej aplikacji FPL jako wbudowany League Cup dla naszej powiązanej ligi Classic. Startuje zazwyczaj w drugiej połowie sezonu, a jego finał odbywa się w GW38.",
           "Losowanie: Drabinka i przydział par do poszczególnych rund generowane są ślepo przez samą grę.",
           "Remisy w pucharze: Ponieważ cały puchar obsługiwany jest przez system FPL, w przypadku remisów punktowych w meczach pucharowych obowiązują wyłącznie oficjalne zasady rozstrzygania wbudowane w grę (FPL Cup tie-breaks), na które administracja ligi nie ma wpływu.",
-          "Nagrody: Na dzień dzisiejszy nie przewidujemy nagród rzeczowych za wygranie pucharu. Zwycięzca Wielkiego Pucharu trafia do serwerowej Galeri Sław (Hall of Fame) społeczności „Na Minusie ™” i otrzymuje specjalne wyróżnienie na serwerze.",
+          "Nagrody: Na dzień dzisiejszy nie przewidujemy nagród rzeczowych za wygranie pucharu. Zwycięzca Wielkiego Pucharu trafia do serwerowej Galeri Sław (Hall of Fame) społeczności „The FA League” i otrzymuje specjalne wyróżnienie na serwerze.",
         ],
       },
     ],
@@ -245,7 +245,7 @@ export const REGULAMIN_SECTIONS: RegulaminSection[] = [
       },
       {
         type: "paragraph",
-        text: "Administracja Ligi „Na Minusie ™” zastrzega sobie prawo do ostatecznej interpretacji niniejszego regulaminu w przypadku sytuacji nieprzewidzianych.",
+        text: "Administracja Ligi „The FA League” zastrzega sobie prawo do ostatecznej interpretacji niniejszego regulaminu w przypadku sytuacji nieprzewidzianych.",
       },
     ],
   },
@@ -258,7 +258,7 @@ export const REGULAMIN_SECTIONS: RegulaminSection[] = [
         items: [
           "Do 9 sierpnia 2026 (godz. 23:59) – Zamknięcie głównego formularza zgłoszeniowego.",
           "Do 3 dni od zgłoszenia – Regulaminowy czas na dokonanie wpłaty BLIK.",
-          "Do 24 godzin od otrzymania kodu – Rygorystyczny czas na dołączenie do Ligi Classic „Na Minusie ™”.",
+          "Do 24 godzin od otrzymania kodu – Rygorystyczny czas na dołączenie do Ligi Classic „The FA League”.",
           "Do 21 sierpnia 2026 (godz. 19:30) – Ewentualna rekrutacja uzupełniająca (awaryjna) na zwolnione miejsca.",
           "21 sierpnia 2026 (godz. 19:30 czasu polskiego) – Twardy deadline 1. kolejki FPL (GW1) i oficjalny start naszej rywalizacji.",
         ],

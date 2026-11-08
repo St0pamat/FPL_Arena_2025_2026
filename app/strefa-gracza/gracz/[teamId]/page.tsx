@@ -16,7 +16,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const name = profile.team.fpl_team_name?.trim() || profile.team.manager_name;
   return {
     title: `${name} — Strefa Gracza`,
-    description: `Profil H2H: ${name} · ${profile.divisionName} · Na Minusie ™`,
+    description: `Profil H2H: ${name} · ${profile.divisionName} · The FA League`,
   };
 }
 

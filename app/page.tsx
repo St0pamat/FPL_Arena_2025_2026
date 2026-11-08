@@ -1,7 +1,8 @@
+import { TheFaLeagueMark } from "@/components/na-minusie/TheFaLeagueMark";
 import { PortalCard } from "@/components/platform/PortalCard";
+import { PlatformSocialIcons } from "@/components/platform/PlatformSocialIcons";
 import { SplashAdminLink } from "@/components/platform/SplashAdminLink";
 import { SplashBrandLockup } from "@/components/platform/SplashBrandLockup";
-import { NA_MINUSIE_LOGO, NA_MINUSIE_LOGO_ALT } from "@/lib/na-minusie";
 import {
   NO_BIG_SIX_LOGO,
   NO_BIG_SIX_LOGO_ALT,
@@ -30,13 +31,12 @@ export default function HomePage() {
           badge="Zamknięty"
         />
         <PortalCard
-          title="NA MINUSIE ™"
-          description="Projekt w ramach współpracy St0pa × Baldwiniasty. Wejdź w nowy wymiar Head to Head — system, w którym Twój wynik wreszcie ma znaczenie."
-          href="/na-minusie"
-          logoSrc={NA_MINUSIE_LOGO}
-          logoAlt={NA_MINUSIE_LOGO_ALT}
+          title="THE FA LEAGUE"
+          description="Wejdź w nowy wymiar Head to Head — system, w którym Twój wynik wreszcie ma znaczenie."
+          href="/strefa-gracza"
+          logoSlot={<TheFaLeagueMark size="fill" />}
           variant="na-minusie"
-          ctaLabel="Dołącz do Ligi →"
+          ctaLabel="Wejdź do Ligi →"
           badge="Aktualny"
         />
         <PortalCard
@@ -47,12 +47,18 @@ export default function HomePage() {
           logoAlt={NO_BIG_SIX_LOGO_ALT}
           variant="no-big-six"
           ctaLabel="Wejdź do Ligi →"
-          badge="SEZON 2026/27"
+          badge="Aktualny"
         />
       </div>
 
-      <footer className="relative z-10 mt-12 text-center text-xs text-slate-600 sm:mt-16">
-        Fantasy Premier League — niezależna platforma społecznościowa
+      <footer className="relative z-10 mt-12 space-y-4 text-center text-xs text-slate-600 sm:mt-16">
+        <PlatformSocialIcons />
+        <div className="space-y-1.5">
+          <p>Fantasy Premier League — niezależna platforma społecznościowa</p>
+          <p className="text-slate-500">
+            www.fpl-arena.com · Powered by St0pa | FPL Arena
+          </p>
+        </div>
       </footer>
     </main>
   );

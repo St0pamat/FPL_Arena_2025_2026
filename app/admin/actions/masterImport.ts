@@ -27,7 +27,7 @@ function revalidateMaster() {
   revalidatePath("/admin/workspace");
   revalidatePath("/admin/fixture-draw");
   revalidatePath("/admin/struktura");
-  revalidatePath("/na-minusie/dywizje");
+  revalidatePath("/The-FA-League/dywizje");
   revalidatePath("/admin", "layout");
 }
 

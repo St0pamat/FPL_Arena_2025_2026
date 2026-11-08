@@ -301,7 +301,7 @@ export function PlayerProfileView({ profile }: { profile: PlayerZoneProfile }) {
               The FA Ranking
             </h2>
             <p className="text-xs text-slate-500">
-              Klasyfikacja ogólna FPL ARENA: Na Minusie ™
+              Klasyfikacja ogólna FPL ARENA: The FA League
               {faRankingPlayers > 0 ? ` · ${faRankingPlayers} graczy` : ""}
             </p>
           </div>

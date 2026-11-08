@@ -15,7 +15,7 @@ export interface CatalogClub {
 }
 
 /**
- * Katalog klubów do wyboru w Na Minusie ™ (poziomy EFL + Premier League).
+ * Katalog klubów do wyboru w The FA League (poziomy EFL + Premier League).
  * Pozycje w ligach ≈ sezon 2025/26 + kluby pojawiające się w arkuszu LIVE VIEW.
  */
 export const ENGLISH_CLUBS_CATALOG: CatalogClub[] = [

@@ -1,13 +1,16 @@
 import Image from "next/image";
 import Link from "next/link";
+import type { ReactNode } from "react";
 import type { PortalVariant } from "@/lib/platform/site";
 
 interface PortalCardProps {
   title: string;
   description: string;
   href: string;
-  logoSrc: string;
-  logoAlt: string;
+  logoSrc?: string;
+  logoAlt?: string;
+  /** Zamiast logoSrc — np. TheFaLeagueMark (placeholder do czasu nowego logo). */
+  logoSlot?: ReactNode;
   variant: PortalVariant;
   ctaLabel: string;
   badge?: string;
@@ -74,6 +77,7 @@ export function PortalCard({
   href,
   logoSrc,
   logoAlt,
+  logoSlot,
   variant,
   ctaLabel,
   badge,
@@ -99,16 +103,24 @@ export function PortalCard({
         <div
           className={`relative flex items-center justify-center transition-all duration-500 group-hover:scale-105 ${styles.logoContainer}`}
         >
-          <Image
-            src={logoSrc}
-            alt={logoAlt}
-            width={144}
-            height={144}
-            quality={95}
-            sizes="(max-width: 640px) 112px, 144px"
-            className={styles.logoImage}
-            priority
-          />
+          {logoSlot ? (
+            <div
+              className={`flex h-full w-full items-center justify-center ${styles.logoImage}`}
+            >
+              {logoSlot}
+            </div>
+          ) : logoSrc ? (
+            <Image
+              src={logoSrc}
+              alt={logoAlt ?? title}
+              width={144}
+              height={144}
+              quality={95}
+              sizes="(max-width: 640px) 112px, 144px"
+              className={styles.logoImage}
+              priority
+            />
+          ) : null}
         </div>
 
         {styles.showTitle ? (

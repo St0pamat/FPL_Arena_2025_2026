@@ -207,7 +207,7 @@ const STATS_LAB_SECTIONS: AdminNavSection[] = [
 export const ADMIN_PROJECTS: AdminProject[] = [
   {
     id: "na-minusie",
-    label: "FPL Arena: Na Minusie ™",
+    label: "FPL Arena: The FA League",
     icon: Trophy,
     accent: "text-[#39FF14]",
     enabled: true,

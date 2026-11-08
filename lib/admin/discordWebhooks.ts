@@ -16,7 +16,7 @@ export const DISCORD_SERVER_TARGETS = [
 export const DEFAULT_DISCORD_SERVER: DiscordServerTarget = "NA_MINUSIE";
 
 export const DISCORD_SERVER_LABELS: Record<DiscordServerTarget, string> = {
-  NA_MINUSIE: "Na Minusie ™",
+  NA_MINUSIE: "The FA League",
   FPL_ARENA: "FPL Arena (Backup)",
 };
 

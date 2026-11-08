@@ -1,19 +1,13 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ArrowLeft } from "lucide-react";
-import {
-  NA_MINUSIE_BRAND,
-  NA_MINUSIE_LOGO,
-  NA_MINUSIE_LOGO_ALT,
-  NA_MINUSIE_MAIN_NAV,
-} from "@/lib/na-minusie";
+import { TheFaLeagueMark } from "@/components/na-minusie/TheFaLeagueMark";
+import { NA_MINUSIE_BRAND, NA_MINUSIE_MAIN_NAV } from "@/lib/na-minusie";
 import { NA_MINUSIE_PATHS } from "@/lib/na-minusie/links";
 import { NM_CONTAINER } from "@/lib/na-minusie/theme";
-import { CollaborationCredits } from "@/components/na-minusie/CollaborationCredits";
 import { createClient } from "@/lib/supabase/client";
 
 const navLinkClass = (isActive: boolean) =>
@@ -102,13 +96,7 @@ export function StickyNavbar() {
             onClick={() => goTo(NA_MINUSIE_PATHS.home)}
             className="flex min-w-0 items-center gap-2.5"
           >
-            <Image
-              src={NA_MINUSIE_LOGO}
-              alt={NA_MINUSIE_LOGO_ALT}
-              width={36}
-              height={36}
-              className="h-8 w-8 shrink-0 object-contain sm:h-9 sm:w-9"
-            />
+            <TheFaLeagueMark size="nav" />
             <span className="truncate text-sm font-black uppercase tracking-wide text-white sm:text-base">
               {NA_MINUSIE_BRAND}
             </span>
@@ -141,7 +129,6 @@ export function StickyNavbar() {
           ) : null}
         </nav>
       </div>
-      <CollaborationCredits />
     </header>
   );
 }

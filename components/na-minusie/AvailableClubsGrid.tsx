@@ -128,7 +128,7 @@ export function AvailableClubsGrid({
               Kluby Niedostępne
             </p>
             <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-500">
-              Użytkownicy serwera Na Minusie ™ niegrający w lidze.
+              Użytkownicy serwera The FA League niegrający w lidze.
             </p>
 
             <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 lg:gap-4">

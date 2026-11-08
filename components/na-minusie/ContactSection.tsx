@@ -15,15 +15,24 @@ const tiles = [
     id: "discord",
     label: "Discord",
     description: "Główny kanał komunikacji ligi",
-    value: NA_MINUSIE_CONTACT.discordNick,
-    href: NA_MINUSIE_LINKS.discordProfile,
+    value: "Dołącz do serwera",
+    href: NA_MINUSIE_LINKS.discord,
     external: true,
     icon: MessageSquare,
   },
   {
-    id: "x",
-    label: "X (Twitter)",
-    description: "Aktualizacje i analizy",
+    id: "x-arena",
+    label: "X · FPL Arena",
+    description: "Oficjalny profil ligi",
+    value: NA_MINUSIE_CONTACT.xFplArenaHandle,
+    href: NA_MINUSIE_LINKS.xFplArena,
+    external: true,
+    icon: XIcon,
+  },
+  {
+    id: "x-stopa",
+    label: "X · St0pa",
+    description: "St0pa | FPL Arena",
     value: NA_MINUSIE_CONTACT.xHandle,
     href: NA_MINUSIE_LINKS.x,
     external: true,
@@ -56,7 +65,7 @@ export function ContactSection() {
         </p>
       </div>
 
-      <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {tiles.map((tile) => {
           const Icon = tile.icon;
           return (

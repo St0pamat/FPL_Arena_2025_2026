@@ -19,7 +19,7 @@ export const TIER_LOGO_MAX_BYTES = 2 * 1024 * 1024;
 export const TIER_LOGO_HINT =
   "PNG z przezroczystością, kwadrat ~400×400. Osobna biblioteka od herbów klubowych. Upload idzie do /uploads/tier-logos/ (jak herby klubów).";
 
-/** Stała piramida Na Minusie ™ — kolejność = Tier 1…5 */
+/** Stała piramida The FA League — kolejność = Tier 1…5 */
 export const PYRAMID_TIER_NAMES = [
   "Premier Division",
   "Championship",

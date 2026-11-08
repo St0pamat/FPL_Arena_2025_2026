@@ -1,7 +1,6 @@
-import Image from "next/image";
 import Link from "next/link";
 import { LoginForm } from "@/components/admin/LoginForm";
-import { NA_MINUSIE_LOGO, NA_MINUSIE_LOGO_ALT } from "@/lib/na-minusie/branding";
+import { TheFaLeagueMark } from "@/components/na-minusie/TheFaLeagueMark";
 
 export default function AdminLoginPage() {
   return (
@@ -11,22 +10,16 @@ export default function AdminLoginPage() {
       <div className="relative w-full max-w-md">
         <div className="admin-card border-[#39FF14]/10 p-8 shadow-[0_0_60px_rgba(57,255,20,0.06)] sm:p-10">
           <div className="mb-8 text-center">
-            <Image
-              src={NA_MINUSIE_LOGO}
-              alt={NA_MINUSIE_LOGO_ALT}
-              width={72}
-              height={72}
-              className="mx-auto mb-5 h-16 w-16 object-contain"
-            />
+            <TheFaLeagueMark size="sm" className="mx-auto mb-5" />
             <p className="text-xs font-black uppercase tracking-[0.3em] text-[#39FF14]">Panel Admina</p>
-            <h1 className="mt-3 text-2xl font-extrabold text-white">Na Minusie ™</h1>
+            <h1 className="mt-3 text-2xl font-extrabold text-white">The FA League</h1>
             <p className="mt-2 text-sm text-[#888]">Zaloguj się, aby zarządzać ligą</p>
           </div>
 
           <LoginForm />
 
           <p className="mt-8 text-center text-xs text-[#555]">
-            <Link href="/na-minusie" className="transition-colors hover:text-[#39FF14]">
+            <Link href="/The-FA-League" className="transition-colors hover:text-[#39FF14]">
               ← Powrót na stronę ligi
             </Link>
           </p>

@@ -30,16 +30,24 @@ function scrollHint(id: string) {
 const contactChannels = [
   {
     id: "discord",
-    label: "Discord ID",
-    hint: "Bezpośredni kontakt",
-    value: NA_MINUSIE_CONTACT.discordNick,
-    href: NA_MINUSIE_LINKS.discordProfile,
+    label: "Discord",
+    hint: "Dołącz do serwera",
+    value: "FPL Arena",
+    href: NA_MINUSIE_LINKS.discord,
     Icon: MessageSquare,
   },
   {
-    id: "x",
-    label: "X (Twitter)",
-    hint: "Aktualności i analizy",
+    id: "x-arena",
+    label: "X · FPL Arena",
+    hint: "Oficjalny profil ligi",
+    value: NA_MINUSIE_CONTACT.xFplArenaHandle,
+    href: NA_MINUSIE_LINKS.xFplArena,
+    Icon: XIcon,
+  },
+  {
+    id: "x-stopa",
+    label: "X · St0pa",
+    hint: "St0pa | FPL Arena",
     value: NA_MINUSIE_CONTACT.xHandle,
     href: NA_MINUSIE_LINKS.x,
     Icon: XIcon,
@@ -115,7 +123,7 @@ export function HowToJoinSection() {
                   </h3>
                   <p className="mt-3 text-base leading-relaxed text-slate-300 sm:text-lg">
                     Po zaksięgowaniu wpłaty (pamiętaj o podaniu swojego nicku z Discorda!) otrzymasz
-                    kod do ligi Na Minusie ™ w wiadomości prywatnej na Discordzie lub na wskazany
+                    kod do ligi The FA League w wiadomości prywatnej na Discordzie lub na wskazany
                     adres e-mail.
                   </p>
                   <Link
@@ -172,7 +180,7 @@ export function HowToJoinSection() {
             href={NA_MINUSIE_PATHS.regulamin}
             className="inline-flex w-full max-w-2xl items-center justify-center rounded-xl border border-emerald-500 bg-emerald-500/10 px-6 py-4 text-center text-sm font-black uppercase tracking-wider text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.5)] transition-all hover:bg-emerald-500/20 hover:text-white sm:text-base"
           >
-            📖 Przeczytaj pełny Regulamin ligi Na Minusie ™
+            📖 Przeczytaj pełny Regulamin ligi The FA League
           </Link>
         </div>
       </SectionShell>
