@@ -1,17 +1,21 @@
 # FPL Arena / Na Minusie ™ — pełny kontekst projektu (handoff dla AI)
 
-> **Wersja:** 3.0  
+> **Wersja:** 3.0 (archiwum)  
 > **Data:** 18 sierpnia 2026  
+> **⚠️ AKTUALNY HANDOFF DLA GEMINI ARGON (listopad 2026):**  
+> **[`docs/GEMINI_ARGON_HANDOFF.md`](GEMINI_ARGON_HANDOFF.md) — wersja 4.0**  
+> Ten plik v3 zachowujemy jako kontekst historyczny. Nowe wątki AI powinny startować od **v4**.  
 > **Repozytorium:** `St0pamat/FPL_Arena_2025_2026` (lokalnie: `fpl-arena-skarb-kibica`)  
 > **Produkcja:** VPS `/var/www/fpl-tracker`, PM2 `na-minusie`  
-> **Powiązany dokument:** `docs/NA_MINUSIE_TECHNICAL.md` (szczegóły algorytmów — ten plik jest **supersetem** + instrukcją operacyjną)
+> **Powiązany dokument:** `docs/NA_MINUSIE_TECHNICAL.md` (szczegóły algorytmów)
 
 ---
 
 ## Jak używać tego dokumentu w nowym wątku (Gemini / inny AI)
 
-1. Wklej **cały ten plik** jako pierwszą wiadomość systemową lub kontekst projektu.
-2. Do zadań kodowych podawaj ścieżki plików z sekcji [Mapa plików](#mapa-plików).
+0. **Preferuj `docs/GEMINI_ARGON_HANDOFF.md` (v4)** — zawiera Content Hub multi-select, n8n/`team_gw_decisions`, No Big Six, aktualne generatory Discord.
+1. Wklej **cały plik v4** jako pierwszą wiadomość systemową lub kontekst projektu.
+2. Do zadań kodowych podawaj ścieżki plików z sekcji mapy w v4 / poniżej.
 3. **Źródło prawdy algorytmów:** `lib/admin/*.ts`, `lib/public/*.ts` — dokument może być nieco za dokumentacją kodu.
 4. **Źródło prawdy schematu DB:** `supabase/schema.sql` + `supabase/migrations/*.sql`.
 5. Przed zmianami w Discord/webhookach sprawdź migrację `add_discord_webhooks_server_target.sql`.

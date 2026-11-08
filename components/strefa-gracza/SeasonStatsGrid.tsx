@@ -73,6 +73,20 @@ const CARD_META: Record<
     gradient: "from-red-600/15 via-slate-900/50 to-slate-900/70",
     span: "md:col-span-1",
   },
+  gw_top: {
+    icon: Crown,
+    accent: "text-emerald-400",
+    border: "border-emerald-500/30 hover:border-emerald-400/50",
+    gradient: "from-emerald-500/15 via-emerald-950/30 to-slate-900/70",
+    span: "md:col-span-1",
+  },
+  gw_low: {
+    icon: TrendingDown,
+    accent: "text-rose-400",
+    border: "border-rose-500/30 hover:border-rose-400/45",
+    gradient: "from-rose-600/15 via-red-950/25 to-slate-900/70",
+    span: "md:col-span-1",
+  },
 };
 
 function StatBentoCard({
@@ -213,8 +227,7 @@ export function SeasonStatsGrid({
     );
   }
 
-  const total = stats.performance.length + stats.anomalies.length;
-  if (total === 0) {
+  if (stats.pantheon.length === 0) {
     return (
       <div className="rounded-xl border border-slate-700/80 bg-slate-800/40 px-6 py-12 text-center backdrop-blur">
         <p className="text-sm text-slate-400">Brak danych statystycznych dla bieżącego sezonu.</p>
@@ -225,15 +238,9 @@ export function SeasonStatsGrid({
   return (
     <div className="space-y-10">
       <StatSection
-        id="stats-performance"
-        title="🔥 Najwyższe Osiągnięcia"
-        cards={stats.performance}
-        logos={logos}
-      />
-      <StatSection
-        id="stats-anomalies"
-        title="📉 Anomalie i Skrajności"
-        cards={stats.anomalies}
+        id="stats-pantheon"
+        title="🔥 Pantheon sezonu"
+        cards={stats.pantheon}
         logos={logos}
       />
     </div>

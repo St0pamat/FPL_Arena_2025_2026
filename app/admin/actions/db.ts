@@ -1427,7 +1427,13 @@ export async function wipeLeagueData(confirmation: string): Promise<ActionState>
 
     const supabase = await requireAuth();
 
-    // Kolejność: dzieci → rodzice (Auth / admin_users / discord_webhooks zostają)
+    // Kolejność: dzieci → rodzice.
+    // ZOSTAJĄ (świadomie wykluczone z wipe):
+    // - Auth / admin_users
+    // - discord_webhooks (trwałe dual-server)
+    // - no_big_six_* (osobny produkt)
+    // - fpl_lab_* (Stats Lab — Incremental ETL, Hard Reset ligi ich NIE kasuje)
+    // - team_gw_decisions / gameweek_metadata (poza zakresem hard wipe struktury ligowej)
     const tables = ["fixtures", "teams", "divisions", "seasons", "pyramids"] as const;
 
     for (const table of tables) {
@@ -1442,7 +1448,7 @@ export async function wipeLeagueData(confirmation: string): Promise<ActionState>
     return {
       error: null,
       success:
-        "Pomyślnie wyczyszczono bazę graczy i strukturę ligową. Webhooki Discord (admin → Webhooki) zostały zachowane.",
+        "Pomyślnie wyczyszczono bazę graczy i strukturę ligową. Zachowano: webhooki Discord, No Big Six (no_big_six_*), Stats Lab (fpl_lab_*).",
     };
   } catch (e) {
     console.error("[wipeLeagueData]", e);

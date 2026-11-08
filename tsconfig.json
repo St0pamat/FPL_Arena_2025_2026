@@ -26,14 +26,12 @@
     "paths": {
       "@/*": [
         "./*"
-      ],
-      "@arena/*": [
-        "./src/*"
       ]
     }
   },
   "include": [
     "next-env.d.ts",
+    "arena-ambient.d.ts",
     "app/**/*.ts",
     "app/**/*.tsx",
     "components/**/*.ts",

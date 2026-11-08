@@ -72,11 +72,14 @@ export type ContentHubSendPanelProps = {
   copiedGlobalX: boolean;
   globalXDraft: string;
   xLen: number;
+  faRankingGeneratePending?: boolean;
   onXChange: (divId: string, value: string) => void;
   onDiscordChange: (divId: string, value: string) => void;
   onGlobalDiscordChange: (value: string) => void;
   onGenerateXSingle: (divId: string) => void;
   onGenerateDiscordSingle: (divId: string) => void;
+  onGenerateFaRankingX?: () => void;
+  onGenerateFaRankingDiscord?: () => void;
   onCopyGlobalX: () => void;
   onAttachGraphicsChange: (checked: boolean) => void;
   onSendServersChange: (server: DiscordServerTarget, checked: boolean) => void;
@@ -90,6 +93,7 @@ export type ContentHubSendPanelProps = {
     kind: "wyniki" | "tabela" | "terminarz",
   ) => void;
   onDownloadFaRoster: () => void;
+  onDownloadFaTop10?: () => void;
   getResultsRef: (divId: string) => RefObject<HTMLDivElement | null>;
   getStandingsRef: (divId: string) => RefObject<HTMLDivElement | null>;
   getPreviewRef: (divId: string) => RefObject<HTMLDivElement | null>;
@@ -134,11 +138,14 @@ export function ContentHubSendPanel(props: ContentHubSendPanelProps) {
     copiedGlobalX,
     globalXDraft,
     xLen,
+    faRankingGeneratePending = false,
     onXChange,
     onDiscordChange,
     onGlobalDiscordChange,
     onGenerateXSingle,
     onGenerateDiscordSingle,
+    onGenerateFaRankingX,
+    onGenerateFaRankingDiscord,
     onCopyGlobalX,
     onAttachGraphicsChange,
     onSendServersChange,
@@ -147,6 +154,7 @@ export function ContentHubSendPanel(props: ContentHubSendPanelProps) {
     onSendGlobal,
     onDownloadImage,
     onDownloadFaRoster,
+    onDownloadFaTop10,
     getResultsRef,
     getStandingsRef,
     getPreviewRef,
@@ -269,6 +277,36 @@ export function ContentHubSendPanel(props: ContentHubSendPanelProps) {
           <h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-slate-300">
             B · C · Treść globalna
           </h2>
+          {isFaRanking && isSummary ? (
+            <div className="mb-4 flex flex-wrap gap-2">
+              <button
+                type="button"
+                disabled={faRankingGeneratePending || faRankingLoading || !faRankingReady}
+                onClick={onGenerateFaRankingX}
+                className="inline-flex items-center gap-2 rounded-xl border border-sky-500/40 bg-sky-500/10 px-3.5 py-2 text-xs font-bold uppercase text-sky-200 disabled:opacity-40"
+              >
+                {faRankingGeneratePending ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Sparkles className="h-3.5 w-3.5" />
+                )}
+                Generuj X Top 10
+              </button>
+              <button
+                type="button"
+                disabled={faRankingGeneratePending || faRankingLoading || !faRankingReady}
+                onClick={onGenerateFaRankingDiscord}
+                className="inline-flex items-center gap-2 rounded-xl border border-indigo-500/40 bg-indigo-500/10 px-3.5 py-2 text-xs font-bold uppercase text-indigo-200 disabled:opacity-40"
+              >
+                {faRankingGeneratePending ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Sparkles className="h-3.5 w-3.5" />
+                )}
+                Generuj Discord Top 10
+              </button>
+            </div>
+          ) : null}
           <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">
             Discord JSON
           </label>
@@ -288,19 +326,39 @@ export function ContentHubSendPanel(props: ContentHubSendPanelProps) {
             />
           </div>
           {isFaRanking ? (
-            <button
-              type="button"
-              disabled={Boolean(downloadBusy) || faRosterLoading || faRosterCount === 0}
-              onClick={onDownloadFaRoster}
-              className="mt-4 inline-flex items-center gap-2 rounded-xl border border-[#39FF14]/40 bg-[#39FF14]/10 px-3.5 py-2 text-xs font-bold uppercase text-[#39FF14] disabled:opacity-40"
-            >
-              {downloadBusy === "fa-roster" || faRosterLoading ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Users className="h-3.5 w-3.5" />
-              )}
-              Generuj listę The FA Ranking (PNG)
-            </button>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button
+                type="button"
+                disabled={
+                  Boolean(downloadBusy) ||
+                  faRankingLoading ||
+                  !faRankingReady ||
+                  !onDownloadFaTop10
+                }
+                onClick={onDownloadFaTop10}
+                className="inline-flex items-center gap-2 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-3.5 py-2 text-xs font-bold uppercase text-emerald-200 disabled:opacity-40"
+              >
+                {downloadBusy === "fa-top10" || faRankingLoading ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Download className="h-3.5 w-3.5" />
+                )}
+                Pobierz Top 10 (PNG)
+              </button>
+              <button
+                type="button"
+                disabled={Boolean(downloadBusy) || faRosterLoading || faRosterCount === 0}
+                onClick={onDownloadFaRoster}
+                className="inline-flex items-center gap-2 rounded-xl border border-[#39FF14]/40 bg-[#39FF14]/10 px-3.5 py-2 text-xs font-bold uppercase text-[#39FF14] disabled:opacity-40"
+              >
+                {downloadBusy === "fa-roster" || faRosterLoading ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Users className="h-3.5 w-3.5" />
+                )}
+                Generuj listę The FA Ranking (PNG)
+              </button>
+            </div>
           ) : null}
           {globalXDraft ? (
             <div className="mt-4 rounded-xl border border-slate-800 bg-slate-950/40 p-3">
@@ -340,7 +398,7 @@ export function ContentHubSendPanel(props: ContentHubSendPanelProps) {
           />
           <span className="min-w-0 text-sm text-slate-200">
             {isFaRanking
-              ? "Dołącz karuzelę PNG The FA Ranking"
+              ? "Dołącz grafikę Top 10 The FA Ranking"
               : isPreview
                 ? "Dołącz grafikę terminarza (per dywizja)"
                 : "Dołącz wygenerowane grafiki (Wyniki + Tabela per dywizja)"}
@@ -354,7 +412,7 @@ export function ContentHubSendPanel(props: ContentHubSendPanelProps) {
               <span className="ml-1 text-amber-400"> · FA Ranking…</span>
             ) : null}
             {isFaRanking && faRankingReady ? (
-              <span className="ml-1 text-emerald-400"> · karuzela gotowa</span>
+              <span className="ml-1 text-emerald-400"> · Top 10 gotowe</span>
             ) : null}
           </span>
         </label>

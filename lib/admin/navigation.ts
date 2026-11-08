@@ -1,7 +1,10 @@
 import {
   Ban,
+  BarChart3,
   Calculator,
+  Database,
   ExternalLink,
+  FlaskConical,
   Gamepad2,
   Image,
   Layers,
@@ -10,6 +13,7 @@ import {
   RefreshCw,
   ShieldAlert,
   Swords,
+  Table2,
   Trophy,
   Users,
   Webhook,
@@ -173,6 +177,33 @@ const NO_BIG_SIX_SECTIONS: AdminNavSection[] = [
   },
 ];
 
+const STATS_LAB_SECTIONS: AdminNavSection[] = [
+  {
+    id: "studio",
+    label: "Analiza",
+    items: [
+      {
+        href: "/admin/stats-lab?tab=centre",
+        label: "Stats Centre (Tabele)",
+        icon: Table2,
+        hint: "Tabele analityczne PL / EN",
+      },
+      {
+        href: "/admin/stats-lab?tab=studio",
+        label: "Studio Wykresów",
+        icon: BarChart3,
+        hint: "Porównania zawodników PL",
+      },
+      {
+        href: "/admin/stats-lab/sync",
+        label: "Baza i Synchronizacja FPL",
+        icon: Database,
+        hint: "Incremental ETL z FPL API",
+      },
+    ],
+  },
+];
+
 export const ADMIN_PROJECTS: AdminProject[] = [
   {
     id: "na-minusie",
@@ -190,6 +221,15 @@ export const ADMIN_PROJECTS: AdminProject[] = [
     accent: "text-amber-500",
     enabled: true,
     sections: NO_BIG_SIX_SECTIONS,
+    extra: [],
+  },
+  {
+    id: "stats-lab",
+    label: "Stats Lab",
+    icon: FlaskConical,
+    accent: "text-emerald-400",
+    enabled: true,
+    sections: STATS_LAB_SECTIONS,
     extra: [],
   },
   {

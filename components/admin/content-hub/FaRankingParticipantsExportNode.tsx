@@ -1,6 +1,6 @@
 "use client";
 
-import type { RefObject, ReactNode } from "react";
+import type { Ref, RefObject, ReactNode } from "react";
 import { CalendarDays, Crown, Trophy, Users } from "lucide-react";
 import type { ClubLogoRecord } from "@/lib/admin/clubLogos";
 import type { FaRankingParticipant } from "@/app/admin/actions/contentHub";
@@ -149,7 +149,7 @@ export function FaRankingParticipantsExportNode({
 
   return (
     <div
-      ref={captureRef}
+      ref={captureRef as Ref<HTMLDivElement>}
       className="box-border overflow-hidden rounded-2xl border border-slate-800 no-scrollbar"
       style={{
         width: EXPORT_WIDTH,
@@ -238,31 +238,13 @@ export function FaRankingParticipantsExportNode({
             Powered by {NA_MINUSIE_EXPORT_BRAND}
           </p>
 
-          <div className="flex flex-col items-center justify-center px-8">
-            <span className="mb-4 text-sm font-medium uppercase tracking-[0.25em] text-slate-500">
-              Projekt powstał we współpracy
+          <div className="flex flex-col items-center justify-center px-8 text-center">
+            <span className="text-xl font-bold tracking-wide text-slate-300">
+              St0pa | FPL Arena
             </span>
-            <div className="flex items-center space-x-12">
-              <div className="flex flex-col items-end text-right">
-                <span className="text-xl font-bold tracking-wide text-slate-300">
-                  St0pa | FPL Arena
-                </span>
-                <span className="mt-1 text-base text-slate-500">
-                  Architekt & Twórca Ligi
-                </span>
-              </div>
-              <span className="mx-2 text-4xl font-black text-emerald-500" aria-hidden>
-                ×
-              </span>
-              <div className="flex flex-col items-start text-left">
-                <span className="text-xl font-bold tracking-wide text-slate-300">
-                  Baldwiniasty | Na Minusie
-                </span>
-                <span className="mt-1 text-base text-slate-500">
-                  Założyciel Społeczności
-                </span>
-              </div>
-            </div>
+            <span className="mt-1 text-base text-slate-500">
+              Architekt & Twórca Ligi
+            </span>
           </div>
 
           <div aria-hidden />

@@ -72,6 +72,9 @@ function findProjectForAdminPath(pathname: string): AdminProject | null {
   if (pathname.startsWith("/admin/no-big-six")) {
     return ADMIN_PROJECTS.find((p) => p.id === "no-big-six") ?? null;
   }
+  if (pathname.startsWith("/admin/stats-lab")) {
+    return ADMIN_PROJECTS.find((p) => p.id === "stats-lab") ?? null;
+  }
   return null;
 }
 

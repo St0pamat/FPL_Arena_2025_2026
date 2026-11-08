@@ -54,6 +54,10 @@ async function requireAuth() {
   return supabase;
 }
 
+const CONTENT_HUB_LEAGUE = "FPL Arena: The FA League";
+const CONTENT_HUB_X_HASHTAGS = "#FPLArena #FPLCommunity #FPL #FPLpl";
+const X_CHAR_LIMIT = 280;
+
 function formatXMention(
   xCom: string | null | undefined,
   managerName: string,
@@ -66,6 +70,57 @@ function formatXMention(
   handle = handle.replace(/^@+/, "").split(/[/?#]/)[0]?.trim() ?? "";
   if (!handle) return managerName.trim() || "—";
   return `@${handle}`;
+}
+
+type FaRankingXLine = {
+  mention: string;
+  points: number;
+  or: number | null;
+};
+
+/** Top 10 FA Ranking — kompaktowo pod limit 280 znaków X. */
+function buildFaRankingTop10XDraft(lines: FaRankingXLine[]): string {
+  const tags = CONTENT_HUB_X_HASHTAGS;
+  const league = `(${CONTENT_HUB_LEAGUE})`;
+
+  const withOr = lines
+    .map((r, i) => {
+      const orPart = r.or != null ? ` OR${r.or}` : "";
+      return `${i + 1}.${r.mention} ${r.points}${orPart}`;
+    })
+    .join("\n");
+  let draft = [`Czołówka THE FA RANKING`, league, "", withOr, "", tags].join(
+    "\n",
+  );
+  if (draft.length <= X_CHAR_LIMIT) return draft;
+
+  const plain = lines
+    .map((r, i) => `${i + 1}.${r.mention} ${r.points}`)
+    .join("\n");
+  draft = [`Czołówka THE FA RANKING`, league, "", plain, "", tags].join("\n");
+  if (draft.length <= X_CHAR_LIMIT) return draft;
+
+  const paired: string[] = [];
+  for (let i = 0; i < lines.length; i += 2) {
+    const a = `${i + 1}.${lines[i].mention} ${lines[i].points}`;
+    const b = lines[i + 1]
+      ? ` ${i + 2}.${lines[i + 1].mention} ${lines[i + 1].points}`
+      : "";
+    paired.push(a + b);
+  }
+  draft = [`THE FA RANKING Top 10`, league, paired.join("\n"), tags].join("\n");
+  if (draft.length <= X_CHAR_LIMIT) return draft;
+
+  const ultra = lines
+    .map((r, i) => `${i + 1}.${r.mention} ${r.points}`)
+    .join(" ");
+  draft = [`THE FA RANKING`, league, ultra, tags].join("\n");
+  if (draft.length <= X_CHAR_LIMIT) return draft;
+
+  draft = [`THE FA RANKING`, league, ultra, "#FPLArena #FPLpl"].join("\n");
+  if (draft.length <= X_CHAR_LIMIT) return draft;
+
+  return `${draft.slice(0, X_CHAR_LIMIT - 1)}…`;
 }
 
 /** Aktywne dywizje (sezon niezaarchiwizowany) + flaga webhooka (po tierze). */
@@ -290,12 +345,12 @@ export async function generateXComDraft(
 
     const draft = [
       `🏆 Wyniki & Tabela - GW ${gameweek}`,
-      `🏴󠁧󠁢󠁥󠁮󠁧󠁿 ${division.name} (FPL Arena: Na Minusie ™)`,
+      `🏴󠁧󠁢󠁥󠁮󠁧󠁿 ${division.name} (${CONTENT_HUB_LEAGUE})`,
       ``,
       `Swoje mecze wygrali:`,
       winnersBlock,
       ``,
-      `#FPL #FPLpl #FantasyPL`,
+      CONTENT_HUB_X_HASHTAGS,
     ].join("\n");
 
     return { error: null, success: "Szkic X.com gotowy.", draft };
@@ -390,29 +445,26 @@ export async function generatePreviewXComDraft(
         ? pairs.map((p) => `${p.a} vs ${p.b}`).join("\n")
         : "(brak par w terminarzu)";
 
-    // Pełna wersja z ozdobnikami
     let draft = [
       `🔜 Zapowiedź GW${gameweek}!`,
-      `🏴󠁧󠁢󠁥󠁮󠁧󠁿 ${division.name} (FPL Arena: Na Minusie ™)`,
+      `🏴󠁧󠁢󠁥󠁮󠁧󠁿 ${division.name} (${CONTENT_HUB_LEAGUE})`,
       ``,
       pairsBlock,
       ``,
-      `Kto zdobędzie 3 punkty? 🔥 #FPL #FPLpl`,
+      CONTENT_HUB_X_HASHTAGS,
     ].join("\n");
 
-    // Fallback: bez footer gdy za długi
-    if (draft.length > 280) {
+    if (draft.length > X_CHAR_LIMIT) {
       draft = [
         `🔜 Zapowiedź GW${gameweek}!`,
-        `🏴󠁧󠁢󠁥󠁮󠁧󠁿 ${division.name} (FPL Arena: Na Minusie ™)`,
+        `🏴󠁧󠁢󠁥󠁮󠁧󠁿 ${division.name} (${CONTENT_HUB_LEAGUE})`,
         ``,
         pairsBlock,
       ].join("\n");
     }
 
-    // Ostateczność: twardy trim
-    if (draft.length > 280) {
-      draft = draft.slice(0, 277) + "…";
+    if (draft.length > X_CHAR_LIMIT) {
+      draft = `${draft.slice(0, X_CHAR_LIMIT - 1)}…`;
     }
 
     return { error: null, success: "Szkic zapowiedzi X.com gotowy.", draft };
@@ -508,7 +560,7 @@ export async function generatePreviewDiscordJSON(
         {
           title: `🔜 Zapowiedź Kolejki ${gameweek}! 🏆`,
           description: [
-            `**${division.name}** · FPL Arena: Na Minusie ™`,
+            `**${division.name}** · ${CONTENT_HUB_LEAGUE}`,
             ``,
             `Oto pary meczowe na nadchodzącą kolejkę (GW ${gameweek}):`,
             ``,
@@ -961,6 +1013,122 @@ export async function getContentHubCaptureData(
   }
 }
 
+/**
+ * Szkic X.com — Top 10 The FA Ranking (oznaczenia @ + punkty, ≤280 znaków).
+ */
+export async function generateFaRankingXComDraft(
+  seasonId: string,
+): Promise<GenerateXDraftResult> {
+  try {
+    await requireAuth();
+    if (!seasonId) return { error: "Wybierz sezon FA Ranking." };
+
+    const { getFARankingData } = await import("@/lib/public/actions");
+    const data = await getFARankingData(seasonId);
+    const top10 = data.rows.slice(0, 10);
+    if (!top10.length) {
+      return { error: "Brak danych The FA Ranking dla wybranego sezonu." };
+    }
+
+    const lines: FaRankingXLine[] = top10.map((row) => ({
+      mention: formatXMention(row.team.x_com, row.team.manager_name),
+      points: row.totalPoints,
+      or:
+        row.team.previous_season_or != null &&
+        Number.isFinite(row.team.previous_season_or)
+          ? Number(row.team.previous_season_or)
+          : null,
+    }));
+
+    const draft = buildFaRankingTop10XDraft(lines);
+    return {
+      error: null,
+      success: "Szkic X.com The FA Ranking (Top 10) gotowy.",
+      draft,
+    };
+  } catch (e) {
+    console.error("[generateFaRankingXComDraft]", e);
+    return {
+      error:
+        e instanceof Error
+          ? e.message
+          : "Nie udało się wygenerować szkicu FA Ranking.",
+    };
+  }
+}
+
+/**
+ * JSON embed Discord — Top 10 The FA Ranking (pingi Discord + punkty).
+ */
+export async function generateFaRankingDiscordJSON(
+  seasonId: string,
+): Promise<GenerateSummaryDiscordResult> {
+  try {
+    await requireAuth();
+    if (!seasonId) return { error: "Wybierz sezon FA Ranking." };
+
+    const { getFARankingData } = await import("@/lib/public/actions");
+    const data = await getFARankingData(seasonId);
+    const top10 = data.rows.slice(0, 10);
+    if (!top10.length) {
+      return { error: "Brak danych The FA Ranking dla wybranego sezonu." };
+    }
+
+    const rankingLines = top10
+      .map((row) => {
+        const mention = formatSummaryDiscordPlayer({
+          manager_name: row.team.manager_name,
+          discord_id: row.team.discord_id,
+        });
+        const or =
+          row.team.previous_season_or != null &&
+          Number.isFinite(row.team.previous_season_or)
+            ? ` · OR ${Number(row.team.previous_season_or)}`
+            : "";
+        return `${row.position}. ${mention} — **${row.totalPoints}** pkt${or}`;
+      })
+      .join("\n");
+
+    const gwNote =
+      data.latestFinishedGw != null
+        ? `Po GW${data.latestFinishedGw}`
+        : data.campaignLabel;
+
+    const payload = {
+      content: "🏆 **THE FA RANKING — Top 10**",
+      embeds: [
+        {
+          title: "Czołówka THE FA RANKING",
+          description: [
+            `**${CONTENT_HUB_LEAGUE}**`,
+            gwNote,
+            "",
+            rankingLines,
+          ].join("\n"),
+          color: 5793266,
+          footer: {
+            text: "www.fpl-arena.com • Powered by St0pa | FPL Arena",
+          },
+        },
+      ],
+    };
+
+    return {
+      error: null,
+      success: "JSON Discord The FA Ranking (Top 10) gotowy.",
+      json: JSON.stringify(payload, null, 2),
+    };
+  } catch (e) {
+    console.error("[generateFaRankingDiscordJSON]", e);
+    return {
+      error:
+        e instanceof Error
+          ? e.message
+          : "Nie udało się wygenerować JSON-a FA Ranking.",
+    };
+  }
+}
+
 export type FaRankingParticipant = {
   discordClub: string;
   fplManager: string;
@@ -968,7 +1136,7 @@ export type FaRankingParticipant = {
 };
 
 /**
- * Pełna lista uczestników Na Minusie (Baza CSV) — alfabetycznie po Discord Club.
+ * Pełna lista uczestników (Baza CSV) — alfabetycznie po Discord Club.
  * Do grafiki „Oficjalna lista uczestników The FA Ranking”.
  */
 export async function getFaRankingParticipantsRoster(): Promise<{

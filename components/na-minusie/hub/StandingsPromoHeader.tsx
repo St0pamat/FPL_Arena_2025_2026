@@ -4,8 +4,8 @@ import type { ClubLogoRecord } from "@/lib/admin/clubLogos";
 import { ARENA_PORTAL_ALT, ARENA_PORTAL_LOGO } from "@/lib/arena";
 import {
   NA_MINUSIE_EXPORT_BRAND,
-  NA_MINUSIE_LOGO,
-  NA_MINUSIE_LOGO_ALT,
+  THE_FA_LEAGUE_MARK_ALT,
+  THE_FA_LEAGUE_MARK_LABEL,
 } from "@/lib/na-minusie";
 import { ClubCrest } from "@/components/na-minusie/hub/ClubCrest";
 
@@ -68,12 +68,30 @@ function CrestStrip({
   );
 }
 
+function brandMarkBoxClass(
+  side: "left" | "right",
+  safeEdges: boolean,
+  size: "default" | "hero",
+): string {
+  if (size === "hero") {
+    return "aspect-square h-[220px] w-[220px] shrink-0";
+  }
+  return `aspect-square h-[7rem] w-[7rem] shrink-0 sm:h-[8.5rem] sm:w-[8.5rem] ${
+    safeEdges ? "self-center" : "self-start"
+  } ${
+    safeEdges
+      ? ""
+      : side === "left"
+        ? "-ml-3 sm:-ml-5"
+        : "-mr-3 sm:-mr-5"
+  }`;
+}
+
 function BrandMark({
   src,
   alt,
-  /** Okrągły kontener — ten sam rozmiar co logo Arena (np. Na Minusie) */
   circle = false,
-  /** Arena → lewo, Na Minusie → prawo */
+  /** Arena → lewo, The FA League → prawo */
   side = "left",
   /** Bez ujemnych marginesów — bezpieczne dla html-to-image */
   safeEdges = false,
@@ -86,18 +104,7 @@ function BrandMark({
   safeEdges?: boolean;
   size?: "default" | "hero";
 }) {
-  const box =
-    size === "hero"
-      ? "aspect-square h-[220px] w-[220px] shrink-0"
-      : `aspect-square h-[7rem] w-[7rem] shrink-0 sm:h-[8.5rem] sm:w-[8.5rem] ${
-          safeEdges ? "self-center" : "self-start"
-        } ${
-          safeEdges
-            ? ""
-            : side === "left"
-              ? "-ml-3 sm:-ml-5"
-              : "-mr-3 sm:-mr-5"
-        }`;
+  const box = brandMarkBoxClass(side, safeEdges, size);
 
   return (
     <div
@@ -123,6 +130,33 @@ function BrandMark({
         crossOrigin="anonymous"
         decoding="async"
       />
+    </div>
+  );
+}
+
+/** Placeholder w miejscu logo Na Minusie — napis The FA League w żółtym okręgu. */
+function FaLeagueBrandMark({
+  side = "right",
+  safeEdges = false,
+  size = "default",
+}: {
+  side?: "left" | "right";
+  safeEdges?: boolean;
+  size?: "default" | "hero";
+}) {
+  const box = brandMarkBoxClass(side, safeEdges, size);
+  const textClass =
+    size === "hero"
+      ? "px-4 text-center text-[1.55rem] font-black uppercase leading-[1.05] tracking-[0.06em] text-slate-950"
+      : "px-2 text-center text-[0.7rem] font-black uppercase leading-[1.05] tracking-[0.04em] text-slate-950 sm:text-[0.8rem]";
+
+  return (
+    <div
+      className={`${box} flex items-center justify-center overflow-hidden rounded-full bg-[#F5C542] ring-1 ring-white/10`}
+      role="img"
+      aria-label={THE_FA_LEAGUE_MARK_ALT}
+    >
+      <span className={textClass}>{THE_FA_LEAGUE_MARK_LABEL}</span>
     </div>
   );
 }
@@ -220,14 +254,7 @@ export function StandingsPromoHeader({
           </div>
 
           <div className="flex w-full justify-center">
-            <BrandMark
-              src={NA_MINUSIE_LOGO}
-              alt={NA_MINUSIE_LOGO_ALT}
-              circle
-              side="right"
-              safeEdges
-              size="hero"
-            />
+            <FaLeagueBrandMark side="right" safeEdges size="hero" />
           </div>
         </div>
       </header>
@@ -268,13 +295,7 @@ export function StandingsPromoHeader({
           </div>
 
           <div className="justify-self-end">
-            <BrandMark
-              src={NA_MINUSIE_LOGO}
-              alt={NA_MINUSIE_LOGO_ALT}
-              circle
-              side="right"
-              safeEdges
-            />
+            <FaLeagueBrandMark side="right" safeEdges />
           </div>
         </div>
       </header>
@@ -296,12 +317,7 @@ export function StandingsPromoHeader({
           <TitleBlock title={title} subtitle={subtitle} compact />
         )}
 
-        <BrandMark
-          src={NA_MINUSIE_LOGO}
-          alt={NA_MINUSIE_LOGO_ALT}
-          circle
-          side="right"
-        />
+        <FaLeagueBrandMark side="right" />
       </div>
     </header>
   );

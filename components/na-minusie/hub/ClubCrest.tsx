@@ -17,7 +17,7 @@ export function ClubCrest({
 }: {
   clubName?: string | null;
   logos?: ClubLogoRecord[];
-  size?: "fill" | "md" | "lg";
+  size?: "fill" | "sm" | "md" | "lg";
   className?: string;
 }) {
   const resolved = resolvePublicCrestSrc(clubName, logos);
@@ -36,7 +36,9 @@ export function ClubCrest({
       ? "relative inline-flex h-16 w-16 shrink-0 items-center justify-center sm:h-20 sm:w-20"
       : size === "md"
         ? "relative inline-flex h-12 w-12 shrink-0 items-center justify-center sm:h-14 sm:w-14"
-        : "relative flex aspect-square h-auto w-auto min-h-[2.75rem] shrink-0 items-center justify-center self-stretch";
+        : size === "sm"
+          ? "relative inline-flex h-6 w-6 shrink-0 items-center justify-center"
+          : "relative flex aspect-square h-auto w-auto min-h-[2.75rem] shrink-0 items-center justify-center self-stretch";
 
   const shell = `${shellBase} ${className}`.trim();
 

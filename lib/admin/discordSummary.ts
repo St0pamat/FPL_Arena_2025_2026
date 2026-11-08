@@ -80,7 +80,7 @@ export function generateSummaryDiscordJSON(
       {
         title: `🏆 Wyniki & Tabela - GW ${gameweek}`,
         description: [
-          `🏴󠁧󠁢󠁥󠁮󠁧󠁿 **${divisionName}** (FPL Arena: Na Minusie ™)`,
+          `🏴󠁧󠁢󠁥󠁮󠁧󠁿 **${divisionName}** (FPL Arena: The FA League)`,
           "",
           "**Komplet wyników w tej kolejce:**",
           matchesBlock,

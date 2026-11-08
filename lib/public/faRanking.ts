@@ -298,10 +298,12 @@ export function buildFARanking(
         id: t.id,
         manager_name: t.manager_name,
         discord_nick: t.discord_nick,
+        discord_id: t.discord_id ?? null,
         fpl_id: t.fpl_id,
         fpl_team_name: t.fpl_team_name,
         chosen_club: t.chosen_club,
         previous_season_or: t.previous_season_or ?? null,
+        x_com: t.x_com ?? null,
       },
       divisionName: t.division_name ?? null,
     });

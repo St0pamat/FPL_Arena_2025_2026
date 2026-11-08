@@ -2,7 +2,8 @@
 
 > **Wersja dokumentu:** 3.0  
 > **Data:** 18 sierpnia 2026  
-> **Handoff AI (Gemini):** pełny kontekst projektu → [`docs/GEMINI_PROJECT_CONTEXT.md`](GEMINI_PROJECT_CONTEXT.md)  
+> **Handoff AI (Gemini Argon, aktualny):** [`docs/GEMINI_ARGON_HANDOFF.md`](GEMINI_ARGON_HANDOFF.md) (v4, 11.2026)  
+> **Handoff AI (archiwum v3):** [`docs/GEMINI_PROJECT_CONTEXT.md`](GEMINI_PROJECT_CONTEXT.md)  
 > **Zakres:** cała platforma **Na Minusie ™** w monorepo `fpl-arena-skarb-kibica` — landing, Strefa Gracza, panel admina, silniki punktacji, baraże, FA Ranking, Content Hub, Discord (dual-server), przejście sezonu, baza Supabase, wdrożenie.  
 > **Repozytorium GitHub:** `St0pamat/FPL_Arena_2025_2026`  
 > **Produkcja:** VPS `/var/www/fpl-tracker`, proces PM2 `na-minusie`

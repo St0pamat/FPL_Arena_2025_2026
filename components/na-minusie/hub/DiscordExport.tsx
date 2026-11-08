@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, type ReactNode, type RefObject } from "react";
+import { useRef, type ReactNode, type Ref, type RefObject } from "react";
 import type { ClubLogoRecord } from "@/lib/admin/clubLogos";
 import { NA_MINUSIE_EXPORT_BRAND } from "@/lib/na-minusie";
 import { ExportControls } from "@/components/na-minusie/hub/ExportControls";
@@ -29,7 +29,7 @@ export function DiscordExportFrame({
   /** Zewnętrzny ref na węzeł do html-to-image */
   captureRef,
   /**
-   * Nagłówek z logo Arena | tekst | logo Na Minusie (domyślnie włączony).
+   * Nagłówek z logo Arena | tekst | marka The FA League (domyślnie włączony).
    * Ten sam HTML idzie do PNG i webhooków Discord.
    */
   brandedHeader = true,
@@ -87,7 +87,7 @@ export function DiscordExportFrame({
       ) : null}
 
       <div
-        ref={nodeRef}
+        ref={nodeRef as Ref<HTMLDivElement>}
         id={id}
         className={`rounded-2xl border border-slate-800 shadow-2xl shadow-black/50 no-scrollbar ${
           safeExportEdges

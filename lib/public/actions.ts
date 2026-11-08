@@ -769,13 +769,14 @@ export async function getDivisionStandings(
       .order("manager_name", { ascending: true });
 
     if (teamsQuery.error && /x_com/i.test(teamsQuery.error.message)) {
-      teamsQuery = await supabase
+      const fallback = await supabase
         .from("teams")
         .select(
           "id, manager_name, discord_nick, fpl_id, fpl_team_name, chosen_club",
         )
         .eq("division_id", divId)
         .order("manager_name", { ascending: true });
+      teamsQuery = fallback as typeof teamsQuery;
     }
     if (teamsQuery.error) throw new Error(teamsQuery.error.message);
 
@@ -1555,27 +1556,48 @@ export async function getFARankingData(
     ]),
   );
 
-  const { data: teamsRaw, error: teamsError } = await supabase
+  let teamsQuery = await supabase
     .from("teams")
     .select(
-      "id, manager_name, discord_nick, fpl_id, fpl_team_name, chosen_club, division_id, previous_season_or",
+      "id, manager_name, discord_nick, discord_id, fpl_id, fpl_team_name, chosen_club, division_id, previous_season_or, x_com",
     )
     .in("division_id", divisionIds);
 
-  if (teamsError) throw new Error(teamsError.message);
+  if (
+    teamsQuery.error &&
+    (/x_com/i.test(teamsQuery.error.message) ||
+      /discord_id/i.test(teamsQuery.error.message))
+  ) {
+    const fallback = await supabase
+      .from("teams")
+      .select(
+        "id, manager_name, discord_nick, fpl_id, fpl_team_name, chosen_club, division_id, previous_season_or",
+      )
+      .in("division_id", divisionIds);
+    teamsQuery = fallback as typeof teamsQuery;
+  }
+
+  if (teamsQuery.error) throw new Error(teamsQuery.error.message);
+  const teamsRaw = teamsQuery.data;
 
   const teams: FARankingTeamInput[] = (teamsRaw ?? []).map((row) => {
     const div = divisionMeta.get(row.division_id as string);
     const season = div ? seasonMeta.get(div.season_id) : undefined;
+    const withOptional = row as {
+      discord_id?: string | null;
+      x_com?: string | null;
+    };
     return {
       id: row.id as string,
       manager_name: String(row.manager_name ?? ""),
       discord_nick: String(row.discord_nick ?? ""),
+      discord_id: withOptional.discord_id ?? null,
       fpl_id: (row.fpl_id as string | null) ?? null,
       fpl_team_name: (row.fpl_team_name as string | null) ?? null,
       chosen_club: String(row.chosen_club ?? ""),
       previous_season_or:
         row.previous_season_or != null ? Number(row.previous_season_or) : null,
+      x_com: withOptional.x_com ?? null,
       division_id: row.division_id as string,
       season_id: div?.season_id ?? "",
       division_name: div?.name ?? null,

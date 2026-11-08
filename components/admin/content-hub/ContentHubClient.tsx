@@ -16,6 +16,8 @@ import {
   Users,
 } from "lucide-react";
 import {
+  generateFaRankingDiscordJSON,
+  generateFaRankingXComDraft,
   generatePreviewDiscordJSON,
   generatePreviewXComDraft,
   generateSummaryDiscordJSONForDivision,
@@ -160,8 +162,11 @@ export function ContentHubClient({
     FPL_ARENA: false,
   });
   const [downloadBusy, setDownloadBusy] = useState<
-    "wyniki" | "tabela" | "terminarz" | "fa-roster" | null
+    "wyniki" | "tabela" | "terminarz" | "fa-roster" | "fa-top10" | null
   >(null);
+  const [faRankingXDraft, setFaRankingXDraft] = useState("");
+  const [faRankingGeneratePending, setFaRankingGeneratePending] =
+    useState(false);
 
   const getResultsRef = useStableRefMap();
   const getStandingsRef = useStableRefMap();
@@ -260,7 +265,11 @@ export function ContentHubClient({
   }, [isDivisionMode, selectedDivisions, globalSendTarget, selectedSeason]);
 
   const primaryDivisionId = selectedDivisionIds[0] ?? "";
-  const globalXDraft = primaryDivisionId ? xComDrafts[primaryDivisionId] ?? "" : "";
+  const globalXDraft = isFaRanking
+    ? faRankingXDraft
+    : primaryDivisionId
+      ? (xComDrafts[primaryDivisionId] ?? "")
+      : "";
   const xLen = globalXDraft.length;
 
   const gwOptions = useMemo(() => {
@@ -485,6 +494,37 @@ export function ContentHubClient({
     showToast,
   ]);
 
+  const handleDownloadFaTop10 = useCallback(async () => {
+    if (!isFaRanking) return;
+    if (faRankingLoading || !faRanking) {
+      showToast("err", "Poczekaj na załadowanie The FA Ranking…");
+      return;
+    }
+    const node = faCarouselRefs.current[0]?.current;
+    if (!node) {
+      showToast("err", "Brak węzła off-screen Top 10.");
+      return;
+    }
+    setDownloadBusy("fa-top10");
+    showToast("ok", "Generowanie Top 10 The FA Ranking…");
+    try {
+      await waitForImages(node);
+      await sleep(80);
+      const dataUrl = await captureExportNode(node);
+      const link = document.createElement("a");
+      const label = (faRanking.campaignLabel || "season").replace(/\//g, "-");
+      link.download = `the-fa-ranking-top10-${label}.png`;
+      link.href = dataUrl;
+      link.click();
+      showToast("ok", `Pobrano ${link.download}`);
+    } catch (error) {
+      console.error("[ContentHub] FA Top 10 PNG", error);
+      showToast("err", "Błąd podczas pobierania Top 10.");
+    } finally {
+      setDownloadBusy(null);
+    }
+  }, [faRanking, faRankingLoading, isFaRanking, showToast]);
+
   const handleDownloadImage = useCallback(
     async (
       divisionId: string,
@@ -557,6 +597,45 @@ export function ContentHubClient({
     },
     [capturesByDivision, getPreviewRef, getResultsRef, getStandingsRef, isPreview],
   );
+
+  async function onGenerateFaRankingX() {
+    if (!selectedGlobalSeasonId) {
+      showToast("err", "Wybierz sezon FA Ranking.");
+      return;
+    }
+    setFaRankingGeneratePending(true);
+    try {
+      const result = await generateFaRankingXComDraft(selectedGlobalSeasonId);
+      if (result.error) {
+        showToast("err", result.error);
+        return;
+      }
+      setFaRankingXDraft(result.draft ?? "");
+      showToast("ok", result.success ?? "Szkic X Top 10 gotowy.");
+    } finally {
+      setFaRankingGeneratePending(false);
+    }
+  }
+
+  async function onGenerateFaRankingDiscord() {
+    if (!selectedGlobalSeasonId) {
+      showToast("err", "Wybierz sezon FA Ranking.");
+      return;
+    }
+    setFaRankingGeneratePending(true);
+    try {
+      const result = await generateFaRankingDiscordJSON(selectedGlobalSeasonId);
+      if (result.error) {
+        showToast("err", result.error);
+        return;
+      }
+      setGlobalDiscordJson(result.json ?? "");
+      setGlobalJsonError(null);
+      showToast("ok", result.success ?? "JSON Discord Top 10 gotowy.");
+    } finally {
+      setFaRankingGeneratePending(false);
+    }
+  }
 
   async function generateXForDivision(divisionId: string): Promise<string | null> {
     const result = isPreview
@@ -832,26 +911,17 @@ export function ContentHubClient({
           showToast("err", "Poczekaj na załadowanie The FA Ranking…");
           return;
         }
-        const refs = faCarouselRefs.current;
-        if (!refs.length) {
-          showToast("err", "Brak węzłów karuzeli FA Ranking.");
+        const node = faCarouselRefs.current[0]?.current;
+        if (!node) {
+          showToast("err", "Brak węzła PNG Top 10 FA Ranking.");
           return;
         }
-        for (let i = 0; i < refs.length; i++) {
-          const node = refs[i]?.current;
-          if (!node) {
-            showToast("err", `Brak węzła PNG #${i + 1}.`);
-            return;
-          }
-          await waitForImages(node);
-          await sleep(40);
-          const png = await captureExportNode(node);
-          const from = i * 10 + 1;
-          const to = Math.min((i + 1) * 10, faRanking.rows.length);
-          generatedFiles.push(
-            await dataUrlToFile(png, `fa-ranking-${from}-${to}.png`),
-          );
-        }
+        await waitForImages(node);
+        await sleep(40);
+        const png = await captureExportNode(node);
+        generatedFiles.push(
+          await dataUrlToFile(png, "fa-ranking-top10.png"),
+        );
       }
 
       await postDiscordPayload(
@@ -1156,11 +1226,14 @@ export function ContentHubClient({
             copiedGlobalX={copiedGlobalX}
             globalXDraft={globalXDraft}
             xLen={xLen}
+            faRankingGeneratePending={faRankingGeneratePending}
             onXChange={(id, v) => setXComDrafts((p) => ({ ...p, [id]: v }))}
             onDiscordChange={(id, v) => setDiscordJsons((p) => ({ ...p, [id]: v }))}
             onGlobalDiscordChange={setGlobalDiscordJson}
             onGenerateXSingle={onGenerateXSingle}
             onGenerateDiscordSingle={onGenerateDiscordSingle}
+            onGenerateFaRankingX={onGenerateFaRankingX}
+            onGenerateFaRankingDiscord={onGenerateFaRankingDiscord}
             onCopyGlobalX={onCopyGlobalX}
             onAttachGraphicsChange={setAttachGraphics}
             onSendServersChange={(server, checked) =>
@@ -1171,6 +1244,7 @@ export function ContentHubClient({
             onSendGlobal={onSendDiscordGlobal}
             onDownloadImage={handleDownloadImage}
             onDownloadFaRoster={handleDownloadFaRoster}
+            onDownloadFaTop10={handleDownloadFaTop10}
             getResultsRef={getResultsRef}
             getStandingsRef={getStandingsRef}
             getPreviewRef={getPreviewRef}

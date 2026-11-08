@@ -16,6 +16,10 @@ const CAPTURE_ROOT_STYLE: Record<string, string> = {
   msOverflowStyle: "none",
 };
 
+type StyleWithMsOverflow = CSSStyleDeclaration & {
+  msOverflowStyle: string;
+};
+
 type OverflowSnapshot = {
   el: HTMLElement;
   overflow: string;
@@ -112,19 +116,20 @@ function lockOverflowForCapture(root: HTMLElement): () => void {
 
     if (!scrolls && el !== root) continue;
 
+    const style = el.style as StyleWithMsOverflow;
     snapshots.push({
       el,
-      overflow: el.style.overflow,
-      overflowX: el.style.overflowX,
-      overflowY: el.style.overflowY,
-      scrollbarWidth: el.style.scrollbarWidth,
-      msOverflowStyle: el.style.msOverflowStyle,
+      overflow: style.overflow,
+      overflowX: style.overflowX,
+      overflowY: style.overflowY,
+      scrollbarWidth: style.scrollbarWidth,
+      msOverflowStyle: style.msOverflowStyle,
     });
-    el.style.overflow = "hidden";
-    el.style.overflowX = "hidden";
-    el.style.overflowY = "hidden";
-    el.style.scrollbarWidth = "none";
-    el.style.msOverflowStyle = "none";
+    style.overflow = "hidden";
+    style.overflowX = "hidden";
+    style.overflowY = "hidden";
+    style.scrollbarWidth = "none";
+    style.msOverflowStyle = "none";
   }
 
   return () => {
@@ -132,11 +137,12 @@ function lockOverflowForCapture(root: HTMLElement): () => void {
     root.style.minWidth = rootBox.minWidth;
     root.style.maxWidth = rootBox.maxWidth;
     for (const s of snapshots) {
-      s.el.style.overflow = s.overflow;
-      s.el.style.overflowX = s.overflowX;
-      s.el.style.overflowY = s.overflowY;
-      s.el.style.scrollbarWidth = s.scrollbarWidth;
-      s.el.style.msOverflowStyle = s.msOverflowStyle;
+      const style = s.el.style as StyleWithMsOverflow;
+      style.overflow = s.overflow;
+      style.overflowX = s.overflowX;
+      style.overflowY = s.overflowY;
+      style.scrollbarWidth = s.scrollbarWidth;
+      style.msOverflowStyle = s.msOverflowStyle;
     }
   };
 }
