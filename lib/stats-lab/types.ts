@@ -950,6 +950,8 @@ export type PlayerStreakRecentFlags = {
   cleanSheetHit: boolean[];
   dcHit: boolean[];
   sixtyMinHit: boolean[];
+  savesHit: boolean[];
+  bonusHit: boolean[];
 };
 
 export type PlayerStreaks = {
@@ -967,9 +969,32 @@ export type PlayerStreaks = {
   currentDcPointsStreak: number;
   max60MinStreak: number;
   current60MinStreak: number;
-  /** % startów z >2 pkt FPL (0–100). */
+  /** Seria meczów z +1 pkt za obrony GK (`saves >= 3`). */
+  maxSavesPointStreak: number;
+  currentSavesPointStreak: number;
+  /** Seria meczów z bonusem BPS (`bonus >= 1`). */
+  maxBonusStreak: number;
+  currentBonusStreak: number;
+  /**
+   * % meczów z `minutes > 0`, w których zaliczono Zwrot FPL
+   * (ta sama definicja co serie zwrotów) — 0–100, `Math.round`.
+   */
   returnConsistencyPct: number;
-  /** Ostatnie mecze — kropki w kartach Eksploratora Pass. */
+  /**
+   * Ostatnie do 10 meczów — rzeczywista chronologia (ASC), nie „pierwsze N od lewej”.
+   * `timelineDots` === `returnTimelineDots` (alias wstecznej kompatybilności).
+   */
+  timelineDots: boolean[];
+  returnTimelineDots: boolean[];
+  goalTimelineDots: boolean[];
+  assistTimelineDots: boolean[];
+  gaTimelineDots: boolean[];
+  csTimelineDots: boolean[];
+  dcTimelineDots: boolean[];
+  sixtyMinTimelineDots: boolean[];
+  savesTimelineDots: boolean[];
+  bonusTimelineDots: boolean[];
+  /** Ostatnie mecze per typ serii — kropki w kartach Eksploratora Pass. */
   recentFlags: PlayerStreakRecentFlags;
 };
 

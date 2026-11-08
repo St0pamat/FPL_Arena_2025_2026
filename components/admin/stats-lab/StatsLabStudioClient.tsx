@@ -42,7 +42,11 @@ import type {
   StreakMetricKey,
 } from "@/lib/stats-lab/i18n";
 import { VIZ_MODE_LABELS, t } from "@/lib/stats-lab/i18n";
-import type { StatsLabVizMode } from "@/components/admin/stats-lab/chartTheme";
+import {
+  STATS_LAB_CHART_THEMES,
+  type StatsLabChartThemeId,
+  type StatsLabVizMode,
+} from "@/components/admin/stats-lab/chartTheme";
 import {
   StatsLabControlPanel,
   type StudioUiState,
@@ -62,6 +66,9 @@ type Props = {
   /** Watchlist / deep-link z Stats Centre → Tryb Ręczny */
   seedSelectedPlayerIds?: number[];
   seedLang?: StatsLabLang;
+  seedChartTheme?: StatsLabChartThemeId;
+  onLangChange?: (lang: StatsLabLang) => void;
+  onChartThemeChange?: (theme: StatsLabChartThemeId) => void;
 };
 
 const VIZ_TABS: {
@@ -100,6 +107,9 @@ export function StatsLabStudioClient({
   initialFilter,
   seedSelectedPlayerIds,
   seedLang,
+  seedChartTheme,
+  onLangChange,
+  onChartThemeChange,
 }: Props) {
   const seededFilter = useMemo((): StatsLabQueryFilter => {
     const ids = seedSelectedPlayerIds?.filter((n) => n > 0) ?? [];
@@ -114,6 +124,7 @@ export function StatsLabStudioClient({
   const [ui, setUi] = useState<StudioUiState>(() => ({
     ...DEFAULT_UI,
     lang: seedLang ?? DEFAULT_UI.lang,
+    chartTheme: seedChartTheme ?? DEFAULT_UI.chartTheme,
     pickMode:
       seedSelectedPlayerIds && seedSelectedPlayerIds.length > 0
         ? "MANUAL"
@@ -135,12 +146,15 @@ export function StatsLabStudioClient({
   const [pointsSortKey, setPointsSortKey] =
     useState<PointsSortKey>("estimatedTotal");
   const [streakSortKey, setStreakSortKey] =
-    useState<StreakMetricKey>("maxReturnStreak");
+    useState<StreakMetricKey>("returnConsistencyPct");
   const [activeStreakKeys, setActiveStreakKeys] = useState<StreakMetricKey[]>([
+    "returnConsistencyPct",
     "maxReturnStreak",
     "currentReturnStreak",
-    "maxGoalOrAssistStreak",
-    "returnConsistencyPct",
+    "maxGoalStreak",
+    "maxAssistStreak",
+    "maxCleanSheetStreak",
+    "maxDcPointsStreak",
   ]);
   const [knowledgeOpen, setKnowledgeOpen] = useState(false);
   const [knowledgeAnchor, setKnowledgeAnchor] =
@@ -209,8 +223,20 @@ export function StatsLabStudioClient({
     setFilter(next);
   }
 
+  useEffect(() => {
+    if (seedLang) setUi((prev) => ({ ...prev, lang: seedLang }));
+  }, [seedLang]);
+
+  useEffect(() => {
+    if (seedChartTheme) {
+      setUi((prev) => ({ ...prev, chartTheme: seedChartTheme }));
+    }
+  }, [seedChartTheme]);
+
   function onUiChange(patch: Partial<StudioUiState>) {
     setUi((prev) => ({ ...prev, ...patch }));
+    if (patch.lang != null) onLangChange?.(patch.lang);
+    if (patch.chartTheme != null) onChartThemeChange?.(patch.chartTheme);
   }
 
   function applyPreset(id: StatsLabPresetId) {
@@ -313,6 +339,34 @@ export function StatsLabStudioClient({
             >
               🇬🇧 EN
             </button>
+          </div>
+
+          <div className="inline-flex rounded-xl border border-slate-700 bg-slate-950 p-1">
+            {(
+              Object.keys(STATS_LAB_CHART_THEMES) as StatsLabChartThemeId[]
+            ).map((id) => {
+              const th = STATS_LAB_CHART_THEMES[id];
+              const label = ui.lang === "en" ? th.labelEn : th.labelPl;
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  title={label}
+                  onClick={() => onUiChange({ chartTheme: id })}
+                  className={`rounded-lg px-2.5 py-1.5 text-[10px] font-black uppercase ${
+                    ui.chartTheme === id
+                      ? "bg-[#39FF14] text-black"
+                      : "text-slate-400"
+                  }`}
+                >
+                  {id === "ARENA_DARK"
+                    ? "Arena"
+                    : id === "SCOUT_DARK"
+                      ? "Scout"
+                      : "Light"}
+                </button>
+              );
+            })}
           </div>
 
           <div className="inline-flex items-center gap-1">
@@ -572,6 +626,7 @@ export function StatsLabStudioClient({
       <StatsLabKnowledgeBaseModal
         open={knowledgeOpen}
         lang={ui.lang}
+        themeId={ui.chartTheme}
         helpAnchor={knowledgeAnchor}
         onLangChange={(lang) => onUiChange({ lang })}
         onClose={() => {

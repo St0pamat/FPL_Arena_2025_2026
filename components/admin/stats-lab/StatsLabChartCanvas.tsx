@@ -262,6 +262,12 @@ function pointsNetFooterExplain(lang: StatsLabLang): string {
     : "Net Points = official FPL total (Gross points earned minus deductions for goals conceded and cards).";
 }
 
+function streaksReturnFooterExplain(lang: StatsLabLang): string {
+  return lang === "pl"
+    ? "Zwrot FPL (Return) = mecz z realnym dorobkiem punktowym ponad sam czas gry: Gol, Asysta, Czyste Konto (GK/DEF/MID), +2 pkt za próg DC (DEF ≥10, MID/FWD ≥12), pkt za obrony GK lub Bonus (BPS). Kropki oznaczają kolejne mecze gracza (kolorowa = zwrot/trafienie, szara = brak)."
+    : "FPL Return = match with attacking/defensive points beyond appearance: Goal, Assist, Clean Sheet (GK/DEF/MID), +2 pts DC threshold (DEF ≥10, MID/FWD ≥12), GK save pts, or Bonus (BPS). Dots represent consecutive matches played (colored = hit, grey = miss).";
+}
+
 export function StatsLabChartCanvas({
   result,
   filter,
@@ -295,6 +301,7 @@ export function StatsLabChartCanvas({
 }: Props) {
   const isExport = variant === "export";
   const theme = STATS_LAB_CHART_THEMES[themeId];
+  const isLightTheme = themeId === "ANALYST_LIGHT";
   const copy = t(lang);
   const players = result?.plottedPlayers ?? [];
   const metrics = result?.activeMetrics?.length
@@ -318,7 +325,7 @@ export function StatsLabChartCanvas({
     vizMode === "POINTS_BREAKDOWN" || vizMode === "STREAKS_EXPLORER";
 
   const glossaryMetrics =
-    vizMode === "POINTS_BREAKDOWN"
+    vizMode === "POINTS_BREAKDOWN" || vizMode === "STREAKS_EXPLORER"
       ? []
       : vizMode === "SCATTER_2D"
         ? [axisX, axisY]
@@ -365,8 +372,10 @@ export function StatsLabChartCanvas({
         </div>
         <div className="flex min-w-0 flex-1 flex-col justify-between gap-1 py-0.5">
           <p
-            className="text-[10px] font-black uppercase tracking-[0.32em] sm:text-xs"
-            style={{ color: theme.accent }}
+            className={`text-[10px] font-black uppercase tracking-[0.32em] sm:text-xs ${
+              isLightTheme ? "text-emerald-700" : ""
+            }`}
+            style={isLightTheme ? undefined : { color: theme.accent }}
           >
             FPL ARENA • STATS LAB
           </p>
@@ -376,15 +385,22 @@ export function StatsLabChartCanvas({
                 ? "text-[34px] font-black leading-tight tracking-tight sm:text-[38px]"
                 : "text-2xl font-black leading-tight tracking-tight sm:text-[32px]"
             }
-            style={{ fontFamily: "var(--font-oswald), Oswald, sans-serif" }}
+            style={{
+              fontFamily: "var(--font-oswald), Oswald, sans-serif",
+              color: theme.text,
+            }}
           >
             {title}
           </h2>
           <p
             className={
               isExport
-                ? "text-base font-medium text-slate-300 sm:text-lg"
-                : "text-sm font-medium text-slate-300"
+                ? isLightTheme
+                  ? "text-base font-semibold text-slate-700 sm:text-lg"
+                  : "text-base font-medium text-slate-300 sm:text-lg"
+                : isLightTheme
+                  ? "text-sm font-semibold text-slate-700"
+                  : "text-sm font-medium text-slate-300"
             }
           >
             {subtitle}
@@ -502,8 +518,8 @@ export function StatsLabChartCanvas({
           <div
             className={`flex flex-wrap gap-x-5 gap-y-1.5 ${
               isExport ? "text-[15px]" : "text-[10px]"
-            }`}
-            style={{ color: theme.muted }}
+            } ${isLightTheme ? "font-medium text-slate-700" : ""}`}
+            style={isLightTheme ? undefined : { color: theme.muted }}
           >
             {glossaryMetrics.map((key) => {
               const def = getFplStatDefinition(key);
@@ -512,7 +528,14 @@ export function StatsLabChartCanvas({
                 lang === "en" ? def.shortLabelEn : def.shortLabelPl;
               return (
                 <span key={key} className="max-w-xl">
-                  <strong style={{ color: theme.text }}>{short}:</strong>{" "}
+                  <strong
+                    className={
+                      isLightTheme ? "font-bold text-slate-950" : undefined
+                    }
+                    style={isLightTheme ? undefined : { color: theme.text }}
+                  >
+                    {short}:
+                  </strong>{" "}
                   {metricGlossaryLine(def, lang)}
                 </span>
               );
@@ -524,21 +547,44 @@ export function StatsLabChartCanvas({
           <p
             className={
               isExport
-                ? "text-[15px] leading-relaxed"
-                : "text-[11px] leading-relaxed"
+                ? isLightTheme
+                  ? "text-[15px] font-medium leading-relaxed text-slate-700"
+                  : "text-[15px] leading-relaxed"
+                : isLightTheme
+                  ? "text-[11px] font-medium leading-relaxed text-slate-700"
+                  : "text-[11px] leading-relaxed"
             }
-            style={{ color: theme.muted }}
+            style={isLightTheme ? undefined : { color: theme.muted }}
           >
             {pointsNetFooterExplain(lang)}
+          </p>
+        ) : vizMode === "STREAKS_EXPLORER" ? (
+          <p
+            className={
+              isExport
+                ? isLightTheme
+                  ? "text-[15px] font-medium leading-relaxed text-slate-700"
+                  : "text-[15px] leading-relaxed"
+                : isLightTheme
+                  ? "text-[11px] font-medium leading-relaxed text-slate-700"
+                  : "text-[11px] leading-relaxed"
+            }
+            style={isLightTheme ? undefined : { color: theme.muted }}
+          >
+            {streaksReturnFooterExplain(lang)}
           </p>
         ) : !isMatchTotalsViz ? (
           <p
             className={
               isExport
-                ? "text-[15px] leading-relaxed"
-                : "text-[11px] leading-relaxed"
+                ? isLightTheme
+                  ? "text-[15px] font-medium leading-relaxed text-slate-700"
+                  : "text-[15px] leading-relaxed"
+                : isLightTheme
+                  ? "text-[11px] font-medium leading-relaxed text-slate-700"
+                  : "text-[11px] leading-relaxed"
             }
-            style={{ color: theme.muted }}
+            style={isLightTheme ? undefined : { color: theme.muted }}
           >
             {scaleMode === "PERCENTILE"
               ? copy.percentileExplain
@@ -549,8 +595,8 @@ export function StatsLabChartCanvas({
         <div
           className={`flex flex-wrap items-center justify-between gap-3 pt-1 ${
             isExport ? "text-base" : "text-[10px]"
-          }`}
-          style={{ color: theme.muted }}
+          } ${isLightTheme ? "font-medium text-slate-700" : ""}`}
+          style={isLightTheme ? undefined : { color: theme.muted }}
         >
           <span>
             {isMatchTotalsViz
@@ -568,10 +614,18 @@ export function StatsLabChartCanvas({
           <span
             className={
               isExport
-                ? "text-base font-extrabold tracking-wide"
-                : "font-semibold tracking-wide"
+                ? isLightTheme
+                  ? "text-base font-black tracking-wide text-emerald-700"
+                  : "text-base font-extrabold tracking-wide"
+                : isLightTheme
+                  ? "font-black tracking-wide text-emerald-700"
+                  : "font-semibold tracking-wide"
             }
-            style={{ color: isExport ? "#39FF14" : theme.muted }}
+            style={
+              isLightTheme
+                ? undefined
+                : { color: isExport ? "#39FF14" : theme.muted }
+            }
           >
             www.fpl-arena.com • Powered by St0pa | FPL Arena
           </span>

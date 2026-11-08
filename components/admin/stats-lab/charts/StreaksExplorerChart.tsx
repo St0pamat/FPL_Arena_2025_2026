@@ -2,9 +2,11 @@
 
 import {
   ArrowDown,
+  Award,
   Crosshair,
   Flame,
   Footprints,
+  Hand,
   Percent,
   Shield,
   Sparkles,
@@ -19,18 +21,22 @@ import type {
 import {
   STREAK_LABELS,
   STREAK_METRIC_KEYS,
+  STREAK_SECONDARY_BY_POOL,
   STREAK_SORT_KEYS,
   STREAK_SORT_SHORT_LABELS,
 } from "@/lib/stats-lab/i18n";
-import {
-  metricColor,
-  type StatsLabChartTheme,
-} from "@/components/admin/stats-lab/chartTheme";
+import type { StatsLabChartTheme } from "@/components/admin/stats-lab/chartTheme";
 import {
   fplLabBadgeUrl,
   fplLabPlayerPhotoUrl,
 } from "@/lib/stats-lab/mediaUrls";
 import type { PlayerStreaks } from "@/lib/stats-lab/types";
+import {
+  getStreakMetricStyle,
+  getThemeTokens,
+  type StatsLabThemeTokens,
+  type StreakMetricStyle,
+} from "@/lib/stats-lab/themeTokens";
 
 type Props = {
   players: PlottedStatsLabPlayer[];
@@ -47,61 +53,197 @@ type Props = {
   variant?: "studio" | "export";
 };
 
+type PoolKind = keyof typeof STREAK_SECONDARY_BY_POOL;
+
 const SORT_ICONS: Record<StreakSortKey, typeof Flame> = {
+  returnConsistencyPct: Percent,
   maxReturnStreak: Flame,
   currentReturnStreak: Sparkles,
   maxGoalStreak: Target,
   maxAssistStreak: Crosshair,
   maxCleanSheetStreak: Shield,
   maxDcPointsStreak: Footprints,
-  returnConsistencyPct: Percent,
+  maxSavesPointStreak: Hand,
+  maxBonusStreak: Award,
 };
 
-function recentFlagsForKey(
+const HERO_KEY: StreakMetricKey = "returnConsistencyPct";
+
+function detectPoolKind(players: PlottedStatsLabPlayer[]): PoolKind {
+  if (!players.length) return "MIXED";
+  const types = new Set(players.map((p) => p.element_type));
+  if (types.size !== 1) return "MIXED";
+  const only = [...types][0];
+  if (only === 1) return "GKP";
+  if (only === 2) return "DEF";
+  if (only === 3) return "MID";
+  if (only === 4) return "FWD";
+  return "MIXED";
+}
+
+/** Martwe / bezsensowne serie dla danej puli pozycji. */
+function isDeadForPool(key: StreakMetricKey, pool: PoolKind): boolean {
+  if (pool === "GKP") {
+    return (
+      key === "maxGoalStreak" ||
+      key === "maxAssistStreak" ||
+      key === "maxGoalOrAssistStreak" ||
+      key === "maxDcPointsStreak"
+    );
+  }
+  if (pool === "FWD") {
+    return key === "maxCleanSheetStreak" || key === "maxSavesPointStreak";
+  }
+  if (pool === "DEF" || pool === "MID") {
+    return key === "maxSavesPointStreak";
+  }
+  return key === "maxSavesPointStreak";
+}
+
+function resolveSecondaryKeys(
+  pool: PoolKind,
+  activeStreakKeys: StreakMetricKey[],
+): StreakMetricKey[] {
+  const hierarchy = STREAK_SECONDARY_BY_POOL[pool];
+  if (pool !== "MIXED") return hierarchy;
+
+  const fromActive = activeStreakKeys.filter(
+    (k) => k !== HERO_KEY && !isDeadForPool(k, pool),
+  );
+  if (fromActive.length === 0) return hierarchy;
+
+  const rank = new Map(hierarchy.map((k, i) => [k, i]));
+  const ordered = [...fromActive].sort(
+    (a, b) => (rank.get(a) ?? 99) - (rank.get(b) ?? 99),
+  );
+  // Parzysta siatka — dopełnij hierarchią lub odetnij ostatni
+  let out = ordered.slice(0, 8);
+  if (out.length % 2 === 1) {
+    const pad = hierarchy.find((k) => !out.includes(k));
+    if (pad) out = [...out, pad];
+    else out = out.slice(0, -1);
+  }
+  return out.length >= 2 ? out : hierarchy;
+}
+
+function timelineDotsForKey(
   streaks: PlayerStreaks,
   key: StreakMetricKey,
 ): boolean[] {
-  const f = streaks.recentFlags;
   switch (key) {
     case "maxReturnStreak":
     case "currentReturnStreak":
-      return f.returnHit;
-    case "maxGoalStreak":
-      return f.goalHit;
-    case "maxAssistStreak":
-      return f.assistHit;
-    case "maxGoalOrAssistStreak":
-      return f.goalOrAssistHit;
-    case "maxCleanSheetStreak":
-      return f.cleanSheetHit;
-    case "maxDcPointsStreak":
-      return f.dcHit;
-    case "max60MinStreak":
-      return f.sixtyMinHit;
     case "returnConsistencyPct":
-      return f.returnHit;
+      return (
+        streaks.returnTimelineDots ??
+        streaks.timelineDots ??
+        streaks.recentFlags.returnHit
+      );
+    case "maxGoalStreak":
+      return streaks.goalTimelineDots ?? streaks.recentFlags.goalHit;
+    case "maxAssistStreak":
+      return streaks.assistTimelineDots ?? streaks.recentFlags.assistHit;
+    case "maxGoalOrAssistStreak":
+      return streaks.gaTimelineDots ?? streaks.recentFlags.goalOrAssistHit;
+    case "maxCleanSheetStreak":
+      return streaks.csTimelineDots ?? streaks.recentFlags.cleanSheetHit;
+    case "maxDcPointsStreak":
+      return streaks.dcTimelineDots ?? streaks.recentFlags.dcHit;
+    case "max60MinStreak":
+      return streaks.sixtyMinTimelineDots ?? streaks.recentFlags.sixtyMinHit;
+    case "maxSavesPointStreak":
+      return streaks.savesTimelineDots ?? streaks.recentFlags.savesHit;
+    case "maxBonusStreak":
+      return streaks.bonusTimelineDots ?? streaks.recentFlags.bonusHit;
     default:
-      return f.returnHit;
+      return streaks.returnTimelineDots ?? streaks.recentFlags.returnHit;
   }
 }
 
-function formatStreakValue(
-  key: StreakMetricKey,
-  val: number,
-  lang: StatsLabLang,
-): string {
+function formatStreakValue(key: StreakMetricKey, val: number): string {
   if (key === "returnConsistencyPct") return `${val.toFixed(0)}%`;
-  return lang === "pl" ? `${val} GW` : `${val} GW`;
+  return `${val} GW`;
 }
 
-function isLightMetricBg(hex: string): boolean {
-  const h = hex.replace("#", "");
-  if (h.length !== 6) return false;
-  const r = parseInt(h.slice(0, 2), 16);
-  const g = parseInt(h.slice(2, 4), 16);
-  const b = parseInt(h.slice(4, 6), 16);
-  // relative luminance threshold
-  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.55;
+function StreakTile({
+  keyName,
+  label,
+  value,
+  max,
+  flags,
+  style,
+  tokens,
+  lang,
+  banner = false,
+}: {
+  keyName: StreakMetricKey;
+  label: string;
+  value: number;
+  max: number;
+  flags: boolean[];
+  style: StreakMetricStyle;
+  tokens: StatsLabThemeTokens;
+  lang: StatsLabLang;
+  banner?: boolean;
+}) {
+  const pct = Math.min(100, (value / Math.max(1, max)) * 100);
+  return (
+    <div
+      className={`flex h-full flex-col justify-between rounded-lg border border-l-4 px-3 py-2.5 ${
+        tokens.isLight ? tokens.tile : `${tokens.tile} ${tokens.tileBorder}`
+      } ${banner ? "col-span-2" : ""}`}
+      style={{ borderLeftColor: style.accent }}
+    >
+      <div className="flex min-h-[32px] items-center justify-between gap-2">
+        <span
+          className={`min-w-0 text-xs font-extrabold leading-tight ${
+            tokens.isLight ? "text-slate-900" : tokens.text
+          } ${banner ? "text-sm" : ""}`}
+        >
+          {label}
+        </span>
+        <span
+          className={`shrink-0 whitespace-nowrap rounded px-2 py-0.5 font-black tabular-nums ${
+            banner ? "text-base" : "text-sm"
+          }`}
+          style={{ background: style.pillBg, color: style.pillText }}
+        >
+          {formatStreakValue(keyName, value)}
+        </span>
+      </div>
+
+      <div
+        className={`my-1.5 h-2 w-full overflow-hidden rounded-full ${tokens.track}`}
+      >
+        <div
+          className="h-full rounded-full"
+          style={{ width: `${pct}%`, background: style.accent }}
+        />
+      </div>
+
+      {flags.length > 0 ? (
+        <div className="flex items-center gap-1.5 pt-0.5">
+          {flags.map((hit, idx) => (
+            <span
+              key={`${keyName}-dot-${idx}`}
+              className={`h-2.5 w-2.5 shrink-0 rounded-full ${
+                hit ? tokens.hitRing : tokens.missDot
+              }`}
+              style={hit ? { background: style.accent } : undefined}
+              title={hit ? "hit" : "miss"}
+            />
+          ))}
+          <span
+            className={`ml-1 text-[9px] font-bold uppercase tracking-wider ${
+              tokens.isLight ? "text-slate-600" : tokens.textMuted
+            }`}
+          >
+            {lang === "pl" ? `${flags.length}M` : `last ${flags.length}`}
+          </span>
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 export function StreaksExplorerChart({
@@ -119,12 +261,12 @@ export function StreaksExplorerChart({
   variant = "studio",
 }: Props) {
   const isExport = variant === "export";
+  const tokens = getThemeTokens(theme.id);
   const labels = STREAK_LABELS[lang];
   const sortShort = STREAK_SORT_SHORT_LABELS[lang];
-  const keys =
-    activeStreakKeys.length > 0
-      ? activeStreakKeys
-      : (["maxReturnStreak", "currentReturnStreak"] as StreakMetricKey[]);
+  const pool = detectPoolKind(players);
+  const secondaryKeys = resolveSecondaryKeys(pool, activeStreakKeys);
+  const displayKeys = [HERO_KEY, ...secondaryKeys];
 
   const sorted = [...players].sort((a, b) => {
     const av = Number(a.streaks[sortKey] ?? 0);
@@ -133,44 +275,63 @@ export function StreaksExplorerChart({
   });
 
   const maxima = Object.fromEntries(
-    keys.map((k) => [
+    displayKeys.map((k) => [
       k,
       Math.max(1, ...sorted.map((p) => Number(p.streaks[k] ?? 0))),
     ]),
   ) as Record<StreakMetricKey, number>;
 
+  const nameClass = tokens.isLight
+    ? "text-slate-950 font-black"
+    : "text-white font-black";
+  const clubClass = tokens.isLight
+    ? "text-slate-800 font-extrabold"
+    : "text-slate-100 font-extrabold";
+  const metaClass = tokens.isLight
+    ? "text-slate-600 font-semibold"
+    : `${tokens.textMuted} font-semibold`;
+
   return (
     <div className={isExport ? "space-y-5" : "space-y-4"}>
-      {/* Pasek sortowania + pigułki metryk */}
       {isExport ? (
         <div className="flex flex-wrap items-center gap-3">
-          <span className="text-xs font-black uppercase tracking-wider text-slate-400">
+          <span
+            className="text-xs font-black uppercase tracking-wider"
+            style={{ color: theme.muted }}
+          >
             {lang === "pl" ? "Sort:" : "Sort:"} {labels[sortKey]}
             <ArrowDown className="ml-1 inline h-3.5 w-3.5" />
           </span>
-          {keys.map((key, i) => (
-            <span
-              key={key}
-              className="inline-flex items-center gap-2 text-sm font-bold"
-              style={{ color: theme.muted }}
-            >
+          {displayKeys.map((key) => {
+            const style = getStreakMetricStyle(key, tokens.isLight);
+            return (
               <span
-                className="h-3.5 w-3.5 rounded-full"
-                style={{ background: metricColor(i) }}
-              />
-              {labels[key]}
-            </span>
-          ))}
+                key={key}
+                className="inline-flex items-center gap-2 text-sm font-bold"
+                style={{ color: theme.muted }}
+              >
+                <span
+                  className="h-3.5 w-3.5 rounded-full"
+                  style={{ background: style.accent }}
+                />
+                {labels[key]}
+              </span>
+            );
+          })}
         </div>
       ) : (
         <>
           <div className="flex flex-wrap items-center gap-2">
-            <span className="mr-1 text-[10px] font-black uppercase tracking-wider text-slate-500">
+            <span
+              className="mr-1 text-[10px] font-black uppercase tracking-wider"
+              style={{ color: theme.muted }}
+            >
               {lang === "pl" ? "Sortuj po:" : "Sort by:"}
             </span>
             {STREAK_SORT_KEYS.map((key) => {
               const Icon = SORT_ICONS[key];
               const active = sortKey === key;
+              if (isDeadForPool(key, pool)) return null;
               return (
                 <button
                   key={`sort-${key}`}
@@ -178,8 +339,12 @@ export function StreaksExplorerChart({
                   onClick={() => onSort(key)}
                   className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[11px] font-extrabold transition ${
                     active
-                      ? "border-[#39FF14]/50 bg-[#39FF14]/15 text-[#39FF14]"
-                      : "border-slate-700/80 bg-slate-900/60 text-slate-300 hover:border-slate-500"
+                      ? tokens.isLight
+                        ? "border-emerald-700/50 bg-emerald-700/10 text-emerald-800"
+                        : "border-[#39FF14]/50 bg-[#39FF14]/15 text-[#39FF14]"
+                      : tokens.isLight
+                        ? "border-slate-300 bg-white text-slate-700 hover:border-slate-400"
+                        : "border-slate-700/80 bg-slate-900/60 text-slate-300 hover:border-slate-500"
                   }`}
                 >
                   <Icon className="h-3.5 w-3.5 shrink-0" />
@@ -191,8 +356,10 @@ export function StreaksExplorerChart({
           </div>
 
           <div className="flex flex-wrap gap-1.5">
-            {STREAK_METRIC_KEYS.map((key, i) => {
-              const on = keys.includes(key);
+            {STREAK_METRIC_KEYS.map((key) => {
+              if (isDeadForPool(key, pool)) return null;
+              const on = displayKeys.includes(key);
+              const style = getStreakMetricStyle(key, tokens.isLight);
               return (
                 <button
                   key={key}
@@ -200,14 +367,14 @@ export function StreaksExplorerChart({
                   onClick={() => onToggleStreakKey(key)}
                   className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-bold"
                   style={{
-                    borderColor: on ? metricColor(i) : theme.border,
-                    background: on ? `${metricColor(i)}22` : "transparent",
+                    borderColor: on ? style.accent : theme.border,
+                    background: on ? `${style.accent}22` : "transparent",
                     color: on ? theme.text : theme.muted,
                   }}
                 >
                   <span
                     className="h-2 w-2 rounded-full"
-                    style={{ background: metricColor(i) }}
+                    style={{ background: style.accent }}
                   />
                   {labels[key]}
                 </button>
@@ -217,7 +384,6 @@ export function StreaksExplorerChart({
         </>
       )}
 
-      {/* Siatka kart */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {sorted.map((p, rank) => {
           const isSpot = spotlightId === p.fpl_element_id;
@@ -240,13 +406,29 @@ export function StreaksExplorerChart({
                   : `Max streak: ${heroVal} GW`;
           const price = `£${(p.rawValues.now_cost / 10).toFixed(1)}m`;
           const tsb = `${p.rawValues.selected_by_percent.toFixed(1)}% TSB`;
+          const isLastOdd =
+            sorted.length % 2 === 1 && rank === sorted.length - 1;
+
+          const consistencyVal = Number(
+            p.streaks.returnConsistencyPct ?? 0,
+          );
+          const consistencyStyle = getStreakMetricStyle(
+            HERO_KEY,
+            tokens.isLight,
+          );
 
           return (
             <button
               key={p.fpl_element_id}
               type="button"
               onClick={() => onSelectPlayer(p.fpl_element_id)}
-              className="relative overflow-hidden rounded-xl border border-slate-800/90 bg-slate-900/90 p-4 text-left shadow-xl transition hover:border-slate-600"
+              className={`relative overflow-hidden rounded-xl border p-4 text-left transition ${tokens.card} ${
+                tokens.isLight ? "" : `${tokens.cardBorder} shadow-xl`
+              } hover:brightness-110 ${
+                isLastOdd
+                  ? "w-full md:col-span-2 md:mx-auto md:w-[calc(50%-0.5rem)]"
+                  : ""
+              }`}
               style={
                 isSpot
                   ? {
@@ -256,7 +438,6 @@ export function StreaksExplorerChart({
                   : undefined
               }
             >
-              {/* Nagłówek karty */}
               <div className="mb-3 flex items-start justify-between gap-3">
                 <div className="flex min-w-0 items-center gap-3">
                   {photo ? (
@@ -274,7 +455,9 @@ export function StreaksExplorerChart({
                   )}
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-xs font-black tabular-nums text-[#39FF14]">
+                      <span
+                        className={`text-xs tabular-nums ${tokens.rankText}`}
+                      >
                         #{rank + 1}
                       </span>
                       {badge ? (
@@ -290,82 +473,71 @@ export function StreaksExplorerChart({
                           />
                         </span>
                       ) : null}
-                      <span className="text-xs font-extrabold tracking-wide text-slate-100">
+                      <span className={`text-xs tracking-wide ${clubClass}`}>
                         {p.club?.short_name ?? "—"}
                       </span>
                     </div>
-                    <p className="mt-0.5 truncate text-[17px] font-black leading-tight text-white">
+                    <p
+                      className={`mt-0.5 truncate text-[17px] leading-tight ${nameClass}`}
+                    >
                       {p.web_name}
                     </p>
                     {showMeta ? (
-                      <p className="mt-0.5 text-[11px] font-semibold text-slate-400">
+                      <p className={`mt-0.5 text-[11px] ${metaClass}`}>
                         {price} · {tsb}
                       </p>
                     ) : null}
                   </div>
                 </div>
 
-                <span className="shrink-0 rounded-full border border-[#39FF14]/45 bg-[#39FF14]/10 px-2.5 py-1 text-[11px] font-black tabular-nums text-[#39FF14] shadow-[0_0_12px_rgba(57,255,20,0.15)]">
+                <span
+                  className={
+                    tokens.isLight
+                      ? "shrink-0 whitespace-nowrap rounded-full border border-emerald-800 bg-emerald-700 px-2.5 py-1 text-xs font-black text-white shadow-sm"
+                      : "shrink-0 whitespace-nowrap rounded-full border border-emerald-500/40 bg-emerald-500/15 px-2.5 py-1 text-xs font-black text-[#39FF14]"
+                  }
+                  style={
+                    tokens.isLight
+                      ? {
+                          backgroundColor: "#047857",
+                          color: "#ffffff",
+                          borderColor: "#065f46",
+                        }
+                      : undefined
+                  }
+                >
                   {heroLabel}
                 </span>
               </div>
 
-              {/* Kafelki pass */}
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                {keys.map((key, i) => {
-                  const val = Number(p.streaks[key] ?? 0);
-                  const max = maxima[key] || 1;
-                  const pct = Math.min(100, (val / max) * 100);
-                  const color = metricColor(i);
-                  const light = isLightMetricBg(color);
-                  const flags = recentFlagsForKey(p.streaks, key);
-                  const valueClass = light
-                    ? "text-slate-950 font-black"
-                    : "text-white font-black drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)]";
-                  const labelClass = light
-                    ? "text-slate-900 font-extrabold"
-                    : "text-white/95 font-extrabold drop-shadow-[0_1px_1px_rgba(0,0,0,0.7)]";
+              <div className="space-y-2">
+                <StreakTile
+                  keyName={HERO_KEY}
+                  label={labels[HERO_KEY]}
+                  value={consistencyVal}
+                  max={maxima[HERO_KEY] ?? 100}
+                  flags={timelineDotsForKey(p.streaks, HERO_KEY)}
+                  style={consistencyStyle}
+                  tokens={tokens}
+                  lang={lang}
+                  banner
+                />
 
-                  return (
-                    <div
+                <div className="grid auto-rows-fr grid-cols-2 gap-2">
+                  {secondaryKeys.map((key) => (
+                    <StreakTile
                       key={key}
-                      className="overflow-hidden rounded-lg border border-slate-800/80 bg-slate-950/50"
-                    >
-                      <div
-                        className="relative px-3 py-2.5"
-                        style={{
-                          background: `linear-gradient(90deg, ${color}${light ? "cc" : "99"} ${pct}%, rgba(15,23,42,0.92) ${pct}%)`,
-                        }}
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <span className={`text-[10px] leading-tight ${labelClass}`}>
-                            {labels[key]}
-                          </span>
-                          <span
-                            className={`shrink-0 text-lg leading-none tabular-nums ${valueClass}`}
-                          >
-                            {formatStreakValue(key, val, lang)}
-                          </span>
-                        </div>
-                        {flags.length > 0 ? (
-                          <div className="mt-2 flex flex-wrap gap-1">
-                            {flags.map((hit, idx) => (
-                              <span
-                                key={`${key}-dot-${idx}`}
-                                className={`h-2 w-2 rounded-full ${
-                                  hit
-                                    ? "bg-emerald-400 shadow-[0_0_4px_rgba(52,211,153,0.8)]"
-                                    : "bg-slate-600/80"
-                                }`}
-                                title={hit ? "hit" : "miss"}
-                              />
-                            ))}
-                          </div>
-                        ) : null}
-                      </div>
-                    </div>
-                  );
-                })}
+                      keyName={key}
+                      label={labels[key]}
+                      value={Number(p.streaks[key] ?? 0)}
+                      max={maxima[key] ?? 1}
+                      flags={timelineDotsForKey(p.streaks, key)}
+                      style={getStreakMetricStyle(key, tokens.isLight)}
+                      tokens={tokens}
+                      lang={lang}
+                    />
+                  ))}
+                </div>
               </div>
             </button>
           );

@@ -182,6 +182,7 @@ export function HeatmapMatrixChart({
                     showMeta={showMeta}
                     priceLabel={`£${(p.rawValues.now_cost / 10).toFixed(1)}m`}
                     dense
+                    isLight={themeId === "ANALYST_LIGHT"}
                   />
                 </td>
                 <td

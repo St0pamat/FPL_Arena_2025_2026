@@ -50,6 +50,11 @@ import {
   downloadDataUrl,
 } from "@/lib/stats-lab/exportCapture";
 import { ARENA_PORTAL_ALT, ARENA_PORTAL_LOGO } from "@/lib/arena";
+import {
+  STATS_LAB_CHART_THEMES,
+  type StatsLabChartThemeId,
+} from "@/components/admin/stats-lab/chartTheme";
+import { getThemeTokens } from "@/lib/stats-lab/themeTokens";
 
 const WATCHLIST_KEY = "fpl-arena-stats-centre-watchlist";
 const PAGE_SIZE_OPTS = [25, 50, 100] as const;
@@ -87,6 +92,8 @@ type Props = {
   bootstrap: StatsLabBootstrapData;
   lang: StatsLabLang;
   onLangChange: (lang: StatsLabLang) => void;
+  themeId?: StatsLabChartThemeId;
+  onThemeChange?: (theme: StatsLabChartThemeId) => void;
 };
 
 function loadWatchlist(): number[] {
@@ -105,8 +112,16 @@ function saveWatchlist(ids: number[]) {
   localStorage.setItem(WATCHLIST_KEY, JSON.stringify(ids));
 }
 
-export function StatsCentreView({ bootstrap, lang, onLangChange }: Props) {
+export function StatsCentreView({
+  bootstrap,
+  lang,
+  onLangChange,
+  themeId = "ARENA_DARK",
+  onThemeChange,
+}: Props) {
   const ui = centreUi(lang);
+  const tokens = getThemeTokens(themeId);
+  const theme = STATS_LAB_CHART_THEMES[themeId];
   const exportRef = useRef<HTMLDivElement>(null);
   const [filter, setFilter] = useState<StatsCentreFilter>(() =>
     createDefaultStatsCentreFilter(bootstrap.seasonCode),
@@ -234,42 +249,83 @@ export function StatsCentreView({ bootstrap, lang, onLangChange }: Props) {
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h2 className="flex items-center gap-2 text-xl font-extrabold text-white">
-            <Table2 className="h-5 w-5 text-[#39FF14]" />
+          <h2
+            className={`flex items-center gap-2 text-xl font-extrabold ${tokens.textStrong}`}
+          >
+            <Table2 className={`h-5 w-5 ${tokens.accentText}`} />
             {ui.title}
           </h2>
-          <p className="mt-1 max-w-2xl text-sm text-slate-400">{ui.subtitle}</p>
+          <p className={`mt-1 max-w-2xl text-sm ${tokens.textMuted}`}>
+            {ui.subtitle}
+          </p>
         </div>
-        <div className="inline-flex rounded-xl border border-slate-700 bg-slate-950 p-1">
-          {(["PLAYERS", "PER_GW", "TEAMS"] as StatsCentreMode[]).map((m) => (
-            <button
-              key={m}
-              type="button"
-              onClick={() =>
-                patchFilter({
-                  centreMode: m,
-                  sortKey:
-                    m === "TEAMS"
-                      ? "total_points"
-                      : m === "PER_GW"
-                        ? "total_points"
-                        : "total_points",
-                })
-              }
-              className={`rounded-lg px-3 py-1.5 text-[10px] font-black uppercase tracking-wider ${
-                filter.centreMode === m
-                  ? "bg-[#39FF14] text-black"
-                  : "text-slate-400 hover:text-white"
-              }`}
+        <div className="flex flex-wrap items-center gap-2">
+          {onThemeChange ? (
+            <div
+              className={`inline-flex rounded-xl border p-1 ${tokens.panelBorder} ${tokens.page}`}
             >
-              {CENTRE_MODE_LABELS[lang][m]}
-            </button>
-          ))}
+              {(
+                Object.keys(STATS_LAB_CHART_THEMES) as StatsLabChartThemeId[]
+              ).map((id) => (
+                <button
+                  key={id}
+                  type="button"
+                  title={
+                    lang === "en"
+                      ? STATS_LAB_CHART_THEMES[id].labelEn
+                      : STATS_LAB_CHART_THEMES[id].labelPl
+                  }
+                  onClick={() => onThemeChange(id)}
+                  className={`rounded-lg px-2.5 py-1.5 text-[10px] font-black uppercase ${
+                    themeId === id
+                      ? "bg-[#39FF14] text-black"
+                      : tokens.textMuted
+                  }`}
+                >
+                  {id === "ARENA_DARK"
+                    ? "Arena"
+                    : id === "SCOUT_DARK"
+                      ? "Scout"
+                      : "Light"}
+                </button>
+              ))}
+            </div>
+          ) : null}
+          <div
+            className={`inline-flex rounded-xl border p-1 ${tokens.panelBorder} ${tokens.page}`}
+          >
+            {(["PLAYERS", "PER_GW", "TEAMS"] as StatsCentreMode[]).map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() =>
+                  patchFilter({
+                    centreMode: m,
+                    sortKey:
+                      m === "TEAMS"
+                        ? "total_points"
+                        : m === "PER_GW"
+                          ? "total_points"
+                          : "total_points",
+                  })
+                }
+                className={`rounded-lg px-3 py-1.5 text-[10px] font-black uppercase tracking-wider ${
+                  filter.centreMode === m
+                    ? "bg-[#39FF14] text-black"
+                    : tokens.textMuted
+                }`}
+              >
+                {CENTRE_MODE_LABELS[lang][m]}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
       {/* Filters bar */}
-      <div className="space-y-3 rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+      <div
+        className={`space-y-3 rounded-2xl border p-4 ${tokens.panel} ${tokens.panelBorder}`}
+      >
         <div className="flex flex-wrap items-end gap-2">
           <label className="text-[10px] font-bold uppercase text-slate-500">
             {ui.range}
@@ -278,7 +334,7 @@ export function StatsCentreView({ bootstrap, lang, onLangChange }: Props) {
               onChange={(e) =>
                 setDraftRange(e.target.value as StatsCentreRangeMode)
               }
-              className="mt-1 block min-w-[200px] rounded-lg border border-slate-700 bg-slate-950 px-2 py-2 text-sm text-white"
+              className={`mt-1 block min-w-[200px] rounded-lg border px-2 py-2 text-sm ${tokens.input}`}
             >
               {RANGE_MODES.map((m) => (
                 <option key={m} value={m}>
@@ -594,9 +650,13 @@ export function StatsCentreView({ bootstrap, lang, onLangChange }: Props) {
       {/* Exportable table node */}
       <div
         ref={exportRef}
-        className="overflow-hidden rounded-2xl border border-slate-800 bg-[#070B14]"
+        className={`overflow-hidden rounded-2xl border ${tokens.panelBorder} ${tokens.tableBg}`}
+        style={{ background: theme.canvasBg, borderColor: theme.border }}
       >
-        <div className="flex items-center gap-3 border-b border-slate-800 px-4 py-3">
+        <div
+          className="flex items-center gap-3 border-b px-4 py-3"
+          style={{ borderColor: theme.border }}
+        >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={ARENA_PORTAL_LOGO}
@@ -607,10 +667,15 @@ export function StatsCentreView({ bootstrap, lang, onLangChange }: Props) {
             crossOrigin="anonymous"
           />
           <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.28em] text-[#39FF14]">
+            <p
+              className={`text-[10px] font-black uppercase tracking-[0.28em] ${tokens.accentText}`}
+            >
               FPL ARENA • STATS CENTRE
             </p>
-            <p className="text-sm font-bold text-white">
+            <p
+              className={`text-sm font-bold ${tokens.textStrong}`}
+              style={{ color: theme.text }}
+            >
               {CENTRE_MODE_LABELS[lang][filter.centreMode]}
               {filter.centreMode === "PLAYERS"
                 ? ` · ${PLAYER_TAB_LABELS[lang][filter.playerTab]}`
@@ -680,7 +745,10 @@ export function StatsCentreView({ bootstrap, lang, onLangChange }: Props) {
                       className="border-b border-slate-800/80 hover:bg-slate-900/50"
                     >
                       {filter.centreMode !== "TEAMS" ? (
-                        <td className="sticky left-0 z-10 bg-[#070B14] px-2 py-1.5">
+                        <td
+                          className="sticky left-0 z-10 px-2 py-1.5"
+                          style={{ background: theme.canvasBg }}
+                        >
                           {row.fpl_element_id != null ? (
                             <button
                               type="button"
@@ -697,7 +765,10 @@ export function StatsCentreView({ bootstrap, lang, onLangChange }: Props) {
                           ) : null}
                         </td>
                       ) : null}
-                      <td className="sticky left-8 z-10 whitespace-nowrap bg-[#070B14] px-3 py-1.5">
+                      <td
+                        className="sticky left-8 z-10 whitespace-nowrap px-3 py-1.5"
+                        style={{ background: theme.canvasBg }}
+                      >
                         {filter.centreMode === "TEAMS" ? (
                           <span className="inline-flex items-center gap-2">
                             {row.club_pulse_code ? (
@@ -711,7 +782,10 @@ export function StatsCentreView({ bootstrap, lang, onLangChange }: Props) {
                                 className="h-7 w-7 object-contain"
                               />
                             ) : null}
-                            <span className="font-bold text-white">
+                            <span
+                              className={`font-bold ${tokens.textStrong}`}
+                              style={{ color: theme.text }}
+                            >
                               {row.web_name}
                             </span>
                           </span>
@@ -729,10 +803,15 @@ export function StatsCentreView({ bootstrap, lang, onLangChange }: Props) {
                               />
                             ) : null}
                             <span className="min-w-0">
-                              <span className="font-bold text-white">
+                              <span
+                                className={`font-bold ${tokens.textStrong}`}
+                                style={{ color: theme.text }}
+                              >
                                 {row.web_name}
                               </span>
-                              <span className="ml-2 inline-flex items-center gap-1 font-mono text-[10px] text-slate-500">
+                              <span
+                                className={`ml-2 inline-flex items-center gap-1 font-mono text-[10px] ${tokens.textMuted}`}
+                              >
                                 {row.club_pulse_code ? (
                                   // eslint-disable-next-line @next/next/no-img-element
                                   <img

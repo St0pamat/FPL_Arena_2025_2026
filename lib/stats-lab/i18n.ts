@@ -221,6 +221,8 @@ export const STREAK_METRIC_KEYS = [
   "maxGoalOrAssistStreak",
   "maxCleanSheetStreak",
   "maxDcPointsStreak",
+  "maxSavesPointStreak",
+  "maxBonusStreak",
   "max60MinStreak",
   "returnConsistencyPct",
 ] as const;
@@ -229,13 +231,15 @@ export type StreakMetricKey = (typeof STREAK_METRIC_KEYS)[number];
 
 /** Klucze paska sortowania Eksploratora Pass (DESC). */
 export const STREAK_SORT_KEYS = [
+  "returnConsistencyPct",
   "maxReturnStreak",
   "currentReturnStreak",
   "maxGoalStreak",
   "maxAssistStreak",
   "maxCleanSheetStreak",
   "maxDcPointsStreak",
-  "returnConsistencyPct",
+  "maxSavesPointStreak",
+  "maxBonusStreak",
 ] as const satisfies readonly StreakMetricKey[];
 
 export type StreakSortKey = (typeof STREAK_SORT_KEYS)[number];
@@ -252,6 +256,8 @@ export const STREAK_LABELS: Record<
     maxGoalOrAssistStreak: "Seria G/A",
     maxCleanSheetStreak: "Seria czystych kont",
     maxDcPointsStreak: "Seria DC (+2)",
+    maxSavesPointStreak: "Seria 3+ obron (pkt GK)",
+    maxBonusStreak: "Seria z bonusem (BPS)",
     max60MinStreak: "Seria 60+ min",
     returnConsistencyPct: "Regularność zwrotów %",
   },
@@ -263,6 +269,8 @@ export const STREAK_LABELS: Record<
     maxGoalOrAssistStreak: "G/A streak",
     maxCleanSheetStreak: "Clean sheet streak",
     maxDcPointsStreak: "DC (+2) streak",
+    maxSavesPointStreak: "3+ Saves streak (+1 pt)",
+    maxBonusStreak: "Bonus points streak",
     max60MinStreak: "60+ min streak",
     returnConsistencyPct: "Return consistency %",
   },
@@ -273,23 +281,77 @@ export const STREAK_SORT_SHORT_LABELS: Record<
   Record<StreakSortKey, string>
 > = {
   pl: {
+    returnConsistencyPct: "Regularność %",
     maxReturnStreak: "Max zwroty",
     currentReturnStreak: "Aktualne zwroty",
     maxGoalStreak: "Gole",
     maxAssistStreak: "Asysty",
     maxCleanSheetStreak: "CS",
     maxDcPointsStreak: "DC",
-    returnConsistencyPct: "Regularność %",
+    maxSavesPointStreak: "Obrony GK",
+    maxBonusStreak: "Bonus",
   },
   en: {
+    returnConsistencyPct: "Consistency %",
     maxReturnStreak: "Max return",
     currentReturnStreak: "Current return",
     maxGoalStreak: "Goals",
     maxAssistStreak: "Assists",
     maxCleanSheetStreak: "CS",
     maxDcPointsStreak: "DC",
-    returnConsistencyPct: "Consistency %",
+    maxSavesPointStreak: "Saves",
+    maxBonusStreak: "Bonus",
   },
+};
+
+/**
+ * Hierarchia mniejszych kafelków (pod banerem Regularności) wg wagi punktowej FPL.
+ * `returnConsistencyPct` jest zawsze osobnym banerem u góry — tu go nie ma.
+ */
+export const STREAK_SECONDARY_BY_POOL: Record<
+  "GKP" | "DEF" | "MID" | "FWD" | "MIXED",
+  StreakMetricKey[]
+> = {
+  GKP: [
+    "maxReturnStreak",
+    "currentReturnStreak",
+    "maxCleanSheetStreak",
+    "maxSavesPointStreak",
+    "maxBonusStreak",
+    "max60MinStreak",
+  ],
+  DEF: [
+    "maxReturnStreak",
+    "currentReturnStreak",
+    "maxGoalStreak",
+    "maxAssistStreak",
+    "maxCleanSheetStreak",
+    "maxDcPointsStreak",
+  ],
+  MID: [
+    "maxReturnStreak",
+    "currentReturnStreak",
+    "maxGoalStreak",
+    "maxAssistStreak",
+    "maxCleanSheetStreak",
+    "maxDcPointsStreak",
+  ],
+  FWD: [
+    "maxReturnStreak",
+    "currentReturnStreak",
+    "maxGoalStreak",
+    "maxAssistStreak",
+    "maxBonusStreak",
+    "maxDcPointsStreak",
+  ],
+  MIXED: [
+    "maxReturnStreak",
+    "currentReturnStreak",
+    "maxGoalStreak",
+    "maxAssistStreak",
+    "maxCleanSheetStreak",
+    "maxDcPointsStreak",
+  ],
 };
 
 export const POINTS_POS_LABELS: Record<

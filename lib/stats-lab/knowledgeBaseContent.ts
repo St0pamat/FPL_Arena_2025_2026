@@ -21,6 +21,8 @@ export type KnowledgeBlock = {
   heading: string;
   paragraphs: string[];
   bullets?: string[];
+  /** Wyróżniona karta (np. Composite Score) */
+  featured?: boolean;
 };
 
 export type KnowledgeTable = {
@@ -71,8 +73,8 @@ const HOW_TO_USE_PL: KnowledgeTabContent = {
     {
       heading: "3. Eksplorator pass i regularności",
       paragraphs: [
-        "Serie meczowe z rzędu (zwroty, G+A, CS, DC, 60+ min) oraz Consistency % — odsetek startów z >2 pkt FPL.",
-        "Idealny do oddzielenia „gracza jednego meczu” od stabilnego scorerów tygodnia w tydzień.",
+        "Serie meczowe z rzędu (zwroty FPL, G+A, CS, DC, 60+ min) oraz Regularność zwrotów % — odsetek rozegranych meczów z prawdziwym Zwrotem FPL (nie zwykłe 1–2 pkt za czas gry).",
+        "Idealny do oddzielenia „gracza jednego meczu” od stabilnego scorera tydzień w tydzień. Kropki na kafelku = kolejne mecze (kolor = zwrot, szary = pusty przelot).",
       ],
     },
     {
@@ -91,6 +93,20 @@ const HOW_TO_USE_PL: KnowledgeTabContent = {
       heading: "6. Macierz heatmap",
       paragraphs: [
         "Tabela z tłem percentylowym i liderami kolumn — szybki skan Top N pod kątem wielu statystyk naraz.",
+      ],
+    },
+    {
+      heading:
+        "Czym jest Composite Score (Indeks Złożony 0–100) i jak go liczymy?",
+      featured: true,
+      paragraphs: [
+        "Composite Score to Twój personalny ranking 0–100 zbudowany wyłącznie z metryk, które aktualnie zaznaczysz w panelu bocznym. Nie jest to stała „ocena FIFA” — zmienia się wraz z Twoimi kryteriami.",
+      ],
+      bullets: [
+        "Krok 1 (Wybór kryteriów): wybierasz od 2 do 8 statystyk (np. dla DEF: Punkty FPL, Czyste konta, Suma DC, xGI, BPS).",
+        "Krok 2 (Percentyle 0–100 na tle pozycji): silnik porównuje wynik każdego gracza z wszystkimi zakwalifikowanymi na tej samej pozycji (np. 116 DEF z min. 180 min) i przyznaje percentyl 0–100 per metryka (P100 = lider, P50 = środek stawki). Dla metryk negatywnych (GC, xGC, kartki) skala jest odwracana (invertScale) — mniej straconych goli = wyższy percentyl.",
+        "Krok 3 (Średnia ważona = Composite): Composite Score = (P(Metryka₁) + P(Metryka₂) + … + P(Metrykaₖ)) / k.",
+        "Przykład (De Cuyper, 5 metryk): P100 (TP) + P99 (CS) + P26 (DC) + P100 (xGI) + P100 (BPS) → (100+99+26+100+100)/5 = 85. Zmiana zaznaczonych statystyk natychmiast przelicza Composite.",
       ],
     },
     {
@@ -144,8 +160,8 @@ const HOW_TO_USE_EN: KnowledgeTabContent = {
     {
       heading: "3. Streaks & consistency explorer",
       paragraphs: [
-        "Match streaks (returns, G+A, CS, DC, 60+ mins) plus Consistency % — share of starts with >2 FPL points.",
-        "Perfect for separating one-week explosives from steady weekly scorers.",
+        "Match streaks (FPL Returns, G+A, CS, DC, 60+ mins) plus Return consistency % — share of matches played with a true FPL Return (not plain 1–2 appearance points).",
+        "Perfect for separating one-week explosives from steady weekly scorers. Tile dots = consecutive matches (colored = return/hit, grey = miss).",
       ],
     },
     {
@@ -164,6 +180,19 @@ const HOW_TO_USE_EN: KnowledgeTabContent = {
       heading: "6. Heatmap matrix",
       paragraphs: [
         "A table with percentile shading and column leaders — the fastest scan of Top N across many stats.",
+      ],
+    },
+    {
+      heading: "What is Composite Score (0–100 Index) and how do we calculate it?",
+      featured: true,
+      paragraphs: [
+        "Composite Score is your personal 0–100 ranking built only from the metrics you currently select in the side panel. It is not a fixed “FIFA rating” — it recalculates whenever your criteria change.",
+      ],
+      bullets: [
+        "Step 1 (Pick criteria): select 2–8 stats (e.g. for DEF: FPL points, Clean sheets, DC total, xGI, BPS).",
+        "Step 2 (Position percentiles 0–100): the engine ranks each player vs all qualified peers at the same position (e.g. 116 DEF with ≥180 mins) and awards a 0–100 percentile per metric (P100 = leader, P50 = mid-pack). Negative stats (GC, xGC, cards) use invertScale — fewer goals conceded = higher percentile.",
+        "Step 3 (Equal-weight average = Composite): Composite Score = (P(Metric₁) + P(Metric₂) + … + P(Metricₖ)) / k.",
+        "Example (De Cuyper, 5 metrics): P100 (TP) + P99 (CS) + P26 (DC) + P100 (xGI) + P100 (BPS) → (100+99+26+100+100)/5 = 85. Change the selected stats and Composite recalculates instantly.",
       ],
     },
     {
@@ -455,32 +484,47 @@ const STREAKS_PL: KnowledgeTabContent = {
   id: "STREAKS_AND_BREAKDOWN",
   label: "Passy i rozbicie punktów",
   intro:
-    "Jak czytać Dekompozycję Punktów i Eksplorator Pass, żeby odróżnić explosiveness od consistency.",
+    "Jak czytać Dekompozycję Punktów i Eksplorator Pass — oraz czym dokładnie jest Zwrot FPL (FPL Return).",
   blocks: [
+    {
+      heading: "Zwrot FPL (FPL Return) — definicja meczowa",
+      featured: true,
+      paragraphs: [
+        "Zwrot FPL = mecz z realnym dorobkiem punktowym PONAD sam czas gry. Zwykłe 1–2 pkt za występ / 60+ minut BEZ żadnej z poniższych akcji NIE jest zwrotem.",
+        "W meczu z minutes > 0 gracz ma hasReturn = true, jeśli spełnił co najmniej jeden warunek:",
+      ],
+      bullets: [
+        "Gol (goals_scored > 0) lub asysta (assists > 0).",
+        "Czyste konto: clean_sheets > 0, minutes ≥ 60 oraz pozycja GK / DEF / MID (element_type 1–3).",
+        "+2 pkt za próg Defensive Contributions: DEF → CBI+TKL ≥ 10; MID/FWD → CBI+TKL+REC ≥ 12 (albo dcPts ≥ 2 z bilansu). NIGDY nie liczymy samego defensive_contributions_total > 0!",
+        "Bramkarz: saves ≥ 3 (+1 za obrony) lub penalties_saved > 0.",
+        "Bonus BPS: bonus ≥ 1.",
+      ],
+    },
+    {
+      heading: "Serie, regularność i kropki meczowe",
+      paragraphs: [
+        "maxReturnStreak = najdłuższa seria kolejnych występów z hasReturn. currentReturnStreak = seria liczona wstecz od ostatniego rozegranego meczu. returnConsistencyPct = round((mecze ze zwrotem / mecze z minutes>0) × 100).",
+        "Dzięki temu 7 zwrotów w 9 meczach = 78% regularności — i max streak nie może magicznie wynosić 9 GW. Kropki na kafelku = ostatnie do 10 występów (kolor = zwrot, szary = brak).",
+      ],
+      bullets: [
+        "Występ (1+ min) vs 60+ min w Dekompozycji: rozbite osobno, żeby widać floor za czas gry vs prawdziwe akcje punktowe.",
+        "Explosive: rzadkie haule, niska regularność, krótkie current streak. Consistent: żywa seria zwrotów + wysoki Consistency % + DC/CS tydzień w tydzień.",
+      ],
+    },
     {
       heading: "Dekompozycja punktów — co sprawdzać",
       paragraphs: [
         "Spójrz najpierw na segmenty dodatnie: czy haul stoi na golach/asystach, na CS, czy na DC (+2)?",
         "Włącz „Kary / Minusy”: kartki i stracone gole potrafią zjeść połowę brutto — szczególnie u DEF z wysokim GC.",
-        "Porównaj Brutto → Kary → Netto z oficjalnymi punktami FPL (przy historii meczowej rozbicie jest dokładne; przy samym snapshocie — estymacja).",
+        "Porównaj Brutto → Kary → Netto z oficjalnymi punktami FPL (historia meczowa = dokładne; sam snapshot = estymacja).",
       ],
     },
     {
-      heading: "Explosive vs Consistent",
+      heading: "Stats Centre → Watchlist → Studio",
       paragraphs: [
-        "Explosive: wysokie punkty z rzadkich hauli (duży udział goli/asyst, niska Consistency %, krótkie aktualne serie).",
-        "Consistent: regularne zwroty ≥5 pkt lub DC/CS tydzień w tydzień — wysoka Consistency %, długa max return streak i aktualna seria 🔥.",
-      ],
-      bullets: [
-        "Consistency % = odsetek meczów w 1. składzie z >2 pkt FPL.",
-        "Max Return Streak vs Current Streak: czy gracz jest w formie TERAZ, czy tylko miał dobry okres wcześniej.",
-        "Serie DC / CS: stabilny „floor” punktowy bez zależności od goli.",
-      ],
-    },
-    {
-      heading: "Jak łączyć oba wykresy",
-      paragraphs: [
-        "Najpierw Breakdown (skąd punkty), potem Streaks (jak często i jak długo). Idealny asset: wysoki udział DC/CS w breakdown + wysoka consistency + żywa current streak.",
+        "W Stats Centre sortujesz i filtrujesz pełną tabelę (zakładki Overview / Goal Threat / Defending itd.). Gwiazdka ★ dodaje gracza do Watchlist.",
+        "Przycisk „Porównaj w Studiu” otwiera Chart Studio w trybie ręcznym z tymi samymi ID — idealne do Radar / Scatter / Streaks na Twojej krótkiej liście.",
       ],
     },
   ],
@@ -490,8 +534,34 @@ const STREAKS_EN: KnowledgeTabContent = {
   id: "STREAKS_AND_BREAKDOWN",
   label: "Streaks & breakdown",
   intro:
-    "How to read Points Breakdown and the Streaks Explorer to separate explosiveness from consistency.",
+    "How to read Points Breakdown and the Streaks Explorer — and exactly what counts as an FPL Return.",
   blocks: [
+    {
+      heading: "FPL Return — match definition",
+      featured: true,
+      paragraphs: [
+        "FPL Return = a match with real scoring actions BEYOND appearance time. Plain 1–2 pts for minutes alone (no actions below) is NOT a return.",
+        "In a match with minutes > 0, hasReturn = true if at least one of these fires:",
+      ],
+      bullets: [
+        "Goal (goals_scored > 0) or assist (assists > 0).",
+        "Clean sheet: clean_sheets > 0, minutes ≥ 60, and position GK / DEF / MID (element_type 1–3).",
+        "+2 pts DC threshold: DEF → CBI+TKL ≥ 10; MID/FWD → CBI+TKL+REC ≥ 12 (or dcPts ≥ 2 from the match ledger). NEVER use raw defensive_contributions_total > 0!",
+        "Goalkeeper: saves ≥ 3 or penalties_saved > 0.",
+        "Bonus BPS: bonus ≥ 1.",
+      ],
+    },
+    {
+      heading: "Streaks, consistency and match dots",
+      paragraphs: [
+        "maxReturnStreak = longest run of consecutive appearances with hasReturn. currentReturnStreak = run counted backwards from the latest played match. returnConsistencyPct = round((return matches / matches with minutes>0) × 100).",
+        "So 7 returns in 9 matches = 78% consistency — and max streak cannot magically be 9 GW. Tile dots = last up to 10 appearances (colored = return, grey = miss).",
+      ],
+      bullets: [
+        "Appearance (1+ min) vs 60+ min in Breakdown: split so you see the minutes floor vs true scoring actions.",
+        "Explosive: rare hauls, low consistency, short current streak. Consistent: live return streak + high Consistency % + weekly DC/CS.",
+      ],
+    },
     {
       heading: "Points breakdown — what to check",
       paragraphs: [
@@ -501,21 +571,10 @@ const STREAKS_EN: KnowledgeTabContent = {
       ],
     },
     {
-      heading: "Explosive vs Consistent",
+      heading: "Stats Centre → Watchlist → Studio",
       paragraphs: [
-        "Explosive: big points from rare hauls (heavy G/A share, low Consistency %, short current streaks).",
-        "Consistent: regular ≥5-pt returns or weekly DC/CS — high Consistency %, long max return streak and a live current streak 🔥.",
-      ],
-      bullets: [
-        "Consistency % = share of starts with >2 FPL points.",
-        "Max Return Streak vs Current Streak: is the player in form NOW, or only had a hot spell earlier?",
-        "DC / CS streaks: a stable points floor that does not need goals.",
-      ],
-    },
-    {
-      heading: "How to combine both charts",
-      paragraphs: [
-        "Breakdown first (where points come from), then Streaks (how often and how long). The ideal asset: high DC/CS share in the breakdown + high consistency + a live current streak.",
+        "In Stats Centre you sort/filter the full table (Overview / Goal Threat / Defending tabs, etc.). The ★ star adds a player to the Watchlist.",
+        "“Compare in Studio” opens Chart Studio in manual mode with those IDs — ideal for Radar / Scatter / Streaks on your shortlist.",
       ],
     },
   ],

@@ -184,6 +184,7 @@ export function StackedCompositeChart({
                     showMeta={showMeta}
                     priceLabel={`£${(p.rawValues.now_cost / 10).toFixed(1)}m`}
                     ownershipLabel={`${p.rawValues.selected_by_percent.toFixed(1)}%`}
+                    isLight={theme.id === "ANALYST_LIGHT"}
                   />
                 </div>
 
@@ -361,6 +362,7 @@ function GroupedRawBars({
                   showMeta={showMeta}
                   priceLabel={`£${(p.rawValues.now_cost / 10).toFixed(1)}m`}
                   ownershipLabel={`${p.rawValues.selected_by_percent.toFixed(1)}%`}
+                  isLight={theme.id === "ANALYST_LIGHT"}
                 />
               </div>
 

@@ -23,11 +23,16 @@ import {
   type StatsLabOverview,
 } from "@/lib/stats-lab/syncEngine";
 import { getFplPositionLabelEn } from "@/lib/stats-lab/types";
+import type { StatsLabChartThemeId } from "@/components/admin/stats-lab/chartTheme";
+import { STATS_LAB_CHART_THEMES } from "@/components/admin/stats-lab/chartTheme";
+import { getThemeTokens } from "@/lib/stats-lab/themeTokens";
 
 type Props = {
   initialOverview: StatsLabOverview;
   seasonCode?: string;
 };
+
+const THEME_KEY = "fpl-arena-stats-lab-theme";
 
 function formatCost(nowCost: number): string {
   return `£${(nowCost / 10).toFixed(1)}m`;
@@ -54,6 +59,27 @@ export function StatsLabSyncClient({
   const [mediaLabel, setMediaLabel] = useState<string | null>(null);
   const [mediaPct, setMediaPct] = useState(0);
   const [mediaLog, setMediaLog] = useState<string | null>(null);
+  const [themeId, setThemeId] = useState<StatsLabChartThemeId>("ARENA_DARK");
+  const tokens = getThemeTokens(themeId);
+
+  useEffect(() => {
+    try {
+      const v = localStorage.getItem(THEME_KEY);
+      if (v === "SCOUT_DARK" || v === "ANALYST_LIGHT" || v === "ARENA_DARK") {
+        setThemeId(v);
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(THEME_KEY, themeId);
+    } catch {
+      /* ignore */
+    }
+  }, [themeId]);
 
   const refreshOverview = useCallback(async () => {
     const next = await getStatsLabOverview(seasonCode);
@@ -260,31 +286,67 @@ export function StatsLabSyncClient({
 
   return (
     <div className="space-y-6">
+      <div className="flex justify-end">
+        <div
+          className={`inline-flex rounded-xl border p-1 ${tokens.panelBorder} ${tokens.page}`}
+        >
+          {(Object.keys(STATS_LAB_CHART_THEMES) as StatsLabChartThemeId[]).map(
+            (id) => (
+              <button
+                key={id}
+                type="button"
+                title={STATS_LAB_CHART_THEMES[id].labelPl}
+                onClick={() => setThemeId(id)}
+                className={`rounded-lg px-2.5 py-1.5 text-[10px] font-black uppercase ${
+                  themeId === id ? "bg-[#39FF14] text-black" : tokens.textMuted
+                }`}
+              >
+                {id === "ARENA_DARK"
+                  ? "Arena"
+                  : id === "SCOUT_DARK"
+                    ? "Scout"
+                    : "Light"}
+              </button>
+            ),
+          )}
+        </div>
+      </div>
+
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {kpi.map((card) => {
           const Icon = card.icon;
           return (
             <div
               key={card.label}
-              className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4"
+              className={`rounded-2xl border p-4 ${tokens.panel} ${tokens.panelBorder}`}
             >
-              <p className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wider text-slate-500">
-                <Icon className="h-3.5 w-3.5 text-[#39FF14]" />
+              <p
+                className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-wider ${tokens.textMuted}`}
+              >
+                <Icon className={`h-3.5 w-3.5 ${tokens.accentText}`} />
                 {card.label}
               </p>
-              <p className="mt-2 text-xl font-extrabold text-white">{card.value}</p>
+              <p className={`mt-2 text-xl font-extrabold ${tokens.textStrong}`}>
+                {card.value}
+              </p>
             </div>
           );
         })}
       </div>
 
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 sm:p-6">
+      <div
+        className={`rounded-2xl border p-5 sm:p-6 ${tokens.panel} ${tokens.panelBorder}`}
+      >
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-[10px] font-black uppercase tracking-wider text-slate-500">
+            <p
+              className={`text-[10px] font-black uppercase tracking-wider ${tokens.textMuted}`}
+            >
               Status synchronizacji
             </p>
-            <p className="mt-1 text-sm font-bold text-emerald-300">{statusLabel}</p>
+            <p className={`mt-1 text-sm font-bold ${tokens.accentText}`}>
+              {statusLabel}
+            </p>
             {overview.meta?.last_error ? (
               <p className="mt-1 text-xs text-rose-400">{overview.meta.last_error}</p>
             ) : null}

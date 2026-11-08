@@ -411,6 +411,7 @@ export function PointsBreakdownChart({
                     showMeta={showMeta}
                     priceLabel={`£${(p.rawValues.now_cost / 10).toFixed(1)}m`}
                     ownershipLabel={`${p.rawValues.selected_by_percent.toFixed(1)}%`}
+                    isLight={theme.id === "ANALYST_LIGHT"}
                   />
                 </div>
 
@@ -524,9 +525,15 @@ export function PointsBreakdownChart({
                 </div>
 
                 <div className="flex w-[125px] shrink-0 flex-col items-end gap-1 text-right">
-                  <p className="whitespace-nowrap text-2xl font-black leading-none tabular-nums text-white">
+                  <p
+                    className="whitespace-nowrap text-2xl font-black leading-none tabular-nums"
+                    style={{ color: theme.text }}
+                  >
                     {bd.estimatedTotal}{" "}
-                    <span className="text-sm font-bold text-slate-400">
+                    <span
+                      className="text-sm font-bold"
+                      style={{ color: theme.muted }}
+                    >
                       {ptsUnit}
                     </span>
                   </p>

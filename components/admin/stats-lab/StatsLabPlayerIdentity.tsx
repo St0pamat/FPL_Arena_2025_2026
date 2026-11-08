@@ -18,6 +18,8 @@ type Props = {
   showMeta?: boolean;
   /** Compact table variant (Stats Centre) */
   dense?: boolean;
+  /** Analyst Light → ciemny tekst; Dark → jasny */
+  isLight?: boolean;
 };
 
 /**
@@ -34,9 +36,14 @@ export function StatsLabPlayerIdentity({
   ownershipLabel,
   showMeta = true,
   dense = false,
+  isLight = false,
 }: Props) {
   const photo = playerCode > 0 ? fplLabPlayerPhotoUrl(playerCode) : null;
   const badge = clubPulseCode > 0 ? fplLabBadgeUrl(clubPulseCode) : null;
+  const nameCls = isLight ? "text-slate-900" : "text-white";
+  const clubCls = isLight ? "text-slate-700" : "text-slate-100";
+  const metaCls = isLight ? "text-slate-600" : "text-slate-400";
+  const accentCls = isLight ? "text-emerald-700" : "text-[#39FF14]";
 
   if (dense) {
     return (
@@ -53,8 +60,10 @@ export function StatsLabPlayerIdentity({
           />
         ) : null}
         <span className="min-w-0">
-          <span className="font-bold text-white">{webName}</span>
-          <span className="ml-2 inline-flex items-center gap-1 font-mono text-[10px] text-slate-500">
+          <span className={`font-bold ${nameCls}`}>{webName}</span>
+          <span
+            className={`ml-2 inline-flex items-center gap-1 font-mono text-[10px] ${metaCls}`}
+          >
             {badge ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -94,7 +103,9 @@ export function StatsLabPlayerIdentity({
         {/* Wiersz 1 — tylko #, herb, skrót klubu */}
         <div className="flex items-center gap-1.5 leading-none">
           {rank != null ? (
-            <span className="shrink-0 text-xs font-black tabular-nums text-[#39FF14]">
+            <span
+              className={`shrink-0 text-xs font-black tabular-nums ${accentCls}`}
+            >
               #{rank}
             </span>
           ) : null}
@@ -111,20 +122,26 @@ export function StatsLabPlayerIdentity({
               />
             </span>
           ) : null}
-          <span className="shrink-0 text-xs font-extrabold tracking-wide text-slate-100">
+          <span
+            className={`shrink-0 text-xs font-extrabold tracking-wide ${clubCls}`}
+          >
             {clubShort}
           </span>
         </div>
 
         {/* Wiersz 2 — ZAWSZE osobna linia: cena · posiadanie */}
         {showMeta ? (
-          <div className="mt-0.5 whitespace-nowrap text-[11px] font-semibold leading-tight text-slate-400">
+          <div
+            className={`mt-0.5 whitespace-nowrap text-[11px] font-semibold leading-tight ${metaCls}`}
+          >
             {[priceLabel, ownershipLabel].filter(Boolean).join(" · ") || "—"}
           </div>
         ) : null}
 
         {/* Wiersz 3 — pełne nazwisko */}
-        <div className="mt-0.5 overflow-hidden text-ellipsis whitespace-nowrap text-[17px] font-black leading-tight text-white">
+        <div
+          className={`mt-0.5 overflow-hidden text-ellipsis whitespace-nowrap text-[17px] font-black leading-tight ${nameCls}`}
+        >
           {webName}
         </div>
       </div>

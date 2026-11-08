@@ -241,6 +241,8 @@ function emptyRecentFlags(): PlayerStreaks["recentFlags"] {
     cleanSheetHit: [],
     dcHit: [],
     sixtyMinHit: [],
+    savesHit: [],
+    bonusHit: [],
   };
 }
 
@@ -260,7 +262,21 @@ function emptyStreaks(): PlayerStreaks {
     currentDcPointsStreak: 0,
     max60MinStreak: 0,
     current60MinStreak: 0,
+    maxSavesPointStreak: 0,
+    currentSavesPointStreak: 0,
+    maxBonusStreak: 0,
+    currentBonusStreak: 0,
     returnConsistencyPct: 0,
+    timelineDots: [],
+    returnTimelineDots: [],
+    goalTimelineDots: [],
+    assistTimelineDots: [],
+    gaTimelineDots: [],
+    csTimelineDots: [],
+    dcTimelineDots: [],
+    sixtyMinTimelineDots: [],
+    savesTimelineDots: [],
+    bonusTimelineDots: [],
     recentFlags: emptyRecentFlags(),
   };
 }
@@ -534,29 +550,61 @@ function forceBreakdownBalance(
 }
 
 /**
- * Precyzyjny „Zwrot FPL” — nie liczy samego występu (2 pkt za 90 min).
- * GK/DEF: G / A / CS / DC actions / bonus ≥2
- * MID/FWD: G / A / bonus ≥2 / total_points ≥5
+ * Próg DC (+2) wyłącznie z komponentów TEGO meczu (`row`):
+ * DEF → CBI+TKL ≥ 10; MID/FWD → CBI+TKL+REC ≥ 12.
+ * NIGDY nie używa sezonowych agregatów ani `defensive_contributions_total > 0`.
  */
-function isReturnMatch(
+export function matchDcThresholdHitInRow(
+  elementType: FplPositionType,
+  row: Pick<
+    FplLabPlayerGwHistory,
+    "clearances_blocks_interceptions" | "tackles" | "recoveries"
+  >,
+): boolean {
+  const rowCbi = Number(row.clearances_blocks_interceptions) || 0;
+  const rowTackles = Number(row.tackles) || 0;
+  const rowRecoveries = Number(row.recoveries) || 0;
+  return hitsDcThreshold(
+    elementType,
+    computeMatchDcComponents(elementType, rowCbi, rowTackles, rowRecoveries),
+  );
+}
+
+/**
+ * Zwrot FPL (`FPL Return`) — realny dorobek ponad sam czas gry.
+ * Liczony WYŁĄCZNIE z pól pojedynczego `row` (nigdy z agregatów sezonowych).
+ * NIGDY nie używa `scoreMatchPoints` (fałszywe `diff === 2` ≠ zwrot).
+ */
+export function isFplReturnInMatch(
   elementType: FplPositionType,
   row: FplLabPlayerGwHistory,
 ): boolean {
-  const goals = Number(row.goals_scored) > 0;
-  const assists = Number(row.assists) > 0;
-  const bonus = Number(row.bonus) >= 2;
+  const mins = Number(row.minutes ?? 0);
+  if (mins <= 0) return false;
 
-  if (elementType === 1 || elementType === 2) {
-    return (
-      goals ||
-      assists ||
-      Number(row.clean_sheets) > 0 ||
-      matchDcTotal(elementType, row) > 0 ||
-      bonus
-    );
-  }
+  const matchGoals = Number(row.goals_scored) || 0;
+  const matchAssists = Number(row.assists) || 0;
+  const matchCS =
+    Number(row.clean_sheets) > 0 &&
+    mins >= 60 &&
+    (elementType === 1 || elementType === 2 || elementType === 3)
+      ? 1
+      : 0;
+  const matchSavePts =
+    elementType === 1 ? Math.floor((Number(row.saves) || 0) / 3) : 0;
+  const matchPenSave = Number(row.penalties_saved) || 0;
+  const matchBonus = Number(row.bonus) || 0;
+  const matchDcHit = matchDcThresholdHitInRow(elementType, row);
 
-  return goals || assists || bonus || Number(row.total_points) >= 5;
+  return (
+    matchGoals > 0 ||
+    matchAssists > 0 ||
+    matchCS > 0 ||
+    matchDcHit ||
+    matchSavePts > 0 ||
+    matchPenSave > 0 ||
+    matchBonus > 0
+  );
 }
 
 function sortHistoryChronologically(
@@ -769,14 +817,17 @@ export function estimatePointsBreakdownFromSnapshot(
 const STREAK_RECENT_WINDOW = 10;
 
 /**
- * Serie / passy na chronologicznej historii meczów.
+ * Serie / passy — tylko mecze z `minutes > 0`, chronologicznie ASC.
+ * `returnConsistencyPct` i serie zwrotów dzielą tę samą definicję `isFplReturnInMatch`.
  */
 export function computePlayerStreaks(
   elementType: FplPositionType,
   historyRows: FplLabPlayerGwHistory[],
 ): PlayerStreaks {
-  const sorted = sortHistoryChronologically(historyRows);
-  if (!sorted.length) return emptyStreaks();
+  const played = sortHistoryChronologically(historyRows).filter(
+    (row) => Number(row.minutes ?? 0) > 0,
+  );
+  if (!played.length) return emptyStreaks();
 
   let maxReturn = 0;
   let curReturn = 0;
@@ -792,16 +843,19 @@ export function computePlayerStreaks(
   let curDc = 0;
   let max60 = 0;
   let cur60 = 0;
+  let maxSaves = 0;
+  let curSaves = 0;
+  let maxBonus = 0;
+  let curBonus = 0;
 
-  let startsCount = 0;
-  let startsWithReturn = 0;
-
+  let matchesWithReturn = 0;
   const recentFlags = emptyRecentFlags();
 
-  for (const row of sorted) {
-    const ret = isReturnMatch(elementType, row);
+  for (const row of played) {
+    const ret = isFplReturnInMatch(elementType, row);
     curReturn = ret ? curReturn + 1 : 0;
     maxReturn = Math.max(maxReturn, curReturn);
+    if (ret) matchesWithReturn += 1;
 
     const goal = Number(row.goals_scored) > 0;
     curGoal = goal ? curGoal + 1 : 0;
@@ -815,17 +869,29 @@ export function computePlayerStreaks(
     curGA = ga ? curGA + 1 : 0;
     maxGA = Math.max(maxGA, curGA);
 
-    const cs = Number(row.clean_sheets) > 0;
+    const cs =
+      Number(row.clean_sheets) > 0 &&
+      Number(row.minutes) >= 60 &&
+      (elementType === 1 || elementType === 2 || elementType === 3);
     curCs = cs ? curCs + 1 : 0;
     maxCs = Math.max(maxCs, curCs);
 
-    const dc = scoreMatchPoints(elementType, row).awardedDcBonus;
+    const dc = matchDcThresholdHitInRow(elementType, row);
     curDc = dc ? curDc + 1 : 0;
     maxDc = Math.max(maxDc, curDc);
 
     const m60 = Number(row.minutes) >= 60;
     cur60 = m60 ? cur60 + 1 : 0;
     max60 = Math.max(max60, cur60);
+
+    const savesPt =
+      elementType === 1 && Math.floor((Number(row.saves) || 0) / 3) > 0;
+    curSaves = savesPt ? curSaves + 1 : 0;
+    maxSaves = Math.max(maxSaves, curSaves);
+
+    const bonusHit = (Number(row.bonus) || 0) >= 1;
+    curBonus = bonusHit ? curBonus + 1 : 0;
+    maxBonus = Math.max(maxBonus, curBonus);
 
     recentFlags.returnHit.push(ret);
     recentFlags.goalHit.push(goal);
@@ -834,14 +900,20 @@ export function computePlayerStreaks(
     recentFlags.cleanSheetHit.push(cs);
     recentFlags.dcHit.push(dc);
     recentFlags.sixtyMinHit.push(m60);
-
-    if (Number(row.starts) > 0) {
-      startsCount += 1;
-      if (Number(row.total_points) > 2) startsWithReturn += 1;
-    }
+    recentFlags.savesHit.push(savesPt);
+    recentFlags.bonusHit.push(bonusHit);
   }
 
   const trim = <T,>(arr: T[]): T[] => arr.slice(-STREAK_RECENT_WINDOW);
+  const returnTimelineDots = trim(recentFlags.returnHit);
+  const goalTimelineDots = trim(recentFlags.goalHit);
+  const assistTimelineDots = trim(recentFlags.assistHit);
+  const gaTimelineDots = trim(recentFlags.goalOrAssistHit);
+  const csTimelineDots = trim(recentFlags.cleanSheetHit);
+  const dcTimelineDots = trim(recentFlags.dcHit);
+  const sixtyMinTimelineDots = trim(recentFlags.sixtyMinHit);
+  const savesTimelineDots = trim(recentFlags.savesHit);
+  const bonusTimelineDots = trim(recentFlags.bonusHit);
 
   return {
     maxReturnStreak: maxReturn,
@@ -858,18 +930,33 @@ export function computePlayerStreaks(
     currentDcPointsStreak: curDc,
     max60MinStreak: max60,
     current60MinStreak: cur60,
-    returnConsistencyPct:
-      startsCount > 0
-        ? roundTo((startsWithReturn / startsCount) * 100, 1)
-        : 0,
+    maxSavesPointStreak: maxSaves,
+    currentSavesPointStreak: curSaves,
+    maxBonusStreak: maxBonus,
+    currentBonusStreak: curBonus,
+    returnConsistencyPct: Math.round(
+      (matchesWithReturn / played.length) * 100,
+    ),
+    timelineDots: returnTimelineDots,
+    returnTimelineDots,
+    goalTimelineDots,
+    assistTimelineDots,
+    gaTimelineDots,
+    csTimelineDots,
+    dcTimelineDots,
+    sixtyMinTimelineDots,
+    savesTimelineDots,
+    bonusTimelineDots,
     recentFlags: {
-      returnHit: trim(recentFlags.returnHit),
-      goalHit: trim(recentFlags.goalHit),
-      assistHit: trim(recentFlags.assistHit),
-      goalOrAssistHit: trim(recentFlags.goalOrAssistHit),
-      cleanSheetHit: trim(recentFlags.cleanSheetHit),
-      dcHit: trim(recentFlags.dcHit),
-      sixtyMinHit: trim(recentFlags.sixtyMinHit),
+      returnHit: returnTimelineDots,
+      goalHit: goalTimelineDots,
+      assistHit: assistTimelineDots,
+      goalOrAssistHit: gaTimelineDots,
+      cleanSheetHit: csTimelineDots,
+      dcHit: dcTimelineDots,
+      sixtyMinHit: sixtyMinTimelineDots,
+      savesHit: savesTimelineDots,
+      bonusHit: bonusTimelineDots,
     },
   };
 }
