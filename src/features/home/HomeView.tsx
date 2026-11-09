@@ -12,7 +12,7 @@ export const HomeView = ({
   onNavigate: (tab: AppTab) => void;
 }) => (
   <div className="flex flex-col items-center justify-center min-h-[calc(100vh-12rem)] text-center px-4 sm:px-8 py-12 lg:py-16 w-full max-w-5xl mx-auto">
-    <div className="league-logo-wrap rounded-3xl p-5 lg:p-6 mb-8 lg:mb-10">
+    <div className="league-logo-wrap mb-8 lg:mb-10">
       <LeagueLogo size="hero" />
     </div>
     <h2 className="text-fluid-5xl font-athletic font-bold text-white uppercase tracking-tighter drop-shadow-2xl leading-none">

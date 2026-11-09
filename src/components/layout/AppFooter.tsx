@@ -22,7 +22,7 @@ export const AppFooter = ({ onTabChange }: { onTabChange: (tab: AppTab) => void 
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-12 gap-10 xl:gap-8">
           <div className="xl:col-span-4 space-y-5">
             <div className="flex items-start gap-4">
-              <div className="league-logo-wrap rounded-xl p-2.5 shrink-0">
+              <div className="league-logo-wrap shrink-0">
                 <LeagueLogo size="lg" />
               </div>
               <div className="min-w-0">

@@ -1,32 +1,29 @@
 import Image from "next/image";
 import Link from "next/link";
-import type { ReactNode } from "react";
 import type { PortalVariant } from "@/lib/platform/site";
 
 interface PortalCardProps {
   title: string;
   description: string;
   href: string;
-  logoSrc?: string;
+  logoSrc: string;
   logoAlt?: string;
-  /** Zamiast logoSrc — np. TheFaLeagueMark. */
-  logoSlot?: ReactNode;
   variant: PortalVariant;
   ctaLabel: string;
   badge?: string;
 }
 
-const sharedLogoContainer =
-  "mt-5 mb-6 h-28 w-28 shrink-0 rounded-2xl bg-slate-950/70 p-3 ring-2 backdrop-blur-sm sm:mb-7 sm:mt-6 sm:h-36 sm:w-36";
-const sharedLogoImage =
-  "h-full w-full object-contain drop-shadow-[0_8px_24px_rgba(0,0,0,0.45)] transition-transform duration-500 group-hover:scale-110";
+/** Wspólny okrągły kontener — identyczny rozmiar dla wszystkich lig. */
+const LOGO_BOX =
+  "mt-5 mb-6 h-40 w-40 shrink-0 overflow-hidden rounded-full sm:mb-8 sm:mt-7 sm:h-52 sm:w-52";
+
+const LOGO_IMG =
+  "h-full w-full object-cover object-center drop-shadow-[0_12px_28px_rgba(0,0,0,0.5)] transition-transform duration-500 group-hover:scale-105";
 
 const variantStyles: Record<
   PortalVariant,
   {
     card: string;
-    logoContainer: string;
-    logoImage: string;
     showTitle: boolean;
     title: string;
     cta: string;
@@ -36,8 +33,6 @@ const variantStyles: Record<
   arena: {
     card:
       "border-slate-700/80 bg-slate-900/50 shadow-none hover:border-fuchsia-500/40 hover:shadow-[0_0_40px_-12px_rgba(192,132,252,0.35)]",
-    logoContainer: `${sharedLogoContainer} ring-slate-600/40 group-hover:ring-fuchsia-400/40`,
-    logoImage: sharedLogoImage,
     showTitle: true,
     title: "text-slate-200 group-hover:text-white",
     cta:
@@ -48,8 +43,6 @@ const variantStyles: Record<
   "na-minusie": {
     card:
       "border-emerald-500/35 bg-slate-900/60 shadow-[0_0_30px_rgba(16,185,129,0.2)] hover:border-emerald-400/55 hover:shadow-[0_0_50px_rgba(16,185,129,0.4)]",
-    logoContainer: `${sharedLogoContainer} ring-emerald-500/35 group-hover:ring-emerald-400/60`,
-    logoImage: sharedLogoImage,
     showTitle: true,
     title: "text-white",
     cta:
@@ -60,8 +53,6 @@ const variantStyles: Record<
   "no-big-six": {
     card:
       "border-amber-500/30 bg-slate-900/60 shadow-[0_0_30px_rgba(245,158,11,0.2)] hover:border-amber-400 hover:shadow-[0_0_50px_rgba(245,158,11,0.35)]",
-    logoContainer: `${sharedLogoContainer} ring-amber-500/30 group-hover:ring-amber-400/50`,
-    logoImage: sharedLogoImage,
     showTitle: true,
     title: "text-amber-500 group-hover:text-amber-400",
     cta:
@@ -77,7 +68,6 @@ export function PortalCard({
   href,
   logoSrc,
   logoAlt,
-  logoSlot,
   variant,
   ctaLabel,
   badge,
@@ -87,7 +77,7 @@ export function PortalCard({
   return (
     <Link
       href={href}
-      className={`group relative flex h-full min-h-[360px] w-full flex-col overflow-hidden rounded-3xl border p-7 backdrop-blur-xl transition-all duration-500 hover:scale-[1.02] sm:min-h-[420px] sm:p-9 ${styles.card}`}
+      className={`group relative flex h-full min-h-[400px] w-full flex-col overflow-hidden rounded-3xl border p-7 backdrop-blur-xl transition-all duration-500 hover:scale-[1.02] sm:min-h-[460px] sm:p-9 ${styles.card}`}
     >
       <div className="relative z-10 flex h-full flex-1 flex-col items-center text-center">
         <div className="flex min-h-[1.75rem] items-center justify-center">
@@ -100,27 +90,17 @@ export function PortalCard({
           ) : null}
         </div>
 
-        <div
-          className={`relative flex items-center justify-center transition-all duration-500 group-hover:scale-105 ${styles.logoContainer}`}
-        >
-          {logoSlot ? (
-            <div
-              className={`flex h-full w-full items-center justify-center ${styles.logoImage}`}
-            >
-              {logoSlot}
-            </div>
-          ) : logoSrc ? (
-            <Image
-              src={logoSrc}
-              alt={logoAlt ?? title}
-              width={144}
-              height={144}
-              quality={95}
-              sizes="(max-width: 640px) 112px, 144px"
-              className={styles.logoImage}
-              priority
-            />
-          ) : null}
+        <div className={`relative ${LOGO_BOX}`}>
+          <Image
+            src={logoSrc}
+            alt={logoAlt ?? title}
+            width={208}
+            height={208}
+            quality={95}
+            sizes="(max-width: 640px) 160px, 208px"
+            className={LOGO_IMG}
+            priority
+          />
         </div>
 
         {styles.showTitle ? (

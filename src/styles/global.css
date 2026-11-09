@@ -247,12 +247,16 @@
   padding: 5px;
   box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.2), 0 8px 28px rgba(0, 0, 0, 0.45);
 }
+/* Logo IKK — bez białego tła; sam okrągły crest na ciemnym UI */
 .league-logo-wrap {
-  border: 2px solid rgba(16, 185, 129, 0.55);
-  border-radius: 12px;
-  background: #ffffff;
-  padding: 6px 8px;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.45), 0 6px 20px rgba(0, 0, 0, 0.35);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  border-radius: 9999px;
 }
 .season-pitch-wrap {
   max-width: 640px;

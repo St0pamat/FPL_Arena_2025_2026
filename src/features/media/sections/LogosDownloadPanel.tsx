@@ -143,8 +143,12 @@ const LogoAssetCard = ({
         {fplId ? (
           <TeamCrest fplId={fplId} size="xl" className="shrink-0" />
         ) : (
-          <div className="league-logo-wrap shrink-0 rounded-xl p-2">
-            <img src={src} alt="" className="h-16 w-auto object-contain" />
+          <div className="league-logo-wrap shrink-0">
+            <img
+              src={src}
+              alt=""
+              className="h-16 w-16 rounded-full object-cover"
+            />
           </div>
         )}
         <div className="min-w-0">

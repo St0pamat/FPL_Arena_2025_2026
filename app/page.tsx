@@ -1,8 +1,15 @@
-import { TheFaLeagueMark } from "@/components/na-minusie/TheFaLeagueMark";
 import { PortalCard } from "@/components/platform/PortalCard";
 import { PlatformSocialIcons } from "@/components/platform/PlatformSocialIcons";
 import { SplashAdminLink } from "@/components/platform/SplashAdminLink";
 import { SplashBrandLockup } from "@/components/platform/SplashBrandLockup";
+import {
+  IKK_LEAGUE_LOGO,
+  IKK_LEAGUE_LOGO_ALT,
+} from "@/lib/arena/branding";
+import {
+  THE_FA_LEAGUE_LOGO,
+  THE_FA_LEAGUE_MARK_ALT,
+} from "@/lib/na-minusie/branding";
 import {
   NO_BIG_SIX_LOGO,
   NO_BIG_SIX_LOGO_ALT,
@@ -24,8 +31,8 @@ export default function HomePage() {
           title="IGRZYSKA KAPCI KŁAPCIA"
           description="Zamknięty projekt. Skarb Kibica i archiwum sezonu 2025/2026."
           href="/arena"
-          logoSrc="/logo/22952.png"
-          logoAlt="Logo Igrzyska Kapci Kłapcia"
+          logoSrc={IKK_LEAGUE_LOGO}
+          logoAlt={IKK_LEAGUE_LOGO_ALT}
           variant="arena"
           ctaLabel="Przejdź do Archiwum →"
           badge="Zamknięty"
@@ -34,7 +41,8 @@ export default function HomePage() {
           title="THE FA LEAGUE"
           description="Wejdź w nowy wymiar Head to Head — system, w którym Twój wynik wreszcie ma znaczenie."
           href="/strefa-gracza"
-          logoSlot={<TheFaLeagueMark size="fill" />}
+          logoSrc={THE_FA_LEAGUE_LOGO}
+          logoAlt={THE_FA_LEAGUE_MARK_ALT}
           variant="na-minusie"
           ctaLabel="Wejdź do Ligi →"
           badge="Aktualny"

@@ -11,5 +11,11 @@ export const ARENA_PORTAL_LOGO = `/images/fpl-arena-logo.png?v=${ARENA_LOGO_ASSE
 
 export const ARENA_PORTAL_ALT = "Logo FPL Arena";
 
-/** Logo sezonu IKK (hełm) — tylko w Skarbze Kibica; nie używać poza /arena. */
-export const IKK_LEAGUE_LOGO = "/logo/fpl-arena-ikk.png";
+/**
+ * Logo sezonu IKK (hełm / crest) — tylko w Skarbie Kibica; nie używać poza /arena.
+ */
+export const IKK_LEAGUE_LOGO_ASSET_VERSION = "20261109";
+
+export const IKK_LEAGUE_LOGO = `/logo/fpl-arena-ikk.png?v=${IKK_LEAGUE_LOGO_ASSET_VERSION}`;
+
+export const IKK_LEAGUE_LOGO_ALT = "Logo Igrzyska Kapci Kłapcia";

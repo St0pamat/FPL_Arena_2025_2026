@@ -1,1 +1,7 @@
-export { ARENA_PORTAL_ALT, ARENA_PORTAL_LOGO } from "./branding";
+export {
+  ARENA_PORTAL_ALT,
+  ARENA_PORTAL_LOGO,
+  IKK_LEAGUE_LOGO,
+  IKK_LEAGUE_LOGO_ALT,
+  IKK_LEAGUE_LOGO_ASSET_VERSION,
+} from "./branding";

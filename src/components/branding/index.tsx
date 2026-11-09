@@ -56,18 +56,19 @@ interface LeagueLogoProps {
 }
 
 export const LeagueLogo = ({ size = "md", className = "" }: LeagueLogoProps) => {
+  /** Kwadrat = dawny biały box; object-cover wypełnia okrąg bez białych rogów. */
   const sizes: Record<LogoSize, string> = {
-    sm: "h-8",
-    md: "h-10",
-    lg: "h-14",
-    xl: "h-20",
-    hero: "h-24 md:h-28",
+    sm: "h-10 w-10",
+    md: "h-12 w-12",
+    lg: "h-16 w-16",
+    xl: "h-24 w-24",
+    hero: "h-40 w-40 md:h-48 md:w-48",
   };
   return (
     <img
       src={LEAGUE_LOGO_SRC}
-      alt="FPL Arena"
-      className={`object-contain w-auto ${sizes[size] || sizes.md} ${className}`}
+      alt="Igrzyska Kapci Kłapcia"
+      className={`shrink-0 rounded-full object-cover ${sizes[size] || sizes.md} ${className}`}
     />
   );
 };

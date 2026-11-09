@@ -19,7 +19,7 @@ export const AppHeader = ({
       <div className="flex flex-col gap-3 lg:gap-4">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div className="flex items-center gap-4 min-w-0">
-            <div className="league-logo-wrap rounded-xl p-2.5 shrink-0">
+            <div className="league-logo-wrap shrink-0">
               <LeagueLogo size="lg" />
             </div>
             <div className="min-w-0">

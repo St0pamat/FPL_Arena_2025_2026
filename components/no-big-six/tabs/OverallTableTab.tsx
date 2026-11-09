@@ -246,18 +246,18 @@ function StandingsCard({
             <img
               src={ARENA_PORTAL_LOGO}
               alt={ARENA_PORTAL_ALT}
-              width={40}
-              height={40}
-              className="h-10 w-10 object-contain"
+              width={64}
+              height={64}
+              className="h-16 w-16 rounded-full object-cover"
             />
-            <div className="hidden h-6 w-px bg-slate-700 sm:block" aria-hidden />
+            <div className="hidden h-10 w-px bg-slate-700 sm:block" aria-hidden />
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={NO_BIG_SIX_LOGO}
               alt={NO_BIG_SIX_LOGO_ALT}
-              width={40}
-              height={40}
-              className="h-10 w-10 object-contain"
+              width={64}
+              height={64}
+              className="h-16 w-16 rounded-full object-cover"
             />
             <p className="text-lg font-black tracking-tight text-white">
               FPL Arena: No Big Six
@@ -289,23 +289,23 @@ function StandingsCard({
       ) : (
         <div className="mb-6 flex flex-col items-start justify-between gap-4 rounded-2xl border border-slate-800/50 bg-slate-900/40 p-5 shadow-sm sm:flex-row sm:items-center">
           <div className="flex items-center gap-5">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-4">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={ARENA_PORTAL_LOGO}
                 alt={ARENA_PORTAL_ALT}
-                width={48}
-                height={48}
-                className="h-12 w-12 object-contain"
+                width={80}
+                height={80}
+                className="h-16 w-16 rounded-full object-cover sm:h-20 sm:w-20"
               />
-              <div className="hidden h-8 w-px bg-slate-700/50 sm:block" aria-hidden />
+              <div className="hidden h-12 w-px bg-slate-700/50 sm:block" aria-hidden />
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={NO_BIG_SIX_LOGO}
                 alt={NO_BIG_SIX_LOGO_ALT}
-                width={48}
-                height={48}
-                className="h-12 w-12 object-contain"
+                width={80}
+                height={80}
+                className="h-16 w-16 rounded-full object-cover sm:h-20 sm:w-20"
               />
             </div>
             <div className="flex flex-col">
