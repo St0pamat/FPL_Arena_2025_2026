@@ -58,7 +58,12 @@ const portalLogos = [
     dest: path.join(imagesDir, "fpl-arena-logo.png"),
   },
   {
-    src: path.join(root, "logo", "Na Minusie.png"),
+    src: path.join(root, "logo", "The FA League.png"),
+    dest: path.join(imagesDir, "the-fa-league-logo.png"),
+  },
+  {
+    // Legacy alias — stare ścieżki / sync; WWW używa the-fa-league-logo.png
+    src: path.join(root, "logo", "The FA League.png"),
     dest: path.join(imagesDir, "na-minusie-logo.png"),
   },
   {

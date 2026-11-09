@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ArrowLeftRight, Search, X } from "lucide-react";
+import { ArrowLeftRight, Check, Search, X } from "lucide-react";
 import type {
   StatsLabBootstrapData,
   StatsLabBootstrapPlayer,
@@ -17,9 +17,15 @@ import {
   getFplPositionLabelEn,
   getFplStatDefinition,
 } from "@/lib/stats-lab/types";
-import type { StatsLabLang, StatsLabScaleMode } from "@/lib/stats-lab/i18n";
+import type {
+  StatsLabLang,
+  StatsLabScaleMode,
+  StreakMetricKey,
+} from "@/lib/stats-lab/i18n";
 import {
   PERIOD_LABELS,
+  STREAK_LABELS,
+  STREAK_METRIC_KEYS,
   categoryLabel,
   statLabel,
   statShort,
@@ -32,6 +38,7 @@ import type {
 import { STATS_LAB_CHART_THEMES } from "@/components/admin/stats-lab/chartTheme";
 import { KnowledgeHelpButton } from "@/components/admin/stats-lab/StatsLabKnowledgeBaseModal";
 import type { KnowledgeHelpAnchor } from "@/lib/stats-lab/knowledgeBaseContent";
+import { getStreakMetricStyle } from "@/lib/stats-lab/themeTokens";
 
 export type PlayerPickMode = "MANUAL" | "AUTO";
 
@@ -60,6 +67,10 @@ type Props = {
   onFilterChange: (next: StatsLabQueryFilter) => void;
   onUiChange: (patch: Partial<StudioUiState>) => void;
   onOpenKnowledge?: (anchor?: KnowledgeHelpAnchor) => void;
+  activeStreakKeys?: StreakMetricKey[];
+  onToggleStreakKey?: (key: StreakMetricKey) => void;
+  onSelectDefaultStreaks?: () => void;
+  onSelectAllStreaks?: () => void;
 };
 
 const CATEGORIES: FplStatCategory[] = [
@@ -111,10 +122,16 @@ export function StatsLabControlPanel({
   onFilterChange,
   onUiChange,
   onOpenKnowledge,
+  activeStreakKeys,
+  onToggleStreakKey,
+  onSelectDefaultStreaks,
+  onSelectAllStreaks,
 }: Props) {
   const [query, setQuery] = useState("");
   const lang = ui.lang;
   const copy = t(lang);
+  const streakLabels = STREAK_LABELS[lang];
+  const isLight = ui.chartTheme === "ANALYST_LIGHT";
 
   const clubName = useMemo(() => {
     const m = new Map<number, string>();
@@ -299,6 +316,72 @@ export function StatsLabControlPanel({
             />
           ) : null}
         </div>
+
+        {ui.vizMode === "STREAKS_EXPLORER" &&
+        onToggleStreakKey &&
+        activeStreakKeys ? (
+          <div className="space-y-2">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              {lang === "pl"
+                ? "Widoczne serie na wykresie (Zaznacz / Odznacz)"
+                : "Visible streaks on chart (Toggle)"}
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {onSelectDefaultStreaks ? (
+                <button
+                  type="button"
+                  onClick={onSelectDefaultStreaks}
+                  className="rounded-lg border border-slate-700 px-2 py-1 text-[10px] font-bold text-slate-300 hover:border-slate-500"
+                >
+                  {lang === "pl"
+                    ? "Domyślne dla pozycji"
+                    : "Position defaults"}
+                </button>
+              ) : null}
+              {onSelectAllStreaks ? (
+                <button
+                  type="button"
+                  onClick={onSelectAllStreaks}
+                  className="rounded-lg border border-slate-700 px-2 py-1 text-[10px] font-bold text-slate-300 hover:border-slate-500"
+                >
+                  {lang === "pl" ? "Zaznacz wszystkie" : "Select all"}
+                </button>
+              ) : null}
+            </div>
+            <div className="flex flex-wrap gap-1">
+              {STREAK_METRIC_KEYS.filter((key) => key !== "max60MinStreak").map(
+                (key) => {
+                  const on = activeStreakKeys.includes(key);
+                  const style = getStreakMetricStyle(key, isLight);
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      title={streakLabels[key]}
+                      onClick={() => onToggleStreakKey(key)}
+                      className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-semibold transition ${
+                        on ? "" : "opacity-45 hover:opacity-80"
+                      }`}
+                      style={{
+                        border: `1px solid ${on ? style.accent : "#334155"}`,
+                        background: on ? `${style.accent}22` : "transparent",
+                        color: on ? "#e2e8f0" : "#64748b",
+                      }}
+                    >
+                      {on ? (
+                        <Check
+                          className="h-3 w-3"
+                          style={{ color: style.accent }}
+                        />
+                      ) : null}
+                      {streakLabels[key]}
+                    </button>
+                  );
+                },
+              )}
+            </div>
+          </div>
+        ) : null}
 
         {multiMetric && ui.vizMode !== "POINTS_BREAKDOWN" && ui.vizMode !== "STREAKS_EXPLORER" ? (
           <div className="space-y-3">

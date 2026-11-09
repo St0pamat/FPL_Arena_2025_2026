@@ -41,7 +41,12 @@ import type {
   StatsLabScaleMode,
   StreakMetricKey,
 } from "@/lib/stats-lab/i18n";
-import { VIZ_MODE_LABELS, t } from "@/lib/stats-lab/i18n";
+import {
+  STREAK_METRIC_KEYS,
+  VIZ_MODE_LABELS,
+  defaultStreakKeysForPositions,
+  t,
+} from "@/lib/stats-lab/i18n";
 import {
   STATS_LAB_CHART_THEMES,
   type StatsLabChartThemeId,
@@ -147,15 +152,9 @@ export function StatsLabStudioClient({
     useState<PointsSortKey>("estimatedTotal");
   const [streakSortKey, setStreakSortKey] =
     useState<StreakMetricKey>("returnConsistencyPct");
-  const [activeStreakKeys, setActiveStreakKeys] = useState<StreakMetricKey[]>([
-    "returnConsistencyPct",
-    "maxReturnStreak",
-    "currentReturnStreak",
-    "maxGoalStreak",
-    "maxAssistStreak",
-    "maxCleanSheetStreak",
-    "maxDcPointsStreak",
-  ]);
+  const [activeStreakKeys, setActiveStreakKeys] = useState<StreakMetricKey[]>(
+    () => defaultStreakKeysForPositions(seededFilter.positions),
+  );
   const [knowledgeOpen, setKnowledgeOpen] = useState(false);
   const [knowledgeAnchor, setKnowledgeAnchor] =
     useState<KnowledgeHelpAnchor | null>(null);
@@ -179,6 +178,9 @@ export function StatsLabStudioClient({
             ...nextFilter,
             selectedPlayerIds:
               ui.pickMode === "MANUAL" ? nextFilter.selectedPlayerIds : [],
+            // STREAKS: sortuj całą pulę po serii przed Top N
+            streakSortKey:
+              ui.vizMode === "STREAKS_EXPLORER" ? streakSortKey : undefined,
           };
           const data = await queryStatsLabComparisonAction(payload);
           setResult(data);
@@ -189,14 +191,14 @@ export function StatsLabStudioClient({
         }
       });
     },
-    [ui.pickMode],
+    [ui.pickMode, ui.vizMode, streakSortKey],
   );
 
   useEffect(() => {
     if (emptyDb) return;
     const tmr = window.setTimeout(() => runQuery(filter), 280);
     return () => window.clearTimeout(tmr);
-  }, [filter, emptyDb, runQuery]);
+  }, [filter, emptyDb, runQuery, ui.vizMode, streakSortKey]);
 
   // Deep-link z Stats Centre: ustaw Watchlistę jako wybór ręczny
   useEffect(() => {
@@ -220,7 +222,12 @@ export function StatsLabStudioClient({
 
   function onFilterChange(next: StatsLabQueryFilter) {
     setActivePreset(null);
+    const prevPos = filter.positions.join(",");
+    const nextPos = next.positions.join(",");
     setFilter(next);
+    if (prevPos !== nextPos) {
+      setActiveStreakKeys(defaultStreakKeysForPositions(next.positions));
+    }
   }
 
   useEffect(() => {
@@ -249,6 +256,7 @@ export function StatsLabStudioClient({
     setActivePreset(id);
     setUi((prev) => ({ ...prev, pickMode: "AUTO" }));
     setFilter({ ...next, selectedPlayerIds: [] });
+    setActiveStreakKeys(defaultStreakKeysForPositions(next.positions));
   }
 
   function resetFilters() {
@@ -292,6 +300,16 @@ export function StatsLabStudioClient({
       }
       return [...prev, key];
     });
+  }
+
+  function selectDefaultStreaks() {
+    setActiveStreakKeys(defaultStreakKeysForPositions(filter.positions));
+  }
+
+  function selectAllStreaks() {
+    setActiveStreakKeys(
+      STREAK_METRIC_KEYS.filter((k) => k !== "max60MinStreak"),
+    );
   }
 
   if (emptyDb) {
@@ -539,6 +557,10 @@ export function StatsLabStudioClient({
               onFilterChange={onFilterChange}
               onUiChange={onUiChange}
               onOpenKnowledge={openKnowledge}
+              activeStreakKeys={activeStreakKeys}
+              onToggleStreakKey={toggleStreakKey}
+              onSelectDefaultStreaks={selectDefaultStreaks}
+              onSelectAllStreaks={selectAllStreaks}
             />
           </div>
         ) : null}
@@ -583,6 +605,8 @@ export function StatsLabStudioClient({
               onPointsSort={togglePointsSort}
               onStreakSort={toggleStreakSort}
               onToggleStreakKey={toggleStreakKey}
+              onSelectDefaultStreaks={selectDefaultStreaks}
+              onSelectAllStreaks={selectAllStreaks}
               onShowNegativesChange={(v) =>
                 onUiChange({ showNegativeBreakdown: v })
               }

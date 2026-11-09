@@ -63,6 +63,8 @@ type Props = {
   onPointsSort: (key: PointsSortKey) => void;
   onStreakSort: (key: StreakMetricKey) => void;
   onToggleStreakKey: (key: StreakMetricKey) => void;
+  onSelectDefaultStreaks?: () => void;
+  onSelectAllStreaks?: () => void;
   onShowNegativesChange: (v: boolean) => void;
   onSelectPlayer: (id: number) => void;
   /** studio = interaktywny podgląd; export = branding social / bez kontrolek UI */
@@ -264,8 +266,8 @@ function pointsNetFooterExplain(lang: StatsLabLang): string {
 
 function streaksReturnFooterExplain(lang: StatsLabLang): string {
   return lang === "pl"
-    ? "Zwrot FPL (Return) = mecz z realnym dorobkiem punktowym ponad sam czas gry: Gol, Asysta, Czyste Konto (GK/DEF/MID), +2 pkt za próg DC (DEF ≥10, MID/FWD ≥12), pkt za obrony GK lub Bonus (BPS). Kropki oznaczają kolejne mecze gracza (kolorowa = zwrot/trafienie, szara = brak)."
-    : "FPL Return = match with attacking/defensive points beyond appearance: Goal, Assist, Clean Sheet (GK/DEF/MID), +2 pts DC threshold (DEF ≥10, MID/FWD ≥12), GK save pts, or Bonus (BPS). Dots represent consecutive matches played (colored = hit, grey = miss).";
+    ? "Zwrot FPL (Return) = Gol, Asysta, Czyste Konto (tylko GK/DEF +4 pkt), +2 pkt za próg DC (DEF ≥10, MID/FWD ≥12), 3+ obrony GK lub Bonus (BPS). Punkty za sam występ (1+ min / 60+ min) oraz +1 pkt CS pomocnika nie są liczone jako zwrot."
+    : "FPL Return = Goal, Assist, Clean Sheet (GK/DEF +4 pts only), +2 pts DC threshold (DEF ≥10, MID/FWD ≥12), GK 3+ saves, or Bonus (BPS). Appearance points (1+ / 60+ mins) and MID +1 pt CS are excluded from returns.";
 }
 
 export function StatsLabChartCanvas({
@@ -295,6 +297,8 @@ export function StatsLabChartCanvas({
   onPointsSort,
   onStreakSort,
   onToggleStreakKey,
+  onSelectDefaultStreaks,
+  onSelectAllStreaks,
   onShowNegativesChange,
   onSelectPlayer,
   variant = "studio",
@@ -455,6 +459,8 @@ export function StatsLabChartCanvas({
             showMeta={showPlayerMeta}
             activeStreakKeys={activeStreakKeys}
             onToggleStreakKey={onToggleStreakKey}
+            onSelectDefaultStreaks={onSelectDefaultStreaks}
+            onSelectAllStreaks={onSelectAllStreaks}
             sortKey={streakSortKey}
             sortDir={chartSortDir}
             onSort={onStreakSort}

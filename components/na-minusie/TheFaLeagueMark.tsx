@@ -1,11 +1,11 @@
 import {
+  THE_FA_LEAGUE_LOGO,
   THE_FA_LEAGUE_MARK_ALT,
-  THE_FA_LEAGUE_MARK_LABEL,
 } from "@/lib/na-minusie/branding";
 
 /**
- * Tymczasowy placeholder marki The FA League (żółty okrąg + napis),
- * taki sam jak na eksportach PNG — do czasu docelowego logo.
+ * Oficjalne logo The FA League — te same wymiary / okrągły crop
+ * co dawny żółty placeholder (WWW + eksporty PNG).
  */
 type MarkSize = "nav" | "sm" | "md" | "lg" | "hero" | "fill";
 
@@ -18,35 +18,24 @@ const SIZE_BOX: Record<MarkSize, string> = {
   fill: "h-full w-full",
 };
 
-const SIZE_TEXT: Record<MarkSize, string> = {
-  nav: "px-0.5 text-center text-[5px] font-black uppercase leading-[1.05] tracking-[0.02em] text-slate-950 sm:text-[6px]",
-  sm: "px-1.5 text-center text-[9px] font-black uppercase leading-[1.05] tracking-[0.04em] text-slate-950",
-  md: "px-2 text-center text-[0.85rem] font-black uppercase leading-[1.05] tracking-[0.05em] text-slate-950 sm:text-[1.05rem]",
-  lg: "px-3 text-center text-[1.05rem] font-black uppercase leading-[1.05] tracking-[0.05em] text-slate-950 sm:text-[1.25rem]",
-  hero: "px-3 text-center text-[1.05rem] font-black uppercase leading-[1.05] tracking-[0.05em] text-slate-950 sm:px-4 sm:text-[1.35rem] lg:text-[1.55rem]",
-  fill: "px-2 text-center text-[0.7rem] font-black uppercase leading-[1.05] tracking-[0.04em] text-slate-950 sm:text-[0.95rem]",
-};
-
 type Props = {
   size?: MarkSize;
   className?: string;
-  textClassName?: string;
 };
 
-export function TheFaLeagueMark({
-  size = "md",
-  className = "",
-  textClassName,
-}: Props) {
+export function TheFaLeagueMark({ size = "md", className = "" }: Props) {
   return (
     <div
-      className={`flex aspect-square shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#F5C542] ring-1 ring-white/10 ${SIZE_BOX[size]} ${className}`}
-      role="img"
-      aria-label={THE_FA_LEAGUE_MARK_ALT}
+      className={`aspect-square shrink-0 overflow-hidden rounded-full bg-black ring-1 ring-white/10 ${SIZE_BOX[size]} ${className}`}
     >
-      <span className={textClassName ?? SIZE_TEXT[size]}>
-        {THE_FA_LEAGUE_MARK_LABEL}
-      </span>
+      {/* eslint-disable-next-line @next/next/no-img-element -- html-to-image / eksporty PNG */}
+      <img
+        src={THE_FA_LEAGUE_LOGO}
+        alt={THE_FA_LEAGUE_MARK_ALT}
+        className="box-border h-full max-h-full w-full max-w-full object-cover object-center"
+        crossOrigin="anonymous"
+        decoding="async"
+      />
     </div>
   );
 }

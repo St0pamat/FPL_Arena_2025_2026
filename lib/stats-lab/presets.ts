@@ -3,6 +3,7 @@
  */
 
 import type { FplPositionType, FplStatKey } from "@/lib/stats-lab/types";
+import type { StreakMetricKey } from "@/lib/stats-lab/i18n";
 import { DEFAULT_STATS_LAB_SEASON } from "@/lib/stats-lab/syncEngine";
 
 /* ─────────────────────────────────────────────────
@@ -53,6 +54,13 @@ export type StatsLabQueryFilter = {
   sortDirection: StatsLabSortDirection;
   /** 2–8 metryk do radar / stacked / tabeli. */
   activeMetrics: FplStatKey[];
+  /**
+   * Gdy ustawione (widok STREAKS_EXPLORER): TOP N sortuje całą pulę
+   * po tej serii + tie-breakerach, dopiero potem `.slice(0, limitPlayers)`.
+   */
+  streakSortKey?: StreakMetricKey;
+  /** Opcjonalne kryterium sortowania Dekompozycji (przyszłe użycie). */
+  breakdownSortKey?: string;
 };
 
 export type StatsLabPresetId =
@@ -215,6 +223,8 @@ export function createDefaultStatsLabFilter(
       "bps",
       "goals_assists",
     ],
+    streakSortKey: undefined,
+    breakdownSortKey: undefined,
   };
 }
 

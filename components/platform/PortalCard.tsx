@@ -9,7 +9,7 @@ interface PortalCardProps {
   href: string;
   logoSrc?: string;
   logoAlt?: string;
-  /** Zamiast logoSrc — np. TheFaLeagueMark (placeholder do czasu nowego logo). */
+  /** Zamiast logoSrc — np. TheFaLeagueMark. */
   logoSlot?: ReactNode;
   variant: PortalVariant;
   ctaLabel: string;

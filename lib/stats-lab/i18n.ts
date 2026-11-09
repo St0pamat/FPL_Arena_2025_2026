@@ -234,6 +234,7 @@ export const STREAK_SORT_KEYS = [
   "returnConsistencyPct",
   "maxReturnStreak",
   "currentReturnStreak",
+  "maxGoalOrAssistStreak",
   "maxGoalStreak",
   "maxAssistStreak",
   "maxCleanSheetStreak",
@@ -284,6 +285,7 @@ export const STREAK_SORT_SHORT_LABELS: Record<
     returnConsistencyPct: "Regularność %",
     maxReturnStreak: "Max zwroty",
     currentReturnStreak: "Aktualne zwroty",
+    maxGoalOrAssistStreak: "G/A",
     maxGoalStreak: "Gole",
     maxAssistStreak: "Asysty",
     maxCleanSheetStreak: "CS",
@@ -295,6 +297,7 @@ export const STREAK_SORT_SHORT_LABELS: Record<
     returnConsistencyPct: "Consistency %",
     maxReturnStreak: "Max return",
     currentReturnStreak: "Current return",
+    maxGoalOrAssistStreak: "G/A",
     maxGoalStreak: "Goals",
     maxAssistStreak: "Assists",
     maxCleanSheetStreak: "CS",
@@ -305,54 +308,155 @@ export const STREAK_SORT_SHORT_LABELS: Record<
 };
 
 /**
- * Hierarchia mniejszych kafelków (pod banerem Regularności) wg wagi punktowej FPL.
- * `returnConsistencyPct` jest zawsze osobnym banerem u góry — tu go nie ma.
+ * Ścisła hierarchia wizualna małych kafelków (poza banerem Regularności).
+ * Niezależna od kolejności kliknięć użytkownika.
  */
-export const STREAK_SECONDARY_BY_POOL: Record<
-  "GKP" | "DEF" | "MID" | "FWD" | "MIXED",
+export const STREAK_HIERARCHY_ORDER: readonly StreakMetricKey[] = [
+  "maxReturnStreak",
+  "currentReturnStreak",
+  "maxGoalOrAssistStreak",
+  "maxGoalStreak",
+  "maxAssistStreak",
+  "maxCleanSheetStreak",
+  "maxDcPointsStreak",
+  "maxSavesPointStreak",
+  "maxBonusStreak",
+  // max60MinStreak — czas gry jest w Kartotece Piłkarza, nie w kafelkach zwrotów
+] as const;
+
+/**
+ * Inteligentny zestaw startowy:
+ * baner Regularności + Max/Current zwroty + 4 kafelki składowe (bez 60+ min).
+ */
+export const DEFAULT_STREAK_KEYS_BY_POSITION: Record<
+  "GKP" | "DEF" | "MID" | "FWD" | "ALL",
   StreakMetricKey[]
 > = {
   GKP: [
+    "returnConsistencyPct",
     "maxReturnStreak",
     "currentReturnStreak",
     "maxCleanSheetStreak",
     "maxSavesPointStreak",
     "maxBonusStreak",
-    "max60MinStreak",
   ],
   DEF: [
+    "returnConsistencyPct",
     "maxReturnStreak",
     "currentReturnStreak",
-    "maxGoalStreak",
-    "maxAssistStreak",
     "maxCleanSheetStreak",
     "maxDcPointsStreak",
+    "maxGoalOrAssistStreak",
+    "maxBonusStreak",
   ],
   MID: [
+    "returnConsistencyPct",
     "maxReturnStreak",
     "currentReturnStreak",
+    "maxGoalOrAssistStreak",
     "maxGoalStreak",
     "maxAssistStreak",
-    "maxCleanSheetStreak",
     "maxDcPointsStreak",
   ],
   FWD: [
+    "returnConsistencyPct",
     "maxReturnStreak",
     "currentReturnStreak",
+    "maxGoalOrAssistStreak",
     "maxGoalStreak",
     "maxAssistStreak",
     "maxBonusStreak",
-    "maxDcPointsStreak",
   ],
-  MIXED: [
+  ALL: [
+    "returnConsistencyPct",
     "maxReturnStreak",
     "currentReturnStreak",
+    "maxGoalOrAssistStreak",
     "maxGoalStreak",
     "maxAssistStreak",
     "maxCleanSheetStreak",
-    "maxDcPointsStreak",
   ],
 };
+
+/** @deprecated alias — używaj DEFAULT_STREAK_KEYS_BY_POSITION */
+export const STREAK_SECONDARY_BY_POOL = {
+  GKP: DEFAULT_STREAK_KEYS_BY_POSITION.GKP.filter(
+    (k) => k !== "returnConsistencyPct",
+  ),
+  DEF: DEFAULT_STREAK_KEYS_BY_POSITION.DEF.filter(
+    (k) => k !== "returnConsistencyPct",
+  ),
+  MID: DEFAULT_STREAK_KEYS_BY_POSITION.MID.filter(
+    (k) => k !== "returnConsistencyPct",
+  ),
+  FWD: DEFAULT_STREAK_KEYS_BY_POSITION.FWD.filter(
+    (k) => k !== "returnConsistencyPct",
+  ),
+  MIXED: DEFAULT_STREAK_KEYS_BY_POSITION.ALL.filter(
+    (k) => k !== "returnConsistencyPct",
+  ),
+} as const;
+
+export function defaultStreakKeysForPositions(
+  positions: Array<1 | 2 | 3 | 4>,
+): StreakMetricKey[] {
+  if (positions.length === 1) {
+    if (positions[0] === 1) return [...DEFAULT_STREAK_KEYS_BY_POSITION.GKP];
+    if (positions[0] === 2) return [...DEFAULT_STREAK_KEYS_BY_POSITION.DEF];
+    if (positions[0] === 3) return [...DEFAULT_STREAK_KEYS_BY_POSITION.MID];
+    if (positions[0] === 4) return [...DEFAULT_STREAK_KEYS_BY_POSITION.FWD];
+  }
+  return [...DEFAULT_STREAK_KEYS_BY_POSITION.ALL];
+}
+
+/** Sortuje zaznaczone małe kafelki wg STREAK_HIERARCHY_ORDER. */
+export function orderStreakKeysByHierarchy(
+  keys: StreakMetricKey[],
+): StreakMetricKey[] {
+  const rank = new Map(STREAK_HIERARCHY_ORDER.map((k, i) => [k, i]));
+  return [...keys]
+    .filter((k) => k !== "returnConsistencyPct" && k !== "max60MinStreak")
+    .sort((a, b) => (rank.get(a) ?? 99) - (rank.get(b) ?? 99));
+}
+
+export type StreakPoolKind = "GKP" | "DEF" | "MID" | "FWD" | "MIXED";
+
+/** Twarda blokada kafelków niezgodnych z pozycją na wykresie. */
+export function filterValidStreakKeysForPosition(
+  keys: StreakMetricKey[],
+  pool: StreakPoolKind,
+): StreakMetricKey[] {
+  return keys.filter((key) => {
+    if (key === "max60MinStreak") return false; // Kartoteka Piłkarza
+    if (pool === "GKP") {
+      return !(
+        key === "maxDcPointsStreak" ||
+        key === "maxGoalStreak" ||
+        key === "maxAssistStreak" ||
+        key === "maxGoalOrAssistStreak"
+      );
+    }
+    if (pool === "DEF" || pool === "MID" || pool === "FWD") {
+      if (key === "maxSavesPointStreak") return false;
+    }
+    if (pool === "FWD" && key === "maxCleanSheetStreak") return false;
+    if (pool === "MIXED" && key === "maxSavesPointStreak") return false;
+    return true;
+  });
+}
+
+export function detectStreakPoolKind(
+  elementTypes: Array<1 | 2 | 3 | 4>,
+): StreakPoolKind {
+  const types = new Set(elementTypes);
+  if (types.size !== 1) return "MIXED";
+  const only = [...types][0];
+  if (only === 1) return "GKP";
+  if (only === 2) return "DEF";
+  if (only === 3) return "MID";
+  if (only === 4) return "FWD";
+  return "MIXED";
+}
 
 export const POINTS_POS_LABELS: Record<
   StatsLabLang,

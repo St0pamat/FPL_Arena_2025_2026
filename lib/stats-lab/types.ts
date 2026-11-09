@@ -954,6 +954,15 @@ export type PlayerStreakRecentFlags = {
   bonusHit: boolean[];
 };
 
+/** Status czasu gry w pojedynczej kolejce okresu. */
+export type PlayingTimeStatus = "SIXTY_PLUS" | "SUB_UNDER_60" | "DNP_0";
+
+export type PlayingTimeGwEntry = {
+  gw: number;
+  status: PlayingTimeStatus;
+  minutes: number;
+};
+
 export type PlayerStreaks = {
   maxReturnStreak: number;
   currentReturnStreak: number;
@@ -977,9 +986,19 @@ export type PlayerStreaks = {
   currentBonusStreak: number;
   /**
    * % meczów z `minutes > 0`, w których zaliczono Zwrot FPL
-   * (ta sama definicja co serie zwrotów) — 0–100, `Math.round`.
+   * (bez punktów za występ / 60+ min; CS tylko GK/DEF) — 0–100, `Math.round`.
    */
   returnConsistencyPct: number;
+  /** Liczba kolejek w badanym okresie (np. 9 dla GW 1–9). */
+  totalPeriodGws: number;
+  /** Mecze z minutes >= 1. */
+  appearancesCount: number;
+  /** Mecze z minutes >= 60. */
+  sixtyPlusCount: number;
+  /** Mecze z hasReturn === true. */
+  returnsCount: number;
+  /** Oś czasu obecności (do 12 ostatnich GW okresu). */
+  playingTimeTimeline: PlayingTimeGwEntry[];
   /**
    * Ostatnie do 10 meczów — rzeczywista chronologia (ASC), nie „pierwsze N od lewej”.
    * `timelineDots` === `returnTimelineDots` (alias wstecznej kompatybilności).

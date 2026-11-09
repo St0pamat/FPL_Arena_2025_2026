@@ -15,6 +15,7 @@ import type {
   FplStatDefinition,
   FplStatKey,
   PlayerStreaks,
+  PlayingTimeGwEntry,
 } from "@/lib/stats-lab/types";
 import {
   FPL_DC_BONUS_POINTS,
@@ -29,6 +30,7 @@ import type {
   StatsLabSortDirection,
 } from "@/lib/stats-lab/presets";
 import { hasActivePositionFilter } from "@/lib/stats-lab/presets";
+import type { StreakMetricKey } from "@/lib/stats-lab/i18n";
 
 /** Metryki sumowane bezpośrednio z historii GW. */
 const HISTORY_SUM_KEYS: readonly FplStatKey[] = [
@@ -246,7 +248,7 @@ function emptyRecentFlags(): PlayerStreaks["recentFlags"] {
   };
 }
 
-function emptyStreaks(): PlayerStreaks {
+function emptyStreaks(totalPeriodGws = 0): PlayerStreaks {
   return {
     maxReturnStreak: 0,
     currentReturnStreak: 0,
@@ -267,6 +269,11 @@ function emptyStreaks(): PlayerStreaks {
     maxBonusStreak: 0,
     currentBonusStreak: 0,
     returnConsistencyPct: 0,
+    totalPeriodGws,
+    appearancesCount: 0,
+    sixtyPlusCount: 0,
+    returnsCount: 0,
+    playingTimeTimeline: [],
     timelineDots: [],
     returnTimelineDots: [],
     goalTimelineDots: [],
@@ -552,7 +559,7 @@ function forceBreakdownBalance(
 /**
  * Próg DC (+2) wyłącznie z komponentów TEGO meczu (`row`):
  * DEF → CBI+TKL ≥ 10; MID/FWD → CBI+TKL+REC ≥ 12.
- * NIGDY nie używa sezonowych agregatów ani `defensive_contributions_total > 0`.
+ * Bramkarze NIGDY nie dostają DC. Zakaz `defensive_contribution > 0`.
  */
 export function matchDcThresholdHitInRow(
   elementType: FplPositionType,
@@ -561,6 +568,7 @@ export function matchDcThresholdHitInRow(
     "clearances_blocks_interceptions" | "tackles" | "recoveries"
   >,
 ): boolean {
+  if (elementType === 1) return false;
   const rowCbi = Number(row.clearances_blocks_interceptions) || 0;
   const rowTackles = Number(row.tackles) || 0;
   const rowRecoveries = Number(row.recoveries) || 0;
@@ -571,9 +579,8 @@ export function matchDcThresholdHitInRow(
 }
 
 /**
- * Zwrot FPL (`FPL Return`) — realny dorobek ponad sam czas gry.
- * Liczony WYŁĄCZNIE z pól pojedynczego `row` (nigdy z agregatów sezonowych).
- * NIGDY nie używa `scoreMatchPoints` (fałszywe `diff === 2` ≠ zwrot).
+ * Zwrot FPL (`FPL Return`) — ZERO punktów za minuty / 60+.
+ * CS jako zwrot TYLKO dla GK/DEF (+4 pkt). MID +1 CS = blank, nie zwrot.
  */
 export function isFplReturnInMatch(
   elementType: FplPositionType,
@@ -582,28 +589,25 @@ export function isFplReturnInMatch(
   const mins = Number(row.minutes ?? 0);
   if (mins <= 0) return false;
 
-  const matchGoals = Number(row.goals_scored) || 0;
-  const matchAssists = Number(row.assists) || 0;
-  const matchCS =
+  const goalHit = (Number(row.goals_scored) || 0) > 0;
+  const assistHit = (Number(row.assists) || 0) > 0;
+  const csReturnHit =
+    (elementType === 1 || elementType === 2) &&
     Number(row.clean_sheets) > 0 &&
-    mins >= 60 &&
-    (elementType === 1 || elementType === 2 || elementType === 3)
-      ? 1
-      : 0;
-  const matchSavePts =
-    elementType === 1 ? Math.floor((Number(row.saves) || 0) / 3) : 0;
-  const matchPenSave = Number(row.penalties_saved) || 0;
-  const matchBonus = Number(row.bonus) || 0;
-  const matchDcHit = matchDcThresholdHitInRow(elementType, row);
+    mins >= 60;
+  const dcBonusHit = matchDcThresholdHitInRow(elementType, row);
+  const gkSaveHit = elementType === 1 && (Number(row.saves) || 0) >= 3;
+  const penSaveHit = (Number(row.penalties_saved) || 0) > 0;
+  const bonusHit = (Number(row.bonus) || 0) > 0;
 
   return (
-    matchGoals > 0 ||
-    matchAssists > 0 ||
-    matchCS > 0 ||
-    matchDcHit ||
-    matchSavePts > 0 ||
-    matchPenSave > 0 ||
-    matchBonus > 0
+    goalHit ||
+    assistHit ||
+    csReturnHit ||
+    dcBonusHit ||
+    gkSaveHit ||
+    penSaveHit ||
+    bonusHit
   );
 }
 
@@ -816,18 +820,58 @@ export function estimatePointsBreakdownFromSnapshot(
 
 const STREAK_RECENT_WINDOW = 10;
 
+const PLAYING_TIME_WINDOW = 12;
+
 /**
- * Serie / passy — tylko mecze z `minutes > 0`, chronologicznie ASC.
- * `returnConsistencyPct` i serie zwrotów dzielą tę samą definicję `isFplReturnInMatch`.
+ * Serie / passy — mecze z `minutes > 0`, chronologicznie ASC.
+ * Zwroty = `isFplReturnInMatch` (bez pkt za minuty; CS tylko GK/DEF).
  */
 export function computePlayerStreaks(
   elementType: FplPositionType,
   historyRows: FplLabPlayerGwHistory[],
+  gwRange?: StatsLabGwRange,
 ): PlayerStreaks {
-  const played = sortHistoryChronologically(historyRows).filter(
-    (row) => Number(row.minutes ?? 0) > 0,
-  );
-  if (!played.length) return emptyStreaks();
+  const sortedAll = sortHistoryChronologically(historyRows);
+  const played = sortedAll.filter((row) => Number(row.minutes ?? 0) > 0);
+
+  const [gwFrom, gwTo] = gwRange ?? [0, 0];
+  const totalPeriodGws =
+    gwFrom > 0 && gwTo >= gwFrom ? gwTo - gwFrom + 1 : 0;
+
+  // Minuty per GW (suma przy double GW)
+  const minsByGw = new Map<number, number>();
+  for (const row of sortedAll) {
+    const gw = Number(row.gameweek);
+    const mins = Number(row.minutes ?? 0);
+    minsByGw.set(gw, (minsByGw.get(gw) ?? 0) + mins);
+  }
+
+  const playingTimeTimeline: PlayingTimeGwEntry[] = [];
+  if (totalPeriodGws > 0) {
+    const startGw = Math.max(gwFrom, gwTo - PLAYING_TIME_WINDOW + 1);
+    for (let gw = startGw; gw <= gwTo; gw += 1) {
+      const minutes = minsByGw.get(gw) ?? 0;
+      const status =
+        minutes >= 60
+          ? "SIXTY_PLUS"
+          : minutes >= 1
+            ? "SUB_UNDER_60"
+            : "DNP_0";
+      playingTimeTimeline.push({ gw, status, minutes });
+    }
+  }
+
+  const appearancesCount = played.length;
+  const sixtyPlusCount = played.filter(
+    (r) => Number(r.minutes) >= 60,
+  ).length;
+
+  if (!played.length) {
+    return {
+      ...emptyStreaks(totalPeriodGws),
+      playingTimeTimeline,
+    };
+  }
 
   let maxReturn = 0;
   let curReturn = 0;
@@ -848,59 +892,61 @@ export function computePlayerStreaks(
   let maxBonus = 0;
   let curBonus = 0;
 
-  let matchesWithReturn = 0;
+  let returnsCount = 0;
   const recentFlags = emptyRecentFlags();
 
   for (const row of played) {
+    const mins = Number(row.minutes ?? 0);
+    const goalHit = (Number(row.goals_scored) || 0) > 0;
+    const assistHit = (Number(row.assists) || 0) > 0;
+    const gaHit = goalHit || assistHit;
+    // Kafelek CS: GK/DEF/MID (fakt CS), ale hasReturn używa tylko GK/DEF
+    const csHit =
+      Number(row.clean_sheets) > 0 &&
+      mins >= 60 &&
+      (elementType === 1 || elementType === 2 || elementType === 3);
+    const dcBonusHit = matchDcThresholdHitInRow(elementType, row);
+    const m60 = mins >= 60;
+    const gkSaveHit = elementType === 1 && (Number(row.saves) || 0) >= 3;
+    const bonusHit = (Number(row.bonus) || 0) > 0;
     const ret = isFplReturnInMatch(elementType, row);
+
     curReturn = ret ? curReturn + 1 : 0;
     maxReturn = Math.max(maxReturn, curReturn);
-    if (ret) matchesWithReturn += 1;
+    if (ret) returnsCount += 1;
 
-    const goal = Number(row.goals_scored) > 0;
-    curGoal = goal ? curGoal + 1 : 0;
+    curGoal = goalHit ? curGoal + 1 : 0;
     maxGoal = Math.max(maxGoal, curGoal);
 
-    const assist = Number(row.assists) > 0;
-    curAssist = assist ? curAssist + 1 : 0;
+    curAssist = assistHit ? curAssist + 1 : 0;
     maxAssist = Math.max(maxAssist, curAssist);
 
-    const ga = goal || assist;
-    curGA = ga ? curGA + 1 : 0;
+    curGA = gaHit ? curGA + 1 : 0;
     maxGA = Math.max(maxGA, curGA);
 
-    const cs =
-      Number(row.clean_sheets) > 0 &&
-      Number(row.minutes) >= 60 &&
-      (elementType === 1 || elementType === 2 || elementType === 3);
-    curCs = cs ? curCs + 1 : 0;
+    curCs = csHit ? curCs + 1 : 0;
     maxCs = Math.max(maxCs, curCs);
 
-    const dc = matchDcThresholdHitInRow(elementType, row);
-    curDc = dc ? curDc + 1 : 0;
+    curDc = dcBonusHit ? curDc + 1 : 0;
     maxDc = Math.max(maxDc, curDc);
 
-    const m60 = Number(row.minutes) >= 60;
     cur60 = m60 ? cur60 + 1 : 0;
     max60 = Math.max(max60, cur60);
 
-    const savesPt =
-      elementType === 1 && Math.floor((Number(row.saves) || 0) / 3) > 0;
-    curSaves = savesPt ? curSaves + 1 : 0;
+    curSaves = gkSaveHit ? curSaves + 1 : 0;
     maxSaves = Math.max(maxSaves, curSaves);
 
-    const bonusHit = (Number(row.bonus) || 0) >= 1;
     curBonus = bonusHit ? curBonus + 1 : 0;
     maxBonus = Math.max(maxBonus, curBonus);
 
     recentFlags.returnHit.push(ret);
-    recentFlags.goalHit.push(goal);
-    recentFlags.assistHit.push(assist);
-    recentFlags.goalOrAssistHit.push(ga);
-    recentFlags.cleanSheetHit.push(cs);
-    recentFlags.dcHit.push(dc);
+    recentFlags.goalHit.push(goalHit);
+    recentFlags.assistHit.push(assistHit);
+    recentFlags.goalOrAssistHit.push(gaHit);
+    recentFlags.cleanSheetHit.push(csHit);
+    recentFlags.dcHit.push(dcBonusHit);
     recentFlags.sixtyMinHit.push(m60);
-    recentFlags.savesHit.push(savesPt);
+    recentFlags.savesHit.push(gkSaveHit);
     recentFlags.bonusHit.push(bonusHit);
   }
 
@@ -934,9 +980,12 @@ export function computePlayerStreaks(
     currentSavesPointStreak: curSaves,
     maxBonusStreak: maxBonus,
     currentBonusStreak: curBonus,
-    returnConsistencyPct: Math.round(
-      (matchesWithReturn / played.length) * 100,
-    ),
+    returnConsistencyPct: Math.round((returnsCount / played.length) * 100),
+    totalPeriodGws,
+    appearancesCount,
+    sixtyPlusCount,
+    returnsCount,
+    playingTimeTimeline,
     timelineDots: returnTimelineDots,
     returnTimelineDots,
     goalTimelineDots,
@@ -959,6 +1008,13 @@ export function computePlayerStreaks(
       bonusHit: bonusTimelineDots,
     },
   };
+}
+
+/** Min. liczba występów do TOP N w widoku pass (rezerwowi 3/3 nie fałszują podium). */
+export function minAppearancesForStreakTopN(totalPeriodGws: number): number {
+  if (totalPeriodGws <= 0) return 1;
+  if (totalPeriodGws < 4) return Math.min(3, totalPeriodGws);
+  return Math.max(4, Math.ceil(totalPeriodGws * 0.65));
 }
 
 function applyComputedRawValues(
@@ -1365,6 +1421,74 @@ function sortPlayers(
 }
 
 /**
+ * Sortowanie po serii + kaskada tie-breaker:
+ * 1) streakSortKey → 2) returnConsistencyPct → 3) returnsCount
+ * → 4) maxReturnStreak → 5) currentReturnStreak → 6) total_points
+ */
+export function comparePlayersByStreak(
+  a: Pick<AnalyzedPlayerStats, "streaks" | "rawValues">,
+  b: Pick<AnalyzedPlayerStats, "streaks" | "rawValues">,
+  streakSortKey: StreakMetricKey,
+  direction: StatsLabSortDirection = "DESC",
+): number {
+  const mul = direction === "DESC" ? 1 : -1;
+  const primary =
+    (Number(b.streaks[streakSortKey] ?? 0) -
+      Number(a.streaks[streakSortKey] ?? 0)) *
+    mul;
+  if (primary !== 0) return primary;
+
+  if (streakSortKey !== "returnConsistencyPct") {
+    const consistency =
+      (Number(b.streaks.returnConsistencyPct ?? 0) -
+        Number(a.streaks.returnConsistencyPct ?? 0)) *
+      mul;
+    if (consistency !== 0) return consistency;
+  }
+
+  // Przy remisie % — więcej zwrotów absolutnych wygrywa (8/9 przed 3/3)
+  const returns =
+    (Number(b.streaks.returnsCount ?? 0) -
+      Number(a.streaks.returnsCount ?? 0)) *
+    mul;
+  if (returns !== 0) return returns;
+
+  const apps =
+    (Number(b.streaks.appearancesCount ?? 0) -
+      Number(a.streaks.appearancesCount ?? 0)) *
+    mul;
+  if (apps !== 0) return apps;
+
+  const maxRet =
+    (Number(b.streaks.maxReturnStreak ?? 0) -
+      Number(a.streaks.maxReturnStreak ?? 0)) *
+    mul;
+  if (maxRet !== 0) return maxRet;
+
+  const curRet =
+    (Number(b.streaks.currentReturnStreak ?? 0) -
+      Number(a.streaks.currentReturnStreak ?? 0)) *
+    mul;
+  if (curRet !== 0) return curRet;
+
+  return (
+    (Number(b.rawValues.total_points ?? 0) -
+      Number(a.rawValues.total_points ?? 0)) *
+    mul
+  );
+}
+
+export function sortPlayersByStreak(
+  players: AnalyzedPlayerStats[],
+  streakSortKey: StreakMetricKey,
+  direction: StatsLabSortDirection = "DESC",
+): AnalyzedPlayerStats[] {
+  return [...players].sort((a, b) =>
+    comparePlayersByStreak(a, b, streakSortKey, direction),
+  );
+}
+
+/**
  * Pełny pipeline porównania na już pobranych danych.
  */
 export function buildStatsLabComparison(args: {
@@ -1431,7 +1555,11 @@ export function buildStatsLabComparison(args: {
           ? computeFullSeasonPointsBreakdown(player, periodHist)
           : computePointsBreakdownFromHistory(agg.element_type, periodHist)
         : estimatePointsBreakdownFromSnapshot(player);
-    const streaks = computePlayerStreaks(agg.element_type, periodHist);
+    const streaks = computePlayerStreaks(
+      agg.element_type,
+      periodHist,
+      gwRange,
+    );
 
     return {
       ...agg,
@@ -1445,23 +1573,42 @@ export function buildStatsLabComparison(args: {
 
   const sortDef = getFplStatDefinition(filter.sortByStat);
   let selected: AnalyzedPlayerStats[];
+  const streakSortKey = filter.streakSortKey;
+  const useStreakSort = Boolean(streakSortKey);
+  const totalPeriodGws =
+    gwRange[0] > 0 && gwRange[1] >= gwRange[0]
+      ? gwRange[1] - gwRange[0] + 1
+      : 0;
+  const minApps = minAppearancesForStreakTopN(totalPeriodGws);
 
   if (filter.selectedPlayerIds.length > 0) {
     const wanted = new Set(filter.selectedPlayerIds);
     selected = analyzed.filter((p) => wanted.has(p.fpl_element_id));
-    selected = sortPlayers(
-      selected,
-      filter.sortByStat,
-      filter.sortDirection,
-      sortDef,
-    );
+    selected = useStreakSort
+      ? sortPlayersByStreak(
+          selected,
+          streakSortKey!,
+          filter.sortDirection,
+        )
+      : sortPlayers(
+          selected,
+          filter.sortByStat,
+          filter.sortDirection,
+          sortDef,
+        );
   } else {
-    const sorted = sortPlayers(
-      analyzed,
-      filter.sortByStat,
-      filter.sortDirection,
-      sortDef,
-    );
+    // STREAKS: filtr min. występów → sort całej puli po serii → Top N.
+    const pool = useStreakSort
+      ? analyzed.filter((p) => p.streaks.appearancesCount >= minApps)
+      : analyzed;
+    const sorted = useStreakSort
+      ? sortPlayersByStreak(pool, streakSortKey!, filter.sortDirection)
+      : sortPlayers(
+          pool,
+          filter.sortByStat,
+          filter.sortDirection,
+          sortDef,
+        );
     const limit = Math.max(1, Math.min(50, filter.limitPlayers || 10));
     selected = sorted.slice(0, limit);
   }

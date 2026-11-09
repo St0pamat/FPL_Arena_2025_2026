@@ -2,9 +2,12 @@
 
 import type { ClubLogoRecord } from "@/lib/admin/clubLogos";
 import { ARENA_PORTAL_ALT, ARENA_PORTAL_LOGO } from "@/lib/arena";
-import { NA_MINUSIE_EXPORT_BRAND } from "@/lib/na-minusie";
+import {
+  NA_MINUSIE_EXPORT_BRAND,
+  THE_FA_LEAGUE_LOGO,
+  THE_FA_LEAGUE_MARK_ALT,
+} from "@/lib/na-minusie";
 import { ClubCrest } from "@/components/na-minusie/hub/ClubCrest";
-import { TheFaLeagueMark } from "@/components/na-minusie/TheFaLeagueMark";
 
 export type PromoHeaderParticipant = {
   clubName: string;
@@ -107,7 +110,7 @@ function BrandMark({
     <div
       className={`${box} ${
         circle
-          ? "overflow-hidden rounded-full bg-[#F5C542] ring-1 ring-white/10"
+          ? "overflow-hidden rounded-full bg-black ring-1 ring-white/10"
           : ""
       }`}
     >
@@ -131,7 +134,7 @@ function BrandMark({
   );
 }
 
-/** Placeholder marki — ten sam żółty okrąg co na WWW (`TheFaLeagueMark`). */
+/** Logo The FA League — ta sama ramka wymiarów co Arena po lewej. */
 function FaLeagueBrandMark({
   side = "right",
   safeEdges = false,
@@ -141,17 +144,14 @@ function FaLeagueBrandMark({
   safeEdges?: boolean;
   size?: "default" | "hero";
 }) {
-  const box = brandMarkBoxClass(side, safeEdges, size);
-  const textClass =
-    size === "hero"
-      ? "px-4 text-center text-[1.55rem] font-black uppercase leading-[1.05] tracking-[0.06em] text-slate-950"
-      : "px-2 text-center text-[0.7rem] font-black uppercase leading-[1.05] tracking-[0.04em] text-slate-950 sm:text-[0.8rem]";
-
   return (
-    <TheFaLeagueMark
-      size="fill"
-      className={`!h-auto !w-auto ${box}`}
-      textClassName={textClass}
+    <BrandMark
+      src={THE_FA_LEAGUE_LOGO}
+      alt={THE_FA_LEAGUE_MARK_ALT}
+      circle
+      side={side}
+      safeEdges={safeEdges}
+      size={size}
     />
   );
 }
