@@ -15,16 +15,21 @@ import type { StatsLabPeriodMode } from "@/lib/stats-lab/presets";
 export type StatsLabLang = "pl" | "en";
 export type StatsLabScaleMode = "PERCENTILE" | "RAW";
 
-export function statLabel(key: FplStatKey, lang: StatsLabLang): string {
-  const d = getFplStatDefinition(key);
-  if (!d) return key;
-  return lang === "en" ? d.labelEn : d.labelPl;
-}
-
 export function statShort(key: FplStatKey, lang: StatsLabLang): string {
   const d = getFplStatDefinition(key);
   if (!d) return key;
   return lang === "en" ? d.shortLabelEn : d.shortLabelPl;
+}
+
+export function statLabel(
+  key: FplStatKey,
+  lang: StatsLabLang,
+  short = false,
+): string {
+  if (short) return statShort(key, lang);
+  const d = getFplStatDefinition(key);
+  if (!d) return key;
+  return lang === "en" ? d.labelEn : d.labelPl;
 }
 
 export function statDescription(key: FplStatKey, lang: StatsLabLang): string {
@@ -98,8 +103,8 @@ export const UI_COPY = {
     resetFilters: "Resetuj filtry",
     langPl: "Polski (PL — Społeczność FPL)",
     langEn: "English (Official FPL)",
-    scalePercentile: "Skala percentylowa (0–100)",
-    scaleRaw: "Wartości rzeczywiste (surowe)",
+    scalePercentile: "Tło grupy (0–100)",
+    scaleRaw: "Wartości statystyk",
     sectionNumbers: "01 · Zakres i Metryki",
     sectionPlayers: "02 · Wybór Zawodników",
     sectionStyle: "03 · Wygląd i Styl",
@@ -114,9 +119,13 @@ export const UI_COPY = {
     axisY: "Oś Y",
     swapAxes: "Zamień osie",
     minMinutes: "Min. minut",
+    minMinutesPool:
+      "Min. minut (grupa porównawcza dla OCENY 0–100)",
     maxPrice: "Max cena (£m)",
     maxSel: "Max Sel%",
-    sortComposite: "Sortuj wg Composite Score",
+    sortComposite: "Sortuj po OCENIE (0–100)",
+    sortCompositeHint:
+      "Ogólna nota z wybranych cech na tle grupy",
     sortByStat: "Sortuj wg statystyki",
     spotlight: "Spotlight (wyróżnij)",
     none: "— brak —",
@@ -131,9 +140,10 @@ export const UI_COPY = {
     pool: "Pula",
     onChart: "Na wykresie",
     percentileExplain:
-      "Skala percentylowa 0–100 określa, od ilu % zawodników na tej samej pozycji dany piłkarz wypada lepiej w wybranym kryterium (100 = lider ligi).",
+      "Tło grupy (0–100): im wyższa nota w kryterium, tym lepiej na tle analizowanej grupy (100 = lider). OCENA (0–100) to średnia z wybranych cech.",
     rawExplain:
-      "Wartości rzeczywiste z bazy — każda metryka ma własną skalę (0…max w grupie).",
+      "Wartości statystyk: prawdziwe liczby z bazy — każda metryka ma własną skalę (0…max w grupie).",
+    scaleHelpTitle: "Co oznaczają Tło grupy i OCENA?",
     gross: "Bez straconych punktów (Brutto)",
     penalties: "Stracone punkty (Kary)",
     net: "Oficjalne Punkty FPL (Suma Netto)",
@@ -149,8 +159,8 @@ export const UI_COPY = {
     resetFilters: "Reset filters",
     langPl: "Polski (PL — FPL Community)",
     langEn: "English (Official FPL)",
-    scalePercentile: "Percentile scale (0–100)",
-    scaleRaw: "Raw values (from database)",
+    scalePercentile: "Group rank (0–100)",
+    scaleRaw: "Actual stats",
     sectionNumbers: "01 · Scope & Metrics",
     sectionPlayers: "02 · Player Selection",
     sectionStyle: "03 · Look & Style",
@@ -165,9 +175,12 @@ export const UI_COPY = {
     axisY: "Y axis",
     swapAxes: "Swap axes",
     minMinutes: "Min. minutes",
+    minMinutesPool: "Min. minutes (comparison group for 0–100 RATING)",
     maxPrice: "Max price (£m)",
     maxSel: "Max Sel%",
-    sortComposite: "Sort by Composite Score",
+    sortComposite: "Sort by RATING (0–100)",
+    sortCompositeHint:
+      "Overall score from selected stats vs group",
     sortByStat: "Sort by statistic",
     spotlight: "Spotlight",
     none: "— none —",
@@ -183,9 +196,10 @@ export const UI_COPY = {
     pool: "Pool",
     onChart: "On chart",
     percentileExplain:
-      "Percentile scale 0–100 shows the percentage of peers in the same position a player outperforms (100 = league leader).",
+      "Group rank (0–100): higher score means better vs the analysed group (100 = leader). RATING (0–100) is the average of your selected traits.",
     rawExplain:
-      "Raw database values — each metric uses its own scale (0…group max).",
+      "Actual stats: true database numbers — each metric uses its own scale (0…group max).",
+    scaleHelpTitle: "What do Group rank and RATING mean?",
     gross: "Without deductions (Gross)",
     penalties: "Points lost (Penalties)",
     net: "Official FPL Points (Net)",

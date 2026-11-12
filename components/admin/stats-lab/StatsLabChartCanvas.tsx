@@ -5,7 +5,6 @@ import { Loader2 } from "lucide-react";
 import type { StatsLabComparisonResult } from "@/lib/stats-lab/analyticsEngine";
 import type { StatsLabQueryFilter } from "@/lib/stats-lab/presets";
 import type { FplStatKey } from "@/lib/stats-lab/types";
-import { getFplStatDefinition } from "@/lib/stats-lab/types";
 import type {
   StatsLabLang,
   StatsLabScaleMode,
@@ -14,13 +13,14 @@ import type {
 import {
   PERIOD_LABELS,
   VIZ_MODE_LABELS,
-  metricGlossaryLine,
   positionLabel,
+  statLabel,
   t,
 } from "@/lib/stats-lab/i18n";
 import { ARENA_PORTAL_ALT, ARENA_PORTAL_LOGO } from "@/lib/arena";
 import {
   STATS_LAB_CHART_THEMES,
+  getMetricColor,
   type StatsLabChartThemeId,
   type StatsLabVizMode,
 } from "@/components/admin/stats-lab/chartTheme";
@@ -239,23 +239,62 @@ function autoSubtitle(
     bits.push(
       scaleMode === "PERCENTILE"
         ? lang === "pl"
-          ? "Percentyle"
-          : "Percentiles"
+          ? "Tło grupy (0–100)"
+          : "Group rank (0–100)"
         : lang === "pl"
-          ? "Surowe"
-          : "Raw",
+          ? "Wartości statystyk"
+          : "Actual stats",
     );
   }
 
   if (poolSize > 0 && !isMatchTotals) {
     bits.push(
       lang === "pl"
-        ? `Tło porównawcze: ${poolSize} graczy`
-        : `Comparison pool: ${poolSize} players`,
+        ? `Grupa porównawcza: ${poolSize} graczy`
+        : `Comparison group: ${poolSize} players`,
     );
   }
 
   return bits.join(" · ");
+}
+
+/** 1-zdaniowa instrukcja czytania wykresu — dopasowana do vizMode / scaleMode. */
+function chartReadingHint(
+  vizMode: StatsLabVizMode,
+  scaleMode: StatsLabScaleMode,
+  lang: StatsLabLang,
+): string | null {
+  if (vizMode === "RADAR_PIZZA") {
+    return lang === "pl"
+      ? "Im dalej od środka tarczy, tym lepszy wynik w danej statystyce (w pigułkach podano rzeczywiste liczby). OCENA (0–100) podsumowuje wybrane kryteria na tle grupy."
+      : "Further from the center means a stronger result in that stat (pills show actual numbers). RATING (0–100) summarizes the selected criteria against the group.";
+  }
+  if (vizMode === "STACKED_COMPOSITE") {
+    if (scaleMode === "PERCENTILE") {
+      return lang === "pl"
+        ? "Całkowita długość paska odpowiada ogólnej OCENIE (0–100) wyliczonej z wybranych kryteriów na tle grupy, a liczby na paskach to rzeczywiste statystyki zawodnika."
+        : "Total bar length reflects the overall RATING (0–100) calculated from the selected criteria against the group, while numbers inside bars show actual stats.";
+    }
+    return lang === "pl"
+      ? "Każda kolumna prezentuje rzeczywistą statystykę zawodnika (pasek = proporcja względem lidera na wykresie). OCENA (0–100) to ogólna nota wyliczona z wybranych wyżej kryteriów na tle analizowanej grupy."
+      : "Each column shows the player's actual stat (bar = proportion vs chart leader). RATING (0–100) is the overall score calculated from the selected criteria against the comparison group.";
+  }
+  if (vizMode === "SCATTER_2D") {
+    if (scaleMode === "PERCENTILE") {
+      return lang === "pl"
+        ? "Osie X i Y pokazują pozycję na tle grupy (0–100) w dwóch wybranych cechach (prawy górny róg ↗ = czołówka w obu), a linie przerywane wyznaczają środek grupy (P50)."
+        : "Axes X and Y show group rank (0–100) across the two selected stats (top-right ↗ = elite in both), while dashed lines mark the group midpoint (P50).";
+    }
+    return lang === "pl"
+      ? "Osie X i Y pokazują rzeczywiste wartości dwóch wybranych statystyk (prawy górny róg ↗ = najlepszy profil), a linie przerywane wyznaczają średnią grupy odniesienia."
+      : "Axes X and Y show actual values of the two selected stats (top-right ↗ = strongest profile), while dashed lines mark the comparison group average.";
+  }
+  if (vizMode === "HEATMAP_MATRIX") {
+    return lang === "pl"
+      ? "Liczby w kafelkach pokazują wartości statystyk, a kolor określa poziom gracza na tle grupy porównawczej (od Słabego do Elity); ★ oznacza lidera kolumny, a OCENA (0–100) podsumowuje wybrane cechy."
+      : "Numbers in tiles show actual stats, while tile color reflects standing against the comparison group (from Poor to Elite); ★ marks the column leader, and RATING (0–100) summarizes selected stats.";
+  }
+  return null;
 }
 
 function pointsNetFooterExplain(lang: StatsLabLang): string {
@@ -269,6 +308,13 @@ function streaksReturnFooterExplain(lang: StatsLabLang): string {
     ? "Zwrot FPL (Return) = Gol, Asysta, Czyste Konto (tylko GK/DEF +4 pkt), +2 pkt za próg DC (DEF ≥10, MID/FWD ≥12), 3+ obrony GK lub Bonus (BPS). Punkty za sam występ (1+ min / 60+ min) oraz +1 pkt CS pomocnika nie są liczone jako zwrot."
     : "FPL Return = Goal, Assist, Clean Sheet (GK/DEF +4 pts only), +2 pts DC threshold (DEF ≥10, MID/FWD ≥12), GK 3+ saves, or Bonus (BPS). Appearance points (1+ / 60+ mins) and MID +1 pt CS are excluded from returns.";
 }
+
+const METRIC_FOOTER_VIZ = new Set<StatsLabVizMode>([
+  "STACKED_COMPOSITE",
+  "RADAR_PIZZA",
+  "SCATTER_2D",
+  "HEATMAP_MATRIX",
+]);
 
 export function StatsLabChartCanvas({
   result,
@@ -307,33 +353,40 @@ export function StatsLabChartCanvas({
   const theme = STATS_LAB_CHART_THEMES[themeId];
   const isLightTheme = themeId === "ANALYST_LIGHT";
   const copy = t(lang);
-  const players = result?.plottedPlayers ?? [];
+  const allPlayers = result?.plottedPlayers ?? [];
+  /** Radar rysuje max 4 — tytuł TOP X i props muszą być WYSIWYG. */
+  const MAX_RADAR_PLAYERS = 4;
+  const players =
+    vizMode === "RADAR_PIZZA"
+      ? allPlayers.slice(0, MAX_RADAR_PLAYERS)
+      : allPlayers;
   const metrics = result?.activeMetrics?.length
     ? result.activeMetrics
     : filter.activeMetrics;
 
   const title =
     customTitle.trim() || autoTitle(filter, vizMode, lang, players);
-  const subtitle =
-    customSubtitle.trim() ||
-    `${lang === "pl" ? "Sezon" : "Season"} ${seasonCode} · ${autoSubtitle(
-      filter,
-      result?.poolSize ?? 0,
-      result?.effectiveGwRange ?? [0, 0],
-      lang,
-      scaleMode,
-      vizMode,
-    )}`;
+  const technicalSubtitle = `${lang === "pl" ? "Sezon" : "Season"} ${seasonCode} · ${autoSubtitle(
+    filter,
+    result?.poolSize ?? 0,
+    result?.effectiveGwRange ?? [0, 0],
+    lang,
+    scaleMode,
+    vizMode,
+  )}`;
+  const authoredSubtitle = customSubtitle.trim();
 
   const isMatchTotalsViz =
     vizMode === "POINTS_BREAKDOWN" || vizMode === "STREAKS_EXPLORER";
 
-  const glossaryMetrics =
-    vizMode === "POINTS_BREAKDOWN" || vizMode === "STREAKS_EXPLORER"
-      ? []
-      : vizMode === "SCATTER_2D"
-        ? [axisX, axisY]
-        : metrics.slice(0, 8);
+  /** Pigułki skrót→nazwa w stopce (bez descriptionPl/En). */
+  const footerMetricKeys: FplStatKey[] = METRIC_FOOTER_VIZ.has(vizMode)
+    ? vizMode === "SCATTER_2D"
+      ? [axisX, axisY]
+      : metrics.slice(0, 8)
+    : [];
+
+  const readingHint = chartReadingHint(vizMode, scaleMode, lang);
 
   const forceShowValues = isExport ? true : showBarValues;
   const forceShowNegatives = isExport
@@ -396,19 +449,43 @@ export function StatsLabChartCanvas({
           >
             {title}
           </h2>
-          <p
-            className={
-              isExport
-                ? isLightTheme
-                  ? "text-base font-semibold text-slate-700 sm:text-lg"
-                  : "text-base font-medium text-slate-300 sm:text-lg"
-                : isLightTheme
-                  ? "text-sm font-semibold text-slate-700"
-                  : "text-sm font-medium text-slate-300"
-            }
-          >
-            {subtitle}
-          </p>
+          {authoredSubtitle ? (
+            <>
+              <p
+                className={
+                  isExport
+                    ? isLightTheme
+                      ? "text-base font-semibold text-slate-700 sm:text-lg"
+                      : "text-base font-medium text-slate-300 sm:text-lg"
+                    : isLightTheme
+                      ? "text-sm font-semibold text-slate-700"
+                      : "text-sm font-medium text-slate-300"
+                }
+              >
+                {authoredSubtitle}
+              </p>
+              <p
+                className="mt-0.5 text-[11px] font-medium opacity-75"
+                style={{ color: isLightTheme ? "#475569" : theme.muted }}
+              >
+                {technicalSubtitle}
+              </p>
+            </>
+          ) : (
+            <p
+              className={
+                isExport
+                  ? isLightTheme
+                    ? "text-base font-semibold text-slate-700 sm:text-lg"
+                    : "text-base font-medium text-slate-300 sm:text-lg"
+                  : isLightTheme
+                    ? "text-sm font-semibold text-slate-700"
+                    : "text-sm font-medium text-slate-300"
+              }
+            >
+              {technicalSubtitle}
+            </p>
+          )}
         </div>
       </header>
 
@@ -435,6 +512,7 @@ export function StatsLabChartCanvas({
             onSort={onChartSort}
             onSelectPlayer={onSelectPlayer}
             variant={variant}
+            per90={filter.per90}
           />
         ) : vizMode === "POINTS_BREAKDOWN" ? (
           <PointsBreakdownChart
@@ -478,6 +556,10 @@ export function StatsLabChartCanvas({
             spotlightId={spotlightPlayerId}
             showAvg={showPoolAverage}
             onSelectPlayer={onSelectPlayer}
+            per90={filter.per90}
+            poolSize={result.poolSize}
+            showPlayerMeta={showPlayerMeta}
+            showBarValues={forceShowValues}
           />
         ) : vizMode === "SCATTER_2D" ? (
           <Scatter2DChart
@@ -491,27 +573,31 @@ export function StatsLabChartCanvas({
             showAvg={showPoolAverage}
             showMeta={showPlayerMeta}
             onSelectPlayer={onSelectPlayer}
+            scaleMode={scaleMode}
+            per90={filter.per90}
+            poolSize={result.poolSize}
           />
         ) : (
           <HeatmapMatrixChart
             players={players}
             metrics={metrics}
+            poolAverages={result.poolAverages}
+            poolSize={result.poolSize}
             theme={theme}
-            themeId={themeId}
             lang={lang}
             scaleMode={scaleMode}
-            spotlightId={spotlightPlayerId}
+            per90={filter.per90}
+            showValues={forceShowValues}
             showMeta={showPlayerMeta}
-            sortKey={chartSortKey}
-            sortDir={chartSortDir}
-            onSort={onChartSort}
+            showAvg={showPoolAverage}
+            spotlightId={spotlightPlayerId}
             onSelectPlayer={onSelectPlayer}
-            variant={variant}
+            variant={variant === "export" ? "export" : "interactive"}
           />
         )}
       </div>
 
-      {/* Cinematic footer / legenda edukacyjna */}
+      {/* Stopka plakatu: pigułki skrótów + 1-zdaniowa instrukcja */}
       <div
         className={
           isExport
@@ -520,29 +606,46 @@ export function StatsLabChartCanvas({
         }
         style={{ borderColor: theme.border }}
       >
-        {glossaryMetrics.length > 0 ? (
-          <div
-            className={`flex flex-wrap gap-x-5 gap-y-1.5 ${
-              isExport ? "text-[15px]" : "text-[10px]"
-            } ${isLightTheme ? "font-medium text-slate-700" : ""}`}
-            style={isLightTheme ? undefined : { color: theme.muted }}
-          >
-            {glossaryMetrics.map((key) => {
-              const def = getFplStatDefinition(key);
-              if (!def) return null;
-              const short =
-                lang === "en" ? def.shortLabelEn : def.shortLabelPl;
+        {footerMetricKeys.length > 0 ? (
+          <div className="mb-2 flex flex-wrap items-center gap-1.5">
+            {footerMetricKeys.map((key, idx) => {
+              const accentColor = getMetricColor(idx, theme);
               return (
-                <span key={key} className="max-w-xl">
-                  <strong
+                <span
+                  key={`foot-metric-${key}`}
+                  className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-[11px] ${
+                    isLightTheme
+                      ? "border-slate-200 bg-slate-50"
+                      : "border-white/10 bg-slate-950/65"
+                  }`}
+                  style={{
+                    borderLeftWidth: 3,
+                    borderLeftColor: accentColor,
+                  }}
+                >
+                  <span
+                    className={`inline-block h-2 w-2 shrink-0 rounded-full ${
+                      isLightTheme ? "ring-1 ring-black/15" : ""
+                    }`}
+                    style={{ backgroundColor: accentColor }}
+                    aria-hidden
+                  />
+                  <span
                     className={
-                      isLightTheme ? "font-bold text-slate-950" : undefined
+                      isLightTheme
+                        ? "font-bold text-slate-900"
+                        : "font-bold text-white"
                     }
-                    style={isLightTheme ? undefined : { color: theme.text }}
                   >
-                    {short}:
-                  </strong>{" "}
-                  {metricGlossaryLine(def, lang)}
+                    {statLabel(key, lang, true)}:
+                  </span>
+                  <span
+                    className={
+                      isLightTheme ? "text-slate-700" : "text-slate-300"
+                    }
+                  >
+                    {statLabel(key, lang, false)}
+                  </span>
                 </span>
               );
             })}
@@ -551,50 +654,30 @@ export function StatsLabChartCanvas({
 
         {vizMode === "POINTS_BREAKDOWN" ? (
           <p
-            className={
-              isExport
-                ? isLightTheme
-                  ? "text-[15px] font-medium leading-relaxed text-slate-700"
-                  : "text-[15px] leading-relaxed"
-                : isLightTheme
-                  ? "text-[11px] font-medium leading-relaxed text-slate-700"
-                  : "text-[11px] leading-relaxed"
-            }
+            className={`mb-2 text-[11px] leading-relaxed opacity-80 ${
+              isLightTheme ? "font-medium text-slate-700" : ""
+            }`}
             style={isLightTheme ? undefined : { color: theme.muted }}
           >
             {pointsNetFooterExplain(lang)}
           </p>
         ) : vizMode === "STREAKS_EXPLORER" ? (
           <p
-            className={
-              isExport
-                ? isLightTheme
-                  ? "text-[15px] font-medium leading-relaxed text-slate-700"
-                  : "text-[15px] leading-relaxed"
-                : isLightTheme
-                  ? "text-[11px] font-medium leading-relaxed text-slate-700"
-                  : "text-[11px] leading-relaxed"
-            }
+            className={`mb-2 text-[11px] leading-relaxed opacity-80 ${
+              isLightTheme ? "font-medium text-slate-700" : ""
+            }`}
             style={isLightTheme ? undefined : { color: theme.muted }}
           >
             {streaksReturnFooterExplain(lang)}
           </p>
-        ) : !isMatchTotalsViz ? (
+        ) : readingHint ? (
           <p
-            className={
-              isExport
-                ? isLightTheme
-                  ? "text-[15px] font-medium leading-relaxed text-slate-700"
-                  : "text-[15px] leading-relaxed"
-                : isLightTheme
-                  ? "text-[11px] font-medium leading-relaxed text-slate-700"
-                  : "text-[11px] leading-relaxed"
-            }
+            className={`mb-2 text-[11px] leading-relaxed opacity-80 ${
+              isLightTheme ? "font-medium text-slate-700" : ""
+            }`}
             style={isLightTheme ? undefined : { color: theme.muted }}
           >
-            {scaleMode === "PERCENTILE"
-              ? copy.percentileExplain
-              : copy.rawExplain}
+            {readingHint}
           </p>
         ) : null}
 
@@ -604,19 +687,15 @@ export function StatsLabChartCanvas({
           } ${isLightTheme ? "font-medium text-slate-700" : ""}`}
           style={isLightTheme ? undefined : { color: theme.muted }}
         >
-          <span>
-            {isMatchTotalsViz
-              ? lang === "pl"
+          {isMatchTotalsViz ? (
+            <span>
+              {lang === "pl"
                 ? "Sumy meczowe · bez skali percentylowej"
-                : "Match totals · no percentile scale"
-              : scaleMode === "PERCENTILE"
-                ? lang === "pl"
-                  ? "Skala percentylowa 0–100 względem puli porównawczej"
-                  : "Percentile scale 0–100 vs comparison pool"
-                : lang === "pl"
-                  ? "Wartości rzeczywiste — osobna skala na metrykę"
-                  : "Raw values — per-metric scale"}
-          </span>
+                : "Match totals · no percentile scale"}
+            </span>
+          ) : (
+            <span />
+          )}
           <span
             className={
               isExport

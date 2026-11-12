@@ -25,13 +25,16 @@ import type { StatsLabLang } from "@/lib/stats-lab/i18n";
 import type { FplPositionType } from "@/lib/stats-lab/types";
 import {
   colourPillClass,
+  colourPillNeutralClass,
   createDefaultStatsCentreFilter,
   formatCentreCell,
+  type StatsCentreColumnDef,
   type StatsCentreFilter,
   type StatsCentreMode,
   type StatsCentrePlayerTab,
   type StatsCentreRangeMode,
   type StatsCentreResult,
+  type StatsCentreRow,
   type StatsCentreTeamTab,
 } from "@/lib/stats-lab/statsCentreEngine";
 import {
@@ -39,16 +42,20 @@ import {
   CENTRE_RANGE_LABELS,
   PLAYER_TAB_LABELS,
   TEAM_TAB_LABELS,
+  centreColFullLabel,
   centreColLabel,
   centreColShort,
   centreUi,
 } from "@/lib/stats-lab/statsCentreI18n";
+import { toJpeg } from "html-to-image";
 import {
-  captureStatsLabPngBlob,
-  captureStatsLabPngDataUrl,
   copyPngBlobToClipboard,
   downloadDataUrl,
 } from "@/lib/stats-lab/exportCapture";
+import {
+  buildStatsCentreAiAuditReport,
+  downloadJsonFile,
+} from "@/lib/stats-lab/auditExport";
 import { ARENA_PORTAL_ALT, ARENA_PORTAL_LOGO } from "@/lib/arena";
 import {
   STATS_LAB_CHART_THEMES,
@@ -88,6 +95,62 @@ const RANGE_MODES: StatsCentreRangeMode[] = [
   "LAST_4_MATCHES",
 ];
 
+type CentreSurface = {
+  canvasBg: string;
+  rowOdd: string;
+  rowEven: string;
+  headBg: string;
+  borderClass: string;
+  textClass: string;
+  mutedClass: string;
+  accent: string;
+  accentTextClass: string;
+  stickyBorderClass: string;
+};
+
+function getCentreSurface(themeId: StatsLabChartThemeId): CentreSurface {
+  if (themeId === "ANALYST_LIGHT") {
+    return {
+      canvasBg: "#F8FAFC",
+      rowOdd: "#FFFFFF",
+      rowEven: "#F1F5F9",
+      headBg: "#E2E8F0",
+      borderClass: "border-slate-200",
+      textClass: "text-slate-900",
+      mutedClass: "text-slate-600",
+      accent: "#059669",
+      accentTextClass: "text-emerald-700",
+      stickyBorderClass: "border-slate-200",
+    };
+  }
+  if (themeId === "SCOUT_DARK") {
+    return {
+      canvasBg: "#07120F",
+      rowOdd: "#07120F",
+      rowEven: "#0B1B16",
+      headBg: "#0F241D",
+      borderClass: "border-emerald-900/60",
+      textClass: "text-emerald-50",
+      mutedClass: "text-emerald-300/70",
+      accent: "#34D399",
+      accentTextClass: "text-emerald-300",
+      stickyBorderClass: "border-emerald-900/60",
+    };
+  }
+  return {
+    canvasBg: "#070B14",
+    rowOdd: "#070B14",
+    rowEven: "#0B1120",
+    headBg: "#0F172A",
+    borderClass: "border-slate-800/80",
+    textClass: "text-slate-100",
+    mutedClass: "text-slate-400",
+    accent: "#39FF14",
+    accentTextClass: "text-emerald-400",
+    stickyBorderClass: "border-slate-800/80",
+  };
+}
+
 type Props = {
   bootstrap: StatsLabBootstrapData;
   lang: StatsLabLang;
@@ -112,6 +175,255 @@ function saveWatchlist(ids: number[]) {
   localStorage.setItem(WATCHLIST_KEY, JSON.stringify(ids));
 }
 
+function initialsFromName(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return "?";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0] ?? ""}${parts[parts.length - 1][0] ?? ""}`.toUpperCase();
+}
+
+function PlayerPortrait({
+  row,
+  isLight,
+}: {
+  row: StatsCentreRow;
+  isLight: boolean;
+}) {
+  const [broken, setBroken] = useState(false);
+  const initials = initialsFromName(row.web_name);
+  return (
+    <span className="relative inline-flex h-[52px] w-[52px] shrink-0">
+      {row.player_code && !broken ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={`/api/uploads/fpl-lab/player/${row.player_code}`}
+          alt={row.web_name}
+          width={52}
+          height={52}
+          crossOrigin="anonymous"
+          onError={() => setBroken(true)}
+          className={`h-[52px] w-[52px] shrink-0 rounded-full border object-cover object-top ${
+            isLight ? "border-slate-300 bg-slate-200" : "border-slate-700/80 bg-slate-800"
+          }`}
+        />
+      ) : (
+        <span
+          className={`flex h-[52px] w-[52px] items-center justify-center rounded-full border text-[13px] font-black ${
+            isLight
+              ? "border-slate-300 bg-slate-200 text-slate-700"
+              : "border-slate-700 bg-slate-800 text-slate-200"
+          }`}
+        >
+          {initials}
+        </span>
+      )}
+      {row.club_pulse_code ? (
+        <span className="absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-white p-0.5 shadow-md">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={`/api/uploads/fpl-lab/badge/${row.club_pulse_code}`}
+            alt={row.club_short}
+            width={20}
+            height={20}
+            crossOrigin="anonymous"
+            className="h-full w-full object-contain"
+          />
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
+function TeamBadge({
+  pulseCode,
+  shortName,
+}: {
+  pulseCode: number | null;
+  shortName: string;
+}) {
+  return (
+    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white p-1.5 shadow-md">
+      {pulseCode ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={`/api/uploads/fpl-lab/badge/${pulseCode}`}
+          alt={shortName}
+          width={44}
+          height={44}
+          crossOrigin="anonymous"
+          className="h-full w-full object-contain"
+        />
+      ) : (
+        <span className="text-[11px] font-black text-slate-700">{shortName}</span>
+      )}
+    </span>
+  );
+}
+
+function orderPillClass(raw: string, isDark: boolean): string {
+  const v = raw.trim();
+  if (!v || v === "—") {
+    return isDark
+      ? "bg-transparent text-slate-500 border border-transparent opacity-50"
+      : "bg-transparent text-slate-400 border border-transparent opacity-50";
+  }
+  if (v === "#1") {
+    return isDark
+      ? "bg-emerald-500/30 text-emerald-200 border border-emerald-500/40 font-extrabold"
+      : "bg-emerald-600 text-white font-extrabold shadow-sm";
+  }
+  if (v === "#2") {
+    return isDark
+      ? "bg-emerald-500/30 text-emerald-200 border border-emerald-500/40"
+      : "bg-emerald-100 text-emerald-950 border border-emerald-300 font-bold";
+  }
+  return isDark
+    ? "bg-slate-800/45 text-slate-300 border border-slate-700/50"
+    : "bg-slate-100 text-slate-700 border border-slate-200";
+}
+
+function ValuePill({
+  col,
+  raw,
+  norm,
+  isDark,
+  lang,
+  per90,
+  isPoolAverage = false,
+  dense = false,
+}: {
+  col: StatsCentreColumnDef;
+  raw: string | number | null;
+  norm: number | null | undefined;
+  isDark: boolean;
+  lang: StatsLabLang;
+  per90: boolean;
+  isPoolAverage?: boolean;
+  dense?: boolean;
+}) {
+  const pillSize = dense
+    ? "min-w-[42px] px-1.5 py-0.5 text-[13px]"
+    : "min-w-[54px] px-2.5 py-1 text-[14px]";
+
+  if (col.format === "order") {
+    const text =
+      raw == null || raw === ""
+        ? "—"
+        : typeof raw === "string"
+          ? raw
+          : String(raw);
+    return (
+      <span
+        className={`inline-flex items-center justify-center whitespace-nowrap rounded-md font-mono font-bold tabular-nums ${pillSize} ${orderPillClass(text, isDark)}`}
+        title={centreColLabel(col.key, lang)}
+      >
+        {text}
+      </span>
+    );
+  }
+
+  const isTextual = col.format === "text";
+  const num = typeof raw === "number" ? raw : null;
+  const cls =
+    isTextual || num == null || norm == null
+      ? colourPillNeutralClass(isDark)
+      : colourPillClass(norm, col.key, isDark, num);
+  return (
+    <span
+      className={`inline-flex items-center justify-center whitespace-nowrap rounded-md font-mono font-bold tabular-nums ${pillSize} ${cls}`}
+      title={centreColLabel(col.key, lang)}
+    >
+      {formatCentreCell(col, raw, per90, isPoolAverage)}
+    </span>
+  );
+}
+
+async function withFitExportWidth<T>(
+  node: HTMLElement,
+  run: () => Promise<T>,
+): Promise<T> {
+  const prev = {
+    width: node.style.width,
+    minWidth: node.style.minWidth,
+    maxWidth: node.style.maxWidth,
+  };
+  const wrappers: Array<{
+    el: HTMLElement;
+    overflow: string;
+    overflowX: string;
+    overflowY: string;
+  }> = [];
+  try {
+    const tableEl = node.querySelector("table");
+    if (tableEl) {
+      const fullTableWidth = Math.max(1200, tableEl.scrollWidth + 64);
+      node.style.width = `${fullTableWidth}px`;
+      node.style.minWidth = `${fullTableWidth}px`;
+      node.style.maxWidth = "none";
+      for (const el of Array.from(
+        node.querySelectorAll<HTMLElement>(
+          "[data-centre-table-wrap], .overflow-x-auto",
+        ),
+      )) {
+        wrappers.push({
+          el,
+          overflow: el.style.overflow,
+          overflowX: el.style.overflowX,
+          overflowY: el.style.overflowY,
+        });
+        el.style.overflow = "visible";
+        el.style.overflowX = "visible";
+        el.style.overflowY = "visible";
+      }
+      await new Promise<void>((r) => requestAnimationFrame(() => r()));
+      await new Promise<void>((r) => requestAnimationFrame(() => r()));
+    }
+    return await run();
+  } finally {
+    node.style.width = prev.width;
+    node.style.minWidth = prev.minWidth;
+    node.style.maxWidth = prev.maxWidth;
+    for (const w of wrappers) {
+      w.el.style.overflow = w.overflow;
+      w.el.style.overflowX = w.overflowX;
+      w.el.style.overflowY = w.overflowY;
+    }
+  }
+}
+
+async function captureCentreJpegDataUrl(
+  node: HTMLElement,
+  backgroundColor: string,
+): Promise<string> {
+  const imgs = Array.from(node.querySelectorAll("img"));
+  await Promise.all(
+    imgs.map((img) =>
+      img.complete
+        ? Promise.resolve()
+        : new Promise<void>((resolve) => {
+            img.addEventListener("load", () => resolve(), { once: true });
+            img.addEventListener("error", () => resolve(), { once: true });
+          }),
+    ),
+  );
+  const opts = {
+    quality: 0.95,
+    pixelRatio: 2,
+    backgroundColor,
+    cacheBust: true,
+    width: node.offsetWidth,
+    height: node.offsetHeight,
+    style: {
+      transform: "none",
+      overflow: "hidden",
+      overflowX: "hidden",
+      overflowY: "hidden",
+    },
+  };
+  await toJpeg(node, opts);
+  return await toJpeg(node, opts);
+}
+
 export function StatsCentreView({
   bootstrap,
   lang,
@@ -121,7 +433,9 @@ export function StatsCentreView({
 }: Props) {
   const ui = centreUi(lang);
   const tokens = getThemeTokens(themeId);
-  const theme = STATS_LAB_CHART_THEMES[themeId];
+  const isLight = themeId === "ANALYST_LIGHT";
+  const isDark = !isLight;
+  const surface = getCentreSurface(themeId);
   const exportRef = useRef<HTMLDivElement>(null);
   const [filter, setFilter] = useState<StatsCentreFilter>(() =>
     createDefaultStatsCentreFilter(bootstrap.seasonCode),
@@ -145,23 +459,20 @@ export function StatsCentreView({
     setWatchlist(loadWatchlist());
   }, []);
 
-  const runQuery = useCallback(
-    (next: StatsCentreFilter) => {
-      startTransition(async () => {
-        try {
-          setError(null);
-          const data = await queryStatsCentreAction(next);
-          setResult(data);
-          setPage(1);
-        } catch (e) {
-          setError(
-            e instanceof Error ? e.message : "Błąd zapytania Stats Centre.",
-          );
-        }
-      });
-    },
-    [],
-  );
+  const runQuery = useCallback((next: StatsCentreFilter) => {
+    startTransition(async () => {
+      try {
+        setError(null);
+        const data = await queryStatsCentreAction(next);
+        setResult(data);
+        setPage(1);
+      } catch (e) {
+        setError(
+          e instanceof Error ? e.message : "Błąd zapytania Stats Centre.",
+        );
+      }
+    });
+  }, []);
 
   useEffect(() => {
     if (bootstrap.players.length === 0) return;
@@ -170,7 +481,11 @@ export function StatsCentreView({
   }, [bootstrap.players.length, filter, runQuery]);
 
   function patchFilter(patch: Partial<StatsCentreFilter>) {
-    setFilter((prev) => ({ ...prev, ...patch }));
+    setFilter((prev) => {
+      const next = { ...prev, ...patch };
+      if (next.centreMode === "PER_GW") next.per90 = false;
+      return next;
+    });
   }
 
   function applyRange() {
@@ -199,7 +514,11 @@ export function StatsCentreView({
           sortDir: prev.sortDir === "DESC" ? "ASC" : "DESC",
         };
       }
-      return { ...prev, sortKey: key, sortDir: "DESC" };
+      return {
+        ...prev,
+        sortKey: key,
+        sortDir: key === "negative_points_total" ? "ASC" : "DESC",
+      };
     });
   }
 
@@ -214,23 +533,172 @@ export function StatsCentreView({
     Math.ceil((result?.totalRows ?? 0) / pageSize),
   );
 
-  async function exportPng(mode: "download" | "copy") {
+  const activeTabKey =
+    filter.centreMode === "TEAMS"
+      ? filter.teamTab
+      : filter.centreMode === "PLAYERS"
+        ? filter.playerTab
+        : "PER_GW";
+
+  const gwLo = Math.max(
+    1,
+    filter.gwFrom ??
+      Number(String(result?.effectiveLabel ?? "1").split("–")[0]) ??
+      1,
+  );
+  const gwHi = Math.max(
+    gwLo,
+    filter.gwTo ?? result?.maxGw ?? bootstrap.maxGw ?? gwLo,
+  );
+
+  const posterTitle = useMemo(() => {
+    if (filter.centreMode === "PLAYERS") {
+      return `${CENTRE_MODE_LABELS[lang].PLAYERS} — ${PLAYER_TAB_LABELS[lang][filter.playerTab]}`;
+    }
+    if (filter.centreMode === "TEAMS") {
+      return `${CENTRE_MODE_LABELS[lang].TEAMS} — ${TEAM_TAB_LABELS[lang][filter.teamTab]}`;
+    }
+    return lang === "pl"
+      ? `Mecz po meczu — ${ui.perGwHistory}`
+      : `Match by Match — ${ui.perGwHistory}`;
+  }, [filter.centreMode, filter.playerTab, filter.teamTab, lang, ui.perGwHistory]);
+
+  const poolNoun =
+    filter.centreMode === "TEAMS"
+      ? ui.poolClubs
+      : filter.centreMode === "PER_GW"
+        ? ui.poolAppearances
+        : ui.poolPlayers;
+
+  const scaleLabel =
+    filter.centreMode === "PER_GW"
+      ? ui.singleMatches
+      : filter.per90
+        ? ui.per90
+        : ui.totals;
+
+  const posterSubtitle = useMemo(() => {
+    const parts = [
+      `${ui.season} ${bootstrap.seasonCode}`,
+      `GW ${gwLo}–${gwHi}`,
+      CENTRE_RANGE_LABELS[lang][filter.rangeMode],
+    ];
+    if (filter.centreMode !== "TEAMS") {
+      parts.push(`Min. ${filter.minMinutes} min`);
+    }
+    parts.push(scaleLabel);
+    parts.push(
+      lang === "pl"
+        ? `Pula: ${result?.totalRows ?? 0} ${poolNoun}`
+        : `Pool: ${result?.totalRows ?? 0} ${poolNoun}`,
+    );
+    return parts.join(" · ");
+  }, [
+    bootstrap.seasonCode,
+    filter.centreMode,
+    filter.minMinutes,
+    filter.rangeMode,
+    gwHi,
+    gwLo,
+    lang,
+    poolNoun,
+    result?.totalRows,
+    scaleLabel,
+    ui.season,
+  ]);
+
+  function buildExportBaseName() {
+    const mode = filter.centreMode.toLowerCase();
+    const tab = String(activeTabKey).toLowerCase().replace(/_/g, "-");
+    return `fpl-arena-stats-centre-${mode}-${tab}-${lang}`;
+  }
+
+  function buildAuditReport() {
+    if (!result || !pageRows.length) return null;
+    const effectiveMin =
+      filter.centreMode === "PLAYERS" && filter.per90
+        ? Math.max(filter.minMinutes, 90)
+        : filter.minMinutes;
+    const auditFilter: StatsCentreFilter = {
+      ...filter,
+      per90: filter.centreMode === "PER_GW" ? false : filter.per90,
+      minMinutes: effectiveMin,
+    };
+    // Audyt: tylko aktualnie widoczne kolumny (+ ich poolAverages)
+    const visibleKeys = new Set(result.columns.map((c) => c.key));
+    const visiblePool: Record<string, number | null> = {};
+    for (const c of result.columns) {
+      visiblePool[c.key] = result.poolAverages?.[c.key] ?? null;
+    }
+    const auditResult: StatsCentreResult = {
+      ...result,
+      poolAverages: visiblePool,
+      rows: result.rows,
+    };
+    const auditPageRows = pageRows.map((row) => {
+      const colorNorm: Record<string, number> = {};
+      for (const k of Object.keys(row.colorNorm)) {
+        if (visibleKeys.has(k)) colorNorm[k] = row.colorNorm[k]!;
+      }
+      return { ...row, colorNorm };
+    });
+    return buildStatsCentreAiAuditReport({
+      filter: auditFilter,
+      result: auditResult,
+      pageRows: auditPageRows,
+      page,
+      pageSize,
+      lang,
+      chartTheme: themeId,
+      seasonCode: bootstrap.seasonCode,
+      rootElement: exportRef.current,
+    });
+  }
+
+  async function exportPair() {
+    const node = exportRef.current;
+    if (!node || !result || !pageRows.length) return;
+    setExportBusy(true);
+    try {
+      const base = buildExportBaseName();
+      await withFitExportWidth(node, async () => {
+        const url = await captureCentreJpegDataUrl(node, surface.canvasBg);
+        downloadDataUrl(url, `${base}.jpg`);
+        const report = buildAuditReport();
+        if (report) downloadJsonFile(`${base}.json`, report);
+      });
+      setFlash(ui.saved);
+      window.setTimeout(() => setFlash(null), 2800);
+    } catch (e) {
+      setFlash(e instanceof Error ? e.message : "Export failed");
+    } finally {
+      setExportBusy(false);
+    }
+  }
+
+  async function exportJpgOnly(mode: "download" | "copy") {
     const node = exportRef.current;
     if (!node) return;
     setExportBusy(true);
     try {
-      if (mode === "download") {
-        const url = await captureStatsLabPngDataUrl(node);
-        downloadDataUrl(
-          url,
-          `fpl-arena-stats-centre-${filter.centreMode.toLowerCase()}.png`,
-        );
-        setFlash(ui.saved);
-      } else {
-        const blob = await captureStatsLabPngBlob(node);
-        await copyPngBlobToClipboard(blob);
-        setFlash(ui.copied);
-      }
+      await withFitExportWidth(node, async () => {
+        const url = await captureCentreJpegDataUrl(node, surface.canvasBg);
+        if (mode === "download") {
+          downloadDataUrl(url, `${buildExportBaseName()}.jpg`);
+          setFlash(ui.saved);
+        } else {
+          const res = await fetch(url);
+          const blob = await res.blob();
+          try {
+            await navigator.clipboard.write([
+              new ClipboardItem({ "image/jpeg": blob }),
+            ]);
+          } catch {
+            await copyPngBlobToClipboard(blob);
+          }
+          setFlash(ui.copied);
+        }
+      });
       window.setTimeout(() => setFlash(null), 2500);
     } catch (e) {
       setFlash(e instanceof Error ? e.message : "Export failed");
@@ -243,6 +711,13 @@ export function StatsCentreView({
     watchlist.length > 0
       ? `/admin/stats-lab?tab=studio&selected=${watchlist.join(",")}`
       : "/admin/stats-lab?tab=studio";
+
+  const showWatch = filter.centreMode !== "TEAMS";
+  const isWideTable = (result?.columns.length ?? 0) >= 13;
+  const densePad = isWideTable ? "px-1 py-2.5" : "px-1.5 py-2.5";
+  const nameMinClass = isWideTable ? "min-w-[115px] pr-1.5" : "min-w-[140px]";
+  const poolAvgLabel =
+    filter.centreMode === "TEAMS" ? ui.poolAverageLeague : ui.poolAverage;
 
   return (
     <div className="space-y-4">
@@ -298,17 +773,15 @@ export function StatsCentreView({
               <button
                 key={m}
                 type="button"
-                onClick={() =>
+                onClick={() => {
                   patchFilter({
                     centreMode: m,
-                    sortKey:
-                      m === "TEAMS"
-                        ? "total_points"
-                        : m === "PER_GW"
-                          ? "total_points"
-                          : "total_points",
-                  })
-                }
+                    sortKey: "total_points",
+                    sortDir: "DESC",
+                    per90: m === "PER_GW" ? false : filter.per90,
+                  });
+                  if (m === "TEAMS" && pageSize < 25) setPageSize(25);
+                }}
                 className={`rounded-lg px-3 py-1.5 text-[10px] font-black uppercase tracking-wider ${
                   filter.centreMode === m
                     ? "bg-[#39FF14] text-black"
@@ -353,7 +826,7 @@ export function StatsCentreView({
                   max={38}
                   value={draftGwFrom}
                   onChange={(e) => setDraftGwFrom(Number(e.target.value))}
-                  className="mt-1 block w-20 rounded-lg border border-slate-700 bg-slate-950 px-2 py-2 text-sm text-white"
+                  className={`mt-1 block w-20 rounded-lg border px-2 py-2 text-sm ${tokens.input}`}
                 />
               </label>
               <label className="text-[10px] font-bold uppercase text-slate-500">
@@ -364,7 +837,7 @@ export function StatsCentreView({
                   max={38}
                   value={draftGwTo}
                   onChange={(e) => setDraftGwTo(Number(e.target.value))}
-                  className="mt-1 block w-20 rounded-lg border border-slate-700 bg-slate-950 px-2 py-2 text-sm text-white"
+                  className={`mt-1 block w-20 rounded-lg border px-2 py-2 text-sm ${tokens.input}`}
                 />
               </label>
             </>
@@ -404,7 +877,6 @@ export function StatsCentreView({
           </div>
         </div>
 
-        {/* Category pills */}
         {filter.centreMode === "PLAYERS" ? (
           <div className="flex flex-wrap gap-1.5">
             {PLAYER_TABS.map((tab) => (
@@ -415,8 +887,7 @@ export function StatsCentreView({
                   patchFilter({
                     playerTab: tab,
                     sortKey:
-                      PLAYER_TAB_LABELS[lang][tab] &&
-                      (tab === "OVERVIEW"
+                      tab === "OVERVIEW"
                         ? "total_points"
                         : tab === "GOAL_THREAT"
                           ? "expected_goals"
@@ -424,18 +895,22 @@ export function StatsCentreView({
                             ? "expected_assists"
                             : tab === "DEFENDING"
                               ? "dc_bonus_points"
-                              : tab === "DISCIPLINE"
-                                ? "negative_points_total"
-                                : tab === "EXPECTED"
-                                  ? "xgi_delta"
-                                  : tab === "VALUE_MARKET"
-                                    ? "value_season"
-                                    : "total_points"),
+                              : tab === "SET_PIECES"
+                                ? "creativity"
+                                : tab === "DISCIPLINE"
+                                  ? "negative_points_total"
+                                  : tab === "EXPECTED"
+                                    ? "xgi_delta"
+                                    : tab === "VALUE_MARKET"
+                                      ? "value_season"
+                                      : "total_points",
+                    sortDir:
+                      tab === "DISCIPLINE" ? "ASC" : "DESC",
                   })
                 }
                 className={`rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-wider ${
                   filter.playerTab === tab
-                    ? "bg-emerald-500/25 text-emerald-200 ring-1 ring-emerald-500/40"
+                    ? "bg-[#39FF14] text-black"
                     : "border border-slate-700 text-slate-400 hover:border-slate-500"
                 }`}
               >
@@ -444,16 +919,30 @@ export function StatsCentreView({
             ))}
           </div>
         ) : null}
+
         {filter.centreMode === "TEAMS" ? (
           <div className="flex flex-wrap gap-1.5">
             {TEAM_TABS.map((tab) => (
               <button
                 key={tab}
                 type="button"
-                onClick={() => patchFilter({ teamTab: tab })}
+                onClick={() =>
+                  patchFilter({
+                    teamTab: tab,
+                    sortKey:
+                      tab === "TEAM_ATTACKING"
+                        ? "goals_scored"
+                        : tab === "TEAM_DEFENDING"
+                          ? "clean_sheets"
+                          : tab === "TEAM_EXPECTED"
+                            ? "expected_goals"
+                            : "total_points",
+                    sortDir: "DESC",
+                  })
+                }
                 className={`rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-wider ${
                   filter.teamTab === tab
-                    ? "bg-emerald-500/25 text-emerald-200 ring-1 ring-emerald-500/40"
+                    ? "bg-[#39FF14] text-black"
                     : "border border-slate-700 text-slate-400 hover:border-slate-500"
                 }`}
               >
@@ -473,7 +962,7 @@ export function StatsCentreView({
                   positions: v === 0 ? [] : [v as FplPositionType],
                 });
               }}
-              className="rounded-lg border border-slate-700 bg-slate-950 px-2 py-1.5 text-xs text-white"
+              className={`rounded-lg border px-2 py-1.5 text-xs ${tokens.input}`}
             >
               <option value={0}>{ui.allPositions}</option>
               <option value={1}>GK</option>
@@ -489,7 +978,7 @@ export function StatsCentreView({
               const v = Number(e.target.value);
               patchFilter({ clubIds: v === 0 ? [] : [v] });
             }}
-            className="rounded-lg border border-slate-700 bg-slate-950 px-2 py-1.5 text-xs text-white"
+            className={`rounded-lg border px-2 py-1.5 text-xs ${tokens.input}`}
           >
             <option value={0}>{ui.allTeams}</option>
             {bootstrap.clubs.map((c) => (
@@ -499,26 +988,43 @@ export function StatsCentreView({
             ))}
           </select>
 
-          <div className="inline-flex rounded-lg border border-slate-700 bg-slate-950 p-0.5">
-            <button
-              type="button"
-              onClick={() => patchFilter({ per90: false })}
-              className={`rounded-md px-2.5 py-1 text-[10px] font-black uppercase ${
-                !filter.per90 ? "bg-slate-800 text-white" : "text-slate-500"
-              }`}
-            >
-              {ui.totals}
-            </button>
-            <button
-              type="button"
-              onClick={() => patchFilter({ per90: true })}
-              className={`rounded-md px-2.5 py-1 text-[10px] font-black uppercase ${
-                filter.per90 ? "bg-[#39FF14] text-black" : "text-slate-500"
-              }`}
-            >
-              {ui.per90}
-            </button>
-          </div>
+          {filter.centreMode !== "PER_GW" ? (
+            <div className="inline-flex rounded-lg border border-slate-700 bg-slate-950 p-0.5">
+              <button
+                type="button"
+                onClick={() =>
+                  patchFilter({
+                    per90: false,
+                    minMinutes:
+                      filter.minMinutes === 90 ? 1 : filter.minMinutes,
+                  })
+                }
+                className={`rounded-md px-2.5 py-1 text-[10px] font-black uppercase ${
+                  !filter.per90 ? "bg-slate-800 text-white" : "text-slate-500"
+                }`}
+              >
+                {ui.totals}
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  patchFilter({
+                    per90: true,
+                    minMinutes: Math.max(filter.minMinutes, 90),
+                  })
+                }
+                className={`rounded-md px-2.5 py-1 text-[10px] font-black uppercase ${
+                  filter.per90 ? "bg-[#39FF14] text-black" : "text-slate-500"
+                }`}
+              >
+                {ui.per90}
+              </button>
+            </div>
+          ) : (
+            <span className="rounded-md border border-slate-700 px-2.5 py-1 text-[10px] font-black uppercase text-slate-400">
+              {ui.singleMatches}
+            </span>
+          )}
 
           <div className="relative min-w-[180px] flex-1">
             <Search className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-500" />
@@ -526,7 +1032,7 @@ export function StatsCentreView({
               value={filter.search}
               onChange={(e) => patchFilter({ search: e.target.value })}
               placeholder={ui.search}
-              className="w-full rounded-lg border border-slate-700 bg-slate-950 py-1.5 pl-8 pr-2 text-xs text-white"
+              className={`w-full rounded-lg border py-1.5 pl-8 pr-2 text-xs ${tokens.input}`}
             />
           </div>
 
@@ -555,7 +1061,7 @@ export function StatsCentreView({
                 onChange={(e) =>
                   patchFilter({ minMinutes: Number(e.target.value) })
                 }
-                className="mt-1 block w-24 rounded-lg border border-slate-700 bg-slate-950 px-2 py-1.5 text-sm text-white"
+                className={`mt-1 block w-24 rounded-lg border px-2 py-1.5 text-sm ${tokens.input}`}
               />
             </label>
             <label className="text-[10px] text-slate-500">
@@ -568,12 +1074,10 @@ export function StatsCentreView({
                 value={filter.maxPrice ?? ""}
                 onChange={(e) =>
                   patchFilter({
-                    maxPrice: e.target.value
-                      ? Number(e.target.value)
-                      : null,
+                    maxPrice: e.target.value ? Number(e.target.value) : null,
                   })
                 }
-                className="mt-1 block w-24 rounded-lg border border-slate-700 bg-slate-950 px-2 py-1.5 text-sm text-white"
+                className={`mt-1 block w-24 rounded-lg border px-2 py-1.5 text-sm ${tokens.input}`}
               />
             </label>
             <label className="text-[10px] text-slate-500">
@@ -590,7 +1094,7 @@ export function StatsCentreView({
                       : null,
                   })
                 }
-                className="mt-1 block w-24 rounded-lg border border-slate-700 bg-slate-950 px-2 py-1.5 text-sm text-white"
+                className={`mt-1 block w-24 rounded-lg border px-2 py-1.5 text-sm ${tokens.input}`}
               />
             </label>
           </div>
@@ -610,24 +1114,32 @@ export function StatsCentreView({
         <button
           type="button"
           disabled={exportBusy || !pageRows.length}
-          onClick={() => void exportPng("download")}
-          className="inline-flex items-center gap-1.5 rounded-xl border border-slate-600 px-3 py-2 text-[10px] font-black uppercase text-slate-200 disabled:opacity-40"
+          onClick={() => void exportPair()}
+          className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-500/50 bg-emerald-500/15 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-emerald-100 disabled:opacity-40"
         >
           {exportBusy ? (
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
           ) : (
             <Download className="h-3.5 w-3.5" />
           )}
-          {ui.downloadPng}
+          {ui.downloadPair}
         </button>
         <button
           type="button"
           disabled={exportBusy || !pageRows.length}
-          onClick={() => void exportPng("copy")}
+          onClick={() => void exportJpgOnly("download")}
+          className="inline-flex items-center gap-1.5 rounded-xl border border-slate-600 px-3 py-2 text-[10px] font-black uppercase text-slate-200 disabled:opacity-40"
+        >
+          {ui.downloadJpg}
+        </button>
+        <button
+          type="button"
+          disabled={exportBusy || !pageRows.length}
+          onClick={() => void exportJpgOnly("copy")}
           className="inline-flex items-center gap-1.5 rounded-xl border border-slate-600 px-3 py-2 text-[10px] font-black uppercase text-slate-200 disabled:opacity-40"
         >
           <ClipboardCopy className="h-3.5 w-3.5" />
-          {ui.copyPng}
+          {ui.copyJpg}
         </button>
         {pending ? (
           <span className="inline-flex items-center gap-1 text-[10px] text-slate-500">
@@ -647,85 +1159,105 @@ export function StatsCentreView({
         </p>
       ) : null}
 
-      {/* Exportable table node */}
+      {/* Exportable poster node */}
       <div
         ref={exportRef}
-        className={`overflow-hidden rounded-2xl border ${tokens.panelBorder} ${tokens.tableBg}`}
-        style={{ background: theme.canvasBg, borderColor: theme.border }}
+        className={`overflow-hidden rounded-2xl border ${surface.borderClass}`}
+        style={{ background: surface.canvasBg }}
       >
         <div
-          className="flex items-center gap-3 border-b px-4 py-3"
-          style={{ borderColor: theme.border }}
+          className={`flex items-center gap-3 border-b px-5 py-4 ${surface.borderClass}`}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={ARENA_PORTAL_LOGO}
             alt={ARENA_PORTAL_ALT}
-            width={40}
-            height={40}
-            className="h-10 w-10 object-contain"
+            width={48}
+            height={48}
+            className="h-12 w-12 object-contain"
             crossOrigin="anonymous"
           />
-          <div>
+          <div className="min-w-0">
             <p
-              className={`text-[10px] font-black uppercase tracking-[0.28em] ${tokens.accentText}`}
+              className={`text-[11px] font-bold uppercase tracking-[0.2em] ${surface.accentTextClass}`}
             >
               FPL ARENA • STATS CENTRE
             </p>
             <p
-              className={`text-sm font-bold ${tokens.textStrong}`}
-              style={{ color: theme.text }}
+              className={`text-[22px] font-black tracking-tight ${surface.textClass}`}
             >
-              {CENTRE_MODE_LABELS[lang][filter.centreMode]}
-              {filter.centreMode === "PLAYERS"
-                ? ` · ${PLAYER_TAB_LABELS[lang][filter.playerTab]}`
-                : filter.centreMode === "TEAMS"
-                  ? ` · ${TEAM_TAB_LABELS[lang][filter.teamTab]}`
-                  : ""}
-              {" · "}
-              {CENTRE_RANGE_LABELS[lang][filter.rangeMode]}
-              {filter.per90 ? " · Per 90" : " · Totals"}
+              {posterTitle}
+            </p>
+            <p className={`mt-0.5 text-[13px] font-medium ${surface.mutedClass}`}>
+              {posterSubtitle}
             </p>
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <div
+          className="overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+          data-centre-table-wrap
+        >
           {!result || pageRows.length === 0 ? (
-            <p className="px-6 py-16 text-center text-sm text-slate-500">
+            <p className={`px-6 py-16 text-center text-sm ${surface.mutedClass}`}>
               {ui.empty}
             </p>
           ) : (
-            <table className="min-w-full border-collapse text-left text-xs">
+            <table className="min-w-full border-collapse text-left">
               <thead>
-                <tr className="border-b border-slate-800 bg-slate-950/80">
-                  {filter.centreMode !== "TEAMS" ? (
-                    <th className="sticky left-0 z-10 bg-slate-950 px-2 py-2 text-[10px] font-black uppercase text-slate-500">
-                      ★
-                    </th>
-                  ) : null}
-                  <th className="sticky left-8 z-10 bg-slate-950 px-3 py-2 text-[10px] font-black uppercase text-slate-400">
-                    {ui.player}
+                <tr
+                  className={`border-b ${surface.borderClass}`}
+                  style={{ background: surface.headBg }}
+                >
+                  <th
+                    className={`sticky left-0 z-20 w-9 whitespace-nowrap border-r ${isWideTable ? "px-1" : "px-2.5"} py-3 text-[12px] font-extrabold uppercase tracking-wider ${surface.stickyBorderClass} ${surface.mutedClass}`}
+                    style={{ background: surface.headBg }}
+                  >
+                    #
+                  </th>
+                  <th
+                    className={`sticky z-20 whitespace-nowrap border-r ${isWideTable ? "px-1.5" : "px-3"} py-3 text-[12px] font-extrabold uppercase tracking-wider ${surface.stickyBorderClass} ${surface.textClass}`}
+                    style={{
+                      background: surface.headBg,
+                      left: isWideTable ? 36 : 56,
+                    }}
+                  >
+                    {filter.centreMode === "TEAMS" ? ui.club : ui.player}
                   </th>
                   {result.columns.map((c) => {
                     const active = filter.sortKey === c.key;
                     return (
-                      <th key={c.key} className="px-1.5 py-2">
+                      <th
+                        key={c.key}
+                        className={isWideTable ? "px-1 py-3" : "px-1.5 py-3"}
+                      >
                         <button
                           type="button"
                           title={centreColLabel(c.key, lang)}
                           onClick={() => onSort(c.key)}
-                          className={`inline-flex items-center gap-0.5 rounded px-1.5 py-1 text-[10px] font-black uppercase tracking-wider ${
+                          className={`inline-flex items-center gap-0.5 whitespace-nowrap rounded text-[12px] font-extrabold uppercase tracking-wider ${
+                            isWideTable ? "px-1 py-1" : "px-2.5 py-1"
+                          } ${
                             active
-                              ? "bg-emerald-500/20 text-emerald-300"
-                              : "text-slate-500 hover:text-slate-300"
+                              ? `${surface.accentTextClass} font-black`
+                              : surface.mutedClass
                           }`}
+                          style={
+                            active
+                              ? {
+                                  background: isLight
+                                    ? "rgba(5,150,105,0.12)"
+                                    : "rgba(52,211,153,0.15)",
+                                }
+                              : undefined
+                          }
                         >
                           {centreColShort(c.key, lang)}
                           {active ? (
                             filter.sortDir === "DESC" ? (
-                              <ArrowDown className="h-3 w-3" />
+                              <ArrowDown className="h-3.5 w-3.5" />
                             ) : (
-                              <ArrowUp className="h-3 w-3" />
+                              <ArrowUp className="h-3.5 w-3.5" />
                             )
                           ) : null}
                         </button>
@@ -735,25 +1267,33 @@ export function StatsCentreView({
                 </tr>
               </thead>
               <tbody>
-                {pageRows.map((row) => {
+                {pageRows.map((row, idx) => {
+                  const rank = (page - 1) * pageSize + idx + 1;
+                  const rowBg = idx % 2 === 0 ? surface.rowOdd : surface.rowEven;
                   const watched =
                     row.fpl_element_id != null &&
                     watchlist.includes(row.fpl_element_id);
                   return (
                     <tr
                       key={row.id}
-                      className="border-b border-slate-800/80 hover:bg-slate-900/50"
+                      className={`border-b ${surface.borderClass}`}
+                      style={{ background: rowBg }}
                     >
-                      {filter.centreMode !== "TEAMS" ? (
-                        <td
-                          className="sticky left-0 z-10 px-2 py-1.5"
-                          style={{ background: theme.canvasBg }}
-                        >
-                          {row.fpl_element_id != null ? (
+                      <td
+                        className={`sticky left-0 z-10 border-r ${isWideTable ? "w-9 px-1" : "px-2"} py-2.5 ${surface.stickyBorderClass}`}
+                        style={{ background: rowBg }}
+                      >
+                        <span className="inline-flex items-center gap-1.5">
+                          <span
+                            className={`w-6 text-right font-mono text-[12px] font-bold opacity-75 ${surface.textClass}`}
+                          >
+                            {rank}
+                          </span>
+                          {showWatch && row.fpl_element_id != null ? (
                             <button
                               type="button"
                               onClick={() => toggleWatch(row.fpl_element_id!)}
-                              className="text-amber-300/80 hover:text-amber-200"
+                              className="text-amber-400/90 hover:text-amber-300"
                               title={ui.watchlist}
                             >
                               <Star
@@ -763,69 +1303,53 @@ export function StatsCentreView({
                               />
                             </button>
                           ) : null}
-                        </td>
-                      ) : null}
+                        </span>
+                      </td>
                       <td
-                        className="sticky left-8 z-10 whitespace-nowrap px-3 py-1.5"
-                        style={{ background: theme.canvasBg }}
+                        className={`sticky z-10 border-r ${isWideTable ? "px-1.5" : "px-3"} py-2.5 ${surface.stickyBorderClass}`}
+                        style={{
+                          background: rowBg,
+                          left: isWideTable ? 36 : 56,
+                        }}
                       >
                         {filter.centreMode === "TEAMS" ? (
-                          <span className="inline-flex items-center gap-2">
-                            {row.club_pulse_code ? (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img
-                                src={`/api/uploads/fpl-lab/badge/${row.club_pulse_code}`}
-                                alt={row.club_short}
-                                width={28}
-                                height={28}
-                                crossOrigin="anonymous"
-                                className="h-7 w-7 object-contain"
-                              />
-                            ) : null}
+                          <span className="inline-flex items-center gap-3">
+                            <TeamBadge
+                              pulseCode={row.club_pulse_code}
+                              shortName={row.club_short}
+                            />
                             <span
-                              className={`font-bold ${tokens.textStrong}`}
-                              style={{ color: theme.text }}
+                              className={`flex flex-col justify-center ${nameMinClass}`}
                             >
-                              {row.web_name}
+                              <span
+                                className={`whitespace-nowrap text-[15px] font-bold leading-tight ${surface.textClass}`}
+                              >
+                                {row.club_name}
+                              </span>
+                              <span
+                                className={`mt-0.5 whitespace-nowrap text-[11px] font-semibold uppercase tracking-wider opacity-70 ${surface.mutedClass}`}
+                              >
+                                {row.club_short}
+                              </span>
                             </span>
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-2">
-                            {row.player_code ? (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img
-                                src={`/api/uploads/fpl-lab/player/${row.player_code}`}
-                                alt={row.web_name}
-                                width={36}
-                                height={36}
-                                crossOrigin="anonymous"
-                                className="h-9 w-9 shrink-0 rounded-full border border-slate-700/80 bg-slate-800 object-cover object-top"
-                              />
-                            ) : null}
-                            <span className="min-w-0">
+                          <span className="inline-flex items-center gap-3">
+                            <PlayerPortrait row={row} isLight={isLight} />
+                            <span
+                              className={`flex flex-col justify-center ${nameMinClass}`}
+                            >
                               <span
-                                className={`font-bold ${tokens.textStrong}`}
-                                style={{ color: theme.text }}
+                                className={`whitespace-nowrap text-[15px] font-bold leading-tight ${surface.textClass}`}
                               >
                                 {row.web_name}
                               </span>
                               <span
-                                className={`ml-2 inline-flex items-center gap-1 font-mono text-[10px] ${tokens.textMuted}`}
+                                className={`mt-0.5 whitespace-nowrap text-[11px] font-semibold uppercase tracking-wider leading-tight opacity-75 ${surface.mutedClass}`}
                               >
-                                {row.club_pulse_code ? (
-                                  // eslint-disable-next-line @next/next/no-img-element
-                                  <img
-                                    src={`/api/uploads/fpl-lab/badge/${row.club_pulse_code}`}
-                                    alt={row.club_short}
-                                    width={20}
-                                    height={20}
-                                    crossOrigin="anonymous"
-                                    className="h-5 w-5 object-contain"
-                                  />
-                                ) : null}
                                 {row.club_short}
                                 {row.position_label !== "TEAM"
-                                  ? ` ${row.position_label}`
+                                  ? ` · ${row.position_label}`
                                   : ""}
                               </span>
                             </span>
@@ -834,22 +1358,22 @@ export function StatsCentreView({
                       </td>
                       {result.columns.map((c) => {
                         const raw = row.values[c.key];
-                        const norm = row.colorNorm[c.key] ?? 0.5;
-                        const num =
-                          typeof raw === "number" ? raw : null;
+                        const norm = row.colorNorm[c.key];
                         return (
-                          <td key={c.key} className="px-1.5 py-1.5">
-                            <span
-                              className={`inline-flex min-w-[2.5rem] justify-center rounded-md px-1.5 py-0.5 font-mono text-[11px] font-semibold tabular-nums ${colourPillClass(
-                                norm,
-                                c.isDelta,
-                                num,
-                                true,
-                              )}`}
-                              title={centreColLabel(c.key, lang)}
-                            >
-                              {formatCentreCell(c, raw)}
-                            </span>
+                          <td key={c.key} className={densePad}>
+                            <ValuePill
+                              col={c}
+                              raw={raw}
+                              norm={norm}
+                              isDark={isDark}
+                              lang={lang}
+                              dense={isWideTable}
+                              per90={
+                                filter.centreMode === "PER_GW"
+                                  ? false
+                                  : filter.per90
+                              }
+                            />
                           </td>
                         );
                       })}
@@ -857,16 +1381,127 @@ export function StatsCentreView({
                   );
                 })}
               </tbody>
+              <tfoot>
+                <tr
+                  className={`border-t-2 border-b-2 ${surface.borderClass}`}
+                  style={{ background: surface.headBg }}
+                >
+                  <td
+                    className={`sticky left-0 z-10 border-r py-3 ${isWideTable ? "w-9 px-1" : "px-2"} ${surface.stickyBorderClass}`}
+                    style={{ background: surface.headBg }}
+                  />
+                  <td
+                    className={`sticky z-10 border-r py-3 ${isWideTable ? "px-1.5" : "px-3"} ${surface.stickyBorderClass}`}
+                    style={{
+                      background: surface.headBg,
+                      left: isWideTable ? 36 : 56,
+                    }}
+                  >
+                    <span
+                      className={`whitespace-nowrap text-[13px] font-black ${surface.accentTextClass}`}
+                    >
+                      {poolAvgLabel}
+                    </span>
+                    <span
+                      className={`ml-2 text-[11px] font-semibold ${surface.mutedClass}`}
+                    >
+                      (n={result.totalRows})
+                    </span>
+                  </td>
+                  {result.columns.map((c) => {
+                    const avg = result.poolAverages?.[c.key];
+                    const per90Effective =
+                      filter.centreMode === "PER_GW" ? false : filter.per90;
+                    const footPad = isWideTable ? "px-1 py-3" : "px-1.5 py-3";
+                    if (avg == null) {
+                      return (
+                        <td key={c.key} className={footPad}>
+                          <span
+                            className={`inline-flex items-center justify-center rounded-md font-mono font-bold ${
+                              isWideTable
+                                ? "min-w-[42px] px-1.5 py-0.5 text-[13px]"
+                                : "min-w-[54px] px-2.5 py-1 text-[14px]"
+                            } ${colourPillNeutralClass(isDark)}`}
+                          >
+                            —
+                          </span>
+                        </td>
+                      );
+                    }
+                    return (
+                      <td key={c.key} className={footPad}>
+                        <ValuePill
+                          col={c}
+                          raw={avg}
+                          norm={undefined}
+                          isDark={isDark}
+                          lang={lang}
+                          dense={isWideTable}
+                          per90={per90Effective}
+                          isPoolAverage
+                        />
+                      </td>
+                    );
+                  })}
+                </tr>
+              </tfoot>
             </table>
           )}
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-800 px-4 py-3 text-[10px] text-slate-500">
-          <span>{ui.colourLegend}</span>
-          <span className="font-semibold text-[#39FF14]">
-            www.fpl-arena.com • Powered by St0pa | FPL Arena
-          </span>
-        </div>
+        {/* Dictionary footer */}
+        {result && result.columns.length > 0 ? (
+          <div
+            className={`space-y-3 border-t px-5 py-4 ${surface.borderClass}`}
+          >
+            <div className="flex flex-wrap gap-2">
+              {result.columns.map((c) => (
+                <span
+                  key={c.key}
+                  className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] ${surface.borderClass} ${surface.textClass}`}
+                  style={{
+                    background: isLight
+                      ? "rgba(255,255,255,0.85)"
+                      : "rgba(15,23,42,0.55)",
+                  }}
+                >
+                  <span
+                    className={`font-black ${surface.accentTextClass}`}
+                    style={{ color: surface.accent }}
+                  >
+                    {centreColShort(c.key, lang)}
+                  </span>
+                  <span className={surface.mutedClass}>
+                    : {centreColFullLabel(c.key, lang)}
+                  </span>
+                </span>
+              ))}
+            </div>
+            <p className={`text-[12px] font-medium ${surface.mutedClass}`}>
+              {ui.colourLegend}
+            </p>
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+              <span className={`text-[10px] ${surface.mutedClass}`}>
+                {posterTitle}
+              </span>
+              <span
+                className="text-[10px] font-semibold"
+                style={{ color: surface.accent }}
+              >
+                www.fpl-arena.com • Powered by St0pa | FPL Arena
+              </span>
+            </div>
+          </div>
+        ) : (
+          <div
+            className={`flex flex-wrap items-center justify-between gap-2 border-t px-4 py-3 text-[10px] ${surface.borderClass} ${surface.mutedClass}`}
+          >
+            <span>{ui.colourLegend}</span>
+            <span className="font-semibold" style={{ color: surface.accent }}>
+              www.fpl-arena.com • Powered by St0pa | FPL Arena
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Pagination */}

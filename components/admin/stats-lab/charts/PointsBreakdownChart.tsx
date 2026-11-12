@@ -46,6 +46,9 @@ export type PointsSortKey =
   | (typeof POS_KEYS)[number]
   | (typeof NEG_KEYS)[number];
 
+type PosKey = (typeof POS_KEYS)[number];
+type NegKey = (typeof NEG_KEYS)[number];
+
 type Props = {
   players: PlottedStatsLabPlayer[];
   theme: StatsLabChartTheme;
@@ -59,6 +62,20 @@ type Props = {
   onSelectPlayer: (id: number) => void;
   variant?: "studio" | "export";
 };
+
+/** AAA: w ANALYST_LIGHT WYS/60+ nie mogą być blade (#cbd5e1). */
+function posSegmentColor(key: PosKey, isLight: boolean): string {
+  if (isLight) {
+    if (key === "appearanceBasePts") return "#64748b"; // slate-500
+    if (key === "sixtyPlusPts") return "#334155"; // slate-700
+  }
+  return POINTS_POS_COLORS[key] ?? "#64748b";
+}
+
+function posSegmentText(bg: string, isLight: boolean): string {
+  if (isLight && (bg === "#64748b" || bg === "#334155")) return "#ffffff";
+  return pointsSegmentTextColor(bg);
+}
 
 function goalPtsPer(elementType: FplPositionType): number {
   if (elementType === 1) return 10;
@@ -74,7 +91,7 @@ function csPtsPer(elementType: FplPositionType): number {
 }
 
 function positiveTooltip(
-  key: (typeof POS_KEYS)[number],
+  key: PosKey,
   pts: number,
   elementType: FplPositionType,
   lang: StatsLabLang,
@@ -101,7 +118,7 @@ function positiveTooltip(
 }
 
 function negativeTooltip(
-  key: (typeof NEG_KEYS)[number],
+  key: NegKey,
   absPts: number,
   lang: StatsLabLang,
 ): string {
@@ -110,10 +127,7 @@ function negativeTooltip(
   return `${full}: −${absPts} ${unit}`;
 }
 
-function posLegendLabel(
-  key: (typeof POS_KEYS)[number],
-  lang: StatsLabLang,
-): string {
+function posLegendLabel(key: PosKey, lang: StatsLabLang): string {
   if (lang === "pl") {
     if (key === "appearanceBasePts") return "Występ (WYS)";
     if (key === "sixtyPlusPts") return "60+ min";
@@ -136,7 +150,7 @@ function posLegendLabel(
   return "Bonus (BON)";
 }
 
-function negLegendLabel(key: (typeof NEG_KEYS)[number], lang: StatsLabLang): string {
+function negLegendLabel(key: NegKey, lang: StatsLabLang): string {
   if (lang === "pl") {
     if (key === "goalsConcededDeduction") return "Stracone gole (GC)";
     if (key === "yellowCardDeduction") return "Żółte kartki (ŻK)";
@@ -153,11 +167,28 @@ function negLegendLabel(key: (typeof NEG_KEYS)[number], lang: StatsLabLang): str
 
 function readPosValue(
   bd: PlottedStatsLabPlayer["pointsBreakdown"],
-  key: (typeof POS_KEYS)[number],
+  key: PosKey,
 ): number {
   return Number(
     bd.positiveBreakdown[key as keyof typeof bd.positiveBreakdown] ?? 0,
   );
+}
+
+function readNegValue(
+  bd: PlottedStatsLabPlayer["pointsBreakdown"],
+  key: NegKey,
+): number {
+  return Number(
+    bd.negativeBreakdown[key as keyof typeof bd.negativeBreakdown] ?? 0,
+  );
+}
+
+function isPosCategoryKey(key: PointsSortKey): key is PosKey {
+  return (POS_KEYS as readonly string[]).includes(key);
+}
+
+function isNegCategoryKey(key: PointsSortKey): key is NegKey {
+  return (NEG_KEYS as readonly string[]).includes(key);
 }
 
 export function PointsBreakdownChart({
@@ -174,13 +205,33 @@ export function PointsBreakdownChart({
   variant = "studio",
 }: Props) {
   const isExport = variant === "export";
+  const isLight = theme.id === "ANALYST_LIGHT";
   const posShort = POINTS_POS_SHORT[lang];
   const negShort = POINTS_NEG_SHORT[lang];
   const ptsUnit = lang === "pl" ? "pkt" : "pts";
 
+  /** Tylko kategorie z ≥1 graczem ≠ 0 na aktualnym wykresie. */
+  const visiblePosKeys = POS_KEYS.filter((key) =>
+    players.some((p) => readPosValue(p.pointsBreakdown, key) !== 0),
+  );
+
+  const visibleNegKeys = showNegatives
+    ? NEG_KEYS.filter((key) =>
+        players.some((p) => Math.abs(readNegValue(p.pointsBreakdown, key)) > 0),
+      )
+    : [];
+
+  // Bezpieczny fallback gdy sort wskazuje kategorię znikającą z legendy
+  // (`"net"` w spec → `estimatedTotal` = oficjalne netto FPL)
+  const effectiveSortKey: PointsSortKey =
+    (isPosCategoryKey(sortKey) && !visiblePosKeys.includes(sortKey)) ||
+    (isNegCategoryKey(sortKey) && !visibleNegKeys.includes(sortKey))
+      ? "estimatedTotal"
+      : sortKey;
+
   const sorted = [...players].sort((a, b) => {
-    const av = readSortValue(a, sortKey);
-    const bv = readSortValue(b, sortKey);
+    const av = readSortValue(a, effectiveSortKey);
+    const bv = readSortValue(b, effectiveSortKey);
     return sortDir === "DESC" ? bv - av : av - bv;
   });
 
@@ -192,57 +243,6 @@ export function PointsBreakdownChart({
     6,
     ...sorted.map((p) => Math.abs(p.pointsBreakdown.negativeTotal)),
   );
-
-  const hasGkOnChart = sorted.some((p) => p.element_type === 1);
-  const sumSavePts = sorted.reduce(
-    (a, p) => a + Number(p.pointsBreakdown.positiveBreakdown.savePts ?? 0),
-    0,
-  );
-  const sumPenSavePts = sorted.reduce(
-    (a, p) =>
-      a + Number(p.pointsBreakdown.positiveBreakdown.penaltySavePts ?? 0),
-    0,
-  );
-
-  const visiblePosKeys = POS_KEYS.filter((key) => {
-    if (key === "savePts") return hasGkOnChart || sumSavePts > 0;
-    if (key === "penaltySavePts") return sumPenSavePts > 0;
-    return true;
-  });
-
-  const negTotals = Object.fromEntries(
-    NEG_KEYS.map((key) => [
-      key,
-      sorted.reduce(
-        (a, p) =>
-          a +
-          Math.abs(
-            Number(
-              p.pointsBreakdown.negativeBreakdown[
-                key as keyof typeof p.pointsBreakdown.negativeBreakdown
-              ] ?? 0,
-            ),
-          ),
-        0,
-      ),
-    ]),
-  ) as Record<(typeof NEG_KEYS)[number], number>;
-
-  const anyNegOnChart = NEG_KEYS.some((k) => negTotals[k] > 0);
-  const visibleNegKeys = showNegatives
-    ? NEG_KEYS.filter((key) => {
-        if (negTotals[key] > 0) return true;
-        // Podstawowe GC / kartki gdy brak jakichkolwiek kar na wykresie
-        if (!anyNegOnChart) {
-          return (
-            key === "goalsConcededDeduction" ||
-            key === "yellowCardDeduction" ||
-            key === "redCardDeduction"
-          );
-        }
-        return false;
-      })
-    : [];
 
   function LegendPill({
     active,
@@ -275,13 +275,24 @@ export function PointsBreakdownChart({
     if (isExport) {
       return (
         <span
-          className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap text-[13px] font-bold"
-          style={{ color: theme.muted }}
+          className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border px-2 py-0.5 text-[13px] font-bold ${
+            isLight
+              ? "border-slate-300 bg-slate-100 text-slate-800"
+              : "border-white/10 bg-white/[0.04] text-slate-200"
+          }`}
         >
           {inner}
         </span>
       );
     }
+
+    const pillClass = active
+      ? isLight
+        ? "bg-emerald-50 border border-emerald-500 text-emerald-900 ring-1 ring-emerald-500/40"
+        : "bg-white/[0.08] border border-[#39FF14]/40 text-slate-100 ring-1 ring-[#39FF14]/35"
+      : isLight
+        ? "bg-slate-100 border border-slate-300 text-slate-800 hover:bg-slate-200"
+        : "bg-white/[0.04] border border-white/10 text-slate-200 hover:bg-white/[0.08]";
 
     return (
       <button
@@ -290,27 +301,43 @@ export function PointsBreakdownChart({
           e.stopPropagation();
           onSort(sortAs);
         }}
-        className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md px-1.5 py-0.5 text-[13px] font-bold transition ${
-          active ? "bg-white/5 ring-1 ring-[#39FF14]/35" : "hover:opacity-90"
-        }`}
-        style={{
-          color: active ? theme.text : theme.muted,
-        }}
+        className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md px-2 py-0.5 text-[13px] font-bold transition ${pillClass}`}
       >
         {inner}
       </button>
     );
   }
 
+  const sortNetActive = effectiveSortKey === "estimatedTotal";
+  const sortNetBtnClass = sortNetActive
+    ? isLight
+      ? "border-emerald-500 bg-emerald-50 text-emerald-900"
+      : "border-[#39FF14]/50 bg-[#39FF14]/10 text-[#39FF14]"
+    : isLight
+      ? "border-slate-300 bg-slate-100 text-slate-700 hover:border-slate-400"
+      : "border-slate-700 text-slate-300 hover:border-slate-500";
+
+  const barTrackClass = isLight
+    ? "bg-slate-100 border border-slate-200/90"
+    : "bg-slate-950/60 border border-white/5";
+
+  const subLegendClass = isLight
+    ? "border border-slate-200/90 bg-slate-50 text-slate-800"
+    : "border border-slate-800/80 bg-slate-900/75";
+
+  const penLabelClass = isLight
+    ? "text-rose-900 font-semibold"
+    : "text-amber-300 font-medium";
+
   return (
     <div className="space-y-4">
       <div className="space-y-1.5">
-        <div className="flex flex-nowrap items-center gap-x-3 overflow-hidden">
+        <div className="flex flex-nowrap items-center gap-x-2 overflow-hidden">
           {visiblePosKeys.map((key) => (
             <LegendPill
               key={key}
-              active={sortKey === key}
-              color={POINTS_POS_COLORS[key]}
+              active={effectiveSortKey === key}
+              color={posSegmentColor(key, isLight)}
               label={posLegendLabel(key, lang)}
               sortAs={key}
             />
@@ -322,14 +349,10 @@ export function PointsBreakdownChart({
                 e.stopPropagation();
                 onSort("estimatedTotal");
               }}
-              className={`ml-auto inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border px-2.5 py-1 text-[12px] font-extrabold transition ${
-                sortKey === "estimatedTotal"
-                  ? "border-[#39FF14]/50 bg-[#39FF14]/10 text-[#39FF14]"
-                  : "border-slate-700 text-slate-300 hover:border-slate-500"
-              }`}
+              className={`ml-auto inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border px-2.5 py-1 text-[12px] font-extrabold transition ${sortNetBtnClass}`}
             >
               {lang === "pl" ? "Sortuj: Suma FPL" : "Sort: FPL Net"}
-              {sortKey === "estimatedTotal" ? (
+              {sortNetActive ? (
                 sortDir === "DESC" ? (
                   <ArrowDown className="h-3.5 w-3.5" />
                 ) : (
@@ -342,17 +365,19 @@ export function PointsBreakdownChart({
           ) : null}
         </div>
         {showNegatives && visibleNegKeys.length > 0 ? (
-          <div className="flex flex-nowrap items-center gap-x-3 overflow-hidden">
+          <div className="flex flex-nowrap items-center gap-x-2 overflow-hidden">
             <span
-              className="shrink-0 whitespace-nowrap text-[13px] font-extrabold"
-              style={{ color: theme.muted }}
+              className={`shrink-0 whitespace-nowrap text-[13px] font-extrabold ${
+                isLight ? "text-slate-700" : ""
+              }`}
+              style={isLight ? undefined : { color: theme.muted }}
             >
               {lang === "pl" ? "Kary:" : "Penalties:"}
             </span>
             {visibleNegKeys.map((key) => (
               <LegendPill
                 key={key}
-                active={sortKey === key}
+                active={effectiveSortKey === key}
                 color={POINTS_NEG_COLORS[key]}
                 label={negLegendLabel(key, lang)}
                 sortAs={key}
@@ -367,13 +392,10 @@ export function PointsBreakdownChart({
           const bd = p.pointsBreakdown;
           const isSpot = spotlightId === p.fpl_element_id;
           const playerGross = Math.max(0, bd.positiveTotal);
-          const barWidthPct =
-            (playerGross / maxGrossAmongPlotted) * 100;
+          const barWidthPct = (playerGross / maxGrossAmongPlotted) * 100;
           const playerPenAbs = Math.abs(bd.negativeTotal);
           const penWidthPct =
-            playerPenAbs > 0
-              ? (playerPenAbs / maxAbsPenalty) * 100
-              : 0;
+            playerPenAbs > 0 ? (playerPenAbs / maxAbsPenalty) * 100 : 0;
 
           const posSegments = POS_KEYS.map((key) => ({
             key,
@@ -381,24 +403,43 @@ export function PointsBreakdownChart({
           })).filter((s) => s.value > 0);
 
           const negSegments = NEG_KEYS.map((key) => {
-            const raw = Number(
-              bd.negativeBreakdown[
-                key as keyof typeof bd.negativeBreakdown
-              ] ?? 0,
-            );
+            const raw = readNegValue(bd, key);
             return { key, value: raw, abs: Math.abs(raw) };
           }).filter((s) => s.value < 0);
+
+          const grossPillClass = isLight
+            ? "bg-emerald-100 text-emerald-900 border border-emerald-300 font-bold"
+            : "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-semibold";
+
+          const pensPillClass =
+            bd.negativeTotal < 0
+              ? isLight
+                ? "bg-rose-100 text-rose-900 border border-rose-300 font-bold"
+                : "bg-rose-500/20 text-rose-300 border border-rose-500/30 font-semibold"
+              : isLight
+                ? "bg-slate-100 text-slate-700 border border-slate-300 font-medium"
+                : "bg-white/5 text-slate-400 border border-white/10";
 
           return (
             <button
               key={p.fpl_element_id}
               type="button"
               onClick={() => onSelectPlayer(p.fpl_element_id)}
-              className="w-full rounded-xl border text-left"
-              style={{
-                borderColor: isSpot ? theme.gold : theme.border,
-                background: isSpot ? `${theme.gold}14` : "transparent",
-              }}
+              className={
+                isSpot
+                  ? isLight
+                    ? "w-full rounded-xl border border-amber-400 bg-amber-50/40 text-left ring-2 ring-amber-500"
+                    : "w-full rounded-xl border border-amber-400/50 bg-amber-500/[0.06] text-left ring-2 ring-amber-400/80"
+                  : "w-full rounded-xl border text-left"
+              }
+              style={
+                isSpot
+                  ? undefined
+                  : {
+                      borderColor: theme.border,
+                      background: "transparent",
+                    }
+              }
             >
               <div className="grid grid-cols-[210px_minmax(0,1fr)_125px] items-center gap-3 px-3.5 py-2.5">
                 <div className="w-[210px] min-w-0 shrink-0">
@@ -411,18 +452,20 @@ export function PointsBreakdownChart({
                     showMeta={showMeta}
                     priceLabel={`£${(p.rawValues.now_cost / 10).toFixed(1)}m`}
                     ownershipLabel={`${p.rawValues.selected_by_percent.toFixed(1)}%`}
-                    isLight={theme.id === "ANALYST_LIGHT"}
+                    isLight={isLight}
                   />
                 </div>
 
                 <div className="min-w-0 w-full space-y-1.5">
-                  <div className="flex h-10 w-full overflow-hidden rounded-lg bg-slate-900/90">
+                  <div
+                    className={`flex h-10 w-full overflow-hidden rounded-lg ${barTrackClass}`}
+                  >
                     <div
                       className="flex h-full overflow-hidden"
                       style={{ width: `${Math.max(barWidthPct, 8)}%` }}
                     >
                       {posSegments.map((seg) => {
-                        const bg = POINTS_POS_COLORS[seg.key];
+                        const bg = posSegmentColor(seg.key, isLight);
                         return (
                           <div
                             key={seg.key}
@@ -432,14 +475,14 @@ export function PointsBreakdownChart({
                               p.element_type,
                               lang,
                             )}
-                            className="flex items-center justify-center border-r border-slate-950/40 px-0.5 text-[15px] font-black leading-none tracking-tight last:border-r-0"
+                            className="flex items-center justify-center border-r border-black/10 px-0.5 text-[15px] font-black leading-none tracking-tight last:border-r-0"
                             style={{
                               flexGrow: seg.value,
                               flexShrink: 1,
                               flexBasis: 0,
                               minWidth: 32,
                               background: bg,
-                              color: pointsSegmentTextColor(bg),
+                              color: posSegmentText(bg, isLight),
                             }}
                           >
                             +{seg.value}
@@ -450,7 +493,9 @@ export function PointsBreakdownChart({
                   </div>
 
                   {showNegatives && playerPenAbs > 0 ? (
-                    <div className="flex h-7 w-full items-center overflow-hidden rounded-md border border-rose-500/20 bg-slate-900/85">
+                    <div
+                      className={`flex h-7 w-full items-center overflow-hidden rounded-md ${barTrackClass}`}
+                    >
                       <div
                         className="flex h-full"
                         style={{
@@ -483,7 +528,9 @@ export function PointsBreakdownChart({
                   ) : null}
 
                   {/* Jednoliniowa pod-legenda — stała wysokość u każdego gracza */}
-                  <div className="flex w-full items-center justify-between gap-2 overflow-hidden whitespace-nowrap rounded border border-slate-800/80 bg-slate-900/75 px-2.5 py-1 text-[11px] font-bold">
+                  <div
+                    className={`flex w-full items-center justify-between gap-2 overflow-hidden whitespace-nowrap rounded px-2.5 py-1 text-[11px] font-bold ${subLegendClass}`}
+                  >
                     <div className="flex min-w-0 flex-nowrap items-center gap-x-2.5 overflow-hidden whitespace-nowrap">
                       {posSegments.map((seg) => (
                         <span
@@ -493,25 +540,39 @@ export function PointsBreakdownChart({
                         >
                           <span
                             className="h-2 w-2 rounded-full"
-                            style={{ background: POINTS_POS_COLORS[seg.key] }}
+                            style={{
+                              background: posSegmentColor(seg.key, isLight),
+                            }}
                           />
                           {posShort[seg.key]} +{seg.value}
                         </span>
                       ))}
                     </div>
                     {showNegatives && negSegments.length > 0 ? (
-                      <div className="flex shrink-0 flex-nowrap items-center gap-x-2 whitespace-nowrap border-l border-slate-700/70 pl-2">
-                        <span className="text-rose-300">
+                      <div
+                        className={`flex shrink-0 flex-nowrap items-center gap-x-2 whitespace-nowrap border-l pl-2 ${
+                          isLight ? "border-slate-300" : "border-slate-700/70"
+                        }`}
+                      >
+                        <span className={penLabelClass}>
                           {lang === "pl" ? "Kary:" : "Pens:"}
                         </span>
                         {negSegments.map((seg) => (
                           <span
                             key={`nleg-${seg.key}`}
-                            className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap"
-                            style={{ color: POINTS_NEG_COLORS[seg.key] }}
+                            className={`inline-flex shrink-0 items-center gap-1 whitespace-nowrap font-bold ${
+                              isLight ? "text-rose-950" : ""
+                            }`}
+                            style={
+                              isLight
+                                ? undefined
+                                : { color: POINTS_NEG_COLORS[seg.key] }
+                            }
                           >
                             <span
-                              className="h-2 w-2 rounded-full"
+                              className={`h-2 w-2 rounded-full ${
+                                isLight ? "ring-1 ring-black/15" : ""
+                              }`}
                               style={{
                                 background: POINTS_NEG_COLORS[seg.key],
                               }}
@@ -537,15 +598,13 @@ export function PointsBreakdownChart({
                       {ptsUnit}
                     </span>
                   </p>
-                  <span className="shrink-0 whitespace-nowrap rounded-md bg-emerald-500/20 px-2 py-0.5 text-xs font-extrabold text-emerald-300">
+                  <span
+                    className={`shrink-0 whitespace-nowrap rounded-md px-2 py-0.5 text-xs ${grossPillClass}`}
+                  >
                     {lang === "pl" ? "Brutto" : "Gross"}: +{bd.positiveTotal}
                   </span>
                   <span
-                    className={`shrink-0 whitespace-nowrap rounded-md px-2 py-0.5 text-xs font-extrabold ${
-                      bd.negativeTotal < 0
-                        ? "bg-rose-500/25 text-rose-300"
-                        : "bg-slate-800/80 text-slate-400"
-                    }`}
+                    className={`shrink-0 whitespace-nowrap rounded-md px-2 py-0.5 text-xs ${pensPillClass}`}
                   >
                     {lang === "pl" ? "Kary" : "Pens"}:{" "}
                     {bd.negativeTotal < 0 ? bd.negativeTotal : 0}

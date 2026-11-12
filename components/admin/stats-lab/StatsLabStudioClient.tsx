@@ -31,6 +31,8 @@ import {
   STATS_LAB_PRESETS,
   applyStatsLabPreset,
   createDefaultStatsLabFilter,
+  defaultActiveMetricsForPositions,
+  isSortByStatAlignedWithPositions,
   type StatsLabPresetId,
   type StatsLabQueryFilter,
 } from "@/lib/stats-lab/presets";
@@ -61,6 +63,7 @@ import { StatsLabExportBar } from "@/components/admin/stats-lab/StatsLabExportBa
 import { StatsLabPosterFrame } from "@/components/admin/stats-lab/StatsLabPosterFrame";
 import { StatsLabExportNode } from "@/components/admin/stats-lab/StatsLabExportNode";
 import { StatsLabKnowledgeBaseModal } from "@/components/admin/stats-lab/StatsLabKnowledgeBaseModal";
+import { RadarQuickSlotsBar } from "@/components/admin/stats-lab/RadarQuickSlotsBar";
 import type { PointsSortKey } from "@/components/admin/stats-lab/charts/PointsBreakdownChart";
 import type { KnowledgeHelpAnchor } from "@/lib/stats-lab/knowledgeBaseContent";
 
@@ -96,7 +99,7 @@ const DEFAULT_UI: StudioUiState = {
   scaleMode: "PERCENTILE",
   customTitle: "",
   customSubtitle: "",
-  showPoolAverage: true,
+  showPoolAverage: false,
   showBarValues: true,
   showPlayerMeta: true,
   showNegativeBreakdown: false,
@@ -174,13 +177,29 @@ export function StatsLabStudioClient({
       startTransition(async () => {
         try {
           setError(null);
+          const isPointsBreakdown = ui.vizMode === "POINTS_BREAKDOWN";
+          const isStreaks = ui.vizMode === "STREAKS_EXPLORER";
+          // Composite TYLKO przy jawnym przełączniku i TYLKO na widokach wielometrycznych.
+          // Zmiana vizMode / okresu / per90 NIGDY nie włącza composite po cichu.
+          const allowComposite =
+            !isPointsBreakdown &&
+            !isStreaks &&
+            ui.sortByComposite === true;
           const payload: StatsLabQueryFilter = {
             ...nextFilter,
             selectedPlayerIds:
               ui.pickMode === "MANUAL" ? nextFilter.selectedPlayerIds : [],
             // STREAKS: sortuj całą pulę po serii przed Top N
-            streakSortKey:
-              ui.vizMode === "STREAKS_EXPLORER" ? streakSortKey : undefined,
+            streakSortKey: isStreaks ? streakSortKey : undefined,
+            sortByComposite: allowComposite,
+            // POINTS_BREAKDOWN: Top N + kolejność = oficjalne sumy FPL (nie Per 90)
+            sortByRawValues: isPointsBreakdown ? true : false,
+            ...(isPointsBreakdown
+              ? {
+                  sortByStat: "total_points" as FplStatKey,
+                  sortDirection: "DESC" as const,
+                }
+              : {}),
           };
           const data = await queryStatsLabComparisonAction(payload);
           setResult(data);
@@ -191,14 +210,25 @@ export function StatsLabStudioClient({
         }
       });
     },
-    [ui.pickMode, ui.vizMode, streakSortKey],
+    [ui.pickMode, ui.vizMode, ui.scaleMode, ui.sortByComposite, streakSortKey],
   );
 
   useEffect(() => {
     if (emptyDb) return;
+    // Każda zmiana filter (w tym minMinutes w trybie MANUAL) → odświeżenie puli odniesienia
     const tmr = window.setTimeout(() => runQuery(filter), 280);
     return () => window.clearTimeout(tmr);
-  }, [filter, emptyDb, runQuery, ui.vizMode, streakSortKey]);
+  }, [
+    filter,
+    filter.minMinutes,
+    filter.selectedPlayerIds,
+    emptyDb,
+    runQuery,
+    ui.vizMode,
+    ui.scaleMode,
+    ui.sortByComposite,
+    streakSortKey,
+  ]);
 
   // Deep-link z Stats Centre: ustaw Watchlistę jako wybór ręczny
   useEffect(() => {
@@ -211,23 +241,120 @@ export function StatsLabStudioClient({
     }));
   }, [seedSelectedPlayerIds]);
 
-  const displayResult = useMemo(() => {
+  /**
+   * Kolejność plottedPlayers pochodzi WYŁĄCZNIE z silnika
+   * (sort całej comparisonPool → dopiero slice Top N).
+   * Zakaz post-slice re-sortu po composite — psuje TOP N po sortByStat
+   * (lider TP wypada poza MAX 4 na radarze).
+   *
+   * POINTS_BREAKDOWN: silnik sortuje po raw total_points; tutaj dodatkowo
+   * synchronizujemy kolejność 1:1 z lokalnym sortem wykresu (estimatedTotal /
+   * kategoria), żeby audit.json === canvas.
+   */
+  const displayResult = useMemo((): StatsLabComparisonResult | null => {
     if (!result) return null;
-    if (!ui.sortByComposite) return result;
-    const plottedPlayers = [...result.plottedPlayers].sort(
-      (a, b) => b.compositeScore - a.compositeScore,
+    if (ui.vizMode !== "POINTS_BREAKDOWN") return result;
+
+    // 1:1 z PointsBreakdownChart.readSortValue — audit.json === canvas
+    const read = (
+      p: StatsLabComparisonResult["plottedPlayers"][number],
+    ): number => {
+      const bd = p.pointsBreakdown;
+      if (pointsSortKey === "estimatedTotal") return bd.estimatedTotal;
+      if (pointsSortKey === "positiveTotal") return bd.positiveTotal;
+      if (pointsSortKey === "negativeTotal") return bd.negativeTotal;
+      if (pointsSortKey === "appearancePts") {
+        return bd.positiveBreakdown.appearancePts;
+      }
+      if (pointsSortKey in bd.positiveBreakdown) {
+        return Number(
+          bd.positiveBreakdown[
+            pointsSortKey as keyof typeof bd.positiveBreakdown
+          ] ?? 0,
+        );
+      }
+      return Number(
+        bd.negativeBreakdown[
+          pointsSortKey as keyof typeof bd.negativeBreakdown
+        ] ?? 0,
+      );
+    };
+
+    const mul = chartSortDir === "DESC" ? 1 : -1;
+    const sorted = [...result.plottedPlayers].sort((a, b) => {
+      const primary = (read(b) - read(a)) * mul;
+      if (primary !== 0) return primary;
+      return (b.pointsBreakdown.estimatedTotal - a.pointsBreakdown.estimatedTotal) * mul;
+    });
+    return { ...result, plottedPlayers: sorted };
+  }, [result, ui.vizMode, pointsSortKey, chartSortDir]);
+
+  /** Kandydaci Spotlight = gracze na wykresie (Radar: max 4). */
+  const spotlightPlottedPlayers = useMemo(() => {
+    const all = displayResult?.plottedPlayers ?? [];
+    return ui.vizMode === "RADAR_PIZZA" ? all.slice(0, 4) : all;
+  }, [displayResult?.plottedPlayers, ui.vizMode]);
+
+  // Spotlight poza aktualnym wykresem → natychmiastowy reset
+  useEffect(() => {
+    const id = ui.spotlightPlayerId;
+    if (id == null) return;
+    const onChart = spotlightPlottedPlayers.some(
+      (p) => p.fpl_element_id === id,
     );
-    return { ...result, plottedPlayers };
-  }, [result, ui.sortByComposite]);
+    if (!onChart) {
+      setUi((prev) =>
+        prev.spotlightPlayerId == null
+          ? prev
+          : { ...prev, spotlightPlayerId: null },
+      );
+    }
+  }, [ui.spotlightPlayerId, spotlightPlottedPlayers]);
 
   function onFilterChange(next: StatsLabQueryFilter) {
     setActivePreset(null);
     const prevPos = filter.positions.join(",");
     const nextPos = next.positions.join(",");
-    setFilter(next);
+    let resolved = next;
     if (prevPos !== nextPos) {
       setActiveStreakKeys(defaultStreakKeysForPositions(next.positions));
+      // Auto-metryki pozycji, jeśli użytkownik nie zmieniał ich w tym samym kroku.
+      const metricsUnchanged =
+        next.activeMetrics.join(",") === filter.activeMetrics.join(",");
+      if (metricsUnchanged) {
+        resolved = {
+          ...next,
+          activeMetrics: defaultActiveMetricsForPositions(next.positions),
+        };
+      }
+      // Po zmianie formacji: sortByStat musi pasować do pozycji / nowych metryk
+      // (np. FWD preset sort=goals_scored → klik GK → TP DESC, nie gole).
+      if (
+        !isSortByStatAlignedWithPositions(
+          resolved.sortByStat,
+          resolved.positions,
+          resolved.activeMetrics,
+        )
+      ) {
+        resolved = {
+          ...resolved,
+          sortByStat: "total_points",
+          sortDirection: "DESC",
+          sortByComposite: false,
+        };
+        setUi((prev) => ({ ...prev, sortByComposite: false }));
+      }
     }
+    // Zmiana sortByStat → wyłącz Composite (kolejność = silnik wg sortByStat)
+    if (resolved.sortByStat !== filter.sortByStat) {
+      resolved = { ...resolved, sortByComposite: false };
+      setUi((prev) => ({ ...prev, sortByComposite: false }));
+    }
+    // Zmiana okresu / klubów / per90 / pozycji NIGDY nie włącza composite
+    if (resolved.sortByComposite !== true) {
+      resolved = { ...resolved, sortByComposite: false };
+    }
+    setFilter(resolved);
   }
 
   useEffect(() => {
@@ -241,7 +368,37 @@ export function StatsLabStudioClient({
   }, [seedChartTheme]);
 
   function onUiChange(patch: Partial<StudioUiState>) {
-    setUi((prev) => ({ ...prev, ...patch }));
+    setUi((prev) => {
+      const next = { ...prev, ...patch };
+      // Czysty plakat Radar: bez przerywanej średniej przy wejściu na zakładkę
+      if (
+        patch.vizMode === "RADAR_PIZZA" &&
+        prev.vizMode !== "RADAR_PIZZA"
+      ) {
+        next.showPoolAverage = false;
+      }
+      // Wejście na POINTS_BREAKDOWN / STREAKS: composite zawsze OFF (brak sensu UX)
+      if (
+        patch.vizMode === "POINTS_BREAKDOWN" ||
+        patch.vizMode === "STREAKS_EXPLORER"
+      ) {
+        next.sortByComposite = false;
+      }
+      return next;
+    });
+    // Źródło prawdy audytu = filter.sortByComposite (1:1 z payloadem silnika)
+    if (patch.sortByComposite !== undefined) {
+      setFilter((prev) => ({
+        ...prev,
+        sortByComposite: patch.sortByComposite === true,
+      }));
+    }
+    if (
+      patch.vizMode === "POINTS_BREAKDOWN" ||
+      patch.vizMode === "STREAKS_EXPLORER"
+    ) {
+      setFilter((prev) => ({ ...prev, sortByComposite: false }));
+    }
     if (patch.lang != null) onLangChange?.(patch.lang);
     if (patch.chartTheme != null) onChartThemeChange?.(patch.chartTheme);
   }
@@ -254,8 +411,9 @@ export function StatsLabStudioClient({
       ),
     );
     setActivePreset(id);
-    setUi((prev) => ({ ...prev, pickMode: "AUTO" }));
-    setFilter({ ...next, selectedPlayerIds: [] });
+    // Preset zawsze wraca do sortByStat z presetu — Composite OFF
+    setUi((prev) => ({ ...prev, pickMode: "AUTO", sortByComposite: false }));
+    setFilter({ ...next, selectedPlayerIds: [], sortByComposite: false });
     setActiveStreakKeys(defaultStreakKeysForPositions(next.positions));
   }
 
@@ -398,7 +556,11 @@ export function StatsLabStudioClient({
                 <button
                   key={mode}
                   type="button"
-                  title={label}
+                  title={
+                    mode === "PERCENTILE"
+                      ? copy.percentileExplain
+                      : copy.rawExplain
+                  }
                   onClick={() =>
                     onUiChange({ scaleMode: mode as StatsLabScaleMode })
                   }
@@ -408,23 +570,13 @@ export function StatsLabStudioClient({
                       : "text-slate-400"
                   }`}
                 >
-                  {mode === "PERCENTILE"
-                    ? ui.lang === "pl"
-                      ? "Percentyle"
-                      : "Percentile"
-                    : ui.lang === "pl"
-                      ? "Surowe"
-                      : "Raw"}
+                  {label}
                 </button>
               ))}
             </div>
             <button
               type="button"
-              title={
-                ui.lang === "pl"
-                  ? "Co oznacza skala percentylowa?"
-                  : "What does the percentile scale mean?"
-              }
+              title={copy.scaleHelpTitle}
               onClick={() => openKnowledge("scale")}
               className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-slate-600 text-[10px] font-black text-slate-400 hover:border-[#39FF14] hover:text-[#39FF14]"
             >
@@ -554,6 +706,7 @@ export function StatsLabStudioClient({
               bootstrap={bootstrap}
               filter={filter}
               ui={ui}
+              plottedPlayers={spotlightPlottedPlayers}
               onFilterChange={onFilterChange}
               onUiChange={onUiChange}
               onOpenKnowledge={openKnowledge}
@@ -575,7 +728,47 @@ export function StatsLabStudioClient({
             scaleMode={ui.scaleMode}
             seasonCode={bootstrap.seasonCode}
             customTitle={ui.customTitle}
+            chartTheme={ui.chartTheme}
+            activeStreakKeys={activeStreakKeys}
+            showNegativeBreakdown={ui.showNegativeBreakdown}
+            streakSortKey={streakSortKey}
+            scatterAxisX={ui.axisX}
+            scatterAxisY={ui.axisY}
           />
+
+          {/* Poza exportRef / PosterFrame — nigdy nie trafia na PNG */}
+          {ui.vizMode === "RADAR_PIZZA" ? (
+            <RadarQuickSlotsBar
+              bootstrap={bootstrap}
+              plottedPlayers={displayResult?.plottedPlayers ?? []}
+              spotlightId={ui.spotlightPlayerId}
+              lang={ui.lang}
+              positionFilter={filter.positions}
+              onAssignIds={(ids) => {
+                setUi((prev) => ({ ...prev, pickMode: "MANUAL" }));
+                setActivePreset(null);
+                setFilter((prev) => ({
+                  ...prev,
+                  selectedPlayerIds: ids,
+                }));
+              }}
+              onSpotlight={(id) =>
+                onUiChange({ spotlightPlayerId: id })
+              }
+              onResetAutoTop4={() => {
+                setUi((prev) => ({ ...prev, pickMode: "AUTO" }));
+                setActivePreset(null);
+                setFilter((prev) => ({
+                  ...prev,
+                  selectedPlayerIds: [],
+                  limitPlayers: Math.min(
+                    Math.max(prev.limitPlayers || 4, 4),
+                    4,
+                  ),
+                }));
+              }}
+            />
+          ) : null}
 
           <StatsLabPosterFrame>
             <StatsLabChartCanvas

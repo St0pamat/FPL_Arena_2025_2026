@@ -61,6 +61,17 @@ export type StatsLabQueryFilter = {
   streakSortKey?: StreakMetricKey;
   /** Opcjonalne kryterium sortowania Dekompozycji (przyszłe użycie). */
   breakdownSortKey?: string;
+  /**
+   * Gdy true (i TOP N): sortuj całą comparisonPool po `compositeScore`
+   * przed `.slice(0, limitPlayers)` — nie sortuj wtórnie tylko Top N.
+   * Domyślnie false — NIGDY nie włączać po cichu przy zmianie viz/okresu/pozycji.
+   */
+  sortByComposite?: boolean;
+  /**
+   * Gdy true: sortuj po `rawValues[sortByStat]` niezależnie od `per90`
+   * (POINTS_BREAKDOWN = oficjalne sumy meczowe FPL 1:1 z wykresem).
+   */
+  sortByRawValues?: boolean;
 };
 
 export type StatsLabPresetId =
@@ -225,6 +236,8 @@ export function createDefaultStatsLabFilter(
     ],
     streakSortKey: undefined,
     breakdownSortKey: undefined,
+    sortByComposite: false,
+    sortByRawValues: false,
   };
 }
 
@@ -243,6 +256,114 @@ export function applyStatsLabPreset(
     selectedPlayerIds: preset.patch.selectedPlayerIds ?? base.selectedPlayerIds,
     activeMetrics: preset.patch.activeMetrics ?? base.activeMetrics,
   };
+}
+
+/**
+ * Domyślne `activeMetrics` dla wybranej pozycji (Studio).
+ * Używane przy zmianie filtra pozycji, żeby composite nie liczył CS u MID/FWD.
+ *
+ * Kontrakt (formacje):
+ * - GK [1]: TP, CS, saves, form, PPM, xGC
+ * - DEF [2]: TP, CS, DC suma / DC Mecz / DC Pkt, xGI, BPS
+ * - MID [3]: TP, G+A, xGI, xG, xA, DC Pkt, BPS
+ * - FWD [4]: TP, gole, xG, xGI, threat, bonus
+ * - Wszystkie / multi: TP, xGI, BPS, G+A
+ */
+export function defaultActiveMetricsForPositions(
+  positions: FplPositionType[],
+): FplStatKey[] {
+  if (positions.length === 1) {
+    if (positions[0] === 1) {
+      return [
+        "total_points",
+        "clean_sheets",
+        "saves",
+        "form",
+        "points_per_game",
+        "expected_goals_conceded",
+      ];
+    }
+    if (positions[0] === 2) {
+      return [
+        "total_points",
+        "clean_sheets",
+        "defensive_contributions_total",
+        "dc_bonus_matches",
+        "dc_bonus_points",
+        "expected_goal_involvements",
+        "bps",
+      ];
+    }
+    if (positions[0] === 3) {
+      return [
+        "total_points",
+        "goals_assists",
+        "expected_goal_involvements",
+        "expected_goals",
+        "expected_assists",
+        "dc_bonus_points",
+        "bps",
+      ];
+    }
+    if (positions[0] === 4) {
+      return [
+        "total_points",
+        "goals_scored",
+        "expected_goals",
+        "expected_goal_involvements",
+        "threat",
+        "bonus",
+      ];
+    }
+  }
+  return [
+    "total_points",
+    "expected_goal_involvements",
+    "bps",
+    "goals_assists",
+  ];
+}
+
+/** Sortowanie ataku / DC — nieadekwatne dla samego GK. */
+const SORT_MISMATCH_ON_GK = new Set<FplStatKey>([
+  "goals_scored",
+  "expected_goals",
+  "threat",
+  "dc_bonus_points",
+  "dc_bonus_matches",
+  "defensive_contributions_total",
+  "goals_assists",
+  "assists",
+]);
+
+/** Sortowanie bramkarskie — nieadekwatne dla DEF / MID / FWD. */
+const SORT_MISMATCH_OFF_GK = new Set<FplStatKey>([
+  "saves",
+  "penalties_saved",
+]);
+
+/**
+ * Czy `sortByStat` pasuje do nowej pozycji i aktualnych `activeMetrics`.
+ * `total_points` zawsze OK; inaczej klucz musi być w metrykach i nie być
+ * typowym mismatchem formacji (np. gole przy GK, saves przy FWD).
+ */
+export function isSortByStatAlignedWithPositions(
+  sortByStat: FplStatKey,
+  positions: FplPositionType[],
+  activeMetrics: FplStatKey[],
+): boolean {
+  if (sortByStat === "total_points") return true;
+  if (!activeMetrics.includes(sortByStat)) return false;
+
+  if (positions.length === 1) {
+    if (positions[0] === 1 && SORT_MISMATCH_ON_GK.has(sortByStat)) {
+      return false;
+    }
+    if (positions[0] !== 1 && SORT_MISMATCH_OFF_GK.has(sortByStat)) {
+      return false;
+    }
+  }
+  return true;
 }
 
 /** Czy filtr pozycji jest aktywny (nie „wszystkie”). */

@@ -294,12 +294,12 @@ export const FPL_STAT_DEFINITIONS: readonly FplStatDefinition[] = [
   // ── OVERVIEW ──
   {
     key: "total_points",
-    labelPl: "Punkty FPL (sezon)",
+    labelPl: "Punkty FPL",
     shortLabelPl: "TP",
-    descriptionPl: "Suma punktów Fantasy Premier League w sezonie.",
-    labelEn: "Total points",
+    descriptionPl: "Suma punktów Fantasy Premier League w badanym okresie.",
+    labelEn: "FPL Points",
     shortLabelEn: "TP",
-    descriptionEn: "Season total Fantasy Premier League points.",
+    descriptionEn: "Fantasy Premier League points in the selected period.",
     category: "OVERVIEW",
     supportsPer90: true,
     decimals: 0,
@@ -318,13 +318,14 @@ export const FPL_STAT_DEFINITIONS: readonly FplStatDefinition[] = [
   },
   {
     key: "points_per_game",
-    labelPl: "Średnia punktów na mecz",
+    labelPl: "Punkty na mecz",
     shortLabelPl: "PPM",
     descriptionPl: "Średnia punktów FPL na mecz w sezonie.",
     labelEn: "Points per game",
     shortLabelEn: "PPG",
     descriptionEn: "Average FPL points per game this season.",
     category: "OVERVIEW",
+    // Oficjalna średnia FPL API — NIGDY nie przeliczać Per 90; zawsze 1 dp (6.6, nie 7).
     supportsPer90: false,
     decimals: 1,
   },
@@ -354,7 +355,7 @@ export const FPL_STAT_DEFINITIONS: readonly FplStatDefinition[] = [
   },
   {
     key: "selected_by_percent",
-    labelPl: "Posiadanie %",
+    labelPl: "Posiadanie (%)",
     shortLabelPl: "TSB%",
     descriptionPl: "Odsetek menedżerów posiadających zawodnika (Team Selected By).",
     labelEn: "Selected by %",
@@ -390,7 +391,7 @@ export const FPL_STAT_DEFINITIONS: readonly FplStatDefinition[] = [
   },
   {
     key: "dreamteam_count",
-    labelPl: "Drużyna Kolejki",
+    labelPl: "Drużyna kolejki",
     shortLabelPl: "DT",
     descriptionPl: "Ile razy zawodnik trafił do oficjalnej Drużyny Kolejki FPL.",
     labelEn: "Times in Dream Team",
@@ -404,7 +405,7 @@ export const FPL_STAT_DEFINITIONS: readonly FplStatDefinition[] = [
   // ── VALUE_TRANSFERS ──
   {
     key: "value_season",
-    labelPl: "Value (sezon)",
+    labelPl: "Opłacalność (sezon)",
     shortLabelPl: "V(S)",
     descriptionPl: "Wartość sezonowa: punkty / cena.",
     labelEn: "Value (season)",
@@ -416,7 +417,7 @@ export const FPL_STAT_DEFINITIONS: readonly FplStatDefinition[] = [
   },
   {
     key: "value_form",
-    labelPl: "Value (forma)",
+    labelPl: "Opłacalność (forma)",
     shortLabelPl: "V(F)",
     descriptionPl: "Wartość formy: forma / cena.",
     labelEn: "Value (form)",
@@ -428,7 +429,7 @@ export const FPL_STAT_DEFINITIONS: readonly FplStatDefinition[] = [
   },
   {
     key: "price_rise",
-    labelPl: "Wzrost ceny od startu",
+    labelPl: "Wzrosty ceny",
     shortLabelPl: "PR",
     descriptionPl: "Dodatnia zmiana ceny od początku sezonu (w dziesiątkach).",
     labelEn: "Price rise (season)",
@@ -441,7 +442,7 @@ export const FPL_STAT_DEFINITIONS: readonly FplStatDefinition[] = [
   },
   {
     key: "price_fall",
-    labelPl: "Spadek ceny od startu",
+    labelPl: "Spadki ceny",
     shortLabelPl: "PF",
     descriptionPl: "Ujemna zmiana ceny od początku sezonu jako wartość dodatnia (w dziesiątkach).",
     labelEn: "Price fall (season)",
@@ -455,7 +456,7 @@ export const FPL_STAT_DEFINITIONS: readonly FplStatDefinition[] = [
   },
   {
     key: "price_change_gw",
-    labelPl: "Zmiana ceny w kolejce",
+    labelPl: "Zmiana ceny (GW)",
     shortLabelPl: "PR/PF GW",
     descriptionPl: "Zmiana ceny w bieżącej kolejce (w dziesiątkach).",
     labelEn: "Price change (GW)",
@@ -468,31 +469,32 @@ export const FPL_STAT_DEFINITIONS: readonly FplStatDefinition[] = [
   },
   {
     key: "transfers_in",
-    labelPl: "Transfery DO (sezon)",
+    labelPl: "Transfery IN (suma)",
     shortLabelPl: "TI",
-    descriptionPl: "Łączna liczba transferów do zespołu menedżerów w sezonie.",
-    labelEn: "Transfers in (season)",
+    descriptionPl: "Łączna liczba transferów do zespołów menedżerów w badanym okresie.",
+    labelEn: "Transfers IN (total)",
     shortLabelEn: "TI",
-    descriptionEn: "Total transfers into managers' teams this season.",
+    descriptionEn: "Total transfers into managers' teams in the selected period.",
     category: "VALUE_TRANSFERS",
     supportsPer90: false,
     decimals: 0,
   },
   {
     key: "transfers_out",
-    labelPl: "Transfery Z (sezon)",
+    labelPl: "Transfery OUT (suma)",
     shortLabelPl: "TO",
-    descriptionPl: "Łączna liczba transferów z zespołów menedżerów w sezonie.",
-    labelEn: "Transfers out (season)",
+    descriptionPl: "Łączna liczba transferów z zespołów menedżerów w badanym okresie.",
+    labelEn: "Transfers OUT (total)",
     shortLabelEn: "TO",
-    descriptionEn: "Total transfers out of managers' teams this season.",
+    descriptionEn: "Total transfers out of managers' teams in the selected period.",
     category: "VALUE_TRANSFERS",
     supportsPer90: false,
     decimals: 0,
+    invertScale: true,
   },
   {
     key: "transfers_in_event",
-    labelPl: "Transfery DO (GW)",
+    labelPl: "Transfery IN (GW)",
     shortLabelPl: "TI GW",
     descriptionPl: "Transfery DO w bieżącej kolejce.",
     labelEn: "Transfers in (GW)",
@@ -504,7 +506,7 @@ export const FPL_STAT_DEFINITIONS: readonly FplStatDefinition[] = [
   },
   {
     key: "transfers_out_event",
-    labelPl: "Transfery Z (GW)",
+    labelPl: "Transfery OUT (GW)",
     shortLabelPl: "TO GW",
     descriptionPl: "Transfery Z w bieżącej kolejce.",
     labelEn: "Transfers out (GW)",
@@ -513,6 +515,7 @@ export const FPL_STAT_DEFINITIONS: readonly FplStatDefinition[] = [
     category: "VALUE_TRANSFERS",
     supportsPer90: false,
     decimals: 0,
+    invertScale: true,
   },
   {
     key: "net_transfers_gw",
@@ -543,7 +546,7 @@ export const FPL_STAT_DEFINITIONS: readonly FplStatDefinition[] = [
   },
   {
     key: "expected_goals",
-    labelPl: "Expected Goals",
+    labelPl: "Oczekiwane gole",
     shortLabelPl: "xG",
     descriptionPl: "Oczekiwane gole (jakość sytuacji strzeleckich).",
     labelEn: "Expected goals",
@@ -555,7 +558,7 @@ export const FPL_STAT_DEFINITIONS: readonly FplStatDefinition[] = [
   },
   {
     key: "goals_vs_xg",
-    labelPl: "Gole vs xG",
+    labelPl: "Skuteczność (Gole − xG)",
     shortLabelPl: "G−xG",
     descriptionPl: "Over/underperformance: gole minus expected goals.",
     labelEn: "Goals vs xG",
@@ -568,7 +571,7 @@ export const FPL_STAT_DEFINITIONS: readonly FplStatDefinition[] = [
   },
   {
     key: "threat",
-    labelPl: "Threat",
+    labelPl: "Zagrożenie pod bramką",
     shortLabelPl: "Threat",
     descriptionPl: "Indeks ICT Threat — zagrożenie ofensywne.",
     labelEn: "Threat",
@@ -593,9 +596,9 @@ export const FPL_STAT_DEFINITIONS: readonly FplStatDefinition[] = [
   },
   {
     key: "expected_goal_involvements",
-    labelPl: "Expected Goal Involvements",
+    labelPl: "Oczekiwane gole + asysty",
     shortLabelPl: "xGI",
-    descriptionPl: "Oczekiwane udziałe w golach (xG + xA).",
+    descriptionPl: "Oczekiwane udziały w golach (xG + xA)",
     labelEn: "Expected goal involvements",
     shortLabelEn: "xGI",
     descriptionEn: "Expected goal involvements (xG + xA).",
@@ -619,7 +622,7 @@ export const FPL_STAT_DEFINITIONS: readonly FplStatDefinition[] = [
   },
   {
     key: "expected_assists",
-    labelPl: "Expected Assists",
+    labelPl: "Oczekiwane asysty",
     shortLabelPl: "xA",
     descriptionPl: "Oczekiwane asysty.",
     labelEn: "Expected assists",
@@ -631,7 +634,7 @@ export const FPL_STAT_DEFINITIONS: readonly FplStatDefinition[] = [
   },
   {
     key: "creativity",
-    labelPl: "Creativity",
+    labelPl: "Kreatywność",
     shortLabelPl: "Crea",
     descriptionPl: "Indeks ICT Creativity — kreacja okazji.",
     labelEn: "Creativity",
@@ -643,7 +646,7 @@ export const FPL_STAT_DEFINITIONS: readonly FplStatDefinition[] = [
   },
   {
     key: "influence",
-    labelPl: "Influence",
+    labelPl: "Wpływ na grę",
     shortLabelPl: "Inf",
     descriptionPl: "Indeks ICT Influence — wpływ na mecz.",
     labelEn: "Influence",
@@ -655,7 +658,7 @@ export const FPL_STAT_DEFINITIONS: readonly FplStatDefinition[] = [
   },
   {
     key: "ict_index",
-    labelPl: "ICT Index",
+    labelPl: "Indeks ICT",
     shortLabelPl: "ICT",
     descriptionPl: "Złożony indeks Influence + Creativity + Threat.",
     labelEn: "ICT Index",
@@ -679,7 +682,7 @@ export const FPL_STAT_DEFINITIONS: readonly FplStatDefinition[] = [
   },
   {
     key: "bps",
-    labelPl: "Bonus Points System",
+    labelPl: "System punktów bonusowych",
     shortLabelPl: "BPS",
     descriptionPl: "Suma punktów BPS decydujących o bonusie.",
     labelEn: "Bonus Points System",
@@ -705,7 +708,7 @@ export const FPL_STAT_DEFINITIONS: readonly FplStatDefinition[] = [
   },
   {
     key: "defensive_contributions_total",
-    labelPl: "Defensive Contributions (suma)",
+    labelPl: "Akcje obronne DC (suma)",
     shortLabelPl: "DC",
     descriptionPl:
       "Suma DC: DEF = CBI + Tackles; MID/FWD = CBI + Tackles + Recoveries.",
@@ -729,7 +732,7 @@ export const FPL_STAT_DEFINITIONS: readonly FplStatDefinition[] = [
     descriptionEn:
       "Matches hitting the DC threshold: DEF ≥10 CBI+TKL, MID/FWD ≥12 CBI+TKL+REC.",
     category: "DEFENDING_DC",
-    supportsPer90: false,
+    supportsPer90: true,
     decimals: 0,
     computed: true,
   },
@@ -742,7 +745,7 @@ export const FPL_STAT_DEFINITIONS: readonly FplStatDefinition[] = [
     shortLabelEn: "DC Pts",
     descriptionEn: "FPL points from Defensive Contributions: threshold matches × 2.",
     category: "DEFENDING_DC",
-    supportsPer90: false,
+    supportsPer90: true,
     decimals: 0,
     computed: true,
   },
@@ -760,7 +763,7 @@ export const FPL_STAT_DEFINITIONS: readonly FplStatDefinition[] = [
   },
   {
     key: "tackles",
-    labelPl: "Wślizgi / pojedynki",
+    labelPl: "Odbiory",
     shortLabelPl: "TKL",
     descriptionPl: "Wygrane wślizgi i pojedynki (tackles).",
     labelEn: "Tackles",
@@ -772,7 +775,7 @@ export const FPL_STAT_DEFINITIONS: readonly FplStatDefinition[] = [
   },
   {
     key: "recoveries",
-    labelPl: "Odzyskania piłki",
+    labelPl: "Odzyskane piłki",
     shortLabelPl: "REC",
     descriptionPl: "Odzyskania piłki (recoveries) — istotne dla DC MID/FWD.",
     labelEn: "Recoveries",
@@ -809,7 +812,7 @@ export const FPL_STAT_DEFINITIONS: readonly FplStatDefinition[] = [
   },
   {
     key: "expected_goals_conceded",
-    labelPl: "Expected Goals Conceded",
+    labelPl: "Oczekiwane stracone gole",
     shortLabelPl: "xGC",
     descriptionPl: "Oczekiwane stracone gole.",
     labelEn: "Expected goals conceded",
@@ -863,7 +866,7 @@ export const FPL_STAT_DEFINITIONS: readonly FplStatDefinition[] = [
   },
   {
     key: "penalties_saved",
-    labelPl: "Rzuty karne obronione",
+    labelPl: "Obronione karne",
     shortLabelPl: "PS",
     descriptionPl: "Obronione rzuty karne (+5 pkt FPL).",
     labelEn: "Penalties saved",
@@ -875,7 +878,7 @@ export const FPL_STAT_DEFINITIONS: readonly FplStatDefinition[] = [
   },
   {
     key: "penalties_missed",
-    labelPl: "Rzuty karne zmarnowane",
+    labelPl: "Zmarnowane karne",
     shortLabelPl: "PM",
     descriptionPl: "Zmarnowane rzuty karne (−2 pkt FPL).",
     labelEn: "Penalties missed",
@@ -941,19 +944,6 @@ export type FplPointsBreakdown = {
   fromHistory: boolean;
 };
 
-/** Mini-historia ostatnich meczów (chronologicznie, od najstarszego). */
-export type PlayerStreakRecentFlags = {
-  returnHit: boolean[];
-  goalHit: boolean[];
-  assistHit: boolean[];
-  goalOrAssistHit: boolean[];
-  cleanSheetHit: boolean[];
-  dcHit: boolean[];
-  sixtyMinHit: boolean[];
-  savesHit: boolean[];
-  bonusHit: boolean[];
-};
-
 /** Status czasu gry w pojedynczej kolejce okresu. */
 export type PlayingTimeStatus = "SIXTY_PLUS" | "SUB_UNDER_60" | "DNP_0";
 
@@ -961,6 +951,73 @@ export type PlayingTimeGwEntry = {
   gw: number;
   status: PlayingTimeStatus;
   minutes: number;
+};
+
+/**
+ * Stan kropki serii na pełnej osi kolejek badanego okresu
+ * (zsynchronizowanej z `playingTimeTimeline`).
+ */
+export type StreakDotState = "HIT" | "MISS" | "DNP";
+
+/**
+ * Oś flag per typ serii — zsynchronizowana z `timelineGameweeks`
+ * (`HIT` / `MISS` / `DNP` dla każdej kolejki okresu).
+ */
+export type PlayerStreakRecentFlags = {
+  returnHit: StreakDotState[];
+  goalHit: StreakDotState[];
+  assistHit: StreakDotState[];
+  goalOrAssistHit: StreakDotState[];
+  cleanSheetHit: StreakDotState[];
+  dcHit: StreakDotState[];
+  sixtyMinHit: StreakDotState[];
+  savesHit: StreakDotState[];
+  bonusHit: StreakDotState[];
+};
+
+/** Ślad mecz-po-meczu do audytu AI (Stats Lab). */
+export type MatchTraceRawStats = {
+  goals: number;
+  assists: number;
+  cs: number;
+  gc: number;
+  saves: number;
+  cbi: number;
+  tackles: number;
+  recoveries: number;
+  dcSum: number;
+  bonus: number;
+  bps: number;
+  yc: number;
+  rc: number;
+  xg: number;
+  xa: number;
+  xgi: number;
+  xgc: number;
+};
+
+export type MatchTraceComputedFlags = {
+  playingTimeStatus: PlayingTimeStatus;
+  goalHit: boolean;
+  assistHit: boolean;
+  csReturnHit: boolean;
+  dcBonusHit: boolean;
+  gkSaveHit: boolean;
+  penSaveHit: boolean;
+  bonusHit: boolean;
+  hasReturn: boolean;
+  /** np. `['DC_THRESHOLD(+2)', 'CLEAN_SHEET(+4)', 'BONUS(+1)']` */
+  returnReasons: string[];
+};
+
+export type MatchByMatchTraceEntry = {
+  gw: number;
+  fixtureId: number;
+  wasHome: boolean;
+  minutes: number;
+  officialMatchPts: number;
+  rawStats: MatchTraceRawStats;
+  computedFlags: MatchTraceComputedFlags;
 };
 
 export type PlayerStreaks = {
@@ -1000,20 +1057,22 @@ export type PlayerStreaks = {
   /** Oś czasu obecności (do 12 ostatnich GW okresu). */
   playingTimeTimeline: PlayingTimeGwEntry[];
   /**
-   * Ostatnie do 10 meczów — rzeczywista chronologia (ASC), nie „pierwsze N od lewej”.
-   * `timelineDots` === `returnTimelineDots` (alias wstecznej kompatybilności).
+   * Pełna oś kolejek badanego okresu (np. GW 1–10) — wspólna z
+   * `playingTimeTimeline` / kafelkami pass (`HIT` | `MISS` | `DNP`).
    */
-  timelineDots: boolean[];
-  returnTimelineDots: boolean[];
-  goalTimelineDots: boolean[];
-  assistTimelineDots: boolean[];
-  gaTimelineDots: boolean[];
-  csTimelineDots: boolean[];
-  dcTimelineDots: boolean[];
-  sixtyMinTimelineDots: boolean[];
-  savesTimelineDots: boolean[];
-  bonusTimelineDots: boolean[];
-  /** Ostatnie mecze per typ serii — kropki w kartach Eksploratora Pass. */
+  timelineGameweeks: number[];
+  /** Alias `returnTimelineDots` (wsteczna kompatybilność). */
+  timelineDots: StreakDotState[];
+  returnTimelineDots: StreakDotState[];
+  goalTimelineDots: StreakDotState[];
+  assistTimelineDots: StreakDotState[];
+  gaTimelineDots: StreakDotState[];
+  csTimelineDots: StreakDotState[];
+  dcTimelineDots: StreakDotState[];
+  sixtyMinTimelineDots: StreakDotState[];
+  savesTimelineDots: StreakDotState[];
+  bonusTimelineDots: StreakDotState[];
+  /** Te same osie co `*TimelineDots` — kropki w kartach Eksploratora Pass. */
   recentFlags: PlayerStreakRecentFlags;
 };
 

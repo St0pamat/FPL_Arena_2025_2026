@@ -1,8 +1,8 @@
 /**
- * Capture PNG Stats Lab (html-to-image) — wzorowane na ExportControls Content Hub.
+ * Capture PNG / JPEG Stats Lab (html-to-image) — wzorowane na ExportControls Content Hub.
  */
 
-import { toBlob, toPng } from "html-to-image";
+import { toBlob, toJpeg, toPng } from "html-to-image";
 
 /** Plakat social-first (X.com / Discord) — ~4:5 przy 6–10 graczach. */
 export const STATS_LAB_EXPORT_WIDTH = 1120;
@@ -187,9 +187,46 @@ export async function captureStatsLabPngBlob(
   return blob;
 }
 
+export async function captureStatsLabJpegDataUrl(
+  node: HTMLElement,
+  options: StatsLabCaptureOptions = {},
+): Promise<string> {
+  await waitForImages(node);
+  const restoreImages = replaceBrokenImages(node);
+  const restoreOverflow = lockOverflowForCapture(node);
+  try {
+    const opts = {
+      quality: 0.95,
+      pixelRatio: options.pixelRatio ?? 2,
+      backgroundColor: options.backgroundColor ?? STATS_LAB_EXPORT_BG,
+      cacheBust: true,
+      style: CAPTURE_ROOT_STYLE,
+    };
+    await toJpeg(node, opts);
+    return await toJpeg(node, opts);
+  } finally {
+    restoreOverflow();
+    restoreImages();
+  }
+}
+
+export async function captureStatsLabJpegBlob(
+  node: HTMLElement,
+  options: StatsLabCaptureOptions = {},
+): Promise<Blob> {
+  const dataUrl = await captureStatsLabJpegDataUrl(node, options);
+  const res = await fetch(dataUrl);
+  const blob = await res.blob();
+  if (!blob || blob.size < 32) {
+    throw new Error("Nie udało się wygenerować JPG (pusty blob).");
+  }
+  return blob;
+}
+
 export function downloadDataUrl(dataUrl: string, fileName: string) {
   const link = document.createElement("a");
-  link.download = fileName.endsWith(".png") ? fileName : `${fileName}.png`;
+  const hasExt = /\.(png|jpe?g|webp)$/i.test(fileName);
+  link.download = hasExt ? fileName : `${fileName}.png`;
   link.href = dataUrl;
   link.click();
 }

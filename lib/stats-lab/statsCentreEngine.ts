@@ -115,6 +115,8 @@ export type StatsCentreResult = {
   totalRows: number;
   maxGw: number;
   effectiveLabel: string;
+  /** Średnie grupy (cała pula przed paginacją) — null dla kolumn tekstowych/porządkowych. */
+  poolAverages: Record<string, number | null>;
 };
 
 export function createDefaultStatsCentreFilter(
@@ -209,7 +211,7 @@ export const PLAYER_TAB_COLUMNS: Record<
     col("clean_sheets", { supportsPer90: true }),
     col("goals_conceded", { invertScale: true, supportsPer90: true }),
     col("defensive_contributions_total", { supportsPer90: true }),
-    col("dc_bonus_points"),
+    col("dc_bonus_points", { supportsPer90: true }),
     col("dc_hit_rate_pct", { format: "percent", decimals: 1 }),
     col("recoveries", { supportsPer90: true }),
     col("tackles", { supportsPer90: true }),
@@ -292,7 +294,7 @@ export const PER_GW_COLUMNS: StatsCentreColumnDef[] = [
   col("goals_assists"),
   col("clean_sheets"),
   col("defensive_contributions_total"),
-  col("dc_bonus_points"),
+  col("dc_bonus_points", { supportsPer90: true }),
   col("expected_goals", { decimals: 2 }),
   col("expected_assists", { decimals: 2 }),
   col("expected_goal_involvements", { decimals: 2 }),
@@ -314,7 +316,7 @@ export const TEAM_TAB_COLUMNS: Record<
     col("goals_conceded", { invertScale: true }),
     col("goal_diff", { isDelta: true, format: "delta" }),
     col("defensive_contributions_total", { supportsPer90: true }),
-    col("dc_bonus_points"),
+    col("dc_bonus_points", { supportsPer90: true }),
     col("bonus", { supportsPer90: true }),
   ],
   TEAM_ATTACKING: [
@@ -337,7 +339,7 @@ export const TEAM_TAB_COLUMNS: Record<
     col("expected_goals_conceded", { decimals: 2, invertScale: true }),
     col("xgc_delta", { decimals: 2, isDelta: true, invertScale: true }),
     col("defensive_contributions_total", { supportsPer90: true }),
-    col("dc_bonus_points"),
+    col("dc_bonus_points", { supportsPer90: true }),
     col("recoveries", { supportsPer90: true }),
     col("tackles", { supportsPer90: true }),
     col("clearances_blocks_interceptions", { supportsPer90: true }),
@@ -435,9 +437,167 @@ function takeLastMatches(
   );
 }
 
+/** Per 90 zawsze z 2 dp — bez surowych floatów w row.values / audit.json. */
 function applyPer90(value: number, minutes: number, enabled: boolean): number {
-  if (!enabled || minutes <= 0) return value;
-  return (value * 90) / minutes;
+  if (!enabled) return value;
+  if (minutes <= 0) return 0;
+  return Number(((value / minutes) * 90).toFixed(2));
+}
+
+/** Alias — ta sama precyzja 2 dp. */
+function applyPer90Rounded(
+  value: number,
+  minutes: number,
+  enabled: boolean,
+): number {
+  return applyPer90(value, minutes, enabled);
+}
+
+/** ALL_MATCHES ≈ FULL_SEASON; pozostałe zakresy = okres filtrowany. */
+function isFilteredCentreRange(rangeMode: StatsCentreRangeMode): boolean {
+  return rangeMode !== "ALL_MATCHES";
+}
+
+/**
+ * GWP / PPM / Form / V(S) / V(F) / transfery GW —
+ * ta sama matematyka co `applyPeriodDerivedOverviewMetrics` w analyticsEngine.
+ */
+function derivePeriodOverviewFromHistory(
+  player: FplLabPlayer,
+  periodRows: FplLabPlayerGwHistory[],
+  periodTotalPoints: number,
+  isFilteredPeriod: boolean,
+): {
+  event_points: number;
+  points_per_game: number;
+  form: number;
+  value_season: number;
+  value_form: number;
+  transfers_in_event: number;
+  transfers_out_event: number;
+  net_transfers_gw: number;
+  dreamteam_count: number;
+} {
+  const priceM = Math.max(0.1, n(player.now_cost) / 10);
+  const playerGwRows = [...periodRows].sort(
+    (a, b) => Number(a.gameweek) - Number(b.gameweek),
+  );
+  const appearancesInPeriod = playerGwRows.filter(
+    (r) => n(r.minutes) > 0,
+  ).length;
+
+  const snap = {
+    event_points: n(player.event_points),
+    points_per_game: Number(n(player.points_per_game).toFixed(1)),
+    form: Number(n(player.form).toFixed(1)),
+    value_season: Number(
+      (n(player.value_season) || periodTotalPoints / priceM).toFixed(1),
+    ),
+    value_form: Number(n(player.value_form).toFixed(1)),
+    transfers_in_event: n(player.transfers_in_event),
+    transfers_out_event: n(player.transfers_out_event),
+    net_transfers_gw:
+      n(player.transfers_in_event) - n(player.transfers_out_event),
+    dreamteam_count: n(player.dreamteam_count),
+  };
+
+  if (!isFilteredPeriod) {
+    if (appearancesInPeriod > 0) {
+      snap.points_per_game = Number(
+        (periodTotalPoints / appearancesInPeriod).toFixed(1),
+      );
+    }
+    return snap;
+  }
+
+  if (playerGwRows.length === 0) {
+    return {
+      event_points: 0,
+      points_per_game: 0,
+      form: 0,
+      value_season: 0,
+      value_form: 0,
+      transfers_in_event: 0,
+      transfers_out_event: 0,
+      net_transfers_gw: 0,
+      dreamteam_count: snap.dreamteam_count,
+    };
+  }
+
+  const maxGw = Number(playerGwRows[playerGwRows.length - 1]!.gameweek);
+  let eventPoints = 0;
+  for (const row of playerGwRows) {
+    if (Number(row.gameweek) === maxGw) {
+      eventPoints += n(row.total_points);
+    }
+  }
+
+  const points_per_game =
+    appearancesInPeriod > 0
+      ? Number((periodTotalPoints / appearancesInPeriod).toFixed(1))
+      : 0;
+  const value_season = Number((periodTotalPoints / priceM).toFixed(1));
+
+  const uniqueGwsDesc: number[] = [];
+  for (let i = playerGwRows.length - 1; i >= 0; i -= 1) {
+    const gw = Number(playerGwRows[i]!.gameweek);
+    if (!uniqueGwsDesc.includes(gw)) uniqueGwsDesc.push(gw);
+    if (uniqueGwsDesc.length >= 4) break;
+  }
+  const formGwSet = new Set(uniqueGwsDesc);
+  const formRows = playerGwRows.filter((r) =>
+    formGwSet.has(Number(r.gameweek)),
+  );
+  const sumPts = formRows.reduce((acc, row) => acc + n(row.total_points), 0);
+  const countGws = uniqueGwsDesc.length;
+  const form =
+    countGws > 0 ? Number((sumPts / countGws).toFixed(1)) : 0;
+  const value_form = Number((form / priceM).toFixed(1));
+
+  // Transfery: 1 wpis / GW (bez podwójnego DGW)
+  const byGw = new Map<number, { ti: number; to: number; bal: number }>();
+  for (const row of playerGwRows) {
+    const gw = Number(row.gameweek);
+    if (byGw.has(gw)) continue;
+    byGw.set(gw, {
+      ti: n(row.transfers_in),
+      to: n(row.transfers_out),
+      bal: n(row.transfers_balance),
+    });
+  }
+  const last = byGw.get(maxGw);
+  const transfers_in_event = last?.ti ?? 0;
+  const transfers_out_event = last?.to ?? 0;
+  const net_transfers_gw = last
+    ? last.bal !== 0
+      ? last.bal
+      : last.ti - last.to
+    : 0;
+
+  return {
+    event_points: eventPoints,
+    points_per_game,
+    form,
+    value_season,
+    value_form,
+    transfers_in_event,
+    transfers_out_event,
+    net_transfers_gw,
+    dreamteam_count: snap.dreamteam_count,
+  };
+}
+
+/** W trybie Per 90 kolumny DC pokazują 2 dp (jak Studio). */
+function withPer90DcDecimals(
+  columns: StatsCentreColumnDef[],
+  per90: boolean,
+): StatsCentreColumnDef[] {
+  if (!per90) return columns;
+  return columns.map((c) =>
+    c.key === "dc_bonus_points" || c.key === "dc_bonus_matches"
+      ? { ...c, supportsPer90: true, decimals: 2 }
+      : c,
+  );
 }
 
 function formatOrder(v: number | null | undefined): string {
@@ -577,7 +737,9 @@ function accumulatePlayerRows(
 function buildPlayerValues(
   player: FplLabPlayer,
   agg: AggBucket,
+  periodRows: FplLabPlayerGwHistory[],
   per90: boolean,
+  isFilteredPeriod: boolean,
 ): Record<string, StatsCentreCellValue> {
   const mins = agg.minutes;
   const p90 = (v: number) => applyPer90(v, mins, per90);
@@ -595,6 +757,13 @@ function buildPlayerValues(
       ? (agg.dc_bonus_matches / agg.matches_with_mins) * 100
       : 0;
 
+  const overview = derivePeriodOverviewFromHistory(
+    player,
+    periodRows,
+    agg.total_points,
+    isFilteredPeriod,
+  );
+
   return {
     price,
     starts: agg.starts,
@@ -607,8 +776,9 @@ function buildPlayerValues(
     dd_hauls: agg.dd_hauls,
     bonus: p90(agg.bonus),
     bps: p90(agg.bps),
-    form: n(player.form),
-    points_per_game: n(player.points_per_game),
+    form: overview.form,
+    points_per_game: overview.points_per_game,
+    event_points: overview.event_points,
     expected_goals: p90(xg),
     xg_delta: gls - xg,
     threat: p90(agg.threat),
@@ -626,7 +796,8 @@ function buildPlayerValues(
     clean_sheets: p90(agg.clean_sheets),
     goals_conceded: p90(gc),
     defensive_contributions_total: p90(agg.defensive_contributions_total),
-    dc_bonus_points: agg.dc_bonus_points,
+    dc_bonus_matches: applyPer90Rounded(agg.dc_bonus_matches, mins, per90),
+    dc_bonus_points: applyPer90Rounded(agg.dc_bonus_points, mins, per90),
     dc_hit_rate_pct: roundTo(dcHit, 1),
     recoveries: p90(agg.recoveries),
     tackles: p90(agg.tackles),
@@ -638,22 +809,21 @@ function buildPlayerValues(
     ),
     direct_freekicks_order: formatOrder(player.direct_freekicks_order),
     penalties_saved: agg.penalties_saved,
-    penalties_missed: agg.penalties_missed,
-    yellow_cards: agg.yellow_cards,
-    red_cards: agg.red_cards,
-    own_goals: agg.own_goals,
-    negative_points_total: agg.negative_points_total,
+    penalties_missed: p90(agg.penalties_missed),
+    yellow_cards: p90(agg.yellow_cards),
+    red_cards: p90(agg.red_cards),
+    own_goals: p90(agg.own_goals),
+    negative_points_total: p90(agg.negative_points_total),
     xgi_delta: gls + ast - xgi,
     xgc_delta: gc - xgc,
-    value_season: n(player.value_season),
-    value_form: n(player.value_form),
+    value_season: overview.value_season,
+    value_form: overview.value_form,
     cost_change_start: n(player.cost_change_start) / 10,
     cost_change_event: n(player.cost_change_event) / 10,
-    transfers_in_event: n(player.transfers_in_event),
-    transfers_out_event: n(player.transfers_out_event),
-    net_transfers_gw:
-      n(player.transfers_in_event) - n(player.transfers_out_event),
-    dreamteam_count: n(player.dreamteam_count),
+    transfers_in_event: overview.transfers_in_event,
+    transfers_out_event: overview.transfers_out_event,
+    net_transfers_gw: overview.net_transfers_gw,
+    dreamteam_count: overview.dreamteam_count,
   };
 }
 
@@ -661,39 +831,422 @@ function buildPlayerValues(
  * Colour scale
  * ───────────────────────────────────────────────── */
 
+const SIGNED_DELTA_KEYS = new Set([
+  "xg_delta",
+  "xa_delta",
+  "xgi_delta",
+  "xgc_delta",
+  "cost_change_start",
+  "cost_change_event",
+  "net_transfers_gw",
+]);
+
+/** Kartki / kary / wytransferowania — 0/niski poziom = neutralny (nigdy zielony lider). */
+export const PENALTY_COLUMNS = new Set([
+  "yellow_cards",
+  "red_cards",
+  "own_goals",
+  "penalties_missed",
+  "negative_points_total",
+  "transfers_out_event",
+  "transfers_out",
+]);
+
+const TRANSFER_OUT_PENALTY_KEYS = new Set([
+  "transfers_out_event",
+  "transfers_out",
+]);
+
+/** Kolumny kontekstowe — bez colorNorm (zawsze neutralna pigułka). */
+const CONTEXT_NO_COLOR_KEYS = new Set(["matches_played", "gameweek"]);
+
+/** Kolumny gdzie niska norma + niekorzystna wartość → różowy alert. */
+export const INVERT_OR_SIGNED_COLUMN_KEYS = new Set([
+  "goals_conceded",
+  "expected_goals_conceded",
+  "mins_per_goal",
+  "mins_per_xg",
+  "mins_per_assist",
+  "yellow_cards",
+  "red_cards",
+  "own_goals",
+  "penalties_missed",
+  "transfers_out_event",
+  "negative_points_total",
+  "goal_diff",
+  "net_xg_balance",
+  ...SIGNED_DELTA_KEYS,
+]);
+
+function percentileSorted(sortedAsc: number[], p: number): number {
+  if (!sortedAsc.length) return 0;
+  if (sortedAsc.length === 1) return sortedAsc[0];
+  const idx = (sortedAsc.length - 1) * p;
+  const lo = Math.floor(idx);
+  const hi = Math.ceil(idx);
+  if (lo === hi) return sortedAsc[lo]!;
+  const t = idx - lo;
+  return sortedAsc[lo]! + (sortedAsc[hi]! - sortedAsc[lo]!) * t;
+}
+
+function clamp01(v: number): number {
+  return Math.max(0, Math.min(1, v));
+}
+
+function rowMinutes(row: StatsCentreRow): number {
+  const m = row.values.minutes;
+  return typeof m === "number" && Number.isFinite(m) ? m : 0;
+}
+
+function computeSignedDeltaNorm(
+  rows: StatsCentreRow[],
+  key: string,
+): void {
+  const signedVals: number[] = [];
+  for (const r of rows) {
+    const raw = r.values[key];
+    if (typeof raw !== "number" || !Number.isFinite(raw)) {
+      delete r.colorNorm[key];
+      continue;
+    }
+    signedVals.push(key === "xgc_delta" ? -raw : raw);
+  }
+  const positives = signedVals.filter((v) => v > 0).sort((a, b) => a - b);
+  const negatives = signedVals.filter((v) => v < 0).sort((a, b) => a - b);
+  const posMax =
+    positives.length >= 5
+      ? percentileSorted(positives, 0.95)
+      : positives.length
+        ? Math.max(...positives)
+        : 0;
+  const negMin =
+    negatives.length >= 5
+      ? percentileSorted(negatives, 0.05)
+      : negatives.length
+        ? Math.min(...negatives)
+        : 0;
+
+  for (const r of rows) {
+    const raw = r.values[key];
+    if (typeof raw !== "number" || !Number.isFinite(raw)) {
+      delete r.colorNorm[key];
+      continue;
+    }
+    const signedVal = key === "xgc_delta" ? -raw : raw;
+    if (signedVal === 0) {
+      r.colorNorm[key] = 0.5;
+      continue;
+    }
+    if (signedVal > 0) {
+      r.colorNorm[key] =
+        posMax > 0 ? 0.5 + 0.5 * Math.min(1, signedVal / posMax) : 0.5;
+      continue;
+    }
+    // signedVal < 0 → zakres 0..0.5
+    r.colorNorm[key] =
+      negMin < 0
+        ? 0.5 * (1 - Math.min(1, signedVal / negMin))
+        : 0.5;
+  }
+}
+
+function penaltyBadness(key: string, rawVal: number): number {
+  if (key === "negative_points_total") return Math.max(0, -rawVal);
+  return Math.max(0, rawVal);
+}
+
+/**
+ * TO / transfers_out:
+ * ≤ P50 → 0.35 (neutral);
+ * P50..P80 → 0.35..0.30;
+ * P80..P95 → 0.24..0.00 (różowy ogon górnych 20%).
+ */
+function computeTransferOutNorm(rows: StatsCentreRow[], key: string): void {
+  const vals: number[] = [];
+  for (const r of rows) {
+    const raw = r.values[key];
+    if (typeof raw === "number" && Number.isFinite(raw)) vals.push(raw);
+  }
+  if (!vals.length) {
+    for (const r of rows) delete r.colorNorm[key];
+    return;
+  }
+  const sorted = [...vals].sort((a, b) => a - b);
+  const p50 = percentileSorted(sorted, 0.5);
+  const p80 = percentileSorted(sorted, 0.8);
+  const p95 = percentileSorted(sorted, 0.95);
+
+  for (const r of rows) {
+    const raw = r.values[key];
+    if (typeof raw !== "number" || !Number.isFinite(raw)) {
+      delete r.colorNorm[key];
+      continue;
+    }
+    if (raw <= p50) {
+      r.colorNorm[key] = 0.35;
+      continue;
+    }
+    if (raw <= p80) {
+      const t = (raw - p50) / Math.max(p80 - p50, 1);
+      r.colorNorm[key] = Number((0.35 - 0.05 * Math.min(1, t)).toFixed(4));
+      continue;
+    }
+    const t = Math.min(1, (raw - p80) / Math.max(p95 - p80, 1));
+    r.colorNorm[key] = Number((0.24 * (1 - t)).toFixed(4));
+  }
+}
+
+/** Kartki/kary: 0 → neutral 0.35; >0 → rose 0.00..0.24 (nigdy zielony). */
+function computePenaltyNorm(rows: StatsCentreRow[], key: string): void {
+  if (TRANSFER_OUT_PENALTY_KEYS.has(key)) {
+    computeTransferOutNorm(rows, key);
+    return;
+  }
+
+  const positives: number[] = [];
+  for (const r of rows) {
+    const raw = r.values[key];
+    if (typeof raw !== "number" || !Number.isFinite(raw)) {
+      delete r.colorNorm[key];
+      continue;
+    }
+    const bad = penaltyBadness(key, raw);
+    if (bad > 0) positives.push(bad);
+  }
+  const sortedPos = [...positives].sort((a, b) => a - b);
+  const maxBad = Math.max(
+    1,
+    sortedPos.length >= 5
+      ? percentileSorted(sortedPos, 0.95)
+      : sortedPos.length
+        ? Math.max(...sortedPos)
+        : 1,
+  );
+
+  for (const r of rows) {
+    const raw = r.values[key];
+    if (typeof raw !== "number" || !Number.isFinite(raw)) {
+      delete r.colorNorm[key];
+      continue;
+    }
+    const badness = penaltyBadness(key, raw);
+    if (badness === 0) {
+      r.colorNorm[key] = 0.35;
+      continue;
+    }
+    const severity = Math.min(1, badness / maxBad);
+    r.colorNorm[key] = Number((0.24 * (1 - severity)).toFixed(4));
+  }
+}
+
+function computeGoalDiffNorm(rows: StatsCentreRow[]): void {
+  for (const r of rows) {
+    const v = r.values.goal_diff;
+    if (typeof v !== "number" || !Number.isFinite(v)) {
+      delete r.colorNorm.goal_diff;
+      continue;
+    }
+    if (v >= 3) {
+      r.colorNorm.goal_diff = Number(
+        (0.85 + 0.15 * Math.min(1, (v - 3) / 5)).toFixed(4),
+      );
+    } else if (v <= -3) {
+      r.colorNorm.goal_diff = Number(
+        (0.24 * (1 - Math.min(1, (-v - 3) / 5))).toFixed(4),
+      );
+    } else {
+      r.colorNorm.goal_diff = 0.35;
+    }
+  }
+}
+
+/** Pełny katalog kolumn Centre — do colorNorm / poolAverages na wszystkich kluczach. */
+function allCentreColumnDefs(): StatsCentreColumnDef[] {
+  const map = new Map<string, StatsCentreColumnDef>();
+  for (const cols of Object.values(PLAYER_TAB_COLUMNS)) {
+    for (const c of cols) map.set(c.key, c);
+  }
+  for (const c of PER_GW_COLUMNS) map.set(c.key, c);
+  for (const cols of Object.values(TEAM_TAB_COLUMNS)) {
+    for (const c of cols) map.set(c.key, c);
+  }
+  return [...map.values()];
+}
+
+/**
+ * colorNorm + poolAverages dla WSZYSTKICH numerycznych kluczy w row.values
+ * (niezależnie od aktywnej pod-zakładki).
+ */
+function finalizeRowColourAndAverages(
+  rows: StatsCentreRow[],
+  visibleColumns: StatsCentreColumnDef[],
+  per90: boolean,
+): Record<string, number | null> {
+  const keysInData = new Set<string>();
+  for (const r of rows) {
+    for (const [k, v] of Object.entries(r.values)) {
+      if (typeof v === "number" && Number.isFinite(v)) keysInData.add(k);
+    }
+  }
+
+  const catalog = allCentreColumnDefs();
+  const byKey = new Map(catalog.map((c) => [c.key, c]));
+  const normColumns: StatsCentreColumnDef[] = [];
+  for (const k of keysInData) {
+    if (CONTEXT_NO_COLOR_KEYS.has(k)) continue;
+    normColumns.push(byKey.get(k) ?? col(k));
+  }
+
+  computeColorNorms(rows, normColumns, per90);
+  for (const r of rows) {
+    for (const k of CONTEXT_NO_COLOR_KEYS) delete r.colorNorm[k];
+  }
+
+  const avgColumns = [
+    ...visibleColumns,
+    ...normColumns.filter((c) => !visibleColumns.some((v) => v.key === c.key)),
+  ];
+  return computePoolAverages(rows, avgColumns);
+}
+
+/**
+ * colorNorm: wyżej = lepiej (zielony). Null/NaN → brak klucza.
+ * Per 90: skala P5–P95 na podzbiorze minutes>=90 (gdy ≥10 takich wierszy).
+ */
 function computeColorNorms(
   rows: StatsCentreRow[],
   columns: StatsCentreColumnDef[],
+  per90: boolean,
 ): void {
   for (const c of columns) {
     if (c.format === "text" || c.format === "order") continue;
+
+    if (CONTEXT_NO_COLOR_KEYS.has(c.key)) {
+      for (const r of rows) delete r.colorNorm[c.key];
+      continue;
+    }
+
+    if (PENALTY_COLUMNS.has(c.key)) {
+      computePenaltyNorm(rows, c.key);
+      continue;
+    }
+
+    if (c.key === "goal_diff") {
+      computeGoalDiffNorm(rows);
+      continue;
+    }
+
+    if (SIGNED_DELTA_KEYS.has(c.key) || c.isDelta || c.format === "delta") {
+      if (
+        SIGNED_DELTA_KEYS.has(c.key) ||
+        c.key === "net_xg_balance"
+      ) {
+        computeSignedDeltaNorm(rows, c.key);
+        continue;
+      }
+    }
+
+    let sampleRows = rows;
+    if (per90) {
+      const seasoned = rows.filter((r) => rowMinutes(r) >= 90);
+      if (seasoned.length >= 10) sampleRows = seasoned;
+    }
+
     const nums: number[] = [];
-    for (const r of rows) {
+    for (const r of sampleRows) {
       const v = r.values[c.key];
       if (typeof v === "number" && Number.isFinite(v)) nums.push(v);
     }
-    if (!nums.length) continue;
-    const min = Math.min(...nums);
-    const max = Math.max(...nums);
-    const span = max - min || 1;
+    if (!nums.length) {
+      for (const r of rows) delete r.colorNorm[c.key];
+      continue;
+    }
+
+    const sorted = [...nums].sort((a, b) => a - b);
+    const min = sorted[0]!;
+    const max = sorted[sorted.length - 1]!;
+    let lowBound = percentileSorted(sorted, 0.05);
+    let highBound = percentileSorted(sorted, 0.95);
+    if (highBound <= lowBound) {
+      lowBound = min;
+      highBound = max;
+    }
+    const span = highBound - lowBound || 1;
+
     for (const r of rows) {
       const v = r.values[c.key];
       if (typeof v !== "number" || !Number.isFinite(v)) {
-        r.colorNorm[c.key] = 0.5;
+        delete r.colorNorm[c.key];
         continue;
       }
-      if (c.isDelta) {
-        // Deltas: positive → green side, negative → rose (handled in UI via sign)
-        // Still provide 0..1 magnitude relative to max abs
-        const absMax = Math.max(...nums.map((x) => Math.abs(x)), 1e-9);
-        r.colorNorm[c.key] = Math.min(1, Math.abs(v) / absMax);
-        continue;
-      }
-      let t = (v - min) / span;
+      let t = clamp01((v - lowBound) / span);
       if (c.invertScale) t = 1 - t;
-      r.colorNorm[c.key] = Math.max(0, Math.min(1, t));
+      r.colorNorm[c.key] = t;
     }
   }
+}
+
+function isPoolAverageSkipColumn(c: StatsCentreColumnDef): boolean {
+  if (c.format === "text" || c.format === "order") return true;
+  if (c.key === "gameweek" || c.key === "opponent_label") return true;
+  if (c.key.endsWith("_order")) return true;
+  return false;
+}
+
+function poolAverageDecimals(c: StatsCentreColumnDef): number {
+  if (
+    c.format === "price" ||
+    c.key === "form" ||
+    c.key === "points_per_game" ||
+    c.key === "value_season" ||
+    c.key === "value_form" ||
+    c.key === "selected_by_percent" ||
+    c.key === "dc_hit_rate_pct"
+  ) {
+    return Math.max(1, c.decimals);
+  }
+  if (
+    c.decimals >= 2 ||
+    c.key.includes("expected") ||
+    c.key.startsWith("xg") ||
+    c.key.startsWith("xa") ||
+    c.key.includes("xgi") ||
+    c.key.includes("xgc") ||
+    c.key === "net_xg_balance"
+  ) {
+    return 2;
+  }
+  // Totals / counts → 1 dp średniej grupy
+  return Math.max(1, c.decimals);
+}
+
+/** Średnie grupy z całej kwalifikowanej puli (przed paginacją). */
+export function computePoolAverages(
+  rows: StatsCentreRow[],
+  columns: StatsCentreColumnDef[],
+): Record<string, number | null> {
+  const out: Record<string, number | null> = {};
+  for (const c of columns) {
+    if (isPoolAverageSkipColumn(c)) {
+      out[c.key] = null;
+      continue;
+    }
+    let sum = 0;
+    let count = 0;
+    for (const r of rows) {
+      const v = r.values[c.key];
+      if (typeof v === "number" && Number.isFinite(v)) {
+        sum += v;
+        count += 1;
+      }
+    }
+    if (!count) {
+      out[c.key] = null;
+      continue;
+    }
+    out[c.key] = roundTo(sum / count, poolAverageDecimals(c));
+  }
+  return out;
 }
 
 function sortRows(
@@ -730,10 +1283,57 @@ function emptyTeamAgg(): TeamAgg {
   return { ...emptyAgg(), matches_played: 0, team_cs: 0, team_gc: 0, team_xgc: 0 };
 }
 
-function aggregateTeamFromRows(rows: FplLabPlayerGwHistory[]): TeamAgg {
+/**
+ * Odrzuć mecze „obce” z historii transferów: prawdziwy mecz klubu =
+ * ≥7 graczy z minutes>0 w fixture; inaczej per-GW najlepszy fixture (≥5).
+ */
+function filterGenuineClubFixtures(
+  rows: FplLabPlayerGwHistory[],
+): FplLabPlayerGwHistory[] {
   const byFixture = new Map<number, FplLabPlayerGwHistory[]>();
   for (const r of rows) {
     if (n(r.minutes) <= 0) continue;
+    const list = byFixture.get(r.fixture_id);
+    if (list) list.push(r);
+    else byFixture.set(r.fixture_id, [r]);
+  }
+
+  const fixtures = [...byFixture.entries()].map(([fid, fr]) => ({
+    fid,
+    gw: fr[0]?.gameweek ?? 0,
+    count: fr.length,
+    rows: fr,
+  }));
+
+  const kept = new Set<number>();
+  for (const f of fixtures) {
+    if (f.count >= 7) kept.add(f.fid);
+  }
+
+  const byGw = new Map<number, typeof fixtures>();
+  for (const f of fixtures) {
+    const list = byGw.get(f.gw);
+    if (list) list.push(f);
+    else byGw.set(f.gw, [f]);
+  }
+
+  for (const [, gwFixtures] of byGw) {
+    if (gwFixtures.some((f) => kept.has(f.fid))) continue;
+    let best: (typeof fixtures)[number] | null = null;
+    for (const f of gwFixtures) {
+      if (f.count < 5) continue;
+      if (!best || f.count > best.count) best = f;
+    }
+    if (best) kept.add(best.fid);
+  }
+
+  return fixtures.filter((f) => kept.has(f.fid)).flatMap((f) => f.rows);
+}
+
+function aggregateTeamFromRows(rows: FplLabPlayerGwHistory[]): TeamAgg {
+  const genuine = filterGenuineClubFixtures(rows);
+  const byFixture = new Map<number, FplLabPlayerGwHistory[]>();
+  for (const r of genuine) {
     const list = byFixture.get(r.fixture_id);
     if (list) list.push(r);
     else byFixture.set(r.fixture_id, [r]);
@@ -806,12 +1406,25 @@ function aggregateTeamFromRows(rows: FplLabPlayerGwHistory[]): TeamAgg {
   return a;
 }
 
+/**
+ * TEAMS „Per 90” = na mecz drużyny: val / matches_played (nie suma minut graczy).
+ * Delty / bilanse pozostają sumami okresu.
+ */
+function applyTeamPerMatch(
+  value: number,
+  matchesPlayed: number,
+  enabled: boolean,
+): number {
+  if (!enabled) return value;
+  return Number((value / Math.max(1, matchesPlayed)).toFixed(2));
+}
+
 function buildTeamValues(
   agg: TeamAgg,
   per90: boolean,
 ): Record<string, StatsCentreCellValue> {
-  const mins = agg.minutes;
-  const p90 = (v: number) => applyPer90(v, mins, per90);
+  const m = Math.max(1, agg.matches_played);
+  const perMatch = (v: number) => applyTeamPerMatch(v, m, per90);
   const gls = agg.goals_scored;
   const ast = agg.assists;
   const xg = agg.expected_goals;
@@ -822,29 +1435,32 @@ function buildTeamValues(
 
   return {
     matches_played: agg.matches_played,
-    total_points: p90(agg.total_points),
-    goals_scored: p90(gls),
-    assists: p90(ast),
-    clean_sheets: agg.team_cs,
-    goals_conceded: gc,
+    total_points: perMatch(agg.total_points),
+    goals_scored: perMatch(gls),
+    assists: perMatch(ast),
+    clean_sheets: perMatch(agg.team_cs),
+    goals_conceded: perMatch(gc),
     goal_diff: gls - gc,
-    defensive_contributions_total: p90(agg.defensive_contributions_total),
-    dc_bonus_points: agg.dc_bonus_points,
-    bonus: p90(agg.bonus),
-    expected_goals: p90(xg),
+    defensive_contributions_total: perMatch(agg.defensive_contributions_total),
+    dc_bonus_matches: perMatch(agg.dc_bonus_matches),
+    dc_bonus_points: perMatch(agg.dc_bonus_points),
+    bonus: perMatch(agg.bonus),
+    expected_goals: perMatch(xg),
     xg_delta: gls - xg,
-    expected_assists: p90(xa),
+    expected_assists: perMatch(xa),
     xa_delta: ast - xa,
-    expected_goal_involvements: p90(xgi),
-    threat: p90(agg.threat),
-    creativity: p90(agg.creativity),
-    ict_index: p90(agg.ict_index),
-    expected_goals_conceded: xgc,
+    expected_goal_involvements: perMatch(xgi),
+    threat: perMatch(agg.threat),
+    creativity: perMatch(agg.creativity),
+    ict_index: perMatch(agg.ict_index),
+    expected_goals_conceded: perMatch(xgc),
     xgc_delta: gc - xgc,
-    recoveries: p90(agg.recoveries),
-    tackles: p90(agg.tackles),
-    clearances_blocks_interceptions: p90(agg.clearances_blocks_interceptions),
-    saves: p90(agg.saves),
+    recoveries: perMatch(agg.recoveries),
+    tackles: perMatch(agg.tackles),
+    clearances_blocks_interceptions: perMatch(
+      agg.clearances_blocks_interceptions,
+    ),
+    saves: perMatch(agg.saves),
     xgi_delta: gls + ast - xgi,
     net_xg_balance: xg - xgc,
   };
@@ -863,7 +1479,12 @@ export function buildStatsCentreResult(input: {
   filter: StatsCentreFilter;
   maxGw: number;
 }): StatsCentreResult {
-  const { players, history, clubs, filter, maxGw } = input;
+  const { players, history, clubs, maxGw } = input;
+  // PER_GW = pojedyncze mecze — Per 90 zawsze wyłączone (audit + UI).
+  const filter: StatsCentreFilter =
+    input.filter.centreMode === "PER_GW"
+      ? { ...input.filter, per90: false }
+      : input.filter;
   const clubsById = new Map(clubs.map((c) => [c.fpl_team_id, c]));
   const gwWindow =
     resolveGwWindow(filter.rangeMode, maxGw, filter.gwFrom, filter.gwTo) ?? [
@@ -972,8 +1593,16 @@ function buildPlayersResult(args: {
 }): StatsCentreResult {
   const { players, historyByPlayer, clubsById, filter, gwWindow, lastN, maxGw } =
     args;
-  const columns = PLAYER_TAB_COLUMNS[filter.playerTab];
+  const columns = withPer90DcDecimals(
+    PLAYER_TAB_COLUMNS[filter.playerTab],
+    filter.per90,
+  );
+  const isFilteredPeriod = isFilteredCentreRange(filter.rangeMode);
   const rows: StatsCentreRow[] = [];
+
+  const effectiveMinMinutes = filter.per90
+    ? Math.max(filter.minMinutes, 90)
+    : filter.minMinutes;
 
   for (const player of players) {
     if (!playerPassesFilters(player, filter)) continue;
@@ -984,7 +1613,7 @@ function buildPlayersResult(args: {
       lastN,
     );
     const agg = accumulatePlayerRows(player.element_type, hist);
-    if (agg.minutes < filter.minMinutes) continue;
+    if (agg.minutes < effectiveMinMinutes) continue;
 
     const club = clubsById.get(player.fpl_team_id);
     rows.push({
@@ -998,13 +1627,23 @@ function buildPlayersResult(args: {
       club_pulse_code: Number(club?.pulse_code ?? 0) || null,
       element_type: player.element_type,
       position_label: FPL_POSITION_LABELS_EN[player.element_type],
-      values: buildPlayerValues(player, agg, filter.per90),
+      values: buildPlayerValues(
+        player,
+        agg,
+        hist,
+        filter.per90,
+        isFilteredPeriod,
+      ),
       colorNorm: {},
     });
   }
 
   const sorted = sortRows(rows, filter.sortKey, filter.sortDir);
-  computeColorNorms(sorted, columns);
+  const poolAverages = finalizeRowColourAndAverages(
+    sorted,
+    columns,
+    filter.per90,
+  );
 
   return {
     mode: "PLAYERS",
@@ -1013,6 +1652,7 @@ function buildPlayersResult(args: {
     totalRows: sorted.length,
     maxGw,
     effectiveLabel: `${gwWindow[0]}–${gwWindow[1]}`,
+    poolAverages,
   };
 }
 
@@ -1073,6 +1713,7 @@ function buildPerGwResult(args: {
           goals_assists: gls + ast,
           clean_sheets: n(row.clean_sheets),
           defensive_contributions_total: matchDcTotal(et, row),
+          dc_bonus_matches: dcPts > 0 ? 1 : 0,
           dc_bonus_points: dcPts,
           expected_goals: n(row.expected_goals),
           expected_assists: n(row.expected_assists),
@@ -1091,7 +1732,11 @@ function buildPerGwResult(args: {
     (r) => n(r.values.minutes) >= filter.minMinutes,
   );
   const sorted = sortRows(filtered, filter.sortKey || "total_points", filter.sortDir);
-  computeColorNorms(sorted, PER_GW_COLUMNS);
+  const poolAverages = finalizeRowColourAndAverages(
+    sorted,
+    PER_GW_COLUMNS,
+    false,
+  );
 
   return {
     mode: "PER_GW",
@@ -1100,6 +1745,7 @@ function buildPerGwResult(args: {
     totalRows: sorted.length,
     maxGw,
     effectiveLabel: `${gwWindow[0]}–${gwWindow[1]}`,
+    poolAverages,
   };
 }
 
@@ -1116,7 +1762,10 @@ function buildTeamsResult(args: {
 }): StatsCentreResult {
   const { players, historyByPlayer, clubs, filter, gwWindow, lastN, maxGw } =
     args;
-  const columns = TEAM_TAB_COLUMNS[filter.teamTab];
+  const columns = withPer90DcDecimals(
+    TEAM_TAB_COLUMNS[filter.teamTab],
+    filter.per90,
+  );
   const playersByTeam = new Map<number, FplLabPlayer[]>();
   for (const p of players) {
     const list = playersByTeam.get(p.fpl_team_id);
@@ -1148,17 +1797,17 @@ function buildTeamsResult(args: {
       teamRows = teamRows.concat(hist);
     }
 
-    // For LAST_N_MATCHES on teams: take last N unique fixtures for the club
+    // LAST_N_MATCHES: tylko autentyczne mecze klubu, potem ostatnie N fixture'ów
     if (lastN > 0) {
+      const genuine = filterGenuineClubFixtures(teamRows);
       const byFix = new Map<number, FplLabPlayerGwHistory[]>();
-      for (const r of teamRows) {
-        if (n(r.minutes) <= 0) continue;
+      for (const r of genuine) {
         const list = byFix.get(r.fixture_id);
         if (list) list.push(r);
         else byFix.set(r.fixture_id, [r]);
       }
       const fixtureMeta = [...byFix.entries()].map(([fid, rs]) => {
-        const sample = rs[0];
+        const sample = rs[0]!;
         const ko = sample.kickoff_time ? Date.parse(sample.kickoff_time) : 0;
         return { fid, gw: sample.gameweek, ko, rows: rs };
       });
@@ -1190,7 +1839,11 @@ function buildTeamsResult(args: {
     filter.sortKey || "total_points",
     filter.sortDir,
   );
-  computeColorNorms(sorted, columns);
+  const poolAverages = finalizeRowColourAndAverages(
+    sorted,
+    columns,
+    filter.per90,
+  );
 
   return {
     mode: "TEAMS",
@@ -1199,65 +1852,243 @@ function buildTeamsResult(args: {
     totalRows: sorted.length,
     maxGw,
     effectiveLabel: `${gwWindow[0]}–${gwWindow[1]}`,
+    poolAverages,
   };
 }
 
-/** Colour helper for UI pills */
-export function colourPillClass(
-  norm: number,
-  isDelta: boolean,
-  value: number | null,
-  dark = true,
-): string {
-  if (value == null || !Number.isFinite(value)) {
-    return dark
-      ? "bg-slate-800/60 text-slate-400"
-      : "bg-slate-100 text-slate-500";
-  }
-  if (isDelta) {
-    if (value > 0) {
-      return dark
-        ? "bg-emerald-500/25 text-emerald-200"
-        : "bg-emerald-200/80 text-emerald-900";
-    }
-    if (value < 0) {
-      return dark
-        ? "bg-rose-500/25 text-rose-200"
-        : "bg-rose-200/80 text-rose-900";
-    }
-    return dark
-      ? "bg-slate-800/60 text-slate-300"
-      : "bg-slate-100 text-slate-600";
-  }
-  // greener = better
-  if (norm >= 0.75) {
-    return dark
-      ? "bg-emerald-500/35 text-emerald-100"
-      : "bg-emerald-300/90 text-emerald-950";
-  }
-  if (norm >= 0.5) {
-    return dark
-      ? "bg-emerald-500/20 text-emerald-200"
-      : "bg-emerald-200/70 text-emerald-900";
-  }
-  if (norm >= 0.25) {
-    return dark
-      ? "bg-slate-700/50 text-slate-200"
-      : "bg-slate-100 text-slate-700";
-  }
-  return dark
-    ? "bg-slate-800/40 text-slate-400"
-    : "bg-slate-50 text-slate-500";
+const TRANSFER_COMPACT_KEYS = new Set([
+  "transfers_in_event",
+  "transfers_out_event",
+  "net_transfers_gw",
+  "transfers_in",
+  "transfers_out",
+]);
+
+function formatCompactTransfer(key: string, value: number): string {
+  const abs = Math.abs(value);
+  let sign = "";
+  if (value < 0) sign = "-";
+  else if (key === "net_transfers_gw" && value > 0) sign = "+";
+
+  if (abs >= 1_000_000) return `${sign}${(abs / 1_000_000).toFixed(2)}M`;
+  if (abs >= 1_000) return `${sign}${(abs / 1_000).toFixed(1)}k`;
+  return `${sign}${Math.round(abs)}`;
 }
+
+/** Czy wartość jest niekorzystna dla różowego alertu (norm już = „wyżej lepiej”). */
+export function isUnfavorableCentreValue(key: string, value: number): boolean {
+  if (key === "xgc_delta") return value > 0;
+  if (key === "negative_points_total") return value < 0;
+  if (SIGNED_DELTA_KEYS.has(key) || key === "goal_diff" || key === "net_xg_balance") {
+    return value < 0;
+  }
+  if (
+    key === "goals_conceded" ||
+    key === "expected_goals_conceded" ||
+    key === "yellow_cards" ||
+    key === "red_cards" ||
+    key === "own_goals" ||
+    key === "penalties_missed" ||
+    key === "transfers_out_event" ||
+    key === "transfers_out"
+  ) {
+    return value > 0;
+  }
+  if (
+    key === "mins_per_goal" ||
+    key === "mins_per_xg" ||
+    key === "mins_per_assist"
+  ) {
+    return value > 0;
+  }
+  return false;
+}
+
+/**
+ * Pigułki kolorystyczne — Social-First AAA.
+ * `norm` już w orientacji „wyżej = lepiej” (silnik); nie odwracamy ponownie.
+ * Ostrzeżenia (invert / signed / penalty): 0..0.10 mocny róż, 0.10..0.25 delikatny róż.
+ * Zwykłe metryki dodatnie przy niskim norm → szare (nigdy róż).
+ */
+export function colourPillClass(
+  norm: number | null | undefined,
+  colKey: string,
+  isDark: boolean,
+  value: number | null = null,
+): string {
+  if (value == null || !Number.isFinite(value) || norm == null || !Number.isFinite(norm)) {
+    return isDark
+      ? "bg-slate-800/45 text-slate-300 border border-transparent"
+      : "bg-slate-100 text-slate-500 border border-slate-200";
+  }
+
+  const effectiveNorm = Math.max(0, Math.min(1, norm));
+  const isWarningCol =
+    PENALTY_COLUMNS.has(colKey) || INVERT_OR_SIGNED_COLUMN_KEYS.has(colKey);
+  const unfavorable = isUnfavorableCentreValue(colKey, value);
+
+  // Najpierw różowe progi — włącznie z norm === 0 (najgorsze w puli)
+  if (isWarningCol && unfavorable && effectiveNorm < 0.25) {
+    if (effectiveNorm <= 0.1) {
+      return isDark
+        ? "bg-rose-500/30 text-rose-100 border border-rose-500/50 font-extrabold"
+        : "bg-rose-600 text-white border border-rose-700 font-extrabold shadow-sm";
+    }
+    return isDark
+      ? "bg-rose-500/15 text-rose-200 border border-rose-500/30 font-bold"
+      : "bg-rose-100 text-rose-900 border border-rose-300 font-bold";
+  }
+
+  if (!isDark) {
+    if (effectiveNorm >= 0.85) {
+      return "bg-emerald-600 text-white font-extrabold shadow-sm";
+    }
+    if (effectiveNorm >= 0.65) {
+      return "bg-emerald-100 text-emerald-950 border border-emerald-300 font-bold";
+    }
+    if (effectiveNorm >= 0.45) {
+      return "bg-emerald-50/90 text-emerald-900 border border-emerald-200/80";
+    }
+    if (effectiveNorm >= 0.25) {
+      return "bg-slate-100 text-slate-700";
+    }
+    // Zwykłe dodatnie (0 goli itd.) — szare, nie różowe
+    return "bg-slate-100/80 text-slate-500";
+  }
+
+  if (effectiveNorm >= 0.85) {
+    return "bg-emerald-500/30 text-emerald-200 border border-emerald-500/40 font-extrabold";
+  }
+  if (effectiveNorm >= 0.65) {
+    return "bg-emerald-500/30 text-emerald-200 border border-emerald-500/40";
+  }
+  if (effectiveNorm >= 0.45) {
+    return "bg-emerald-500/15 text-emerald-300 border border-emerald-500/25";
+  }
+  if (effectiveNorm >= 0.25) {
+    return "bg-slate-800/45 text-slate-200 border border-transparent";
+  }
+  // Zwykłe dodatnie przy niskim norm — szare bez ramki
+  return "bg-slate-800/30 text-slate-400 border border-transparent";
+}
+
+/** Neutralna pigułka dla kolumn tekstowych / porządkowych / null. */
+export function colourPillNeutralClass(isDark: boolean): string {
+  return isDark
+    ? "bg-slate-800/45 text-slate-300 border border-transparent"
+    : "bg-slate-100 text-slate-700 border border-slate-200";
+}
+
+/** Metryki skalowane Per 90 → zawsze 2 dp w UI. */
+const PER90_TWO_DP_KEYS = new Set([
+  "total_points",
+  "goals_scored",
+  "assists",
+  "goals_assists",
+  "clean_sheets",
+  "goals_conceded",
+  "defensive_contributions_total",
+  "dc_bonus_points",
+  "dc_bonus_matches",
+  "recoveries",
+  "tackles",
+  "clearances_blocks_interceptions",
+  "saves",
+  "bonus",
+  "bps",
+  "yellow_cards",
+  "red_cards",
+  "own_goals",
+  "negative_points_total",
+  "expected_goals",
+  "expected_assists",
+  "expected_goal_involvements",
+  "expected_goals_conceded",
+  "threat",
+  "creativity",
+  "influence",
+  "ict_index",
+]);
+
+/** Całkowite w Totals → w Ø średniej 1 dp. */
+const POOL_AVG_ONE_DP_KEYS = new Set([
+  "starts",
+  "total_points",
+  "goals_scored",
+  "assists",
+  "goals_assists",
+  "dd_hauls",
+  "bonus",
+  "bps",
+  "clean_sheets",
+  "goals_conceded",
+  "defensive_contributions_total",
+  "dc_bonus_points",
+  "dc_bonus_matches",
+  "recoveries",
+  "tackles",
+  "clearances_blocks_interceptions",
+  "saves",
+  "yellow_cards",
+  "red_cards",
+  "own_goals",
+  "negative_points_total",
+  "dreamteam_count",
+  "matches_played",
+  "penalties_saved",
+  "penalties_missed",
+]);
+
+const POOL_AVG_ROUND_INT_KEYS = new Set([
+  "minutes",
+  "mins_per_goal",
+  "mins_per_xg",
+  "mins_per_assist",
+]);
 
 export function formatCentreCell(
   colDef: StatsCentreColumnDef,
   value: StatsCentreCellValue,
+  per90 = false,
+  isPoolAverage = false,
 ): string {
   if (value == null) return "—";
   if (typeof value === "string") return value;
+  if (TRANSFER_COMPACT_KEYS.has(colDef.key)) {
+    return formatCompactTransfer(colDef.key, value);
+  }
   if (colDef.format === "price") return `£${value.toFixed(colDef.decimals)}`;
   if (colDef.format === "percent") return `${value.toFixed(colDef.decimals)}%`;
+
+  // starts / dd_hauls / dreamteam_count / goal_diff w Ø — 1 dp
+  if (
+    isPoolAverage &&
+    (colDef.key === "starts" ||
+      colDef.key === "dd_hauls" ||
+      colDef.key === "dreamteam_count" ||
+      colDef.key === "matches_played" ||
+      colDef.key === "goal_diff")
+  ) {
+    if (colDef.key === "goal_diff") {
+      const sign = value > 0 ? "+" : "";
+      return `${sign}${value.toFixed(1)}`;
+    }
+    return value.toFixed(1);
+  }
+
+  if (per90 && PER90_TWO_DP_KEYS.has(colDef.key)) {
+    return value.toFixed(2);
+  }
+
+  if (isPoolAverage) {
+    if (POOL_AVG_ROUND_INT_KEYS.has(colDef.key)) {
+      return String(Math.round(value));
+    }
+    if (POOL_AVG_ONE_DP_KEYS.has(colDef.key)) {
+      return value.toFixed(1);
+    }
+  }
+
   if (colDef.isDelta || colDef.format === "delta") {
     const sign = value > 0 ? "+" : "";
     return `${sign}${value.toFixed(colDef.decimals)}`;

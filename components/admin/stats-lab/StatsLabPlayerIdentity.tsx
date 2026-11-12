@@ -110,7 +110,13 @@ export function StatsLabPlayerIdentity({
             </span>
           ) : null}
           {badge ? (
-            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/10 p-0.5 ring-1 ring-white/15">
+            <span
+              className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full p-0.5 ${
+                isLight
+                  ? "bg-slate-200/80 ring-1 ring-slate-300"
+                  : "bg-white/10 ring-1 ring-white/15"
+              }`}
+            >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={badge}

@@ -10,6 +10,7 @@ import {
   Check,
   ClipboardCopy,
   Download,
+  FileJson,
   Loader2,
   PenLine,
   Send,
@@ -27,8 +28,16 @@ import {
 } from "@/lib/admin/discordWebhooks";
 import type { StatsLabComparisonResult } from "@/lib/stats-lab/analyticsEngine";
 import type { StatsLabQueryFilter } from "@/lib/stats-lab/presets";
-import type { StatsLabLang, StatsLabScaleMode } from "@/lib/stats-lab/i18n";
-import type { StatsLabVizMode } from "@/components/admin/stats-lab/chartTheme";
+import type { FplStatKey } from "@/lib/stats-lab/types";
+import type {
+  StatsLabLang,
+  StatsLabScaleMode,
+  StreakMetricKey,
+} from "@/lib/stats-lab/i18n";
+import type {
+  StatsLabChartThemeId,
+  StatsLabVizMode,
+} from "@/components/admin/stats-lab/chartTheme";
 import {
   captureStatsLabPngBlob,
   captureStatsLabPngDataUrl,
@@ -40,6 +49,12 @@ import {
   buildStatsLabExportFileName,
   buildStatsLabSocialPost,
 } from "@/lib/stats-lab/exportPostCopy";
+import {
+  buildAuditJsonFileName,
+  buildChartStudioAiAuditReport,
+  copyJsonToClipboard,
+  downloadJsonFile,
+} from "@/lib/stats-lab/auditExport";
 
 type Props = {
   exportRef:
@@ -52,6 +67,13 @@ type Props = {
   scaleMode: StatsLabScaleMode;
   seasonCode: string;
   customTitle: string;
+  chartTheme?: StatsLabChartThemeId;
+  activeStreakKeys?: StreakMetricKey[];
+  showNegativeBreakdown?: boolean;
+  streakSortKey?: StreakMetricKey;
+  /** Osie Scatter — dokumentowane w audit.json. */
+  scatterAxisX?: FplStatKey | null;
+  scatterAxisY?: FplStatKey | null;
 };
 
 type FlashKind = "ok" | "err";
@@ -65,9 +87,15 @@ export function StatsLabExportBar({
   scaleMode,
   seasonCode,
   customTitle,
+  chartTheme = "ARENA_DARK",
+  activeStreakKeys = [],
+  showNegativeBreakdown = true,
+  streakSortKey,
+  scatterAxisX = null,
+  scatterAxisY = null,
 }: Props) {
   const [busy, setBusy] = useState<
-    null | "png" | "copy" | "post" | "discord"
+    null | "png" | "copy" | "post" | "discord" | "audit" | "auditCopy"
   >(null);
   const [flash, setFlash] = useState<{ kind: FlashKind; text: string } | null>(
     null,
@@ -229,6 +257,103 @@ export function StatsLabExportBar({
     }
   }
 
+  function buildAuditReport() {
+    if (!result) throw new Error("Brak wyniku porównania.");
+    return buildChartStudioAiAuditReport({
+      result,
+      filter,
+      vizMode,
+      lang,
+      chartTheme,
+      scaleMode,
+      seasonCode,
+      activeStreakKeys,
+      showNegativeBreakdown,
+      streakSortKey: streakSortKey ?? filter.streakSortKey,
+      scatterAxisX,
+      scatterAxisY,
+      rootElement: exportRef.current,
+    });
+  }
+
+  async function onDownloadAuditJson() {
+    if (!players.length) {
+      showFlash(
+        "err",
+        lang === "pl"
+          ? "Brak graczy na wykresie — zmień filtry."
+          : "No players on chart — change filters.",
+      );
+      return;
+    }
+    setBusy("audit");
+    try {
+      await ensureNode();
+      const report = buildAuditReport();
+      const name = buildAuditJsonFileName({
+        module: "CHART_STUDIO",
+        subView: vizMode,
+        positions: filter.positions,
+        gwRange,
+      });
+      downloadJsonFile(name, report);
+      showFlash(
+        "ok",
+        lang === "pl"
+          ? `Zapisano audyt AI: ${name}`
+          : `Saved AI audit: ${name}`,
+      );
+    } catch (e) {
+      console.error("[StatsLabExport] audit json", e);
+      showFlash(
+        "err",
+        e instanceof Error
+          ? e.message
+          : lang === "pl"
+            ? "Nie udało się wygenerować audytu AI."
+            : "Failed to build AI audit.",
+      );
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function onCopyAuditJson() {
+    if (!players.length) {
+      showFlash(
+        "err",
+        lang === "pl"
+          ? "Brak graczy na wykresie — zmień filtry."
+          : "No players on chart — change filters.",
+      );
+      return;
+    }
+    setBusy("auditCopy");
+    try {
+      await ensureNode();
+      const report = buildAuditReport();
+      await copyJsonToClipboard(report);
+      showFlash(
+        "ok",
+        lang === "pl"
+          ? "Skopiowano pełny raport diagnostyczny AI do schowka!"
+          : "Full AI diagnostic report copied to clipboard!",
+      );
+    } catch (e) {
+      console.error("[StatsLabExport] audit copy", e);
+      showFlash(
+        "err",
+        e instanceof Error
+          ? e.message
+          : lang === "pl"
+            ? "Nie udało się skopiować audytu AI."
+            : "Failed to copy AI audit.",
+      );
+    } finally {
+      setBusy(null);
+    }
+  }
+
   function toggleServer(target: DiscordServerTarget) {
     setServerTargets((prev) => {
       if (prev.includes(target)) {
@@ -381,6 +506,41 @@ export function StatsLabExportBar({
         >
           <Send className="h-3.5 w-3.5" />
           {lang === "pl" ? "Wyślij na Discord" : "Send to Discord"}
+        </button>
+
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={() => void onDownloadAuditJson()}
+          className="inline-flex items-center gap-1.5 rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-amber-100 hover:bg-amber-500/20 disabled:opacity-40"
+          title={
+            lang === "pl"
+              ? "Pełny raport diagnostyczny (filtry + wzory + matchTrace + DOM)"
+              : "Full diagnostic report (filters + formulas + matchTrace + DOM)"
+          }
+        >
+          {busy === "audit" ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <FileJson className="h-3.5 w-3.5" />
+          )}
+          {lang === "pl"
+            ? "🔍 Pobierz Audyt AI (.json)"
+            : "🔍 Download AI Audit JSON"}
+        </button>
+
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={() => void onCopyAuditJson()}
+          className="inline-flex items-center gap-1.5 rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-amber-100 hover:bg-amber-500/20 disabled:opacity-40"
+        >
+          {busy === "auditCopy" ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <ClipboardCopy className="h-3.5 w-3.5" />
+          )}
+          {lang === "pl" ? "📋 Kopiuj JSON dla AI" : "📋 Copy AI Audit"}
         </button>
       </div>
 

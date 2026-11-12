@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { ArrowLeftRight, Check, Search, X } from "lucide-react";
 import type {
+  PlottedStatsLabPlayer,
   StatsLabBootstrapData,
   StatsLabBootstrapPlayer,
 } from "@/lib/stats-lab/analyticsEngine";
@@ -64,6 +65,8 @@ type Props = {
   bootstrap: StatsLabBootstrapData;
   filter: StatsLabQueryFilter;
   ui: StudioUiState;
+  /** Gracze aktualnie na wykresie (kolejność = kolejność na canvasie). */
+  plottedPlayers?: PlottedStatsLabPlayer[];
   onFilterChange: (next: StatsLabQueryFilter) => void;
   onUiChange: (patch: Partial<StudioUiState>) => void;
   onOpenKnowledge?: (anchor?: KnowledgeHelpAnchor) => void;
@@ -119,6 +122,7 @@ export function StatsLabControlPanel({
   bootstrap,
   filter,
   ui,
+  plottedPlayers = [],
   onFilterChange,
   onUiChange,
   onOpenKnowledge,
@@ -441,7 +445,7 @@ export function StatsLabControlPanel({
               >
                 {FPL_STAT_DEFINITIONS.map((d) => (
                   <option key={d.key} value={d.key}>
-                    {statLabel(d.key, lang)}
+                    {`(${statShort(d.key, lang)}) ${statLabel(d.key, lang)}`}
                   </option>
                 ))}
               </select>
@@ -457,7 +461,7 @@ export function StatsLabControlPanel({
               >
                 {FPL_STAT_DEFINITIONS.map((d) => (
                   <option key={d.key} value={d.key}>
-                    {statLabel(d.key, lang)}
+                    {`(${statShort(d.key, lang)}) ${statLabel(d.key, lang)}`}
                   </option>
                 ))}
               </select>
@@ -470,6 +474,58 @@ export function StatsLabControlPanel({
               <ArrowLeftRight className="h-3.5 w-3.5" />
               {copy.swapAxes}
             </button>
+            <div className="flex flex-wrap gap-1.5 pt-0.5">
+              {(
+                [
+                  {
+                    id: "xgi-tp",
+                    label: "xGI vs TP",
+                    axisX: "expected_goal_involvements" as FplStatKey,
+                    axisY: "total_points" as FplStatKey,
+                  },
+                  {
+                    id: "xg-goals",
+                    label: lang === "pl" ? "xG vs Gole" : "xG vs Goals",
+                    axisX: "expected_goals" as FplStatKey,
+                    axisY: "goals_scored" as FplStatKey,
+                  },
+                  {
+                    id: "price-ppm",
+                    label: lang === "pl" ? "Cena vs PPM" : "Price vs PPG",
+                    axisX: "now_cost" as FplStatKey,
+                    axisY: "points_per_game" as FplStatKey,
+                  },
+                  {
+                    id: "dc-dcp",
+                    label: "DC vs DC Pkt",
+                    axisX: "defensive_contributions_total" as FplStatKey,
+                    axisY: "dc_bonus_points" as FplStatKey,
+                  },
+                ] as const
+              ).map((preset) => {
+                const active =
+                  ui.axisX === preset.axisX && ui.axisY === preset.axisY;
+                return (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    onClick={() =>
+                      onUiChange({
+                        axisX: preset.axisX,
+                        axisY: preset.axisY,
+                      })
+                    }
+                    className={`rounded-lg border px-2 py-1 text-[10px] font-black uppercase tracking-wide ${
+                      active
+                        ? "border-emerald-500/60 bg-emerald-500/15 text-emerald-300"
+                        : "border-slate-700 text-slate-400 hover:border-slate-500 hover:text-slate-200"
+                    }`}
+                  >
+                    {preset.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         ) : null}
       </Section>
@@ -566,6 +622,43 @@ export function StatsLabControlPanel({
             ) : (
               <p className="text-[11px] text-slate-500">{copy.addPlayersHint}</p>
             )}
+
+            <div>
+              <label className="block text-[10px] font-bold uppercase text-slate-500">
+                {copy.minMinutesPool}
+                <input
+                  type="number"
+                  min={0}
+                  step={30}
+                  value={filter.minMinutes}
+                  onChange={(e) =>
+                    onFilterChange({
+                      ...filter,
+                      minMinutes: Number(e.target.value) || 0,
+                    })
+                  }
+                  className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-2 py-1.5 text-sm text-white"
+                />
+              </label>
+              <div className="mt-1.5 flex flex-wrap gap-1">
+                {[90, 180, 270, 360, 450].map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() =>
+                      onFilterChange({ ...filter, minMinutes: n })
+                    }
+                    className={`rounded-lg px-2.5 py-1 text-[10px] font-black uppercase ${
+                      filter.minMinutes === n
+                        ? "bg-[#39FF14] text-black"
+                        : "border border-slate-700 text-slate-400"
+                    }`}
+                  >
+                    {n}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         ) : (
           <div className="space-y-3">
@@ -693,22 +786,42 @@ export function StatsLabControlPanel({
               </div>
             </div>
 
-            <label className="block text-[10px] font-bold uppercase text-slate-500">
-              {copy.minMinutes}
-              <input
-                type="number"
-                min={0}
-                step={30}
-                value={filter.minMinutes}
-                onChange={(e) =>
-                  onFilterChange({
-                    ...filter,
-                    minMinutes: Number(e.target.value) || 0,
-                  })
-                }
-                className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-2 py-1.5 text-sm text-white"
-              />
-            </label>
+            <div>
+              <label className="block text-[10px] font-bold uppercase text-slate-500">
+                {copy.minMinutesPool}
+                <input
+                  type="number"
+                  min={0}
+                  step={30}
+                  value={filter.minMinutes}
+                  onChange={(e) =>
+                    onFilterChange({
+                      ...filter,
+                      minMinutes: Number(e.target.value) || 0,
+                    })
+                  }
+                  className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-2 py-1.5 text-sm text-white"
+                />
+              </label>
+              <div className="mt-1.5 flex flex-wrap gap-1">
+                {[90, 180, 270, 360, 450].map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() =>
+                      onFilterChange({ ...filter, minMinutes: n })
+                    }
+                    className={`rounded-lg px-2.5 py-1 text-[10px] font-black uppercase ${
+                      filter.minMinutes === n
+                        ? "bg-[#39FF14] text-black"
+                        : "border border-slate-700 text-slate-400"
+                    }`}
+                  >
+                    {n}
+                  </button>
+                ))}
+              </div>
+            </div>
 
             <div className="grid grid-cols-2 gap-2">
               <label className="block text-[10px] font-bold uppercase text-slate-500">
@@ -755,7 +868,10 @@ export function StatsLabControlPanel({
               </label>
             </div>
 
-            <label className="flex items-center gap-2 text-xs text-slate-300">
+            <label
+              className="flex items-center gap-2 text-xs text-slate-300"
+              title={copy.sortCompositeHint}
+            >
               <input
                 type="checkbox"
                 checked={ui.sortByComposite}
@@ -764,7 +880,12 @@ export function StatsLabControlPanel({
                 }
                 className="accent-[#39FF14]"
               />
-              {copy.sortComposite}
+              <span>
+                {copy.sortComposite}
+                <span className="mt-0.5 block text-[10px] font-normal text-slate-500">
+                  {copy.sortCompositeHint}
+                </span>
+              </span>
             </label>
 
             {!ui.sortByComposite ? (
@@ -782,7 +903,7 @@ export function StatsLabControlPanel({
                 >
                   {FPL_STAT_DEFINITIONS.map((d) => (
                     <option key={d.key} value={d.key}>
-                      {statLabel(d.key, lang)}
+                      {`(${statShort(d.key, lang)}) ${statLabel(d.key, lang)}`}
                     </option>
                   ))}
                 </select>
@@ -804,17 +925,17 @@ export function StatsLabControlPanel({
             className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-2 py-2 text-sm text-white"
           >
             <option value="">{copy.none}</option>
-            {selectedPlayers.length
-              ? selectedPlayers.map((p) => (
-                  <option key={p.fpl_element_id} value={p.fpl_element_id}>
-                    {p.web_name}
-                  </option>
-                ))
-              : bootstrap.players.slice(0, 80).map((p) => (
-                  <option key={p.fpl_element_id} value={p.fpl_element_id}>
-                    {clubName.get(p.fpl_team_id)} {p.web_name}
-                  </option>
-                ))}
+            {plottedPlayers.map((p, idx) => {
+              const club =
+                p.club?.short_name ?? clubName.get(p.fpl_team_id) ?? "?";
+              const pts = Math.round(Number(p.rawValues.total_points ?? 0));
+              const unit = lang === "pl" ? "pkt" : "pts";
+              return (
+                <option key={p.fpl_element_id} value={p.fpl_element_id}>
+                  {`#${idx + 1} ${p.web_name} (${club}) — ${pts} ${unit}`}
+                </option>
+              );
+            })}
           </select>
         </label>
       </Section>

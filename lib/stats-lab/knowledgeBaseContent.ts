@@ -21,7 +21,7 @@ export type KnowledgeBlock = {
   heading: string;
   paragraphs: string[];
   bullets?: string[];
-  /** Wyróżniona karta (np. Composite Score) */
+  /** Wyróżniona karta (np. OCENA 0–100 / RATING) */
   featured?: boolean;
 };
 
@@ -54,20 +54,26 @@ const HOW_TO_USE_PL: KnowledgeTabContent = {
     "Szybki przewodnik po 6 typach wykresów i przełącznikach Studia — żebyś wiedział, którego narzędzia użyć i jak czytać wynik.",
   blocks: [
     {
-      heading: "1. Profil wielowymiarowy (Power Bars / Grouped Raw)",
+      heading: "1. Profil wielowymiarowy (STACKED_COMPOSITE)",
       paragraphs: [
         "Najlepszy start przy porównaniu kilku graczy na wielu kryteriach naraz (np. punkty, xGI, DC, BPS).",
+        "OCENA (0–100) po prawej to średnia arytmetyczna percentyli wybranych kryteriów na tle kwalifikowanej grupy porównawczej (comparisonPool). Na paskach i w pod-legendzie zawsze widać rzeczywiste wartości statystyk (bez kodów Pxx).",
       ],
       bullets: [
-        "W skali percentylowej segmenty mają równą wagę wizualną (0–100) — widać profil, nie „zgniatanie” przez minuty.",
-        "W trybie RAW Studio przełącza się na małe słupki porównawcze: każda metryka ma własną skalę 0…max w grupie.",
+        "Tło grupy (0–100): długość paska ≈ OCENA; kolorowe segmenty = wkład cech; liczby = displayValues.",
+        "Wartości statystyk: osobna kolumna na każde kryterium (pasek vs lider na wykresie).",
+        "Zmiana pozycji (GK/DEF/MID/FWD) automatycznie podmienia domyślne activeMetrics, jeśli nie edytowałeś ich w tym samym kroku.",
       ],
     },
     {
-      heading: "2. Dekompozycja punktów FPL",
+      heading: "2. Dekompozycja punktów FPL (POINTS_BREAKDOWN)",
       paragraphs: [
         "Pokazuje ZA CO gracz zbiera punkty (występy, gole, asysty, CS, DC, obrony, karne, bonus) i opcjonalnie kary (stracone gole, kartki, PM, OG).",
-        "Używaj, gdy chcesz sprawdzić, czy punkty pochodzą z formy ofensywnej, z czystych kont, czy z „darmowych” +2 za DC.",
+        "Górna legenda jest dynamiczna: pokazuje wyłącznie kategorie, w których widoczni zawodnicy faktycznie punktowali (dodatnio lub ujemnie). Wiersz „Kary:” znika, gdy nikt nie ma punktów ujemnych.",
+      ],
+      bullets: [
+        "Suma składowych = oficjalne punkty FPL w badanym okresie (1:1 z historią GW).",
+        "Kolejność na wykresie = oficjalne sumy meczowe (nie przelicznik Per 90).",
       ],
     },
     {
@@ -78,57 +84,66 @@ const HOW_TO_USE_PL: KnowledgeTabContent = {
       ],
     },
     {
-      heading: "4. Radar / Pizza",
+      heading: "4. Radar / Pizza (RADAR_PIZZA)",
       paragraphs: [
-        "Porównanie 1–4 graczy na tym samym zestawie metryk. Percentyle dają czytelny „kształt” profilu; RAW skaluje każdą oś do maksimum w grupie.",
+        "Porównanie 1–4 graczy na tym samym zestawie osi. Kształt wielokąta i wycinki Pizzy odzwierciedlają poziom gracza (percentyle w trybie Tło grupy albo znormalizowaną skalę grupy w trybie Wartości statystyk).",
+        "Pigułki przy osiach zawsze pokazują rzeczywiste wartości statystyk (np. 70 pkt, 7.1 xGI, +392.5k TI) — nigdy kodów Pxx. Nad wykresem (poza eksportem PNG) dostępny jest pasek 4 szybkich slotów wyboru piłkarzy.",
       ],
     },
     {
       heading: "5. Scatter 2D",
       paragraphs: [
-        "Dwie osie (X vs Y) + ćwiartki analityczne. Klasyczny wybór: xGI vs cena, DC vs CS, forma vs Sel%.",
+        "Dwie osie (X vs Y) + ćwiartki względem średniej grupy (lub P50 w trybie Tło grupy). Klasyczne pary: xGI vs TP, xG vs gole, cena vs PPM, DC vs DC Pkt — szybkie presety w panelu.",
+        "Wartości = rzeczywiste displayValues; Tło grupy = percentyle 0–100 na osiach. Dla metryk „mniej = lepiej” (GC, kartki…) oś RAW jest odwrócona: lepszy wynik idzie w prawo / w górę. Prawy górny róg ↗ = najlepszy profil w obu cechach.",
+        "Etykiety graczy unikają kolizji (smart AABB); pod wykresem kartoteka z portretami, herbami i OCENĄ. Kolory kropek = klub (nie jedna zieleń).",
       ],
     },
     {
       heading: "6. Macierz heatmap",
       paragraphs: [
-        "Tabela z tłem percentylowym i liderami kolumn — szybki skan Top N pod kątem wielu statystyk naraz.",
+        "Tabela z tłem grupy (0–100) i liderami kolumn — szybki skan Top N pod kątem wielu statystyk naraz. Kolumna OCENA podsumowuje wybrane kryteria.",
       ],
     },
     {
-      heading:
-        "Czym jest Composite Score (Indeks Złożony 0–100) i jak go liczymy?",
+      heading: "Czym jest OCENA (0–100) i jak ją liczymy?",
       featured: true,
       paragraphs: [
-        "Composite Score to Twój personalny ranking 0–100 zbudowany wyłącznie z metryk, które aktualnie zaznaczysz w panelu bocznym. Nie jest to stała „ocena FIFA” — zmienia się wraz z Twoimi kryteriami.",
+        "OCENA (0–100) / RATING to Twoja ogólna nota z zaznaczonych kryteriów na tle analizowanej grupy — w stylu FIFA/FPL. W kodzie i audit.json pole nazywa się compositeScore.",
+        "Matematycznie: średnia percentyli 0–100 tylko z cech, które różnicują grupę (pomija metryki, gdzie wszyscy mają tę samą wartość, np. 0 OG). 90 = wynik lepszy od 90% graczy; 100 = lider cechy.",
       ],
       bullets: [
-        "Krok 1 (Wybór kryteriów): wybierasz od 2 do 8 statystyk (np. dla DEF: Punkty FPL, Czyste konta, Suma DC, xGI, BPS).",
-        "Krok 2 (Percentyle 0–100 na tle pozycji): silnik porównuje wynik każdego gracza z wszystkimi zakwalifikowanymi na tej samej pozycji (np. 116 DEF z min. 180 min) i przyznaje percentyl 0–100 per metryka (P100 = lider, P50 = środek stawki). Dla metryk negatywnych (GC, xGC, kartki) skala jest odwracana (invertScale) — mniej straconych goli = wyższy percentyl.",
-        "Krok 3 (Średnia ważona = Composite): Composite Score = (P(Metryka₁) + P(Metryka₂) + … + P(Metrykaₖ)) / k.",
-        "Przykład (De Cuyper, 5 metryk): P100 (TP) + P99 (CS) + P26 (DC) + P100 (xGI) + P100 (BPS) → (100+99+26+100+100)/5 = 85. Zmiana zaznaczonych statystyk natychmiast przelicza Composite.",
+        "Krok 1: wybierasz 2–8 kryteriów (np. DEF: TP, CS, DC, xGI, BPS).",
+        "Krok 2: silnik liczy percentyl na tle comparisonPool (min. minut, pozycja, kluby…); invertScale dla GC/xGC/kartek — mniej = wyższa nota.",
+        "Krok 3: OCENA = średnia żywych not; flat metrics nie pompują wyniku.",
+        "Na paskach STACKED i w pod-legendzie zawsze widać rzeczywiste displayValues, nie kody Pxx.",
       ],
     },
     {
-      heading: "Skala percentylowa (0–100) vs wartości surowe (Raw)",
+      heading: "Tło grupy (0–100) vs Wartości statystyk",
       paragraphs: [
-        "Percentyle pozwalają porównać „jabłka z pomarańczami”: gole, odzyskania i BPS na jednym wykresie bez dominacji dużych liczb (np. 800 minut vs 1.5 xGI).",
-        "Wynik 85 oznacza: gracz wypada lepiej niż 85% zawodników w puli porównawczej (zwykle ta sama pozycja / filtr). 100 = lider grupy.",
-        "Raw pokazuje prawdziwe liczby z bazy — używaj, gdy interesuje Cię konkretna wartość (ile DC, ile CS), a nie względny ranking.",
+        "Tło grupy (0–100) pozwala porównać „jabłka z pomarańczami” bez dominacji dużych liczb.",
+        "Wartości statystyk pokazują prawdziwe liczby z bazy — używaj, gdy interesuje Cię konkretna wartość (ile DC, ile CS), a nie względna OCENA.",
+      ],
+    },
+    {
+      heading: "Filtry okresu i wskaźniki dynamiczne",
+      paragraphs: [
+        "Cały sezon, Ostatnie 4/6 GW, Tylko Dom, Tylko Wyjazd oraz Własny zakres GW filtrują historię meczów.",
+        "W wybranym podzbiorze kolejek silnik dynamicznie wylicza m.in. GWP, PPM, Formę, Value (sezon/forma), transfery TI/TO oraz DC — nie bierze ślepych snapshotów sezonowych, gdy okres ≠ pełny sezon.",
       ],
     },
     {
       heading: "Totals vs Per 90",
       paragraphs: [
-        "Totals = suma w wybranym okresie (sezon / ostatnie GW). Najlepsze do rankingów sezonowych i „kto już nazbierał”.",
-        "Per 90 = tempo na 90 minut. Używaj przy graczach po kontuzji, nowych transferach lub ograniczonych minutach — lepiej pokazuje jakość, nie tylko ilość gry.",
+        "Totals = suma w wybranym okresie. Najlepsze do rankingów i „kto już nazbierał”.",
+        "Per 90 = tempo na 90 minut (DC Opta 1 dp; DC Mecz/Pkt 2 dp). Używaj po kontuzji, transferze lub małej liczbie minut.",
       ],
     },
     {
       heading: "Tryb ręczny vs Ranking Top N i filtr klubów",
       paragraphs: [
-        "Ręczny wybór: porównanie celowe (np. 3 konkurentów na Twoje miejsce w składzie).",
-        "Top N + pozycja + multi-select klubów: automatyczny ranking najlepszych według sortowanej metryki (np. Top 5 DEF z ARS+CHE+MCI).",
+        "Ręczny wybór: porównanie celowe (np. 3 konkurentów). Spotlight w panelu pokazuje tylko graczy z aktualnego wykresu.",
+        "Top N + pozycja + multi-select klubów: ranking według sortByStat (DESC = największa wartość; invertScale nie odwraca sortu).",
       ],
     },
   ],
@@ -141,20 +156,26 @@ const HOW_TO_USE_EN: KnowledgeTabContent = {
     "A practical guide to the 6 chart types and Studio toggles — so you know which tool to open and how to read the result.",
   blocks: [
     {
-      heading: "1. Multi-metric profile (Power Bars / Grouped Raw)",
+      heading: "1. Multi-metric profile (STACKED_COMPOSITE)",
       paragraphs: [
         "Best starting view when comparing several players across many criteria at once (points, xGI, DC, BPS, etc.).",
+        "RATING (0–100) on the right is the arithmetic mean of percentiles for your selected criteria vs the qualified comparison pool. Bars and the sub-legend always show actual stat values (no Pxx codes).",
       ],
       bullets: [
-        "On the percentile scale, segments share equal visual weight (0–100) — you see the profile, not minutes crushing everything.",
-        "In RAW mode the Studio switches to small comparative bars: each metric has its own 0…group-max scale.",
+        "Group rank (0–100): bar length ≈ RATING; coloured segments = trait contribution; numbers = displayValues.",
+        "Actual stats: one column per criterion (bar vs chart leader).",
+        "Changing position (GK/DEF/MID/FWD) auto-swaps default activeMetrics if you did not edit metrics in the same step.",
       ],
     },
     {
-      heading: "2. FPL points breakdown",
+      heading: "2. FPL points breakdown (POINTS_BREAKDOWN)",
       paragraphs: [
         "Shows WHERE points come from (appearances, goals, assists, CS, DC, saves, pens, bonus) and optional penalties (GC, cards, PM, OG).",
-        "Use it to check whether haul points come from attack, clean sheets, or “free” +2 DC bonuses.",
+        "The top legend is dynamic: it lists only categories where plotted players actually scored (positive or negative). The “Penalties:” row hides when nobody has negative points.",
+      ],
+      bullets: [
+        "Component sum = official FPL points in the selected window (1:1 with GW history).",
+        "Chart order = official match totals (not Per 90 rates).",
       ],
     },
     {
@@ -165,56 +186,66 @@ const HOW_TO_USE_EN: KnowledgeTabContent = {
       ],
     },
     {
-      heading: "4. Radar / Pizza",
+      heading: "4. Radar / Pizza (RADAR_PIZZA)",
       paragraphs: [
-        "Compare 1–4 players on the same metric set. Percentiles give a readable profile shape; RAW scales each axis to the group maximum.",
+        "Compare 1–4 players on the same axes. Polygon shape and Pizza wedges reflect player level (percentiles in Group rank mode, or group-normalised scale in Actual stats mode).",
+        "Axis pills always show actual stats (e.g. 70 pts, 7.1 xGI, +392.5k TI) — never Pxx codes. Above the chart (outside PNG export) a quick-slot bar lets you assign up to 4 players.",
       ],
     },
     {
       heading: "5. Scatter 2D",
       paragraphs: [
-        "Two axes (X vs Y) with analytical quadrants. Classics: xGI vs price, DC vs CS, form vs ownership.",
+        "Two axes (X vs Y) with quadrants vs the group average (or P50 in Group rank mode). Classic pairs: xGI vs TP, xG vs goals, price vs PPG, DC vs DC Pts — quick presets in the side panel.",
+        "Actual stats mode plots displayValues; Group rank plots 0–100 percentiles on both axes. For “lower is better” metrics (GC, cards…) the RAW axis is inverted so stronger profiles sit top-right ↗.",
+        "Player labels avoid collisions (smart AABB). Below the chart a roster shows photos, badges and RATING. Dot colours follow the club palette.",
       ],
     },
     {
       heading: "6. Heatmap matrix",
       paragraphs: [
-        "A table with percentile shading and column leaders — the fastest scan of Top N across many stats.",
+        "A table with group-rank (0–100) shading and column leaders — the fastest scan of Top N across many stats. The RATING column summarizes selected criteria.",
       ],
     },
     {
-      heading: "What is Composite Score (0–100 Index) and how do we calculate it?",
+      heading: "What is RATING (0–100) and how do we calculate it?",
       featured: true,
       paragraphs: [
-        "Composite Score is your personal 0–100 ranking built only from the metrics you currently select in the side panel. It is not a fixed “FIFA rating” — it recalculates whenever your criteria change.",
+        "RATING (0–100) is your overall score from selected criteria vs the analysed group — FIFA/FPL style. In code and audit.json the field is still named compositeScore.",
+        "Mathematically: mean of 0–100 percentiles only for traits that differentiate the pool (flat metrics where everyone shares the same value, e.g. 0 OG, are skipped). 90 = better than 90% of the group; 100 = trait leader.",
       ],
       bullets: [
-        "Step 1 (Pick criteria): select 2–8 stats (e.g. for DEF: FPL points, Clean sheets, DC total, xGI, BPS).",
-        "Step 2 (Position percentiles 0–100): the engine ranks each player vs all qualified peers at the same position (e.g. 116 DEF with ≥180 mins) and awards a 0–100 percentile per metric (P100 = leader, P50 = mid-pack). Negative stats (GC, xGC, cards) use invertScale — fewer goals conceded = higher percentile.",
-        "Step 3 (Equal-weight average = Composite): Composite Score = (P(Metric₁) + P(Metric₂) + … + P(Metricₖ)) / k.",
-        "Example (De Cuyper, 5 metrics): P100 (TP) + P99 (CS) + P26 (DC) + P100 (xGI) + P100 (BPS) → (100+99+26+100+100)/5 = 85. Change the selected stats and Composite recalculates instantly.",
+        "Step 1: pick 2–8 criteria (e.g. DEF: TP, CS, DC, xGI, BPS).",
+        "Step 2: engine ranks vs comparisonPool (min minutes, position, clubs…); invertScale for GC/xGC/cards — fewer = higher score.",
+        "Step 3: RATING = mean of live scores; flat metrics do not inflate the result.",
+        "STACKED bars and sub-legends always show actual displayValues, not Pxx codes.",
       ],
     },
     {
-      heading: "Percentile scale (0–100) vs raw values",
+      heading: "Group rank (0–100) vs Actual stats",
       paragraphs: [
-        "Percentiles let you compare apples with oranges: goals, recoveries and BPS on one chart without large numbers (e.g. 800 minutes vs 1.5 xGI) dominating.",
-        "A score of 85 means the player outperforms 85% of the comparison pool (usually same position / filters). 100 = group leader.",
-        "Raw shows true database numbers — use it when you care about the absolute count (how many DC, how many CS), not relative rank.",
+        "Group rank (0–100) lets you compare apples with oranges without large numbers dominating.",
+        "Actual stats show true database numbers — use when you care about absolute counts (how many DC, how many CS), not relative RATING.",
+      ],
+    },
+    {
+      heading: "Period filters & dynamic indicators",
+      paragraphs: [
+        "Full season, Last 4/6 GW, Home only, Away only and Custom GW range filter match history.",
+        "Inside the selected window the engine dynamically recomputes GWP, PPG, Form, Value (season/form), TI/TO transfers and DC — it does not blindly reuse season snapshots when the period is not the full season.",
       ],
     },
     {
       heading: "Totals vs Per 90",
       paragraphs: [
-        "Totals = sum in the selected window (season / last GWs). Best for seasonal ranks and “who already banked points”.",
-        "Per 90 = rate per 90 minutes. Use after injuries, new transfers or limited minutes — it shows quality, not just playing time.",
+        "Totals = sum in the selected window. Best for ranks and “who already banked points”.",
+        "Per 90 = rate per 90 minutes (DC Opta 1 dp; DC Matches/Pts 2 dp). Use after injuries, transfers or limited minutes.",
       ],
     },
     {
       heading: "Manual pick vs Top N ranking & club filter",
       paragraphs: [
-        "Manual mode: targeted comparison (e.g. three rivals for your midfield slot).",
-        "Top N + position + multi-club filter: automatic ranking by the sorted metric (e.g. Top 5 DEF from ARS+CHE+MCI).",
+        "Manual mode: targeted comparison. Spotlight in the side panel lists only players currently on the chart.",
+        "Top N + position + multi-club filter: ranking by sortByStat (DESC = highest value; invertScale does not reverse sort order).",
       ],
     },
   ],
@@ -626,7 +657,7 @@ function buildGlossaryTab(lang: StatsLabLang): KnowledgeTabContent {
 export const KNOWLEDGE_BASE: Record<StatsLabLang, KnowledgePack> = {
   pl: {
     title: "Baza Wiedzy i Zasady FPL",
-    searchPlaceholder: "Szukaj: DC, xGI, percentyl, BPS…",
+    searchPlaceholder: "Szukaj: DC, xGI, OCENA, BPS…",
     closeLabel: "Zamknij",
     noResults: "Brak wyników dla tego hasła.",
     tabs: [
@@ -639,7 +670,7 @@ export const KNOWLEDGE_BASE: Record<StatsLabLang, KnowledgePack> = {
   },
   en: {
     title: "FPL Knowledge Base & Guide",
-    searchPlaceholder: "Search: DC, xGI, percentile, BPS…",
+    searchPlaceholder: "Search: DC, xGI, RATING, BPS…",
     closeLabel: "Close",
     noResults: "No results for this query.",
     tabs: [

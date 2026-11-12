@@ -39,6 +39,7 @@ import {
 import type {
   PlayerStreaks,
   PlayingTimeGwEntry,
+  StreakDotState,
 } from "@/lib/stats-lab/types";
 import {
   getStreakMetricStyle,
@@ -82,7 +83,7 @@ const HERO_KEY: StreakMetricKey = "returnConsistencyPct";
 function timelineDotsForKey(
   streaks: PlayerStreaks,
   key: StreakMetricKey,
-): boolean[] {
+): StreakDotState[] {
   switch (key) {
     case "maxReturnStreak":
     case "currentReturnStreak":
@@ -90,27 +91,42 @@ function timelineDotsForKey(
       return (
         streaks.returnTimelineDots ??
         streaks.timelineDots ??
-        streaks.recentFlags.returnHit
+        streaks.recentFlags.returnHit ??
+        []
       );
     case "maxGoalStreak":
-      return streaks.goalTimelineDots ?? streaks.recentFlags.goalHit;
+      return streaks.goalTimelineDots ?? streaks.recentFlags.goalHit ?? [];
     case "maxAssistStreak":
-      return streaks.assistTimelineDots ?? streaks.recentFlags.assistHit;
+      return streaks.assistTimelineDots ?? streaks.recentFlags.assistHit ?? [];
     case "maxGoalOrAssistStreak":
-      return streaks.gaTimelineDots ?? streaks.recentFlags.goalOrAssistHit;
+      return streaks.gaTimelineDots ?? streaks.recentFlags.goalOrAssistHit ?? [];
     case "maxCleanSheetStreak":
-      return streaks.csTimelineDots ?? streaks.recentFlags.cleanSheetHit;
+      return streaks.csTimelineDots ?? streaks.recentFlags.cleanSheetHit ?? [];
     case "maxDcPointsStreak":
-      return streaks.dcTimelineDots ?? streaks.recentFlags.dcHit;
+      return streaks.dcTimelineDots ?? streaks.recentFlags.dcHit ?? [];
     case "max60MinStreak":
-      return streaks.sixtyMinTimelineDots ?? streaks.recentFlags.sixtyMinHit;
+      return (
+        streaks.sixtyMinTimelineDots ?? streaks.recentFlags.sixtyMinHit ?? []
+      );
     case "maxSavesPointStreak":
-      return streaks.savesTimelineDots ?? streaks.recentFlags.savesHit;
+      return streaks.savesTimelineDots ?? streaks.recentFlags.savesHit ?? [];
     case "maxBonusStreak":
-      return streaks.bonusTimelineDots ?? streaks.recentFlags.bonusHit;
+      return streaks.bonusTimelineDots ?? streaks.recentFlags.bonusHit ?? [];
     default:
-      return streaks.returnTimelineDots ?? streaks.recentFlags.returnHit;
+      return streaks.returnTimelineDots ?? streaks.recentFlags.returnHit ?? [];
   }
+}
+
+function gwAxisLabel(streaks: PlayerStreaks, lang: StatsLabLang): string {
+  const gws = streaks.timelineGameweeks ?? [];
+  if (gws.length >= 2) {
+    return lang === "pl"
+      ? `GW ${gws[0]}–${gws[gws.length - 1]}`
+      : `GW ${gws[0]}–${gws[gws.length - 1]}`;
+  }
+  if (gws.length === 1) return `GW ${gws[0]}`;
+  const n = streaks.totalPeriodGws || 0;
+  return lang === "pl" ? `${n} GW` : `${n} GW`;
 }
 
 function formatStreakValue(
@@ -135,7 +151,7 @@ function PlayingTimeDots({
 }) {
   if (!timeline.length) return null;
   return (
-    <div className="flex flex-wrap items-center gap-1.5">
+    <div className="flex flex-wrap items-center gap-2">
       {timeline.map((entry) => {
         if (entry.status === "SIXTY_PLUS") {
           return (
@@ -172,12 +188,14 @@ function PlayingTimeDots({
         );
       })}
       <span
-        className={`ml-1 flex items-center gap-1.5 text-[8px] font-bold uppercase tracking-wider ${
-          tokens.isLight ? "text-slate-600" : tokens.textMuted
+        className={`ml-1 flex items-center gap-1.5 text-[11px] font-bold ${
+          tokens.isLight ? "text-slate-600" : "text-slate-300"
         }`}
       >
         <span>⦿ 60+</span>
+        <span>·</span>
         <span>● &lt;60′</span>
+        <span>·</span>
         <span>○ 0′</span>
       </span>
     </div>
@@ -191,6 +209,8 @@ function StreakTile({
   max,
   value,
   flags,
+  timelineGws,
+  axisLabel,
   style,
   tokens,
   lang,
@@ -202,7 +222,9 @@ function StreakTile({
   valueLabel: string;
   value: number;
   max: number;
-  flags: boolean[];
+  flags: StreakDotState[];
+  timelineGws: number[];
+  axisLabel: string;
   style: StreakMetricStyle;
   tokens: StatsLabThemeTokens;
   lang: StatsLabLang;
@@ -256,23 +278,56 @@ function StreakTile({
       </div>
 
       {flags.length > 0 ? (
-        <div className="flex items-center gap-1.5 pt-0.5">
-          {flags.map((hit, idx) => (
-            <span
-              key={`${keyName}-dot-${idx}`}
-              className={`h-2.5 w-2.5 shrink-0 rounded-full ${
-                hit ? tokens.hitRing : tokens.missDot
-              }`}
-              style={hit ? { background: style.accent } : undefined}
-              title={hit ? "hit" : "miss"}
-            />
-          ))}
+        <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+          {flags.map((state, idx) => {
+            const gw = timelineGws[idx];
+            if (state === "DNP") {
+              return (
+                <span
+                  key={`${keyName}-dot-${idx}`}
+                  className={`h-1 w-2.5 shrink-0 rounded-full ${
+                    tokens.isLight ? "bg-slate-300" : "bg-slate-700/60"
+                  }`}
+                  title={
+                    gw != null
+                      ? `GW${gw}: 0 min (DNP)`
+                      : lang === "pl"
+                        ? "0 min (DNP)"
+                        : "0 min (DNP)"
+                  }
+                />
+              );
+            }
+            const hit = state === "HIT";
+            return (
+              <span
+                key={`${keyName}-dot-${idx}`}
+                className={`h-2.5 w-2.5 shrink-0 rounded-full ${
+                  hit
+                    ? tokens.hitRing
+                    : tokens.isLight
+                      ? "border border-slate-400 bg-slate-300"
+                      : "border border-slate-600 bg-slate-800"
+                }`}
+                style={hit ? { background: style.accent } : undefined}
+                title={
+                  gw != null
+                    ? hit
+                      ? `GW${gw}: hit`
+                      : `GW${gw}: miss`
+                    : hit
+                      ? "hit"
+                      : "miss"
+                }
+              />
+            );
+          })}
           <span
             className={`ml-1 text-[9px] font-bold uppercase tracking-wider ${
               tokens.isLight ? "text-slate-600" : tokens.textMuted
             }`}
           >
-            {lang === "pl" ? `${flags.length}M` : `last ${flags.length}`}
+            {axisLabel}
           </span>
         </div>
       ) : null}
@@ -530,6 +585,8 @@ export function StreaksExplorerChart({
           );
           const apps = p.streaks.appearancesCount ?? 0;
           const sixty = p.streaks.sixtyPlusCount ?? 0;
+          const timelineGws = p.streaks.timelineGameweeks ?? [];
+          const axisLabel = gwAxisLabel(p.streaks, lang);
 
           // Secondary: Max + Current first row if present, then rest
           const maxKey = secondaryKeys.includes("maxReturnStreak")
@@ -684,6 +741,8 @@ export function StreaksExplorerChart({
                     )}
                     max={maxima[HERO_KEY] ?? 100}
                     flags={timelineDotsForKey(p.streaks, HERO_KEY)}
+                    timelineGws={timelineGws}
+                    axisLabel={axisLabel}
                     style={getStreakMetricStyle(HERO_KEY, tokens.isLight)}
                     tokens={tokens}
                     lang={lang}
@@ -705,6 +764,8 @@ export function StreaksExplorerChart({
                         )}
                         max={maxima[maxKey] ?? 1}
                         flags={timelineDotsForKey(p.streaks, maxKey)}
+                        timelineGws={timelineGws}
+                        axisLabel={axisLabel}
                         style={getStreakMetricStyle(maxKey, tokens.isLight)}
                         tokens={tokens}
                         lang={lang}
@@ -724,6 +785,8 @@ export function StreaksExplorerChart({
                         )}
                         max={maxima[curKey] ?? 1}
                         flags={timelineDotsForKey(p.streaks, curKey)}
+                        timelineGws={timelineGws}
+                        axisLabel={axisLabel}
                         style={getStreakMetricStyle(curKey, tokens.isLight)}
                         tokens={tokens}
                         lang={lang}
@@ -749,6 +812,8 @@ export function StreaksExplorerChart({
                         )}
                         max={maxima[key] ?? 1}
                         flags={timelineDotsForKey(p.streaks, key)}
+                        timelineGws={timelineGws}
+                        axisLabel={axisLabel}
                         style={getStreakMetricStyle(key, tokens.isLight)}
                         tokens={tokens}
                         lang={lang}
