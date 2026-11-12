@@ -420,9 +420,9 @@ export function StackedCompositeChart({
                   ) : null}
                 </div>
 
-                <div className="min-w-0 text-right">
+                <div className="flex min-w-0 items-center justify-center">
                   <div
-                    className="inline-flex flex-col items-end rounded-xl border-2 px-2.5 py-1.5"
+                    className="inline-flex flex-col items-center justify-center rounded-xl border-2 px-2.5 py-1.5 text-center"
                     style={{
                       borderColor: isLight ? "#059669" : "#39FF14",
                     }}
@@ -646,9 +646,9 @@ function GroupedRawBars({
                   })}
                 </div>
 
-                <div className="min-w-0 text-right">
+                <div className="flex min-w-0 items-center justify-center">
                   <div
-                    className="inline-flex flex-col items-end rounded-xl border-2 px-2.5 py-1.5"
+                    className="inline-flex flex-col items-center justify-center rounded-xl border-2 px-2.5 py-1.5 text-center"
                     style={{ borderColor: rightAccent }}
                   >
                     <p

@@ -17,7 +17,6 @@ import {
   Loader2,
   Search,
   Star,
-  Table2,
 } from "lucide-react";
 import { queryStatsCentreAction } from "@/app/admin/actions/statsLabCentre";
 import type { StatsLabBootstrapData } from "@/lib/stats-lab/analyticsEngine";
@@ -57,11 +56,12 @@ import {
   downloadJsonFile,
 } from "@/lib/stats-lab/auditExport";
 import { ARENA_PORTAL_ALT, ARENA_PORTAL_LOGO } from "@/lib/arena";
-import {
-  STATS_LAB_CHART_THEMES,
-  type StatsLabChartThemeId,
-} from "@/components/admin/stats-lab/chartTheme";
+import type { StatsLabChartThemeId } from "@/components/admin/stats-lab/chartTheme";
 import { getThemeTokens } from "@/lib/stats-lab/themeTokens";
+import {
+  getStatsLabMenuChrome,
+  STATS_LAB_THEME_SYNC_EVENT,
+} from "@/lib/stats-lab/menuChrome";
 
 const WATCHLIST_KEY = "fpl-arena-stats-centre-watchlist";
 const PAGE_SIZE_OPTS = [25, 50, 100] as const;
@@ -433,9 +433,11 @@ export function StatsCentreView({
 }: Props) {
   const ui = centreUi(lang);
   const tokens = getThemeTokens(themeId);
+  const chrome = getStatsLabMenuChrome(themeId);
   const isLight = themeId === "ANALYST_LIGHT";
   const isDark = !isLight;
   const surface = getCentreSurface(themeId);
+  const hideShellDupes = onThemeChange != null;
   const exportRef = useRef<HTMLDivElement>(null);
   const [filter, setFilter] = useState<StatsCentreFilter>(() =>
     createDefaultStatsCentreFilter(bootstrap.seasonCode),
@@ -449,6 +451,7 @@ export function StatsCentreView({
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const [watchlist, setWatchlist] = useState<number[]>([]);
+  const [onlyWatchlist, setOnlyWatchlist] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<(typeof PAGE_SIZE_OPTS)[number]>(25);
@@ -458,6 +461,27 @@ export function StatsCentreView({
   useEffect(() => {
     setWatchlist(loadWatchlist());
   }, []);
+
+  useEffect(() => {
+    function onThemeSync(ev: Event) {
+      const detail = (ev as CustomEvent<{ themeId?: string; lang?: string }>)
+        .detail;
+      if (!detail) return;
+      if (
+        detail.themeId === "ARENA_DARK" ||
+        detail.themeId === "SCOUT_DARK" ||
+        detail.themeId === "ANALYST_LIGHT"
+      ) {
+        onThemeChange?.(detail.themeId);
+      }
+      if (detail.lang === "pl" || detail.lang === "en") {
+        onLangChange(detail.lang);
+      }
+    }
+    window.addEventListener(STATS_LAB_THEME_SYNC_EVENT, onThemeSync);
+    return () =>
+      window.removeEventListener(STATS_LAB_THEME_SYNC_EVENT, onThemeSync);
+  }, [onLangChange, onThemeChange]);
 
   const runQuery = useCallback((next: StatsCentreFilter) => {
     startTransition(async () => {
@@ -522,15 +546,26 @@ export function StatsCentreView({
     });
   }
 
-  const pageRows = useMemo(() => {
+  const filteredRows = useMemo(() => {
     const all = result?.rows ?? [];
+    if (!onlyWatchlist) return all;
+    return all.filter(
+      (row) =>
+        row.fpl_element_id != null && watchlist.includes(row.fpl_element_id),
+    );
+  }, [result, onlyWatchlist, watchlist]);
+
+  const pageRows = useMemo(() => {
     const start = (page - 1) * pageSize;
-    return all.slice(start, start + pageSize);
-  }, [result, page, pageSize]);
+    return filteredRows.slice(start, start + pageSize);
+  }, [filteredRows, page, pageSize]);
 
   const totalPages = Math.max(
     1,
-    Math.ceil((result?.totalRows ?? 0) / pageSize),
+    Math.ceil(
+      (onlyWatchlist ? filteredRows.length : (result?.totalRows ?? 0)) /
+        pageSize,
+    ),
   );
 
   const activeTabKey =
@@ -721,96 +756,45 @@ export function StatsCentreView({
 
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h2
-            className={`flex items-center gap-2 text-xl font-extrabold ${tokens.textStrong}`}
-          >
-            <Table2 className={`h-5 w-5 ${tokens.accentText}`} />
-            {ui.title}
-          </h2>
-          <p className={`mt-1 max-w-2xl text-sm ${tokens.textMuted}`}>
-            {ui.subtitle}
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {onThemeChange ? (
-            <div
-              className={`inline-flex rounded-xl border p-1 ${tokens.panelBorder} ${tokens.page}`}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className={`inline-flex rounded-xl p-1 ${chrome.group}`}>
+          {(["PLAYERS", "PER_GW", "TEAMS"] as StatsCentreMode[]).map((m) => (
+            <button
+              key={m}
+              type="button"
+              onClick={() => {
+                patchFilter({
+                  centreMode: m,
+                  sortKey: "total_points",
+                  sortDir: "DESC",
+                  per90: m === "PER_GW" ? false : filter.per90,
+                });
+                if (m === "TEAMS" && pageSize < 25) setPageSize(25);
+              }}
+              className={`rounded-lg px-3 py-1.5 text-[10px] uppercase tracking-wider ${
+                filter.centreMode === m ? chrome.activeBtn : chrome.inactiveBtn
+              }`}
             >
-              {(
-                Object.keys(STATS_LAB_CHART_THEMES) as StatsLabChartThemeId[]
-              ).map((id) => (
-                <button
-                  key={id}
-                  type="button"
-                  title={
-                    lang === "en"
-                      ? STATS_LAB_CHART_THEMES[id].labelEn
-                      : STATS_LAB_CHART_THEMES[id].labelPl
-                  }
-                  onClick={() => onThemeChange(id)}
-                  className={`rounded-lg px-2.5 py-1.5 text-[10px] font-black uppercase ${
-                    themeId === id
-                      ? "bg-[#39FF14] text-black"
-                      : tokens.textMuted
-                  }`}
-                >
-                  {id === "ARENA_DARK"
-                    ? "Arena"
-                    : id === "SCOUT_DARK"
-                      ? "Scout"
-                      : "Light"}
-                </button>
-              ))}
-            </div>
-          ) : null}
-          <div
-            className={`inline-flex rounded-xl border p-1 ${tokens.panelBorder} ${tokens.page}`}
-          >
-            {(["PLAYERS", "PER_GW", "TEAMS"] as StatsCentreMode[]).map((m) => (
-              <button
-                key={m}
-                type="button"
-                onClick={() => {
-                  patchFilter({
-                    centreMode: m,
-                    sortKey: "total_points",
-                    sortDir: "DESC",
-                    per90: m === "PER_GW" ? false : filter.per90,
-                  });
-                  if (m === "TEAMS" && pageSize < 25) setPageSize(25);
-                }}
-                className={`rounded-lg px-3 py-1.5 text-[10px] font-black uppercase tracking-wider ${
-                  filter.centreMode === m
-                    ? "bg-[#39FF14] text-black"
-                    : tokens.textMuted
-                }`}
-              >
-                {CENTRE_MODE_LABELS[lang][m]}
-              </button>
-            ))}
-          </div>
+              {CENTRE_MODE_LABELS[lang][m]}
+            </button>
+          ))}
         </div>
       </div>
 
       {/* Filters bar */}
-      <div
-        className={`space-y-3 rounded-2xl border p-4 ${tokens.panel} ${tokens.panelBorder}`}
-      >
+      <div className={`space-y-3 rounded-2xl p-4 ${chrome.panel}`}>
         <div className="flex flex-wrap items-end gap-2">
-          <label className="text-[10px] font-bold uppercase text-slate-500">
+          <label className={`text-[10px] font-bold uppercase ${chrome.mutedLabel}`}>
             {ui.range}
             <select
               value={draftRange}
               onChange={(e) =>
                 setDraftRange(e.target.value as StatsCentreRangeMode)
               }
-              className={`mt-1 block min-w-[200px] rounded-lg border px-2 py-2 text-sm ${tokens.input}`}
+              className={`mt-1 block min-w-[200px] rounded-lg px-2 py-2 text-sm ${chrome.input}`}
             >
               {RANGE_MODES.map((m) => (
-                <option key={m} value={m}>
+                <option key={m} value={m} className={chrome.option}>
                   {CENTRE_RANGE_LABELS[lang][m]}
                 </option>
               ))}
@@ -818,7 +802,7 @@ export function StatsCentreView({
           </label>
           {draftRange === "GW_RANGE" ? (
             <>
-              <label className="text-[10px] font-bold uppercase text-slate-500">
+              <label className={`text-[10px] font-bold uppercase ${chrome.mutedLabel}`}>
                 {ui.gwFrom}
                 <input
                   type="number"
@@ -826,10 +810,10 @@ export function StatsCentreView({
                   max={38}
                   value={draftGwFrom}
                   onChange={(e) => setDraftGwFrom(Number(e.target.value))}
-                  className={`mt-1 block w-20 rounded-lg border px-2 py-2 text-sm ${tokens.input}`}
+                  className={`mt-1 block w-20 rounded-lg px-2 py-2 text-sm ${chrome.input}`}
                 />
               </label>
-              <label className="text-[10px] font-bold uppercase text-slate-500">
+              <label className={`text-[10px] font-bold uppercase ${chrome.mutedLabel}`}>
                 {ui.gwTo}
                 <input
                   type="number"
@@ -837,7 +821,7 @@ export function StatsCentreView({
                   max={38}
                   value={draftGwTo}
                   onChange={(e) => setDraftGwTo(Number(e.target.value))}
-                  className={`mt-1 block w-20 rounded-lg border px-2 py-2 text-sm ${tokens.input}`}
+                  className={`mt-1 block w-20 rounded-lg px-2 py-2 text-sm ${chrome.input}`}
                 />
               </label>
             </>
@@ -845,33 +829,35 @@ export function StatsCentreView({
           <button
             type="button"
             onClick={applyRange}
-            className="rounded-xl bg-[#39FF14] px-4 py-2 text-[10px] font-black uppercase tracking-wider text-black"
+            className={`rounded-xl px-4 py-2 text-[10px] uppercase tracking-wider ${chrome.activeBtn}`}
           >
             {ui.apply}
           </button>
 
           <div className="ml-auto flex flex-wrap items-center gap-2">
-            <div className="inline-flex rounded-xl border border-slate-700 bg-slate-950 p-1">
-              <button
-                type="button"
-                onClick={() => onLangChange("pl")}
-                className={`rounded-lg px-2 py-1 text-[10px] font-black ${
-                  lang === "pl" ? "bg-[#39FF14] text-black" : "text-slate-400"
-                }`}
-              >
-                PL
-              </button>
-              <button
-                type="button"
-                onClick={() => onLangChange("en")}
-                className={`rounded-lg px-2 py-1 text-[10px] font-black ${
-                  lang === "en" ? "bg-[#39FF14] text-black" : "text-slate-400"
-                }`}
-              >
-                EN
-              </button>
-            </div>
-            <span className="rounded-lg border border-slate-700 px-2 py-1.5 text-[10px] font-bold text-slate-400">
+            {!hideShellDupes ? (
+              <div className={`inline-flex rounded-xl p-1 ${chrome.group}`}>
+                <button
+                  type="button"
+                  onClick={() => onLangChange("pl")}
+                  className={`rounded-lg px-2 py-1.5 text-[10px] uppercase ${
+                    lang === "pl" ? chrome.activeBtn : chrome.inactiveBtn
+                  }`}
+                >
+                  PL
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onLangChange("en")}
+                  className={`rounded-lg px-2 py-1.5 text-[10px] uppercase ${
+                    lang === "en" ? chrome.activeBtn : chrome.inactiveBtn
+                  }`}
+                >
+                  EN
+                </button>
+              </div>
+            ) : null}
+            <span className={`rounded-lg px-2 py-1.5 text-[10px] font-bold ${chrome.inactiveBtn}`}>
               {ui.season}: {bootstrap.seasonCode}
             </span>
           </div>
@@ -908,10 +894,10 @@ export function StatsCentreView({
                       tab === "DISCIPLINE" ? "ASC" : "DESC",
                   })
                 }
-                className={`rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-wider ${
+                className={`rounded-full px-3 py-1.5 text-[10px] uppercase tracking-wider ${
                   filter.playerTab === tab
-                    ? "bg-[#39FF14] text-black"
-                    : "border border-slate-700 text-slate-400 hover:border-slate-500"
+                    ? chrome.activeBtn
+                    : chrome.inactiveBtn
                 }`}
               >
                 {PLAYER_TAB_LABELS[lang][tab]}
@@ -940,10 +926,10 @@ export function StatsCentreView({
                     sortDir: "DESC",
                   })
                 }
-                className={`rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-wider ${
+                className={`rounded-full px-3 py-1.5 text-[10px] uppercase tracking-wider ${
                   filter.teamTab === tab
-                    ? "bg-[#39FF14] text-black"
-                    : "border border-slate-700 text-slate-400 hover:border-slate-500"
+                    ? chrome.activeBtn
+                    : chrome.inactiveBtn
                 }`}
               >
                 {TEAM_TAB_LABELS[lang][tab]}
@@ -962,13 +948,23 @@ export function StatsCentreView({
                   positions: v === 0 ? [] : [v as FplPositionType],
                 });
               }}
-              className={`rounded-lg border px-2 py-1.5 text-xs ${tokens.input}`}
+              className={`rounded-lg px-2 py-1.5 text-xs ${chrome.input}`}
             >
-              <option value={0}>{ui.allPositions}</option>
-              <option value={1}>GK</option>
-              <option value={2}>DEF</option>
-              <option value={3}>MID</option>
-              <option value={4}>FWD</option>
+              <option value={0} className={chrome.option}>
+                {ui.allPositions}
+              </option>
+              <option value={1} className={chrome.option}>
+                GK
+              </option>
+              <option value={2} className={chrome.option}>
+                DEF
+              </option>
+              <option value={3} className={chrome.option}>
+                MID
+              </option>
+              <option value={4} className={chrome.option}>
+                FWD
+              </option>
             </select>
           ) : null}
 
@@ -978,18 +974,24 @@ export function StatsCentreView({
               const v = Number(e.target.value);
               patchFilter({ clubIds: v === 0 ? [] : [v] });
             }}
-            className={`rounded-lg border px-2 py-1.5 text-xs ${tokens.input}`}
+            className={`rounded-lg px-2 py-1.5 text-xs ${chrome.input}`}
           >
-            <option value={0}>{ui.allTeams}</option>
+            <option value={0} className={chrome.option}>
+              {ui.allTeams}
+            </option>
             {bootstrap.clubs.map((c) => (
-              <option key={c.fpl_team_id} value={c.fpl_team_id}>
+              <option
+                key={c.fpl_team_id}
+                value={c.fpl_team_id}
+                className={chrome.option}
+              >
                 {c.short_name} — {c.name}
               </option>
             ))}
           </select>
 
           {filter.centreMode !== "PER_GW" ? (
-            <div className="inline-flex rounded-lg border border-slate-700 bg-slate-950 p-0.5">
+            <div className={`inline-flex rounded-lg p-0.5 ${chrome.group}`}>
               <button
                 type="button"
                 onClick={() =>
@@ -999,8 +1001,8 @@ export function StatsCentreView({
                       filter.minMinutes === 90 ? 1 : filter.minMinutes,
                   })
                 }
-                className={`rounded-md px-2.5 py-1 text-[10px] font-black uppercase ${
-                  !filter.per90 ? "bg-slate-800 text-white" : "text-slate-500"
+                className={`rounded-md px-2.5 py-1.5 text-[10px] uppercase ${
+                  !filter.per90 ? chrome.activeBtn : chrome.inactiveBtn
                 }`}
               >
                 {ui.totals}
@@ -1013,15 +1015,15 @@ export function StatsCentreView({
                     minMinutes: Math.max(filter.minMinutes, 90),
                   })
                 }
-                className={`rounded-md px-2.5 py-1 text-[10px] font-black uppercase ${
-                  filter.per90 ? "bg-[#39FF14] text-black" : "text-slate-500"
+                className={`rounded-md px-2.5 py-1.5 text-[10px] uppercase ${
+                  filter.per90 ? chrome.activeBtn : chrome.inactiveBtn
                 }`}
               >
                 {ui.per90}
               </button>
             </div>
           ) : (
-            <span className="rounded-md border border-slate-700 px-2.5 py-1 text-[10px] font-black uppercase text-slate-400">
+            <span className={`rounded-md px-2.5 py-1.5 text-[10px] uppercase ${chrome.inactiveBtn}`}>
               {ui.singleMatches}
             </span>
           )}
@@ -1032,27 +1034,44 @@ export function StatsCentreView({
               value={filter.search}
               onChange={(e) => patchFilter({ search: e.target.value })}
               placeholder={ui.search}
-              className={`w-full rounded-lg border py-1.5 pl-8 pr-2 text-xs ${tokens.input}`}
+              className={`w-full rounded-lg py-1.5 pl-8 pr-2 text-xs ${chrome.input}`}
             />
           </div>
 
           <button
             type="button"
             onClick={() => setAdvancedOpen((v) => !v)}
-            className="rounded-lg border border-slate-700 px-2.5 py-1.5 text-[10px] font-black uppercase text-slate-300"
+            className={`rounded-lg px-2.5 py-1.5 text-[10px] uppercase ${chrome.inactiveBtn}`}
           >
             {ui.advanced}
           </button>
 
-          <span className="inline-flex items-center gap-1 rounded-lg border border-amber-500/30 bg-amber-500/10 px-2.5 py-1.5 text-[10px] font-black uppercase text-amber-200">
-            <Star className="h-3 w-3 fill-amber-300 text-amber-300" />
+          <button
+            type="button"
+            onClick={() => {
+              setOnlyWatchlist((v) => !v);
+              setPage(1);
+            }}
+            className={`inline-flex min-h-[28px] items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[10px] uppercase tracking-wider ${
+              onlyWatchlist ? chrome.activeBtn : chrome.inactiveBtn
+            }`}
+          >
+            <Star
+              className={`h-3.5 w-3.5 ${
+                onlyWatchlist
+                  ? isLight
+                    ? "fill-white text-white"
+                    : "fill-slate-950 text-slate-950"
+                  : "fill-amber-500 text-amber-500"
+              }`}
+            />
             {ui.watchlist}: {watchlist.length}
-          </span>
+          </button>
         </div>
 
         {advancedOpen ? (
-          <div className="flex flex-wrap gap-3 border-t border-slate-800 pt-3">
-            <label className="text-[10px] text-slate-500">
+          <div className={`flex flex-wrap gap-3 border-t pt-3 ${isLight ? "border-slate-200" : "border-slate-800"}`}>
+            <label className={`text-[10px] ${chrome.mutedLabel}`}>
               {ui.minMinutes}
               <input
                 type="number"
@@ -1061,10 +1080,10 @@ export function StatsCentreView({
                 onChange={(e) =>
                   patchFilter({ minMinutes: Number(e.target.value) })
                 }
-                className={`mt-1 block w-24 rounded-lg border px-2 py-1.5 text-sm ${tokens.input}`}
+                className={`mt-1 block w-24 rounded-lg px-2 py-1.5 text-sm ${chrome.input}`}
               />
             </label>
-            <label className="text-[10px] text-slate-500">
+            <label className={`text-[10px] ${chrome.mutedLabel}`}>
               {ui.maxPrice}
               <input
                 type="number"
@@ -1077,10 +1096,10 @@ export function StatsCentreView({
                     maxPrice: e.target.value ? Number(e.target.value) : null,
                   })
                 }
-                className={`mt-1 block w-24 rounded-lg border px-2 py-1.5 text-sm ${tokens.input}`}
+                className={`mt-1 block w-24 rounded-lg px-2 py-1.5 text-sm ${chrome.input}`}
               />
             </label>
-            <label className="text-[10px] text-slate-500">
+            <label className={`text-[10px] ${chrome.mutedLabel}`}>
               {ui.maxOwn}
               <input
                 type="number"
@@ -1094,7 +1113,7 @@ export function StatsCentreView({
                       : null,
                   })
                 }
-                className={`mt-1 block w-24 rounded-lg border px-2 py-1.5 text-sm ${tokens.input}`}
+                className={`mt-1 block w-24 rounded-lg px-2 py-1.5 text-sm ${chrome.input}`}
               />
             </label>
           </div>
@@ -1106,7 +1125,7 @@ export function StatsCentreView({
         {watchlist.length > 0 ? (
           <Link
             href={studioHref}
-            className="inline-flex items-center gap-2 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-emerald-200 hover:bg-emerald-500/20"
+            className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-[10px] ${chrome.knowledgeBtn}`}
           >
             📈 {ui.compareInStudio} ({watchlist.length}) ↗
           </Link>
@@ -1115,7 +1134,7 @@ export function StatsCentreView({
           type="button"
           disabled={exportBusy || !pageRows.length}
           onClick={() => void exportPair()}
-          className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-500/50 bg-emerald-500/15 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-emerald-100 disabled:opacity-40"
+          className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-[10px] ${chrome.exportPrimary}`}
         >
           {exportBusy ? (
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -1128,7 +1147,7 @@ export function StatsCentreView({
           type="button"
           disabled={exportBusy || !pageRows.length}
           onClick={() => void exportJpgOnly("download")}
-          className="inline-flex items-center gap-1.5 rounded-xl border border-slate-600 px-3 py-2 text-[10px] font-black uppercase text-slate-200 disabled:opacity-40"
+          className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-[10px] ${chrome.exportSecondary}`}
         >
           {ui.downloadJpg}
         </button>
@@ -1136,7 +1155,7 @@ export function StatsCentreView({
           type="button"
           disabled={exportBusy || !pageRows.length}
           onClick={() => void exportJpgOnly("copy")}
-          className="inline-flex items-center gap-1.5 rounded-xl border border-slate-600 px-3 py-2 text-[10px] font-black uppercase text-slate-200 disabled:opacity-40"
+          className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-[10px] ${chrome.exportSecondary}`}
         >
           <ClipboardCopy className="h-3.5 w-3.5" />
           {ui.copyJpg}
@@ -1293,12 +1312,24 @@ export function StatsCentreView({
                             <button
                               type="button"
                               onClick={() => toggleWatch(row.fpl_element_id!)}
-                              className="text-amber-400/90 hover:text-amber-300"
+                              className={
+                                isLight
+                                  ? watched
+                                    ? "text-amber-600 drop-shadow-sm"
+                                    : "text-slate-400 hover:text-amber-600"
+                                  : watched
+                                    ? "text-amber-300 hover:text-amber-200"
+                                    : "text-amber-400/90 hover:text-amber-300"
+                              }
                               title={ui.watchlist}
                             >
                               <Star
                                 className={`h-3.5 w-3.5 ${
-                                  watched ? "fill-amber-300" : ""
+                                  watched
+                                    ? isLight
+                                      ? "fill-amber-600 font-black"
+                                      : "fill-amber-300"
+                                    : ""
                                 }`}
                               />
                             </button>
@@ -1505,8 +1536,8 @@ export function StatsCentreView({
       </div>
 
       {/* Pagination */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2 text-[10px] text-slate-400">
+      <div className={`flex flex-wrap items-center justify-between gap-3 rounded-2xl p-3 ${chrome.panel}`}>
+        <div className={`flex items-center gap-2 text-[10px] ${chrome.mutedLabel}`}>
           <span>{ui.rowsPerPage}</span>
           {PAGE_SIZE_OPTS.map((n) => (
             <button
@@ -1516,16 +1547,14 @@ export function StatsCentreView({
                 setPageSize(n);
                 setPage(1);
               }}
-              className={`rounded-md px-2 py-1 font-black ${
-                pageSize === n
-                  ? "bg-[#39FF14] text-black"
-                  : "border border-slate-700"
+              className={`rounded-md px-2 py-1.5 ${
+                pageSize === n ? chrome.activeBtn : chrome.inactiveBtn
               }`}
             >
               {n}
             </button>
           ))}
-          <span className="ml-2 text-slate-500">
+          <span className={`ml-2 ${chrome.mutedLabel}`}>
             {result?.totalRows ?? 0} · {page}/{totalPages}
           </span>
         </div>
@@ -1534,7 +1563,7 @@ export function StatsCentreView({
             type="button"
             disabled={page <= 1}
             onClick={() => setPage((p) => Math.max(1, p - 1))}
-            className="rounded-lg border border-slate-700 px-3 py-1.5 text-[10px] font-black uppercase disabled:opacity-40"
+            className={`rounded-lg px-3 py-1.5 text-[10px] uppercase disabled:opacity-50 ${chrome.inactiveBtn}`}
           >
             {ui.prev}
           </button>
@@ -1542,7 +1571,7 @@ export function StatsCentreView({
             type="button"
             disabled={page >= totalPages}
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            className="rounded-lg border border-slate-700 px-3 py-1.5 text-[10px] font-black uppercase disabled:opacity-40"
+            className={`rounded-lg px-3 py-1.5 text-[10px] uppercase disabled:opacity-50 ${chrome.inactiveBtn}`}
           >
             {ui.next}
           </button>

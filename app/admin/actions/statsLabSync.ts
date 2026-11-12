@@ -18,9 +18,12 @@ import {
   HISTORY_BATCH_SIZE_DEFAULT,
   HISTORY_CONCURRENCY,
   FplRateLimitError,
+  buildEventDeadlineMap,
   chunkArray,
+  fetchFplFixtures,
   fetchFplJsonWithRetry,
   historyBatchJitterMs,
+  mapApiFixture,
   mapBootstrapClub,
   mapBootstrapPlayer,
   mapElementHistoryRows,
@@ -268,8 +271,9 @@ export async function getStatsLabOverview(
 }
 
 /**
- * Krok A — bootstrap-static → clubs + players (+ sync_meta).
+ * Krok A — bootstrap-static → clubs + players + fixtures (+ sync_meta).
  * Zachowuje istniejące last_synced_gw graczy.
+ * Terminarz: GET /api/fixtures/ z deadline_time z bootstrap.events[].
  */
 export async function runBootstrapSyncAction(
   seasonCode: string = DEFAULT_STATS_LAB_SEASON,
@@ -288,6 +292,7 @@ export async function runBootstrapSyncAction(
       `${FPL_API_BASE}/bootstrap-static/`,
     );
     const targetGw = resolveTargetGameweek(bootstrap.events);
+    const eventDeadlineMap = buildEventDeadlineMap(bootstrap.events);
 
     const clubs = (bootstrap.teams ?? []).map((t) =>
       mapBootstrapClub(seasonCode, t, nowIso),
@@ -318,6 +323,11 @@ export async function runBootstrapSyncAction(
       if (mapped) players.push(mapped);
     }
 
+    const rawFixtures = await fetchFplFixtures();
+    const fixtures = rawFixtures
+      .filter((f) => Number.isFinite(Number(f.id)))
+      .map((f) => mapApiFixture(seasonCode, f, eventDeadlineMap, nowIso));
+
     for (const batch of chunkArray(clubs, UPSERT_CHUNK)) {
       const { error } = await supabase.from("fpl_lab_clubs").upsert(batch, {
         onConflict: "season_code,fpl_team_id",
@@ -330,6 +340,13 @@ export async function runBootstrapSyncAction(
         onConflict: "season_code,fpl_element_id",
       });
       if (error) throw new Error(`fpl_lab_players: ${error.message}`);
+    }
+
+    for (const batch of chunkArray(fixtures, UPSERT_CHUNK)) {
+      const { error } = await supabase.from("fpl_lab_fixtures").upsert(batch, {
+        onConflict: "season_code,fixture_id",
+      });
+      if (error) throw new Error(`fpl_lab_fixtures: ${error.message}`);
     }
 
     await upsertSyncMeta(supabase, {
@@ -345,11 +362,12 @@ export async function runBootstrapSyncAction(
 
     return {
       ok: true,
-      message: `Bootstrap OK — ${clubs.length} klubów, ${players.length} zawodników, target GW${targetGw}.`,
+      message: `Bootstrap OK — ${clubs.length} klubów, ${players.length} zawodników, ${fixtures.length} meczów, target GW${targetGw}.`,
       seasonCode,
       targetGw,
       clubsUpserted: clubs.length,
       playersUpserted: players.length,
+      fixturesUpserted: fixtures.length,
     };
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Błąd bootstrap sync.";
@@ -370,6 +388,7 @@ export async function runBootstrapSyncAction(
       targetGw: 0,
       clubsUpserted: 0,
       playersUpserted: 0,
+      fixturesUpserted: 0,
     };
   }
 }

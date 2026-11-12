@@ -13,20 +13,39 @@ import {
 import type { StatsLabChartThemeId } from "@/components/admin/stats-lab/chartTheme";
 import { getThemeTokens } from "@/lib/stats-lab/themeTokens";
 
+type ActiveModuleTab = "centre" | "studio" | "projections";
+
 type Props = {
   open: boolean;
   lang: StatsLabLang;
   themeId?: StatsLabChartThemeId;
+  activeModuleTab?: ActiveModuleTab;
   initialTab?: KnowledgeTabId;
   helpAnchor?: KnowledgeHelpAnchor | null;
   onLangChange: (lang: StatsLabLang) => void;
   onClose: () => void;
 };
 
+function moduleHint(
+  tab: ActiveModuleTab | undefined,
+  lang: StatsLabLang,
+): string | null {
+  if (!tab) return null;
+  if (lang === "pl") {
+    if (tab === "centre") return "Kontekst: Stats Centre (Tabele Analityczne)";
+    if (tab === "studio") return "Kontekst: Studio Wykresów";
+    return "Kontekst: Predykcje i Terminarz";
+  }
+  if (tab === "centre") return "Context: Stats Centre (Analytical Tables)";
+  if (tab === "studio") return "Context: Chart Studio";
+  return "Context: Projections & Fixtures";
+}
+
 export function StatsLabKnowledgeBaseModal({
   open,
   lang,
   themeId = "ARENA_DARK",
+  activeModuleTab,
   initialTab,
   helpAnchor,
   onLangChange,
@@ -94,6 +113,9 @@ export function StatsLabKnowledgeBaseModal({
             </h2>
             <p className={`mt-0.5 text-xs ${tokens.textMuted}`}>
               FPL Arena · Stats Lab
+              {moduleHint(activeModuleTab, lang)
+                ? ` · ${moduleHint(activeModuleTab, lang)}`
+                : ""}
             </p>
           </div>
           <div
@@ -253,9 +275,11 @@ export function StatsLabKnowledgeBaseModal({
 export function KnowledgeHelpButton({
   label,
   onClick,
+  className,
 }: {
   label: string;
   onClick: () => void;
+  className?: string;
 }) {
   return (
     <button
@@ -267,7 +291,10 @@ export function KnowledgeHelpButton({
         e.stopPropagation();
         onClick();
       }}
-      className="ml-1 inline-flex h-4 w-4 items-center justify-center rounded-full border border-slate-600 text-[9px] font-black text-slate-400 hover:border-[#39FF14] hover:text-[#39FF14]"
+      className={
+        className ??
+        "ml-1 inline-flex h-4 w-4 items-center justify-center rounded-full border border-slate-600 text-[9px] font-black text-slate-400 hover:border-[#39FF14] hover:text-[#39FF14]"
+      }
     >
       ?
     </button>

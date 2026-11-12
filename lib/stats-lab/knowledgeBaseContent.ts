@@ -49,101 +49,74 @@ export type KnowledgePack = {
 
 const HOW_TO_USE_PL: KnowledgeTabContent = {
   id: "HOW_TO_USE",
-  label: "Jak używać Studia",
+  label: "3 moduły Stats Lab",
   intro:
-    "Szybki przewodnik po 6 typach wykresów i przełącznikach Studia — żebyś wiedział, którego narzędzia użyć i jak czytać wynik.",
+    "Przewodnik po całej aplikacji Stats Lab: Stats Centre (tabele), Studio Wykresów (wizualizacje) oraz Predykcje i Terminarz (FDR i prognozy).",
   blocks: [
     {
-      heading: "1. Profil wielowymiarowy (STACKED_COMPOSITE)",
+      heading: "Moduł 1: Stats Centre — Tabele Analityczne",
       paragraphs: [
-        "Najlepszy start przy porównaniu kilku graczy na wielu kryteriach naraz (np. punkty, xGI, DC, BPS).",
-        "OCENA (0–100) po prawej to średnia arytmetyczna percentyli wybranych kryteriów na tle kwalifikowanej grupy porównawczej (comparisonPool). Na paskach i w pod-legendzie zawsze widać rzeczywiste wartości statystyk (bez kodów Pxx).",
+        "Tu przeglądasz dane w formie tabel. Masz trzy tryby: Zawodnicy, Mecz po meczu oraz Kluby.",
+        "Zawodnicy mają 8 zakładek tematycznych (punkty, atak, kreacja, obrona/DC, ICT, wartość, dyscyplina, transfery). Kluby mają 4 zakładki (atak, obrona, forma, terminarz).",
+        "Kolory komórek to skala percentyli P5–P95 na tle wybranej grupy porównawczej — im bardziej „gorąco”, tym lepszy wynik względem rówieśników (przy metrykach „mniej = lepiej” logika jest odwrócona).",
       ],
       bullets: [
-        "Tło grupy (0–100): długość paska ≈ OCENA; kolorowe segmenty = wkład cech; liczby = displayValues.",
-        "Wartości statystyk: osobna kolumna na każde kryterium (pasek vs lider na wykresie).",
-        "Zmiana pozycji (GK/DEF/MID/FWD) automatycznie podmienia domyślne activeMetrics, jeśli nie edytowałeś ich w tym samym kroku.",
+        "Per 90: przelicza tempo na 90 minut — przydatne przy małej liczbie minut.",
+        "Słownik skrótów: pełne nazwy kolumn znajdziesz w zakładce „Słownik skrótów” oraz w legendzie nagłówków tabeli.",
+        "Ulubieni: gwiazdka dodaje zawodnika do watchlisty; filtr ★ Ulubieni zawęża tabelę.",
       ],
     },
     {
-      heading: "2. Dekompozycja punktów FPL (POINTS_BREAKDOWN)",
+      heading: "Moduł 2: Studio Wykresów — 6 wizualizacji",
       paragraphs: [
-        "Pokazuje ZA CO gracz zbiera punkty (występy, gole, asysty, CS, DC, obrony, karne, bonus) i opcjonalnie kary (stracone gole, kartki, PM, OG).",
-        "Górna legenda jest dynamiczna: pokazuje wyłącznie kategorie, w których widoczni zawodnicy faktycznie punktowali (dodatnio lub ujemnie). Wiersz „Kary:” znika, gdy nikt nie ma punktów ujemnych.",
-      ],
-      bullets: [
-        "Suma składowych = oficjalne punkty FPL w badanym okresie (1:1 z historią GW).",
-        "Kolejność na wykresie = oficjalne sumy meczowe (nie przelicznik Per 90).",
-      ],
-    },
-    {
-      heading: "3. Eksplorator pass i regularności",
-      paragraphs: [
-        "Serie meczowe z rzędu (zwroty FPL, G+A, CS, DC, 60+ min) oraz Regularność zwrotów % — odsetek rozegranych meczów z prawdziwym Zwrotem FPL (nie zwykłe 1–2 pkt za czas gry).",
-        "Idealny do oddzielenia „gracza jednego meczu” od stabilnego scorera tydzień w tydzień. Kropki na kafelku = kolejne mecze (kolor = zwrot, szary = pusty przelot).",
+        "Profil wielowymiarowy: porównanie wielu cech na raz + kafelek OCENA.",
+        "Dekompozycja punktów: za co dokładnie gracz zbiera punkty FPL (i kary).",
+        "Passy i regularność: serie zwrotów, CS, DC, 60+ min oraz Regularność zwrotów %.",
+        "Radar / Pizza: 1–4 graczy na tych samych osiach + szybkie sloty wyboru.",
+        "Scatter 2D: dwie osie X/Y z ćwiartkami względem grupy.",
+        "Macierz heatmap: szybki skan Top N po wielu statystykach + kolumna OCENA.",
       ],
     },
     {
-      heading: "4. Radar / Pizza (RADAR_PIZZA)",
-      paragraphs: [
-        "Porównanie 1–4 graczy na tym samym zestawie osi. Kształt wielokąta i wycinki Pizzy odzwierciedlają poziom gracza (percentyle w trybie Tło grupy albo znormalizowaną skalę grupy w trybie Wartości statystyk).",
-        "Pigułki przy osiach zawsze pokazują rzeczywiste wartości statystyk (np. 70 pkt, 7.1 xGI, +392.5k TI) — nigdy kodów Pxx. Nad wykresem (poza eksportem PNG) dostępny jest pasek 4 szybkich slotów wyboru piłkarzy.",
-      ],
-    },
-    {
-      heading: "5. Scatter 2D",
-      paragraphs: [
-        "Dwie osie (X vs Y) + ćwiartki względem średniej grupy (lub P50 w trybie Tło grupy). Klasyczne pary: xGI vs TP, xG vs gole, cena vs PPM, DC vs DC Pkt — szybkie presety w panelu.",
-        "Wartości = rzeczywiste displayValues; Tło grupy = percentyle 0–100 na osiach. Dla metryk „mniej = lepiej” (GC, kartki…) oś RAW jest odwrócona: lepszy wynik idzie w prawo / w górę. Prawy górny róg ↗ = najlepszy profil w obu cechach.",
-        "Etykiety graczy unikają kolizji (smart AABB); pod wykresem kartoteka z portretami, herbami i OCENĄ. Kolory kropek = klub (nie jedna zieleń).",
-      ],
-    },
-    {
-      heading: "6. Macierz heatmap",
-      paragraphs: [
-        "Tabela z tłem grupy (0–100) i liderami kolumn — szybki skan Top N pod kątem wielu statystyk naraz. Kolumna OCENA podsumowuje wybrane kryteria.",
-      ],
-    },
-    {
-      heading: "Czym jest OCENA (0–100) i jak ją liczymy?",
+      heading: "OCENA (0–100) — jak liczona?",
       featured: true,
       paragraphs: [
-        "OCENA (0–100) / RATING to Twoja ogólna nota z zaznaczonych kryteriów na tle analizowanej grupy — w stylu FIFA/FPL. W kodzie i audit.json pole nazywa się compositeScore.",
-        "Matematycznie: średnia percentyli 0–100 tylko z cech, które różnicują grupę (pomija metryki, gdzie wszyscy mają tę samą wartość, np. 0 OG). 90 = wynik lepszy od 90% graczy; 100 = lider cechy.",
+        "OCENA to średnia percentyli wybranych cech na tle grupy porównawczej (comparisonPool). 90 = lepszy wynik niż 90% grupy; 100 = lider cechy.",
+        "Liczymy tylko cechy, które realnie różnicują grupę (płaskie metryki, np. wszyscy 0 OG, nie pompują wyniku).",
       ],
       bullets: [
-        "Krok 1: wybierasz 2–8 kryteriów (np. DEF: TP, CS, DC, xGI, BPS).",
-        "Krok 2: silnik liczy percentyl na tle comparisonPool (min. minut, pozycja, kluby…); invertScale dla GC/xGC/kartek — mniej = wyższa nota.",
-        "Krok 3: OCENA = średnia żywych not; flat metrics nie pompują wyniku.",
-        "Na paskach STACKED i w pod-legendzie zawsze widać rzeczywiste displayValues, nie kody Pxx.",
+        "Tło grupy (0–100): długość / kolor = pozycja percentylowa; liczby na paskach = prawdziwe wartości.",
+        "Wartości statystyk: porównujesz surowe liczby (np. 12 DC), nie relative ranking.",
       ],
     },
     {
-      heading: "Tło grupy (0–100) vs Wartości statystyk",
+      heading: "Oficjalne zasady FPL: DC i Returny",
       paragraphs: [
-        "Tło grupy (0–100) pozwala porównać „jabłka z pomarańczami” bez dominacji dużych liczb.",
-        "Wartości statystyk pokazują prawdziwe liczby z bazy — używaj, gdy interesuje Cię konkretna wartość (ile DC, ile CS), a nie względna OCENA.",
+        "Defensive Contributions (DC): DEF ≥10 CBI+TKL w meczu = +2 pkt; MID/FWD ≥12 CBI+TKL+REC = +2 pkt.",
+        "Return (Zwrot FPL): prawdziwy zwrot punktowy (gol/asysta/CS/DC/bonus itd.) — nie same 1–2 pkt za czas gry. W Studio patrz zakładkę Passy oraz słownik w SCORING.",
       ],
     },
     {
-      heading: "Filtry okresu i wskaźniki dynamiczne",
+      heading: "Moduł 3: Predykcje i Terminarz",
       paragraphs: [
-        "Cały sezon, Ostatnie 4/6 GW, Tylko Dom, Tylko Wyjazd oraz Własny zakres GW filtrują historię meczów.",
-        "W wybranym podzbiorze kolejek silnik dynamicznie wylicza m.in. GWP, PPM, Formę, Value (sezon/forma), transfery TI/TO oraz DC — nie bierze ślepych snapshotów sezonowych, gdy okres ≠ pełny sezon.",
+        "Kalendarz FDR pokazuje trudność terminarza w 3 skalach: Ogółem, Atak i Obrona.",
+        "Prognozy: Oczekiwane Gole, Czyste Konto %, Karty Meczowe (Top 3 dokładne wyniki, 1X2%, weryfikacja Predykcje vs Rzeczywistość).",
+        "DGW / BGW: podwójne i puste kolejki są oznaczone w terminarzu — planuj chipy i rotację z wyprzedzeniem.",
       ],
     },
     {
-      heading: "Totals vs Per 90",
+      heading: "Jak działa silnik predykcji pod maską",
+      featured: true,
       paragraphs: [
-        "Totals = suma w wybranym okresie. Najlepsze do rankingów i „kto już nazbierał”.",
-        "Per 90 = tempo na 90 minut (DC Opta 1 dp; DC Mecz/Pkt 2 dp). Używaj po kontuzji, transferze lub małej liczbie minut.",
+        "Model matematyczny Dixona-Colesa łączy xG/xGC klubów z oficjalną siłą drużyn FPL (strength attack/defence home/away).",
+        "Po deadlinie kolejki nie używamy danych z meczów tej kolejki do „przepowiadania wstecz” — snapshot jest zamrażany w momencie deadline’u, żeby weryfikacja była uczciwa.",
       ],
     },
     {
-      heading: "Tryb ręczny vs Ranking Top N i filtr klubów",
+      heading: "Totals vs Per 90 (Centre + Studio)",
       paragraphs: [
-        "Ręczny wybór: porównanie celowe (np. 3 konkurentów). Spotlight w panelu pokazuje tylko graczy z aktualnego wykresu.",
-        "Top N + pozycja + multi-select klubów: ranking według sortByStat (DESC = największa wartość; invertScale nie odwraca sortu).",
+        "Totals = suma w wybranym okresie. Najlepsze do rankingów „kto już nazbierał”.",
+        "Per 90 = tempo na 90 minut. Używaj po kontuzji, transferze lub małej liczbie minut.",
       ],
     },
   ],
@@ -151,101 +124,74 @@ const HOW_TO_USE_PL: KnowledgeTabContent = {
 
 const HOW_TO_USE_EN: KnowledgeTabContent = {
   id: "HOW_TO_USE",
-  label: "How to use the Studio",
+  label: "3 Stats Lab modules",
   intro:
-    "A practical guide to the 6 chart types and Studio toggles — so you know which tool to open and how to read the result.",
+    "Guide to the full Stats Lab: Stats Centre (tables), Chart Studio (visuals) and Projections & Fixtures (FDR and forecasts).",
   blocks: [
     {
-      heading: "1. Multi-metric profile (STACKED_COMPOSITE)",
+      heading: "Module 1: Stats Centre — Analytical Tables",
       paragraphs: [
-        "Best starting view when comparing several players across many criteria at once (points, xGI, DC, BPS, etc.).",
-        "RATING (0–100) on the right is the arithmetic mean of percentiles for your selected criteria vs the qualified comparison pool. Bars and the sub-legend always show actual stat values (no Pxx codes).",
+        "Browse data as tables. Three modes: Players, Match-by-match and Clubs.",
+        "Players have 8 topical tabs (points, attack, creation, defence/DC, ICT, value, discipline, transfers). Clubs have 4 tabs (attack, defence, form, fixtures).",
+        "Cell colours use a P5–P95 percentile scale vs your comparison group — hotter means a stronger relative result (inverted for “lower is better” metrics).",
       ],
       bullets: [
-        "Group rank (0–100): bar length ≈ RATING; coloured segments = trait contribution; numbers = displayValues.",
-        "Actual stats: one column per criterion (bar vs chart leader).",
-        "Changing position (GK/DEF/MID/FWD) auto-swaps default activeMetrics if you did not edit metrics in the same step.",
+        "Per 90: rate per 90 minutes — useful with limited minutes.",
+        "Abbreviation glossary: full column names live in the glossary tab and table header tooltips.",
+        "Favourites: star a player for the watchlist; ★ Favourites filter narrows the table.",
       ],
     },
     {
-      heading: "2. FPL points breakdown (POINTS_BREAKDOWN)",
+      heading: "Module 2: Chart Studio — 6 visualisations",
       paragraphs: [
-        "Shows WHERE points come from (appearances, goals, assists, CS, DC, saves, pens, bonus) and optional penalties (GC, cards, PM, OG).",
-        "The top legend is dynamic: it lists only categories where plotted players actually scored (positive or negative). The “Penalties:” row hides when nobody has negative points.",
-      ],
-      bullets: [
-        "Component sum = official FPL points in the selected window (1:1 with GW history).",
-        "Chart order = official match totals (not Per 90 rates).",
-      ],
-    },
-    {
-      heading: "3. Streaks & consistency explorer",
-      paragraphs: [
-        "Match streaks (FPL Returns, G+A, CS, DC, 60+ mins) plus Return consistency % — share of matches played with a true FPL Return (not plain 1–2 appearance points).",
-        "Perfect for separating one-week explosives from steady weekly scorers. Tile dots = consecutive matches (colored = return/hit, grey = miss).",
+        "Multi-metric profile: many traits at once + RATING tile.",
+        "Points breakdown: exactly where FPL points (and penalties) come from.",
+        "Streaks & consistency: Return / CS / DC / 60+ streaks plus Return consistency %.",
+        "Radar / Pizza: 1–4 players on shared axes + quick player slots.",
+        "Scatter 2D: X/Y axes with group quadrants.",
+        "Heatmap matrix: fast Top N scan across many stats + RATING column.",
       ],
     },
     {
-      heading: "4. Radar / Pizza (RADAR_PIZZA)",
-      paragraphs: [
-        "Compare 1–4 players on the same axes. Polygon shape and Pizza wedges reflect player level (percentiles in Group rank mode, or group-normalised scale in Actual stats mode).",
-        "Axis pills always show actual stats (e.g. 70 pts, 7.1 xGI, +392.5k TI) — never Pxx codes. Above the chart (outside PNG export) a quick-slot bar lets you assign up to 4 players.",
-      ],
-    },
-    {
-      heading: "5. Scatter 2D",
-      paragraphs: [
-        "Two axes (X vs Y) with quadrants vs the group average (or P50 in Group rank mode). Classic pairs: xGI vs TP, xG vs goals, price vs PPG, DC vs DC Pts — quick presets in the side panel.",
-        "Actual stats mode plots displayValues; Group rank plots 0–100 percentiles on both axes. For “lower is better” metrics (GC, cards…) the RAW axis is inverted so stronger profiles sit top-right ↗.",
-        "Player labels avoid collisions (smart AABB). Below the chart a roster shows photos, badges and RATING. Dot colours follow the club palette.",
-      ],
-    },
-    {
-      heading: "6. Heatmap matrix",
-      paragraphs: [
-        "A table with group-rank (0–100) shading and column leaders — the fastest scan of Top N across many stats. The RATING column summarizes selected criteria.",
-      ],
-    },
-    {
-      heading: "What is RATING (0–100) and how do we calculate it?",
+      heading: "RATING (0–100) — how is it calculated?",
       featured: true,
       paragraphs: [
-        "RATING (0–100) is your overall score from selected criteria vs the analysed group — FIFA/FPL style. In code and audit.json the field is still named compositeScore.",
-        "Mathematically: mean of 0–100 percentiles only for traits that differentiate the pool (flat metrics where everyone shares the same value, e.g. 0 OG, are skipped). 90 = better than 90% of the group; 100 = trait leader.",
+        "RATING is the mean of percentiles for your selected traits vs the comparison pool. 90 = better than 90% of the group; 100 = trait leader.",
+        "Only differentiating traits count (flat metrics, e.g. everyone on 0 OG, do not inflate the score).",
       ],
       bullets: [
-        "Step 1: pick 2–8 criteria (e.g. DEF: TP, CS, DC, xGI, BPS).",
-        "Step 2: engine ranks vs comparisonPool (min minutes, position, clubs…); invertScale for GC/xGC/cards — fewer = higher score.",
-        "Step 3: RATING = mean of live scores; flat metrics do not inflate the result.",
-        "STACKED bars and sub-legends always show actual displayValues, not Pxx codes.",
+        "Group rank (0–100): length/colour = percentile position; numbers on bars = real values.",
+        "Actual stats: compare raw numbers (e.g. 12 DC), not relative rank.",
       ],
     },
     {
-      heading: "Group rank (0–100) vs Actual stats",
+      heading: "Official FPL rules: DC and Returns",
       paragraphs: [
-        "Group rank (0–100) lets you compare apples with oranges without large numbers dominating.",
-        "Actual stats show true database numbers — use when you care about absolute counts (how many DC, how many CS), not relative RATING.",
+        "Defensive Contributions (DC): DEF ≥10 CBI+TKL in a match = +2 pts; MID/FWD ≥12 CBI+TKL+REC = +2 pts.",
+        "FPL Return: a true scoring return (goal/assist/CS/DC/bonus etc.) — not plain 1–2 appearance points. See Streaks in Studio and the SCORING tab.",
       ],
     },
     {
-      heading: "Period filters & dynamic indicators",
+      heading: "Module 3: Projections & Fixtures",
       paragraphs: [
-        "Full season, Last 4/6 GW, Home only, Away only and Custom GW range filter match history.",
-        "Inside the selected window the engine dynamically recomputes GWP, PPG, Form, Value (season/form), TI/TO transfers and DC — it does not blindly reuse season snapshots when the period is not the full season.",
+        "The FDR calendar shows fixture difficulty on 3 scales: Overall, Attack and Defence.",
+        "Forecasts: Expected Goals, Clean Sheet %, Match Cards (Top 3 exact scores, 1X2%, Predictions vs Reality).",
+        "DGW / BGW: double and blank gameweeks are flagged so you can plan chips and rotation early.",
       ],
     },
     {
-      heading: "Totals vs Per 90",
+      heading: "How the prediction engine works under the hood",
+      featured: true,
       paragraphs: [
-        "Totals = sum in the selected window. Best for ranks and “who already banked points”.",
-        "Per 90 = rate per 90 minutes (DC Opta 1 dp; DC Matches/Pts 2 dp). Use after injuries, transfers or limited minutes.",
+        "A Dixon–Coles model blends club xG/xGC with official FPL team strengths (attack/defence home/away).",
+        "After a gameweek deadline we do not use that GW’s match data to “predict backwards” — the snapshot freezes at deadline so verification stays fair.",
       ],
     },
     {
-      heading: "Manual pick vs Top N ranking & club filter",
+      heading: "Totals vs Per 90 (Centre + Studio)",
       paragraphs: [
-        "Manual mode: targeted comparison. Spotlight in the side panel lists only players currently on the chart.",
-        "Top N + position + multi-club filter: ranking by sortByStat (DESC = highest value; invertScale does not reverse sort order).",
+        "Totals = sum in the selected window. Best for “who already banked points” ranks.",
+        "Per 90 = rate per 90 minutes. Use after injuries, transfers or limited minutes.",
       ],
     },
   ],
@@ -669,7 +615,7 @@ export const KNOWLEDGE_BASE: Record<StatsLabLang, KnowledgePack> = {
     ],
   },
   en: {
-    title: "FPL Knowledge Base & Guide",
+    title: "Knowledge Base & FPL Rules",
     searchPlaceholder: "Search: DC, xGI, RATING, BPS…",
     closeLabel: "Close",
     noResults: "No results for this query.",

@@ -1,6 +1,5 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
 import {
   buildStatsLabComparison,
   type StatsLabBootstrapData,
@@ -11,9 +10,13 @@ import {
 import type { StatsLabQueryFilter } from "@/lib/stats-lab/presets";
 import { createDefaultStatsLabFilter } from "@/lib/stats-lab/presets";
 import { DEFAULT_STATS_LAB_SEASON } from "@/lib/stats-lab/syncEngine";
+import {
+  filterCachedHistoryByGwRange,
+  getCachedStatsLabDataset,
+} from "@/lib/stats-lab/serverDataCache";
+import { createClient } from "@/lib/supabase/server";
 import type {
   FplLabClub,
-  FplLabPlayer,
   FplLabPlayerGwHistory,
   FplLabSyncMeta,
   FplPositionType,
@@ -26,47 +29,6 @@ async function requireAuth() {
   } = await supabase.auth.getUser();
   if (!user) throw new Error("Brak sesji — zaloguj się w panelu admina.");
   return supabase;
-}
-
-const GW_HISTORY_PAGE = 1000;
-
-type SupabaseClient = Awaited<ReturnType<typeof requireAuth>>;
-
-/**
- * PostgREST domyślnie ucina wynik do 1000 wierszy — sezon FPL ma 4k–15k wierszy
- * historii. Pobieramy wszystko stronicowaniem `.range()`.
- */
-async function fetchAllGwHistoryForSeason(
-  supabase: SupabaseClient,
-  seasonCode: string,
-  gwFrom: number,
-  gwTo: number,
-): Promise<FplLabPlayerGwHistory[]> {
-  const all: FplLabPlayerGwHistory[] = [];
-  let from = 0;
-
-  for (;;) {
-    const to = from + GW_HISTORY_PAGE - 1;
-    const { data, error } = await supabase
-      .from("fpl_lab_player_gw_history")
-      .select("*")
-      .eq("season_code", seasonCode)
-      .gte("gameweek", gwFrom)
-      .lte("gameweek", gwTo)
-      .order("fixture_id", { ascending: true })
-      .order("fpl_element_id", { ascending: true })
-      .range(from, to);
-
-    if (error) throw new Error(error.message);
-
-    const chunk = (data ?? []) as FplLabPlayerGwHistory[];
-    all.push(...chunk);
-
-    if (chunk.length < GW_HISTORY_PAGE) break;
-    from += GW_HISTORY_PAGE;
-  }
-
-  return all;
 }
 
 function mapClub(row: FplLabClub): StatsLabClubInfo {
@@ -95,7 +57,9 @@ export async function loadStatsLabBootstrapDataAction(
       .maybeSingle(),
     supabase
       .from("fpl_lab_clubs")
-      .select("season_code, fpl_team_id, pulse_code, name, short_name, strength, primary_color, updated_at")
+      .select(
+        "season_code, fpl_team_id, pulse_code, name, short_name, strength, primary_color, updated_at",
+      )
       .eq("season_code", seasonCode)
       .order("name", { ascending: true }),
     supabase
@@ -136,11 +100,12 @@ export async function loadStatsLabBootstrapDataAction(
 
 /**
  * Porównanie graczy wg filtra Studio (agregacja + percentyle + Top N / wybór ręczny).
+ * Dane surowe: Turbo-Cache RAM (`getCachedStatsLabDataset`).
  */
 export async function queryStatsLabComparisonAction(
   filterInput: StatsLabQueryFilter,
 ): Promise<StatsLabComparisonResult> {
-  const supabase = await requireAuth();
+  await requireAuth();
   const defaults = createDefaultStatsLabFilter(
     filterInput.seasonCode || DEFAULT_STATS_LAB_SEASON,
   );
@@ -158,42 +123,17 @@ export async function queryStatsLabComparisonAction(
   };
 
   const seasonCode = filter.seasonCode || DEFAULT_STATS_LAB_SEASON;
-
-  const [metaRes, clubsRes, playersRes] = await Promise.all([
-    supabase
-      .from("fpl_lab_sync_meta")
-      .select("last_finished_gw")
-      .eq("season_code", seasonCode)
-      .maybeSingle(),
-    supabase
-      .from("fpl_lab_clubs")
-      .select("fpl_team_id, name, short_name, primary_color, pulse_code")
-      .eq("season_code", seasonCode),
-    supabase.from("fpl_lab_players").select("*").eq("season_code", seasonCode),
-  ]);
-
-  if (metaRes.error) throw new Error(metaRes.error.message);
-  if (clubsRes.error) throw new Error(clubsRes.error.message);
-  if (playersRes.error) throw new Error(playersRes.error.message);
-
-  const maxGw = Number(metaRes.data?.last_finished_gw ?? 0);
-  const players = (playersRes.data ?? []) as FplLabPlayer[];
+  const dataset = await getCachedStatsLabDataset(seasonCode);
+  const maxGw = dataset.lastFinishedGw;
+  const players = dataset.players;
 
   const clubsById = new Map<number, StatsLabClubInfo>();
-  for (const c of clubsRes.data ?? []) {
-    clubsById.set(Number(c.fpl_team_id), {
-      fpl_team_id: Number(c.fpl_team_id),
-      name: String(c.name),
-      short_name: String(c.short_name),
-      primary_color: (c.primary_color as string | null) ?? null,
-      pulse_code: Number((c as { pulse_code?: number }).pulse_code ?? 0),
-    });
+  for (const c of dataset.clubs) {
+    clubsById.set(Number(c.fpl_team_id), mapClub(c));
   }
 
   const historyByPlayerId = new Map<number, FplLabPlayerGwHistory[]>();
 
-  // Zawsze ładuj historię GW (również FULL_SEASON) — bez niej breakdown/DC/streaks
-  // wpadają w zepsutą estymację ze snapshotu (np. +25 pkt za występy).
   if (maxGw > 0) {
     let gwFrom = 1;
     let gwTo = maxGw;
@@ -205,12 +145,9 @@ export async function queryStatsLabComparisonAction(
       gwFrom = Math.max(1, Number(filter.period.gwFrom ?? 1));
       gwTo = Math.min(38, Number(filter.period.gwTo ?? maxGw));
     }
-    // FULL_SEASON / HOME_ONLY / AWAY_ONLY → cały zakres 1…maxGw
-    // (HOME/AWAY filtruje silnik po was_home)
 
-    const historyRows = await fetchAllGwHistoryForSeason(
-      supabase,
-      seasonCode,
+    const historyRows = filterCachedHistoryByGwRange(
+      dataset.playerGwHistory,
       gwFrom,
       gwTo,
     );

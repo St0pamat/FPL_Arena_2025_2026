@@ -1,0 +1,22 @@
+---
+description: Żelazne reguły architektury, Zero-Regression (FROZEN) i standardu Social-First AAA dla projektu FPL Arena
+globs: ["**/*.ts", "**/*.tsx", "docs/**/*.md"]
+alwaysApply: true
+---
+
+# ŻELAZNE ZASADY PROJEKTU FPL ARENA (ZERO-REGRESSION & AAA STANDARD)
+
+1. **REŻIM ZERO-REGRESSION (ZAMROŻONE MODUŁY — ZAKAZ MODYFIKACJI BEZ JAWNEGO POLECENIA)**:
+   - Moduł `CHART_STUDIO` (6/6 widoków: `PointsBreakdownChart.tsx`, `StreaksExplorerChart.tsx`, `StackedCompositeChart.tsx`, `RadarPizzaChart.tsx`, `RadarQuickSlotsBar.tsx`, `Scatter2DChart.tsx`, `HeatmapMatrixChart.tsx`) jest ZAMROŻONY (FROZEN).
+   - Moduł `STATS_CENTRE` (13/13 widoków w `StatsCentreView.tsx`, `statsCentreEngine.ts`, `statsCentreI18n.ts`) jest ZAMROŻONY (FROZEN).
+   - Nigdy nie modyfikuj zamrożonych plików, chyba że prompt użytkownika wprost wymienia konkretny plik jako cel edycji.
+
+2. **TWARDE REGUŁY STYLÓW TAILWIND CSS V3 I UI (SOCIAL-FIRST AAA)**:
+   - Używaj WYŁĄCZNIE oficjalnych kroków przezroczystości Tailwind CSS v3 (`/5`, `/10`, `/15`, `/20`, `/25`, `/30`, `/40`, `/50`, `/60`, `/70`, `/75`, `/80`, `/90`, `/95`). ZAKAZ używania nieistniejących klas typu `/35` lub `/45`, które generują przezroczyste tło!
+   - ZAKAZ ucinania nazwisk piłkarzy i nazw klubów klasą `truncate` lub `text-ellipsis` na plakatach eksportowych.
+   - Zawsze wspieraj pełny kontrast we wszystkich 3 motywach: `ARENA_DARK`, `SCOUT_DARK` oraz `ANALYST_LIGHT` oraz w 2 językach (`pl`, `en`).
+   - Dla obrazków piłkarzy i herbów zawsze używaj lokalnych endpointów `/api/uploads/fpl-lab/player/...` oraz `/api/uploads/fpl-lab/badge/...` z atrybutem `crossOrigin="anonymous"`.
+
+3. **DIAGNOSTYKA DOM I OBOWIĄZKOWA WERYFIKACJA KOMPILACJI**:
+   - Każda zmiana w UI musi gwarantować w eksporcie `audit.json` (`layoutDiagnostics`) wynik: `truncatedOrOverflowingElements: []`, `overlappingLabels: []`, `zeroWidthSegments: []`.
+   - Na końcu każdego zadania ZAWSZE uruchom w terminalu `npx tsc --noEmit` i upewnij się, że wynik to 0 błędów przed zgłoszeniem gotowości.

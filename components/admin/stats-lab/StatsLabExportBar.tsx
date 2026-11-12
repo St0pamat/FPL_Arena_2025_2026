@@ -55,6 +55,7 @@ import {
   copyJsonToClipboard,
   downloadJsonFile,
 } from "@/lib/stats-lab/auditExport";
+import { getStatsLabMenuChrome } from "@/lib/stats-lab/menuChrome";
 
 type Props = {
   exportRef:
@@ -442,11 +443,23 @@ export function StatsLabExportBar({
   }
 
   const disabled = busy != null || !players.length;
+  const chrome = getStatsLabMenuChrome(chartTheme);
+  const isLight = chartTheme === "ANALYST_LIGHT";
+  const isScout = chartTheme === "SCOUT_DARK";
+  const btnPng = isLight
+    ? "inline-flex min-h-[28px] items-center gap-1.5 rounded-xl border border-emerald-800 bg-emerald-700 px-3 py-2 text-[10px] font-black text-white shadow-sm hover:bg-emerald-800 disabled:opacity-50"
+    : "inline-flex min-h-[28px] items-center gap-1.5 rounded-xl border border-emerald-300 bg-emerald-400 px-3 py-2 text-[10px] font-black text-slate-950 shadow-sm hover:bg-emerald-300 disabled:opacity-50";
+  const btnNeutral = isLight
+    ? "inline-flex min-h-[28px] items-center gap-1.5 rounded-xl border border-slate-300 bg-slate-100 px-3 py-2 text-[10px] font-bold text-slate-800 hover:bg-slate-200 disabled:opacity-50"
+    : isScout
+      ? "inline-flex min-h-[28px] items-center gap-1.5 rounded-xl border border-teal-700 bg-[#0d2d37] px-3 py-2 text-[10px] font-bold text-teal-50 hover:bg-teal-900/60 disabled:opacity-50"
+      : "inline-flex min-h-[28px] items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-[10px] font-bold text-slate-100 hover:bg-slate-800 disabled:opacity-50";
+  const btnAudit = btnNeutral;
 
   return (
-    <div className="space-y-3 rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
+    <div className={`space-y-3 rounded-2xl p-4 ${chrome.panel}`}>
       <div className="flex flex-wrap items-center gap-2">
-        <p className="mr-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
+        <p className={`mr-2 text-[10px] font-black uppercase tracking-[0.2em] ${chrome.mutedLabel}`}>
           {lang === "pl" ? "Eksport & publikacja" : "Export & publish"}
         </p>
 
@@ -454,7 +467,7 @@ export function StatsLabExportBar({
           type="button"
           disabled={disabled}
           onClick={() => void onDownloadPng()}
-          className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-emerald-200 hover:bg-emerald-500/20 disabled:opacity-40"
+          className={btnPng}
         >
           {busy === "png" ? (
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -468,7 +481,7 @@ export function StatsLabExportBar({
           type="button"
           disabled={disabled}
           onClick={() => void onCopyPng()}
-          className="inline-flex items-center gap-1.5 rounded-xl border border-slate-600 bg-slate-950 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-slate-200 hover:border-slate-400 disabled:opacity-40"
+          className={btnNeutral}
         >
           {busy === "copy" ? (
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -484,7 +497,7 @@ export function StatsLabExportBar({
           type="button"
           disabled={busy != null}
           onClick={() => void onCopyPost()}
-          className="inline-flex items-center gap-1.5 rounded-xl border border-slate-600 bg-slate-950 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-slate-200 hover:border-slate-400 disabled:opacity-40"
+          className={btnNeutral}
         >
           {busy === "post" ? (
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -502,7 +515,7 @@ export function StatsLabExportBar({
           type="button"
           disabled={busy != null}
           onClick={() => setDiscordOpen((v) => !v)}
-          className="inline-flex items-center gap-1.5 rounded-xl border border-indigo-500/40 bg-indigo-500/10 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-indigo-200 hover:bg-indigo-500/20 disabled:opacity-40"
+          className={btnNeutral}
         >
           <Send className="h-3.5 w-3.5" />
           {lang === "pl" ? "Wyślij na Discord" : "Send to Discord"}
@@ -512,7 +525,7 @@ export function StatsLabExportBar({
           type="button"
           disabled={disabled}
           onClick={() => void onDownloadAuditJson()}
-          className="inline-flex items-center gap-1.5 rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-amber-100 hover:bg-amber-500/20 disabled:opacity-40"
+          className={btnAudit}
           title={
             lang === "pl"
               ? "Pełny raport diagnostyczny (filtry + wzory + matchTrace + DOM)"
@@ -533,7 +546,7 @@ export function StatsLabExportBar({
           type="button"
           disabled={disabled}
           onClick={() => void onCopyAuditJson()}
-          className="inline-flex items-center gap-1.5 rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-amber-100 hover:bg-amber-500/20 disabled:opacity-40"
+          className={btnAudit}
         >
           {busy === "auditCopy" ? (
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -545,8 +558,8 @@ export function StatsLabExportBar({
       </div>
 
       {discordOpen ? (
-        <div className="space-y-3 rounded-xl border border-slate-700 bg-slate-950/80 p-3">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+        <div className={`space-y-3 rounded-xl p-3 ${chrome.group}`}>
+          <p className={`text-[10px] font-bold uppercase tracking-wider ${chrome.mutedLabel}`}>
             {lang === "pl"
               ? "Serwer docelowy · kanał The FA Ranking"
               : "Target server · The FA Ranking channel"}
@@ -559,10 +572,8 @@ export function StatsLabExportBar({
                   key={target}
                   type="button"
                   onClick={() => toggleServer(target)}
-                  className={`rounded-lg px-3 py-1.5 text-[10px] font-black uppercase tracking-wider ${
-                    on
-                      ? "bg-[#39FF14] text-black"
-                      : "border border-slate-700 text-slate-400"
+                  className={`rounded-lg px-3 py-1.5 text-[10px] uppercase tracking-wider ${
+                    on ? chrome.activeBtn : chrome.inactiveBtn
                   }`}
                 >
                   {DISCORD_SERVER_LABELS[target]}
@@ -570,14 +581,14 @@ export function StatsLabExportBar({
               );
             })}
           </div>
-          <pre className="max-h-28 overflow-auto rounded-lg border border-slate-800 bg-black/40 p-2 text-[10px] leading-relaxed text-slate-400 whitespace-pre-wrap">
+          <pre className={`max-h-28 overflow-auto rounded-lg p-2 text-[10px] leading-relaxed whitespace-pre-wrap ${chrome.input}`}>
             {postText}
           </pre>
           <button
             type="button"
             disabled={disabled}
             onClick={() => void onSendDiscord()}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-[#5865F2] px-4 py-2 text-[10px] font-black uppercase tracking-wider text-white hover:brightness-110 disabled:opacity-40"
+            className={`inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-[10px] ${chrome.exportDiscord}`}
           >
             {busy === "discord" ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin" />

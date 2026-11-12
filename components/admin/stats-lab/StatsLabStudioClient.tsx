@@ -12,12 +12,12 @@ import Link from "next/link";
 import {
   Activity,
   BarChart3,
-  BookOpen,
   ChartScatter,
   Database,
   Flame,
   Grid3X3,
   Layers,
+  Loader2,
   PieChart,
   RefreshCw,
   SlidersHorizontal,
@@ -62,10 +62,13 @@ import { StatsLabChartCanvas } from "@/components/admin/stats-lab/StatsLabChartC
 import { StatsLabExportBar } from "@/components/admin/stats-lab/StatsLabExportBar";
 import { StatsLabPosterFrame } from "@/components/admin/stats-lab/StatsLabPosterFrame";
 import { StatsLabExportNode } from "@/components/admin/stats-lab/StatsLabExportNode";
-import { StatsLabKnowledgeBaseModal } from "@/components/admin/stats-lab/StatsLabKnowledgeBaseModal";
 import { RadarQuickSlotsBar } from "@/components/admin/stats-lab/RadarQuickSlotsBar";
 import type { PointsSortKey } from "@/components/admin/stats-lab/charts/PointsBreakdownChart";
 import type { KnowledgeHelpAnchor } from "@/lib/stats-lab/knowledgeBaseContent";
+import {
+  getStatsLabMenuChrome,
+  STATS_LAB_THEME_SYNC_EVENT,
+} from "@/lib/stats-lab/menuChrome";
 
 type Props = {
   bootstrap: StatsLabBootstrapData;
@@ -77,6 +80,7 @@ type Props = {
   seedChartTheme?: StatsLabChartThemeId;
   onLangChange?: (lang: StatsLabLang) => void;
   onChartThemeChange?: (theme: StatsLabChartThemeId) => void;
+  onOpenKnowledge?: (anchor?: KnowledgeHelpAnchor) => void;
 };
 
 const VIZ_TABS: {
@@ -118,6 +122,7 @@ export function StatsLabStudioClient({
   seedChartTheme,
   onLangChange,
   onChartThemeChange,
+  onOpenKnowledge,
 }: Props) {
   const seededFilter = useMemo((): StatsLabQueryFilter => {
     const ids = seedSelectedPlayerIds?.filter((n) => n > 0) ?? [];
@@ -158,9 +163,6 @@ export function StatsLabStudioClient({
   const [activeStreakKeys, setActiveStreakKeys] = useState<StreakMetricKey[]>(
     () => defaultStreakKeysForPositions(seededFilter.positions),
   );
-  const [knowledgeOpen, setKnowledgeOpen] = useState(false);
-  const [knowledgeAnchor, setKnowledgeAnchor] =
-    useState<KnowledgeHelpAnchor | null>(null);
   const [isControlPanelCollapsed, setIsControlPanelCollapsed] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
 
@@ -168,8 +170,7 @@ export function StatsLabStudioClient({
   const copy = t(ui.lang);
 
   function openKnowledge(anchor: KnowledgeHelpAnchor = "general") {
-    setKnowledgeAnchor(anchor);
-    setKnowledgeOpen(true);
+    onOpenKnowledge?.(anchor);
   }
 
   const runQuery = useCallback(
@@ -216,7 +217,7 @@ export function StatsLabStudioClient({
   useEffect(() => {
     if (emptyDb) return;
     // Każda zmiana filter (w tym minMinutes w trybie MANUAL) → odświeżenie puli odniesienia
-    const tmr = window.setTimeout(() => runQuery(filter), 280);
+    const tmr = window.setTimeout(() => runQuery(filter), 80);
     return () => window.clearTimeout(tmr);
   }, [
     filter,
@@ -367,6 +368,41 @@ export function StatsLabStudioClient({
     }
   }, [seedChartTheme]);
 
+  useEffect(() => {
+    function onThemeSync(ev: Event) {
+      const detail = (ev as CustomEvent<{ themeId?: string; lang?: string }>)
+        .detail;
+      if (!detail) return;
+      setUi((prev) => {
+        const next = { ...prev };
+        if (
+          detail.themeId === "ARENA_DARK" ||
+          detail.themeId === "SCOUT_DARK" ||
+          detail.themeId === "ANALYST_LIGHT"
+        ) {
+          next.chartTheme = detail.themeId;
+        }
+        if (detail.lang === "pl" || detail.lang === "en") {
+          next.lang = detail.lang;
+        }
+        return next;
+      });
+      if (
+        detail.themeId === "ARENA_DARK" ||
+        detail.themeId === "SCOUT_DARK" ||
+        detail.themeId === "ANALYST_LIGHT"
+      ) {
+        onChartThemeChange?.(detail.themeId);
+      }
+      if (detail.lang === "pl" || detail.lang === "en") {
+        onLangChange?.(detail.lang);
+      }
+    }
+    window.addEventListener(STATS_LAB_THEME_SYNC_EVENT, onThemeSync);
+    return () =>
+      window.removeEventListener(STATS_LAB_THEME_SYNC_EVENT, onThemeSync);
+  }, [onChartThemeChange, onLangChange]);
+
   function onUiChange(patch: Partial<StudioUiState>) {
     setUi((prev) => {
       const next = { ...prev, ...patch };
@@ -489,64 +525,71 @@ export function StatsLabStudioClient({
     );
   }
 
+  const chrome = getStatsLabMenuChrome(ui.chartTheme);
+  const hideShellDupes = typeof onChartThemeChange === "function";
+
   return (
     <div className="space-y-5">
-      {/* Top bar: lang + scale + presets + viz */}
-      <div className="space-y-3 rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+      {/* Top bar: scale + presets + viz (theme/lang w shellu) */}
+      <div className={`space-y-3 rounded-2xl p-4 ${chrome.panel}`}>
         <div className="flex flex-wrap items-center gap-2">
-          <div className="inline-flex rounded-xl border border-slate-700 bg-slate-950 p-1">
-            <button
-              type="button"
-              onClick={() => onUiChange({ lang: "pl" })}
-              className={`rounded-lg px-2.5 py-1.5 text-[10px] font-black uppercase ${
-                ui.lang === "pl" ? "bg-[#39FF14] text-black" : "text-slate-400"
-              }`}
-              title={copy.langPl}
-            >
-              🇵🇱 PL
-            </button>
-            <button
-              type="button"
-              onClick={() => onUiChange({ lang: "en" })}
-              className={`rounded-lg px-2.5 py-1.5 text-[10px] font-black uppercase ${
-                ui.lang === "en" ? "bg-[#39FF14] text-black" : "text-slate-400"
-              }`}
-              title={copy.langEn}
-            >
-              🇬🇧 EN
-            </button>
-          </div>
-
-          <div className="inline-flex rounded-xl border border-slate-700 bg-slate-950 p-1">
-            {(
-              Object.keys(STATS_LAB_CHART_THEMES) as StatsLabChartThemeId[]
-            ).map((id) => {
-              const th = STATS_LAB_CHART_THEMES[id];
-              const label = ui.lang === "en" ? th.labelEn : th.labelPl;
-              return (
+          {!hideShellDupes ? (
+            <>
+              <div className={`inline-flex rounded-xl p-1 ${chrome.group}`}>
                 <button
-                  key={id}
                   type="button"
-                  title={label}
-                  onClick={() => onUiChange({ chartTheme: id })}
-                  className={`rounded-lg px-2.5 py-1.5 text-[10px] font-black uppercase ${
-                    ui.chartTheme === id
-                      ? "bg-[#39FF14] text-black"
-                      : "text-slate-400"
+                  onClick={() => onUiChange({ lang: "pl" })}
+                  className={`rounded-lg px-2.5 py-1.5 text-[10px] uppercase ${
+                    ui.lang === "pl" ? chrome.activeBtn : chrome.inactiveBtn
                   }`}
+                  title={copy.langPl}
                 >
-                  {id === "ARENA_DARK"
-                    ? "Arena"
-                    : id === "SCOUT_DARK"
-                      ? "Scout"
-                      : "Light"}
+                  🇵🇱 PL
                 </button>
-              );
-            })}
-          </div>
+                <button
+                  type="button"
+                  onClick={() => onUiChange({ lang: "en" })}
+                  className={`rounded-lg px-2.5 py-1.5 text-[10px] uppercase ${
+                    ui.lang === "en" ? chrome.activeBtn : chrome.inactiveBtn
+                  }`}
+                  title={copy.langEn}
+                >
+                  🇬🇧 EN
+                </button>
+              </div>
+
+              <div className={`inline-flex rounded-xl p-1 ${chrome.group}`}>
+                {(
+                  Object.keys(STATS_LAB_CHART_THEMES) as StatsLabChartThemeId[]
+                ).map((id) => {
+                  const th = STATS_LAB_CHART_THEMES[id];
+                  const label = ui.lang === "en" ? th.labelEn : th.labelPl;
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      title={label}
+                      onClick={() => onUiChange({ chartTheme: id })}
+                      className={`rounded-lg px-2.5 py-1.5 text-[10px] uppercase ${
+                        ui.chartTheme === id
+                          ? chrome.activeBtn
+                          : chrome.inactiveBtn
+                      }`}
+                    >
+                      {id === "ARENA_DARK"
+                        ? "Arena"
+                        : id === "SCOUT_DARK"
+                          ? "Scout"
+                          : "Light"}
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          ) : null}
 
           <div className="inline-flex items-center gap-1">
-            <div className="inline-flex rounded-xl border border-slate-700 bg-slate-950 p-1">
+            <div className={`inline-flex rounded-xl p-1 ${chrome.group}`}>
               {(
                 [
                   ["PERCENTILE", copy.scalePercentile],
@@ -564,41 +607,22 @@ export function StatsLabStudioClient({
                   onClick={() =>
                     onUiChange({ scaleMode: mode as StatsLabScaleMode })
                   }
-                  className={`rounded-lg px-2.5 py-1.5 text-[10px] font-black uppercase ${
+                  className={`rounded-lg px-2.5 py-1.5 text-[10px] uppercase ${
                     ui.scaleMode === mode
-                      ? "bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-500/40"
-                      : "text-slate-400"
+                      ? chrome.activeBtn
+                      : chrome.inactiveBtn
                   }`}
                 >
                   {label}
                 </button>
               ))}
             </div>
-            <button
-              type="button"
-              title={copy.scaleHelpTitle}
-              onClick={() => openKnowledge("scale")}
-              className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-slate-600 text-[10px] font-black text-slate-400 hover:border-[#39FF14] hover:text-[#39FF14]"
-            >
-              ?
-            </button>
           </div>
 
           <button
             type="button"
-            onClick={() => openKnowledge("general")}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-emerald-200 hover:bg-emerald-500/20"
-          >
-            <BookOpen className="h-3.5 w-3.5" />
-            {ui.lang === "pl"
-              ? "📚 Baza Wiedzy i Zasady FPL"
-              : "📚 FPL Knowledge Base & Guide"}
-          </button>
-
-          <button
-            type="button"
             onClick={resetFilters}
-            className="ml-auto inline-flex items-center gap-1.5 rounded-lg border border-slate-700 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 hover:text-white"
+            className={`ml-auto inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[10px] uppercase tracking-wider ${chrome.inactiveBtn}`}
           >
             <RefreshCw className="h-3 w-3" />
             {copy.resetFilters}
@@ -606,7 +630,7 @@ export function StatsLabStudioClient({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">
+          <span className={`text-[10px] font-black uppercase tracking-wider ${chrome.mutedLabel}`}>
             {copy.presets}
           </span>
           {STATS_LAB_PRESETS.map((p) => (
@@ -615,10 +639,8 @@ export function StatsLabStudioClient({
               type="button"
               title={ui.lang === "en" ? p.descriptionEn : p.descriptionPl}
               onClick={() => applyPreset(p.id)}
-              className={`rounded-lg px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wider ${
-                activePreset === p.id
-                  ? "bg-[#39FF14] text-black"
-                  : "border border-slate-700 text-slate-300 hover:border-slate-500"
+              className={`rounded-lg px-2.5 py-1.5 text-[10px] uppercase tracking-wider ${
+                activePreset === p.id ? chrome.activeBtn : chrome.inactiveBtn
               }`}
             >
               {ui.lang === "en" ? p.labelEn : p.labelPl}
@@ -635,10 +657,8 @@ export function StatsLabStudioClient({
                 key={tab.id}
                 type="button"
                 onClick={() => onUiChange({ vizMode: tab.id })}
-                className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-[11px] font-black uppercase tracking-wider ${
-                  on
-                    ? "bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-500/40"
-                    : "border border-slate-700 text-slate-400 hover:text-slate-200"
+                className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-[11px] uppercase tracking-wider ${
+                  on ? chrome.activeBtn : chrome.inactiveBtn
                 }`}
               >
                 <Icon className="h-3.5 w-3.5" />
@@ -648,7 +668,9 @@ export function StatsLabStudioClient({
           })}
 
           {ui.vizMode === "POINTS_BREAKDOWN" ? (
-            <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-slate-700 bg-slate-950/60 px-3 py-2 text-[11px] font-bold text-slate-300">
+            <label
+              className={`inline-flex min-h-[28px] cursor-pointer items-center gap-2 rounded-xl px-3 py-2 text-[11px] font-bold ${chrome.inactiveBtn}`}
+            >
               <input
                 type="checkbox"
                 className="accent-[#39FF14]"
@@ -664,10 +686,8 @@ export function StatsLabStudioClient({
           <button
             type="button"
             onClick={() => setIsControlPanelCollapsed((v) => !v)}
-            className={`ml-auto inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-[11px] font-black uppercase tracking-wider ${
-              isControlPanelCollapsed
-                ? "bg-sky-500/20 text-sky-200 ring-1 ring-sky-500/40"
-                : "border border-slate-700 text-slate-400 hover:text-slate-200"
+            className={`ml-auto inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-[11px] uppercase tracking-wider ${
+              isControlPanelCollapsed ? chrome.activeBtn : chrome.inactiveBtn
             }`}
             title={
               isControlPanelCollapsed
@@ -743,6 +763,7 @@ export function StatsLabStudioClient({
               plottedPlayers={displayResult?.plottedPlayers ?? []}
               spotlightId={ui.spotlightPlayerId}
               lang={ui.lang}
+              themeId={ui.chartTheme}
               positionFilter={filter.positions}
               onAssignIds={(ids) => {
                 setUi((prev) => ({ ...prev, pickMode: "MANUAL" }));
@@ -770,42 +791,58 @@ export function StatsLabStudioClient({
             />
           ) : null}
 
-          <StatsLabPosterFrame>
-            <StatsLabChartCanvas
-              result={displayResult}
-              filter={filter}
-              vizMode={ui.vizMode}
-              themeId={ui.chartTheme}
-              lang={ui.lang}
-              scaleMode={ui.scaleMode}
-              customTitle={ui.customTitle}
-              customSubtitle={ui.customSubtitle}
-              seasonCode={bootstrap.seasonCode}
-              spotlightPlayerId={ui.spotlightPlayerId}
-              showPoolAverage={ui.showPoolAverage}
-              showBarValues={ui.showBarValues}
-              showPlayerMeta={ui.showPlayerMeta}
-              showNegativeBreakdown={ui.showNegativeBreakdown}
-              axisX={ui.axisX}
-              axisY={ui.axisY}
-              pending={pending}
-              chartSortKey={chartSortKey}
-              chartSortDir={chartSortDir}
-              pointsSortKey={pointsSortKey}
-              streakSortKey={streakSortKey}
-              activeStreakKeys={activeStreakKeys}
-              onChartSort={toggleChartSort}
-              onPointsSort={togglePointsSort}
-              onStreakSort={toggleStreakSort}
-              onToggleStreakKey={toggleStreakKey}
-              onSelectDefaultStreaks={selectDefaultStreaks}
-              onSelectAllStreaks={selectAllStreaks}
-              onShowNegativesChange={(v) =>
-                onUiChange({ showNegativeBreakdown: v })
-              }
-              onSelectPlayer={(id) => onUiChange({ spotlightPlayerId: id })}
-            />
-          </StatsLabPosterFrame>
+          <div data-stats-lab-canvas-preview="true" className="relative">
+            {pending && displayResult ? (
+              <div className="pointer-events-none absolute right-3 top-3 z-30">
+                <span
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-wider shadow-sm ${
+                    chrome.isLight
+                      ? "border-emerald-700 bg-emerald-700 text-white"
+                      : "border-emerald-300 bg-emerald-400 text-slate-950"
+                  }`}
+                >
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  {ui.lang === "pl" ? "Przeliczanie…" : "Updating…"}
+                </span>
+              </div>
+            ) : null}
+            <StatsLabPosterFrame>
+              <StatsLabChartCanvas
+                result={displayResult}
+                filter={filter}
+                vizMode={ui.vizMode}
+                themeId={ui.chartTheme}
+                lang={ui.lang}
+                scaleMode={ui.scaleMode}
+                customTitle={ui.customTitle}
+                customSubtitle={ui.customSubtitle}
+                seasonCode={bootstrap.seasonCode}
+                spotlightPlayerId={ui.spotlightPlayerId}
+                showPoolAverage={ui.showPoolAverage}
+                showBarValues={ui.showBarValues}
+                showPlayerMeta={ui.showPlayerMeta}
+                showNegativeBreakdown={ui.showNegativeBreakdown}
+                axisX={ui.axisX}
+                axisY={ui.axisY}
+                pending={pending && !displayResult}
+                chartSortKey={chartSortKey}
+                chartSortDir={chartSortDir}
+                pointsSortKey={pointsSortKey}
+                streakSortKey={streakSortKey}
+                activeStreakKeys={activeStreakKeys}
+                onChartSort={toggleChartSort}
+                onPointsSort={togglePointsSort}
+                onStreakSort={toggleStreakSort}
+                onToggleStreakKey={toggleStreakKey}
+                onSelectDefaultStreaks={selectDefaultStreaks}
+                onSelectAllStreaks={selectAllStreaks}
+                onShowNegativesChange={(v) =>
+                  onUiChange({ showNegativeBreakdown: v })
+                }
+                onSelectPlayer={(id) => onUiChange({ spotlightPlayerId: id })}
+              />
+            </StatsLabPosterFrame>
+          </div>
         </div>
       </div>
 
@@ -840,17 +877,6 @@ export function StatsLabStudioClient({
         activeStreakKeys={activeStreakKeys}
       />
 
-      <StatsLabKnowledgeBaseModal
-        open={knowledgeOpen}
-        lang={ui.lang}
-        themeId={ui.chartTheme}
-        helpAnchor={knowledgeAnchor}
-        onLangChange={(lang) => onUiChange({ lang })}
-        onClose={() => {
-          setKnowledgeOpen(false);
-          setKnowledgeAnchor(null);
-        }}
-      />
     </div>
   );
 }

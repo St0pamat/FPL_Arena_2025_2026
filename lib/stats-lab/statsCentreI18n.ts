@@ -382,8 +382,6 @@ export function centreColFullLabel(key: string, lang: StatsLabLang): string {
 export const CENTRE_UI = {
   pl: {
     title: "Stats Centre",
-    subtitle:
-      "Tabele analityczne zawodników, występów meczowych i 20 klubów PL — wzorowane na Fantasy Football Scout.",
     moduleCentre: "📊 Stats Centre (Tabele Analityczne)",
     moduleStudio: "📈 Studio Wykresów (Wizualizacje)",
     range: "Zakres",
@@ -428,8 +426,6 @@ export const CENTRE_UI = {
   },
   en: {
     title: "Stats Centre",
-    subtitle:
-      "Analytical tables for players, match appearances and all 20 PL clubs — Fantasy Football Scout style.",
     moduleCentre: "📊 Stats Centre (Tables)",
     moduleStudio: "📈 Chart Studio (Visualisations)",
     range: "Range",

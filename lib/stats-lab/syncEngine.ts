@@ -5,6 +5,7 @@
 
 import type {
   FplLabClub,
+  FplLabFixtureRow,
   FplLabPlayer,
   FplLabPlayerGwHistory,
   FplLabSyncMeta,
@@ -64,6 +65,7 @@ export type BootstrapSyncResult = {
   targetGw: number;
   clubsUpserted: number;
   playersUpserted: number;
+  fixturesUpserted: number;
 };
 
 export type HistoryBatchSyncResult = {
@@ -164,6 +166,7 @@ export type FplBootstrapEvent = {
   finished?: boolean;
   data_checked?: boolean;
   is_current?: boolean;
+  deadline_time?: string | null;
 };
 
 export type FplBootstrapTeam = {
@@ -172,6 +175,31 @@ export type FplBootstrapTeam = {
   name: string;
   short_name: string;
   strength?: number | null;
+  strength_overall_home?: number | null;
+  strength_overall_away?: number | null;
+  strength_attack_home?: number | null;
+  strength_attack_away?: number | null;
+  strength_defence_home?: number | null;
+  strength_defence_away?: number | null;
+};
+
+/** Surowy wiersz z GET /api/fixtures/ */
+export type FplApiFixture = {
+  id: number;
+  code?: number | null;
+  event?: number | null;
+  kickoff_time?: string | null;
+  team_h: number;
+  team_a: number;
+  team_h_score?: number | null;
+  team_a_score?: number | null;
+  team_h_difficulty?: number | null;
+  team_a_difficulty?: number | null;
+  started?: boolean | null;
+  finished?: boolean | null;
+  finished_provisional?: boolean | null;
+  provisional_start_time?: boolean | null;
+  minutes?: number | null;
 };
 
 export type FplBootstrapElement = {
@@ -329,6 +357,27 @@ export function resolveTargetGameweek(events: FplBootstrapEvent[] | undefined): 
   return 0;
 }
 
+/** Bezpieczne mapowanie strength_* z bootstrap (tylko finite number → wartość). */
+export function mapOptionalStrength(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+/** Mapa event.id → deadline_time z bootstrap.events[] (Zero-Data-Leakage). */
+export function buildEventDeadlineMap(
+  events: FplBootstrapEvent[] | undefined,
+): Map<number, string | null> {
+  const map = new Map<number, string | null>();
+  for (const event of events ?? []) {
+    const id = Number(event.id);
+    if (!Number.isFinite(id)) continue;
+    map.set(
+      id,
+      typeof event.deadline_time === "string" ? event.deadline_time : null,
+    );
+  }
+  return map;
+}
+
 export function mapBootstrapClub(
   seasonCode: string,
   team: FplBootstrapTeam,
@@ -341,7 +390,52 @@ export function mapBootstrapClub(
     name: String(team.name ?? "").trim() || `Team ${team.id}`,
     short_name: String(team.short_name ?? "").trim() || "???",
     strength: team.strength == null ? null : parseFplInt(team.strength),
+    strength_overall_home: mapOptionalStrength(team.strength_overall_home),
+    strength_overall_away: mapOptionalStrength(team.strength_overall_away),
+    strength_attack_home: mapOptionalStrength(team.strength_attack_home),
+    strength_attack_away: mapOptionalStrength(team.strength_attack_away),
+    strength_defence_home: mapOptionalStrength(team.strength_defence_home),
+    strength_defence_away: mapOptionalStrength(team.strength_defence_away),
     primary_color: null,
+    updated_at: nowIso,
+  };
+}
+
+/** GET /api/fixtures/ — pełny terminarz sezonu. */
+export async function fetchFplFixtures(): Promise<FplApiFixture[]> {
+  return fetchFplJsonWithRetry<FplApiFixture[]>(`${FPL_API_BASE}/fixtures/`);
+}
+
+export function mapApiFixture(
+  seasonCode: string,
+  f: FplApiFixture,
+  eventDeadlineMap: Map<number, string | null>,
+  nowIso: string,
+): FplLabFixtureRow {
+  const gameweek = typeof f.event === "number" ? f.event : null;
+  return {
+    season_code: seasonCode,
+    fixture_id: Number(f.id),
+    pulse_id: typeof f.code === "number" ? f.code : null,
+    gameweek,
+    kickoff_time: typeof f.kickoff_time === "string" ? f.kickoff_time : null,
+    deadline_time:
+      typeof f.event === "number"
+        ? (eventDeadlineMap.get(f.event) ?? null)
+        : null,
+    team_h: Number(f.team_h),
+    team_a: Number(f.team_a),
+    team_h_score: typeof f.team_h_score === "number" ? f.team_h_score : null,
+    team_a_score: typeof f.team_a_score === "number" ? f.team_a_score : null,
+    team_h_difficulty:
+      typeof f.team_h_difficulty === "number" ? f.team_h_difficulty : null,
+    team_a_difficulty:
+      typeof f.team_a_difficulty === "number" ? f.team_a_difficulty : null,
+    started: Boolean(f.started),
+    finished: Boolean(f.finished),
+    finished_provisional: Boolean(f.finished_provisional),
+    provisional_start_time: Boolean(f.provisional_start_time),
+    minutes: typeof f.minutes === "number" ? f.minutes : 0,
     updated_at: nowIso,
   };
 }

@@ -74,8 +74,37 @@ export interface FplLabClub {
   name: string;
   short_name: string;
   strength: number | null;
+  /** Oficjalne siły FPL (bootstrap teams) — opcjonalne dla wstecznej kompatybilności. */
+  strength_overall_home?: number | null;
+  strength_overall_away?: number | null;
+  strength_attack_home?: number | null;
+  strength_attack_away?: number | null;
+  strength_defence_home?: number | null;
+  strength_defence_away?: number | null;
   primary_color: string | null;
   updated_at: string;
+}
+
+/** fpl_lab_fixtures — terminarz PL (GW1–GW38 + unscheduled). */
+export interface FplLabFixtureRow {
+  season_code: string;
+  fixture_id: number;
+  pulse_id: number | null;
+  gameweek: number | null;
+  kickoff_time: string | null;
+  deadline_time: string | null;
+  team_h: number;
+  team_a: number;
+  team_h_score: number | null;
+  team_a_score: number | null;
+  team_h_difficulty: number | null;
+  team_a_difficulty: number | null;
+  started: boolean;
+  finished: boolean;
+  finished_provisional: boolean;
+  provisional_start_time: boolean;
+  minutes: number;
+  updated_at?: string;
 }
 
 /** fpl_lab_players */

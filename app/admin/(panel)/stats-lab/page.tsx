@@ -69,7 +69,11 @@ export default async function AdminStatsLabStudioPage({
   }
 
   const initialTab =
-    searchParams?.tab === "centre" ? "centre" : ("studio" as const);
+    searchParams?.tab === "centre"
+      ? ("centre" as const)
+      : searchParams?.tab === "projections"
+        ? ("projections" as const)
+        : ("studio" as const);
 
   return (
     <main className="flex-1 bg-[#0B0F19] p-4 sm:p-6 lg:p-8">

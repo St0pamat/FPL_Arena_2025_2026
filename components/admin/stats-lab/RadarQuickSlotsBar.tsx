@@ -13,6 +13,7 @@ import {
   fplLabBadgeUrl,
   fplLabPlayerPhotoUrl,
 } from "@/lib/stats-lab/mediaUrls";
+import type { StatsLabChartThemeId } from "@/components/admin/stats-lab/chartTheme";
 
 const SLOT_COLORS = ["#4ade80", "#38bdf8", "#fbbf24", "#fb7185"] as const;
 
@@ -21,11 +22,86 @@ type Props = {
   plottedPlayers: PlottedStatsLabPlayer[];
   spotlightId: number | null;
   lang: StatsLabLang;
+  themeId: StatsLabChartThemeId;
   positionFilter: number[];
   onAssignIds: (ids: number[]) => void;
   onSpotlight: (id: number) => void;
   onResetAutoTop4: () => void;
 };
+
+type SlotChrome = {
+  card: string;
+  meta: string;
+  name: string;
+  title: string;
+  empty: string;
+  resetBtn: string;
+  searchInput: string;
+  dropdown: string;
+  dropdownItem: string;
+  dropdownName: string;
+  dropdownMeta: string;
+  pizzaIdle: string;
+  pizzaActive: string;
+};
+
+function slotChrome(themeId: StatsLabChartThemeId): SlotChrome {
+  if (themeId === "ANALYST_LIGHT") {
+    return {
+      card: "bg-white border-slate-300 text-slate-900 shadow-sm",
+      meta: "text-slate-600",
+      name: "text-slate-900",
+      title: "text-slate-600",
+      empty: "text-slate-500",
+      resetBtn:
+        "border border-slate-300 bg-slate-100 text-slate-800 hover:bg-slate-200",
+      searchInput:
+        "border border-slate-300 bg-slate-100 text-slate-800 placeholder:text-slate-500 hover:bg-slate-200 focus:border-emerald-600",
+      dropdown: "border border-slate-300 bg-white shadow-xl",
+      dropdownItem: "hover:bg-slate-100",
+      dropdownName: "text-slate-900",
+      dropdownMeta: "text-slate-500",
+      pizzaIdle: "text-slate-600 hover:bg-slate-100",
+      pizzaActive: "bg-amber-100 text-amber-900 ring-1 ring-amber-400",
+    };
+  }
+  if (themeId === "SCOUT_DARK") {
+    return {
+      card: "bg-[#09222a] border-teal-800/80 text-teal-50",
+      meta: "text-teal-200/80",
+      name: "text-teal-50",
+      title: "text-teal-200/80",
+      empty: "text-teal-400/70",
+      resetBtn:
+        "border border-teal-700 bg-[#0d2d37] text-teal-100 hover:bg-teal-900/60",
+      searchInput:
+        "border border-teal-700 bg-[#06181e] text-teal-100 placeholder:text-teal-500 hover:bg-[#0d2d37] focus:border-emerald-400",
+      dropdown: "border border-teal-700 bg-[#06181e] shadow-xl",
+      dropdownItem: "hover:bg-[#0d2d37]",
+      dropdownName: "text-teal-50",
+      dropdownMeta: "text-teal-400",
+      pizzaIdle: "text-teal-200 hover:bg-teal-900/50",
+      pizzaActive: "bg-amber-500/25 text-amber-200 ring-1 ring-amber-400",
+    };
+  }
+  return {
+    card: "bg-[#0c1322] border-slate-800 text-slate-100",
+    meta: "text-slate-400",
+    name: "text-slate-100",
+    title: "text-slate-400",
+    empty: "text-slate-500",
+    resetBtn:
+      "border border-slate-700 bg-slate-950 text-slate-200 hover:bg-slate-900",
+    searchInput:
+      "border border-slate-700 bg-slate-950 text-slate-200 placeholder:text-slate-500 hover:bg-slate-900 focus:border-emerald-500",
+    dropdown: "border border-slate-700 bg-slate-950 shadow-xl",
+    dropdownItem: "hover:bg-slate-900",
+    dropdownName: "text-white",
+    dropdownMeta: "text-slate-500",
+    pizzaIdle: "text-slate-300 hover:bg-slate-800",
+    pizzaActive: "bg-amber-500/25 text-amber-200 ring-1 ring-amber-400",
+  };
+}
 
 function positionShortPl(elementType: number): string {
   const map: Record<number, string> = {
@@ -50,55 +126,29 @@ function SlotHeroPhoto({
   clubPulseCode: number;
   clubShort: string;
 }) {
-  const [photoFailed, setPhotoFailed] = useState(false);
-  const [badgeFailed, setBadgeFailed] = useState(false);
-  const initials = name
-    .split(/\s+/)
-    .map((w) => w[0] ?? "")
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
-
   return (
     <div className="relative shrink-0">
       <div
-        className="h-12 w-12 overflow-hidden rounded-full border-2 bg-slate-900/70"
+        className="h-12 w-12 overflow-hidden rounded-full border-2 bg-black/20"
         style={{ borderColor: stroke }}
       >
-        {photoFailed || playerCode <= 0 ? (
-          <div
-            className="flex h-full w-full items-center justify-center text-[11px] font-black"
-            style={{ color: stroke }}
-          >
-            {initials || "?"}
-          </div>
-        ) : (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={fplLabPlayerPhotoUrl(playerCode)}
-            alt={name}
-            crossOrigin="anonymous"
-            className="h-full w-full object-cover object-top"
-            onError={() => setPhotoFailed(true)}
-          />
-        )}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={fplLabPlayerPhotoUrl(playerCode)}
+          alt={name}
+          crossOrigin="anonymous"
+          className="h-full w-full object-cover object-top"
+        />
       </div>
-      <span className="absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full border border-slate-300 bg-white p-0.5 shadow">
-        {badgeFailed || clubPulseCode <= 0 ? (
-          <span className="text-[7px] font-black text-slate-600">
-            {clubShort.slice(0, 2)}
-          </span>
-        ) : (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={fplLabBadgeUrl(clubPulseCode)}
-            alt={clubShort}
-            crossOrigin="anonymous"
-            className="h-full w-full object-contain"
-            onError={() => setBadgeFailed(true)}
-          />
-        )}
-      </span>
+      {clubPulseCode > 0 ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={fplLabBadgeUrl(clubPulseCode)}
+          alt={clubShort}
+          crossOrigin="anonymous"
+          className="absolute -bottom-0.5 -right-0.5 h-5 w-5 rounded-full bg-black/40 object-contain p-0.5"
+        />
+      ) : null}
     </div>
   );
 }
@@ -109,6 +159,7 @@ function SlotSearch({
   positionFilter,
   occupiedIds,
   lang,
+  chrome,
   placeholder,
   onPick,
 }: {
@@ -117,6 +168,7 @@ function SlotSearch({
   positionFilter: number[];
   occupiedIds: Set<number>;
   lang: StatsLabLang;
+  chrome: SlotChrome;
   placeholder: string;
   onPick: (id: number) => void;
 }) {
@@ -173,11 +225,13 @@ function SlotSearch({
           window.setTimeout(() => setOpen(false), 160);
         }}
         placeholder={placeholder}
-        className="w-full rounded-lg border border-slate-800 bg-slate-950/80 px-2.5 py-1.5 text-xs text-slate-200 outline-none placeholder:text-slate-500 focus:border-emerald-500"
+        className={`w-full rounded-lg px-2.5 py-1.5 text-xs outline-none ${chrome.searchInput}`}
         aria-label={`Radar slot ${slotIndex + 1} search`}
       />
       {open && suggestions.length > 0 ? (
-        <ul className="absolute z-30 mt-1 max-h-56 w-full overflow-auto rounded-lg border border-slate-700 bg-slate-950 shadow-xl">
+        <ul
+          className={`absolute z-30 mt-1 max-h-56 w-full overflow-auto rounded-lg ${chrome.dropdown}`}
+        >
           {suggestions.map((p) => {
             const club = clubById.get(p.fpl_team_id);
             const already = occupiedIds.has(p.fpl_element_id);
@@ -196,7 +250,7 @@ function SlotSearch({
                   className={`flex w-full items-center gap-2 px-2.5 py-2 text-left text-[11px] ${
                     already
                       ? "cursor-not-allowed opacity-40"
-                      : "hover:bg-slate-900"
+                      : chrome.dropdownItem
                   }`}
                 >
                   {club && club.pulse > 0 ? (
@@ -208,20 +262,22 @@ function SlotSearch({
                       className="h-4 w-4 object-contain"
                     />
                   ) : (
-                    <span className="h-4 w-4 rounded bg-slate-800" />
+                    <span className="h-4 w-4 rounded bg-slate-500/30" />
                   )}
                   <span className="min-w-0 flex-1">
-                    <span className="font-bold text-white">{p.web_name}</span>
-                    <span className="text-slate-500">
+                    <span className={`font-bold ${chrome.dropdownName}`}>
+                      {p.web_name}
+                    </span>
+                    <span className={chrome.dropdownMeta}>
                       {" "}
                       · {club?.short ?? "—"} ·{" "}
                       {getFplPositionLabelEn(p.element_type)}
                     </span>
                   </span>
-                  <span className="shrink-0 tabular-nums text-slate-400">
+                  <span className={`shrink-0 tabular-nums ${chrome.dropdownMeta}`}>
                     £{(Number(p.now_cost) / 10).toFixed(1)}m
                   </span>
-                  <span className="shrink-0 font-bold tabular-nums text-[#39FF14]">
+                  <span className="shrink-0 font-bold tabular-nums text-emerald-500">
                     {Number(p.total_points ?? 0)}
                     {lang === "pl" ? " pkt" : " pts"}
                   </span>
@@ -240,11 +296,13 @@ export function RadarQuickSlotsBar({
   plottedPlayers,
   spotlightId,
   lang,
+  themeId,
   positionFilter,
   onAssignIds,
   onSpotlight,
   onResetAutoTop4,
 }: Props) {
+  const chrome = slotChrome(themeId);
   const currentRadarPlayers = plottedPlayers.slice(0, 4);
   const occupiedIds = useMemo(
     () => new Set(currentRadarPlayers.map((p) => p.fpl_element_id)),
@@ -274,7 +332,9 @@ export function RadarQuickSlotsBar({
   return (
     <div className="mb-3 space-y-2">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+        <p
+          className={`text-[10px] font-black uppercase tracking-wider ${chrome.title}`}
+        >
           {lang === "pl"
             ? "Szybkie sloty radaru (max 4) — poza eksportem PNG"
             : "Radar quick slots (max 4) — outside PNG export"}
@@ -282,7 +342,7 @@ export function RadarQuickSlotsBar({
         <button
           type="button"
           onClick={onResetAutoTop4}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-300 hover:border-[#39FF14] hover:text-[#39FF14]"
+          className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${chrome.resetBtn}`}
         >
           <RotateCcw className="h-3 w-3" />
           {lang === "pl" ? "Resetuj do AUTO Top 4" : "Reset to AUTO Top 4"}
@@ -319,10 +379,9 @@ export function RadarQuickSlotsBar({
           return (
             <div
               key={slotIndex}
-              className="flex flex-col justify-between gap-2.5 rounded-xl border border-slate-800 bg-slate-900/90 p-3"
+              className={`flex flex-col justify-between gap-2.5 rounded-xl border p-3 ${chrome.card}`}
               style={{ borderTopWidth: 3, borderTopColor: color }}
             >
-              {/* Poziom 1 — pasek narzędzi */}
               <div className="flex items-center justify-between gap-2">
                 <div className="flex min-w-0 flex-wrap items-center gap-1.5">
                   <span
@@ -336,12 +395,12 @@ export function RadarQuickSlotsBar({
                     #{slotIndex + 1}
                   </span>
                   {player ? (
-                    <span className="text-xs font-semibold text-slate-300">
+                    <span className={`text-xs font-semibold ${chrome.meta}`}>
                       {clubShort} · {pos} · £{price}m · {pts}{" "}
                       {lang === "pl" ? "pkt" : "pts"}
                     </span>
                   ) : (
-                    <span className="text-xs font-semibold text-slate-500">
+                    <span className={`text-xs font-semibold ${chrome.empty}`}>
                       {lang === "pl" ? "Wolne miejsce" : "Empty slot"}
                     </span>
                   )}
@@ -357,9 +416,7 @@ export function RadarQuickSlotsBar({
                       }
                       onClick={() => onSpotlight(player.fpl_element_id)}
                       className={`flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-bold transition-all ${
-                        isPizza
-                          ? "bg-amber-500/25 text-amber-200 ring-1 ring-amber-400"
-                          : "text-slate-300 hover:bg-slate-800"
+                        isPizza ? chrome.pizzaActive : chrome.pizzaIdle
                       }`}
                     >
                       {isPizza
@@ -372,7 +429,7 @@ export function RadarQuickSlotsBar({
                       type="button"
                       title={lang === "pl" ? "Usuń" : "Remove"}
                       onClick={() => removeFromSlot(slotIndex)}
-                      className="flex h-6 w-6 items-center justify-center rounded-lg text-slate-400 hover:bg-rose-500/10 hover:text-rose-400"
+                      className="flex h-6 w-6 items-center justify-center rounded-lg text-rose-400 hover:bg-rose-500/10"
                     >
                       <X className="h-3.5 w-3.5" />
                     </button>
@@ -380,7 +437,6 @@ export function RadarQuickSlotsBar({
                 ) : null}
               </div>
 
-              {/* Poziom 2 — bohater: duże zdjęcie + pełne nazwisko */}
               {player ? (
                 <div className="flex items-center gap-3 py-0.5">
                   <SlotHeroPhoto
@@ -391,25 +447,28 @@ export function RadarQuickSlotsBar({
                     clubShort={clubShort}
                   />
                   <div className="min-w-0 flex-1">
-                    <p className="text-[16px] font-black leading-snug text-white">
+                    <p
+                      className={`text-[16px] font-black leading-snug ${chrome.name}`}
+                    >
                       {player.web_name}
                     </p>
-                    <p className="text-[11px] font-medium text-slate-400">
+                    <p className={`text-[11px] font-medium ${chrome.meta}`}>
                       {lang === "pl" ? "Posiadanie" : "Ownership"}:{" "}
-                      {ownership.toFixed(1)}% · Composite:{" "}
-                      {player.compositeScore.toFixed(1)}
+                      {ownership.toFixed(1)}% ·{" "}
+                      {lang === "pl" ? "OCENA" : "RATING"}:{" "}
+                      {Math.round(player.compositeScore)}
                     </p>
                   </div>
                 </div>
               ) : (
                 <div className="flex min-h-[52px] items-center gap-3 py-0.5">
                   <div
-                    className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 border-dashed text-xs font-black text-slate-600"
+                    className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 border-dashed text-xs font-black opacity-60"
                     style={{ borderColor: `${color}66` }}
                   >
                     +
                   </div>
-                  <p className="text-sm font-bold text-slate-500">
+                  <p className={`text-sm font-bold ${chrome.empty}`}>
                     {lang === "pl"
                       ? `Dodaj gracza do slotu #${slotIndex + 1}`
                       : `Add player to slot #${slotIndex + 1}`}
@@ -417,13 +476,13 @@ export function RadarQuickSlotsBar({
                 </div>
               )}
 
-              {/* Poziom 3 — wyszukiwarka */}
               <SlotSearch
                 slotIndex={slotIndex}
                 bootstrap={bootstrap}
                 positionFilter={positionFilter}
                 occupiedIds={occupiedIds}
                 lang={lang}
+                chrome={chrome}
                 placeholder={
                   player
                     ? lang === "pl"

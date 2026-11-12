@@ -214,13 +214,6 @@ function formatHeatmapStatValue(
   return formatStatDisplay(key, val, Boolean(per90));
 }
 
-function compositeAccentColor(comp: number): string {
-  if (comp >= 85) return "#10b981";
-  if (comp >= 65) return "#14b8a6";
-  if (comp >= 35) return "#64748b";
-  return "#f59e0b";
-}
-
 export function HeatmapMatrixChart({
   players,
   metrics,
@@ -338,62 +331,42 @@ export function HeatmapMatrixChart({
     score: number,
     isLeader: boolean,
   ): ReactNode {
-    const accent = compositeAccentColor(score);
-    const topAccent = isLeader ? "#f59e0b" : accent;
-
-    if (isLight) {
-      return (
-        <div
-          className={`flex w-full min-h-[64px] flex-col items-center justify-center rounded-xl border-2 bg-slate-900 px-2 py-2 text-white shadow-sm ${
-            isLeader
-              ? "border-amber-400 ring-2 ring-amber-400/70"
-              : "border-slate-800"
-          }`}
-          style={{
-            borderTopWidth: "4px",
-            borderTopColor: topAccent,
-          }}
-        >
-          <span className="whitespace-nowrap text-[20px] font-black leading-none tabular-nums text-white sm:text-[22px]">
-            {score}
-            {isLeader ? (
-              <span className="ml-0.5 text-[15px] text-amber-400">★</span>
-            ) : null}
-          </span>
-          <span className="mt-1 text-[9.5px] font-extrabold uppercase tracking-wider text-slate-300">
-            {lang === "pl" ? "Z CECH" : "SEL. STATS"}
-          </span>
-        </div>
-      );
-    }
+    const borderAccent = isLeader
+      ? "#f59e0b"
+      : isLight
+        ? "#059669"
+        : "#39FF14";
+    const labelAccent = isLight ? "#059669" : "#39FF14";
+    const microAccent = isLight ? "#047857" : "#86efac";
 
     return (
       <div
-        className={`flex w-full min-h-[64px] flex-col items-center justify-center rounded-xl border-2 px-2 py-2 shadow-sm ${
-          isLeader ? "ring-2 ring-amber-400/60" : ""
+        className={`flex w-full min-h-[64px] flex-col items-center justify-center rounded-xl border-2 px-2.5 py-1.5 text-center shadow-sm ${
+          isLeader ? "ring-2 ring-amber-400/70" : ""
         }`}
-        style={{
-          background: isLeader
-            ? "linear-gradient(180deg, rgba(245, 158, 11, 0.30) 0%, rgba(15, 23, 42, 0.96) 100%)"
-            : "linear-gradient(180deg, rgba(245, 158, 11, 0.14) 0%, rgba(15, 23, 42, 0.94) 100%)",
-          borderColor: isLeader ? "#fbbf24" : "rgba(251, 191, 36, 0.40)",
-          borderTopWidth: "4px",
-          borderTopColor: isLeader ? "#fbbf24" : accent,
-        }}
+        style={{ borderColor: borderAccent }}
       >
-        <span
-          className={`whitespace-nowrap text-[20px] font-black leading-none tabular-nums sm:text-[22px] ${
-            isLeader ? "text-amber-200" : "text-white"
-          }`}
+        <p
+          className="text-[10px] font-black uppercase tracking-wider"
+          style={{ color: isLeader ? "#f59e0b" : labelAccent }}
+        >
+          {lang === "pl" ? "OCENA" : "RATING"}
+        </p>
+        <p
+          className="whitespace-nowrap text-2xl font-black leading-none tabular-nums sm:text-3xl"
+          style={{ color: isLeader ? "#f59e0b" : labelAccent }}
         >
           {score}
           {isLeader ? (
-            <span className="ml-0.5 text-[15px] text-amber-300">★</span>
+            <span className="ml-0.5 text-[15px] text-amber-400">★</span>
           ) : null}
-        </span>
-        <span className="mt-1 text-[9.5px] font-extrabold uppercase tracking-wider text-amber-200/80">
-          {lang === "pl" ? "Z CECH" : "SEL. STATS"}
-        </span>
+        </p>
+        <p
+          className="mt-0.5 text-[9.5px] font-medium leading-tight opacity-80"
+          style={{ color: isLeader ? "#fbbf24" : microAccent }}
+        >
+          {lang === "pl" ? "z wybranych cech" : "selected stats"}
+        </p>
       </div>
     );
   }

@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { BarChart3, Table2 } from "lucide-react";
+import { BarChart3, BookOpen, CalendarRange, Table2 } from "lucide-react";
 import type {
   StatsLabBootstrapData,
   StatsLabComparisonResult,
@@ -11,15 +10,19 @@ import type {
 import type { StatsLabQueryFilter } from "@/lib/stats-lab/presets";
 import type { StatsLabLang } from "@/lib/stats-lab/i18n";
 import { centreUi } from "@/lib/stats-lab/statsCentreI18n";
+import { PROJECTIONS_MODULE_LABEL } from "@/lib/stats-lab/projectionsI18n";
+import type { KnowledgeHelpAnchor } from "@/lib/stats-lab/knowledgeBaseContent";
 import {
   STATS_LAB_CHART_THEMES,
   type StatsLabChartThemeId,
 } from "@/components/admin/stats-lab/chartTheme";
-import { getThemeTokens } from "@/lib/stats-lab/themeTokens";
 import { StatsLabStudioClient } from "@/components/admin/stats-lab/StatsLabStudioClient";
 import { StatsCentreView } from "@/components/admin/stats-lab/StatsCentreView";
+import { StatsLabProjectionsClient } from "@/components/admin/stats-lab/StatsLabProjectionsClient";
+import { StatsLabKnowledgeBaseModal } from "@/components/admin/stats-lab/StatsLabKnowledgeBaseModal";
+import { getStatsLabMenuChrome } from "@/lib/stats-lab/menuChrome";
 
-type ModuleTab = "centre" | "studio";
+type ModuleTab = "centre" | "studio" | "projections";
 
 type Props = {
   bootstrap: StatsLabBootstrapData;
@@ -28,8 +31,19 @@ type Props = {
   initialTab?: ModuleTab;
 };
 
-const LANG_KEY = "fpl-arena-stats-lab-lang";
-const THEME_KEY = "fpl-arena-stats-lab-theme";
+const LANG_KEYS = [
+  "fpl-arena-stats-lab-lang",
+  "fpl-arena-stats-centre-lang",
+  "fpl-arena-stats-studio-lang",
+] as const;
+
+const THEME_KEYS = [
+  "fpl-arena-stats-lab-theme",
+  "fpl-arena-stats-centre-theme",
+  "fpl-arena-stats-studio-theme",
+] as const;
+
+const THEME_SYNC_EVENT = "fpl-stats-lab-theme-sync";
 
 function parseSelectedIds(raw: string | null): number[] {
   if (!raw) return [];
@@ -41,23 +55,115 @@ function parseSelectedIds(raw: string | null): number[] {
 
 function readStoredLang(): StatsLabLang {
   try {
-    const v = localStorage.getItem(LANG_KEY);
-    return v === "en" ? "en" : "pl";
+    for (const key of LANG_KEYS) {
+      const v = localStorage.getItem(key);
+      if (v === "en" || v === "pl") return v;
+    }
   } catch {
-    return "pl";
+    /* ignore */
   }
+  return "pl";
 }
 
 function readStoredTheme(): StatsLabChartThemeId {
   try {
-    const v = localStorage.getItem(THEME_KEY);
-    if (v === "SCOUT_DARK" || v === "ANALYST_LIGHT" || v === "ARENA_DARK") {
-      return v;
+    for (const key of THEME_KEYS) {
+      const v = localStorage.getItem(key);
+      if (v === "SCOUT_DARK" || v === "ANALYST_LIGHT" || v === "ARENA_DARK") {
+        return v;
+      }
     }
   } catch {
     /* ignore */
   }
   return "ARENA_DARK";
+}
+
+function persistThemeAndLang(
+  themeId: StatsLabChartThemeId,
+  lang: StatsLabLang,
+): void {
+  try {
+    for (const key of LANG_KEYS) localStorage.setItem(key, lang);
+    for (const key of THEME_KEYS) localStorage.setItem(key, themeId);
+  } catch {
+    /* ignore */
+  }
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(
+      new CustomEvent(THEME_SYNC_EVENT, {
+        detail: { themeId, lang },
+      }),
+    );
+  }
+}
+
+function shellRootClass(themeId: StatsLabChartThemeId): string {
+  const base =
+    "space-y-5 overflow-x-hidden rounded-2xl p-4 transition-colors duration-200";
+  if (themeId === "ANALYST_LIGHT") {
+    return `${base} border border-slate-300 bg-slate-100 text-slate-900 shadow-sm`;
+  }
+  if (themeId === "SCOUT_DARK") {
+    return `${base} border border-teal-900/70 bg-[#06181e] text-teal-50`;
+  }
+  return `${base} border border-slate-800/80 bg-[#070b14] text-slate-100`;
+}
+
+function shellNavClass(themeId: StatsLabChartThemeId): string {
+  const base = "flex flex-wrap items-center gap-2 rounded-2xl p-2";
+  if (themeId === "ANALYST_LIGHT") {
+    return `${base} border border-slate-300 bg-white shadow-sm`;
+  }
+  if (themeId === "SCOUT_DARK") {
+    return `${base} border border-teal-800/80 bg-[#09222a]`;
+  }
+  return `${base} border border-slate-800 bg-[#0c1322]`;
+}
+
+function shellNavInactiveClass(themeId: StatsLabChartThemeId): string {
+  if (themeId === "ANALYST_LIGHT") {
+    return "border border-slate-300 bg-slate-100 text-slate-800 hover:bg-slate-200 hover:text-slate-950";
+  }
+  if (themeId === "SCOUT_DARK") {
+    return "border border-teal-800 bg-[#06181e] text-teal-100 hover:bg-teal-900/60 hover:text-white";
+  }
+  return "border border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800 hover:text-white";
+}
+
+function shellNavActiveClass(themeId: StatsLabChartThemeId): string {
+  if (themeId === "ANALYST_LIGHT") {
+    return "border border-emerald-800 bg-emerald-700 font-black text-white";
+  }
+  return "border border-[#39ff14] bg-[#39ff14] font-black text-slate-950";
+}
+
+function shellNavChipGroupClass(themeId: StatsLabChartThemeId): string {
+  if (themeId === "ANALYST_LIGHT") {
+    return "inline-flex rounded-xl border border-slate-300 bg-slate-50 p-1";
+  }
+  if (themeId === "SCOUT_DARK") {
+    return "inline-flex rounded-xl border border-teal-800 bg-[#06181e] p-1";
+  }
+  return "inline-flex rounded-xl border border-slate-700 bg-[#070b14] p-1";
+}
+
+function shellNavTabClass(
+  active: boolean,
+  themeId: StatsLabChartThemeId,
+): string {
+  return `inline-flex min-h-[28px] items-center gap-2 rounded-xl px-4 py-2.5 text-[11px] font-black uppercase tracking-wider ${
+    active ? shellNavActiveClass(themeId) : shellNavInactiveClass(themeId)
+  }`;
+}
+
+function shellNavChipClass(
+  active: boolean,
+  themeId: StatsLabChartThemeId,
+): string {
+  return `min-h-[28px] rounded-lg px-2.5 py-1.5 text-[10px] font-black uppercase ${
+    active ? shellNavActiveClass(themeId) : shellNavInactiveClass(themeId)
+  }`;
 }
 
 export function StatsLabModuleShell({
@@ -72,15 +178,37 @@ export function StatsLabModuleShell({
   const tabParam = searchParams.get("tab");
   const selectedParam = searchParams.get("selected");
 
-  const [tab, setTab] = useState<ModuleTab>(
-    tabParam === "centre" || initialTab === "centre" ? "centre" : "studio",
-  );
+  const [tab, setTab] = useState<ModuleTab>(() => {
+    if (
+      tabParam === "centre" ||
+      tabParam === "studio" ||
+      tabParam === "projections"
+    ) {
+      return tabParam;
+    }
+    if (initialTab === "centre" || initialTab === "projections") return initialTab;
+    return "studio";
+  });
   const [lang, setLang] = useState<StatsLabLang>("pl");
   const [chartTheme, setChartTheme] =
     useState<StatsLabChartThemeId>("ARENA_DARK");
   const [prefsReady, setPrefsReady] = useState(false);
+  const [visitedTabs, setVisitedTabs] = useState<Set<ModuleTab>>(() => {
+    const initial: ModuleTab =
+      tabParam === "centre" ||
+      tabParam === "studio" ||
+      tabParam === "projections"
+        ? tabParam
+        : initialTab === "centre" || initialTab === "projections"
+          ? initialTab
+          : "studio";
+    return new Set<ModuleTab>([initial]);
+  });
+  const [knowledgeOpen, setKnowledgeOpen] = useState(false);
+  const [knowledgeAnchor, setKnowledgeAnchor] =
+    useState<KnowledgeHelpAnchor | null>(null);
   const ui = centreUi(lang);
-  const tokens = getThemeTokens(chartTheme);
+  const chrome = getStatsLabMenuChrome(chartTheme);
 
   const seedSelectedIds = useMemo(
     () => parseSelectedIds(selectedParam),
@@ -95,41 +223,97 @@ export function StatsLabModuleShell({
 
   useEffect(() => {
     if (!prefsReady) return;
-    try {
-      localStorage.setItem(LANG_KEY, lang);
-      localStorage.setItem(THEME_KEY, chartTheme);
-    } catch {
-      /* ignore */
-    }
+    persistThemeAndLang(chartTheme, lang);
   }, [lang, chartTheme, prefsReady]);
 
   useEffect(() => {
-    if (tabParam === "centre" || tabParam === "studio") {
+    function onExternalSync(ev: Event) {
+      const detail = (ev as CustomEvent<{ themeId?: string; lang?: string }>)
+        .detail;
+      if (!detail) return;
+      if (
+        detail.themeId === "ARENA_DARK" ||
+        detail.themeId === "SCOUT_DARK" ||
+        detail.themeId === "ANALYST_LIGHT"
+      ) {
+        setChartTheme(detail.themeId);
+      }
+      if (detail.lang === "pl" || detail.lang === "en") {
+        setLang(detail.lang);
+      }
+    }
+    window.addEventListener(THEME_SYNC_EVENT, onExternalSync);
+    return () => window.removeEventListener(THEME_SYNC_EVENT, onExternalSync);
+  }, []);
+
+  useEffect(() => {
+    if (
+      tabParam === "centre" ||
+      tabParam === "studio" ||
+      tabParam === "projections"
+    ) {
       setTab(tabParam);
+      setVisitedTabs((prev) => {
+        if (prev.has(tabParam)) return prev;
+        const next = new Set(prev);
+        next.add(tabParam);
+        return next;
+      });
     }
   }, [tabParam]);
 
+  useEffect(() => {
+    setVisitedTabs((prev) => {
+      if (prev.has(tab)) return prev;
+      const next = new Set(prev);
+      next.add(tab);
+      return next;
+    });
+  }, [tab]);
+
   function switchTab(next: ModuleTab) {
     setTab(next);
+    setVisitedTabs((prev) => {
+      if (prev.has(next)) return prev;
+      const copy = new Set(prev);
+      copy.add(next);
+      return copy;
+    });
     const params = new URLSearchParams(searchParams.toString());
     params.set("tab", next);
     if (next === "centre") params.delete("selected");
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   }
 
+  function applyLang(next: StatsLabLang) {
+    setLang(next);
+  }
+
+  function applyTheme(next: StatsLabChartThemeId) {
+    setChartTheme(next);
+  }
+
+  function openKnowledge(anchor: KnowledgeHelpAnchor = "general") {
+    setKnowledgeAnchor(anchor);
+    setKnowledgeOpen(true);
+  }
+
   return (
-    <div className="space-y-5">
+    <div
+      className={shellRootClass(chartTheme)}
+      data-stats-lab-shell-root="true"
+      data-stats-lab-theme={chartTheme}
+      data-stats-lab-lang={lang}
+      data-stats-lab-active-tab={tab}
+    >
       <div
-        className={`flex flex-wrap items-center gap-2 rounded-2xl border p-2 ${tokens.panel} ${tokens.panelBorder}`}
+        data-stats-lab-region="SHELL_HEADER_NAV"
+        className={shellNavClass(chartTheme)}
       >
         <button
           type="button"
           onClick={() => switchTab("centre")}
-          className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-[11px] font-black uppercase tracking-wider ${
-            tab === "centre"
-              ? "bg-[#39FF14] text-black"
-              : `${tokens.textMuted} hover:brightness-125`
-          }`}
+          className={shellNavTabClass(tab === "centre", chartTheme)}
         >
           <Table2 className="h-3.5 w-3.5" />
           {ui.moduleCentre}
@@ -137,43 +321,39 @@ export function StatsLabModuleShell({
         <button
           type="button"
           onClick={() => switchTab("studio")}
-          className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-[11px] font-black uppercase tracking-wider ${
-            tab === "studio"
-              ? "bg-[#39FF14] text-black"
-              : `${tokens.textMuted} hover:brightness-125`
-          }`}
+          className={shellNavTabClass(tab === "studio", chartTheme)}
         >
           <BarChart3 className="h-3.5 w-3.5" />
           {ui.moduleStudio}
         </button>
+        <button
+          type="button"
+          onClick={() => switchTab("projections")}
+          className={shellNavTabClass(tab === "projections", chartTheme)}
+        >
+          <CalendarRange className="h-3.5 w-3.5" />
+          {PROJECTIONS_MODULE_LABEL[lang]}
+        </button>
 
         <div className="ml-auto flex flex-wrap items-center gap-2">
-          <div
-            className={`inline-flex rounded-xl border p-1 ${tokens.panelBorder} ${tokens.page}`}
-          >
+          <div className={shellNavChipGroupClass(chartTheme)}>
             <button
               type="button"
-              onClick={() => setLang("pl")}
-              className={`rounded-lg px-2.5 py-1.5 text-[10px] font-black uppercase ${
-                lang === "pl" ? "bg-[#39FF14] text-black" : tokens.textMuted
-              }`}
+              onClick={() => applyLang("pl")}
+              className={shellNavChipClass(lang === "pl", chartTheme)}
             >
               🇵🇱 PL
             </button>
             <button
               type="button"
-              onClick={() => setLang("en")}
-              className={`rounded-lg px-2.5 py-1.5 text-[10px] font-black uppercase ${
-                lang === "en" ? "bg-[#39FF14] text-black" : tokens.textMuted
-              }`}
+              onClick={() => applyLang("en")}
+              className={shellNavChipClass(lang === "en", chartTheme)}
             >
               🇬🇧 EN
             </button>
           </div>
 
-          <div
-            className={`inline-flex rounded-xl border p-1 ${tokens.panelBorder} ${tokens.page}`}
-          >
+          <div className={shellNavChipGroupClass(chartTheme)}>
             {(
               Object.keys(STATS_LAB_CHART_THEMES) as StatsLabChartThemeId[]
             ).map((id) => (
@@ -185,12 +365,8 @@ export function StatsLabModuleShell({
                     ? STATS_LAB_CHART_THEMES[id].labelEn
                     : STATS_LAB_CHART_THEMES[id].labelPl
                 }
-                onClick={() => setChartTheme(id)}
-                className={`rounded-lg px-2.5 py-1.5 text-[10px] font-black uppercase ${
-                  chartTheme === id
-                    ? "bg-[#39FF14] text-black"
-                    : tokens.textMuted
-                }`}
+                onClick={() => applyTheme(id)}
+                className={shellNavChipClass(chartTheme === id, chartTheme)}
               >
                 {id === "ARENA_DARK"
                   ? "Arena"
@@ -201,35 +377,85 @@ export function StatsLabModuleShell({
             ))}
           </div>
 
-          <Link
-            href="/admin/stats-lab/centre"
-            className={`text-[10px] font-bold uppercase tracking-wider ${tokens.textMuted} hover:opacity-80`}
+          <button
+            type="button"
+            onClick={() => openKnowledge("general")}
+            className={`inline-flex min-h-[28px] items-center justify-center gap-1.5 rounded-lg px-2.5 py-1 text-[11px] uppercase tracking-wider ${chrome.knowledgeBtn}`}
           >
-            /centre
-          </Link>
+            <BookOpen className="h-3.5 w-3.5" />
+            {lang === "pl"
+              ? "📚 Baza Wiedzy i Zasady FPL"
+              : "📚 Knowledge Base & FPL Rules"}
+          </button>
         </div>
       </div>
 
-      {tab === "centre" ? (
-        <StatsCentreView
-          bootstrap={bootstrap}
-          lang={lang}
-          onLangChange={setLang}
-          themeId={chartTheme}
-          onThemeChange={setChartTheme}
-        />
-      ) : (
-        <StatsLabStudioClient
-          bootstrap={bootstrap}
-          initialResult={initialResult}
-          initialFilter={initialFilter}
-          seedSelectedPlayerIds={seedSelectedIds}
-          seedLang={lang}
-          seedChartTheme={chartTheme}
-          onLangChange={setLang}
-          onChartThemeChange={setChartTheme}
-        />
-      )}
+      <div data-stats-lab-region="MODULE_WORKSPACE">
+        {visitedTabs.has("centre") ? (
+          <div
+            className={tab === "centre" ? undefined : "hidden"}
+            data-stats-lab-active-workspace={
+              tab === "centre" ? "true" : undefined
+            }
+            aria-hidden={tab !== "centre"}
+          >
+            <StatsCentreView
+              bootstrap={bootstrap}
+              lang={lang}
+              onLangChange={applyLang}
+              themeId={chartTheme}
+              onThemeChange={applyTheme}
+            />
+          </div>
+        ) : null}
+
+        {visitedTabs.has("studio") ? (
+          <div
+            className={tab === "studio" ? undefined : "hidden"}
+            data-stats-lab-active-workspace={
+              tab === "studio" ? "true" : undefined
+            }
+            aria-hidden={tab !== "studio"}
+          >
+            <StatsLabStudioClient
+              bootstrap={bootstrap}
+              initialResult={initialResult}
+              initialFilter={initialFilter}
+              seedSelectedPlayerIds={seedSelectedIds}
+              seedLang={lang}
+              seedChartTheme={chartTheme}
+              onLangChange={applyLang}
+              onChartThemeChange={applyTheme}
+              onOpenKnowledge={openKnowledge}
+            />
+          </div>
+        ) : null}
+
+        {visitedTabs.has("projections") ? (
+          <div
+            className={tab === "projections" ? undefined : "hidden"}
+            data-stats-lab-active-workspace={
+              tab === "projections" ? "true" : undefined
+            }
+            aria-hidden={tab !== "projections"}
+          >
+            <StatsLabProjectionsClient lang={lang} themeId={chartTheme} />
+          </div>
+        ) : null}
+      </div>
+
+      <StatsLabKnowledgeBaseModal
+        open={knowledgeOpen}
+        lang={lang}
+        themeId={chartTheme}
+        activeModuleTab={tab}
+        helpAnchor={knowledgeAnchor}
+        onLangChange={applyLang}
+        onClose={() => {
+          setKnowledgeOpen(false);
+          setKnowledgeAnchor(null);
+        }}
+      />
     </div>
   );
 }
