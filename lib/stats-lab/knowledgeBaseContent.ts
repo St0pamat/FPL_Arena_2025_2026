@@ -49,9 +49,9 @@ export type KnowledgePack = {
 
 const HOW_TO_USE_PL: KnowledgeTabContent = {
   id: "HOW_TO_USE",
-  label: "3 moduły Stats Lab",
+  label: "4 moduły Stats Lab",
   intro:
-    "Przewodnik po całej aplikacji Stats Lab: Stats Centre (tabele), Studio Wykresów (wizualizacje) oraz Predykcje i Terminarz (FDR i prognozy).",
+    "Przewodnik po całej aplikacji Stats Lab: Stats Centre (tabele), Studio Wykresów (wizualizacje), Predykcje i Terminarz (FDR i prognozy) oraz Planer FPL (drużyna, transfery i chipy).",
   blocks: [
     {
       heading: "Moduł 1: Stats Centre — Tabele Analityczne",
@@ -119,14 +119,30 @@ const HOW_TO_USE_PL: KnowledgeTabContent = {
         "Per 90 = tempo na 90 minut. Używaj po kontuzji, transferze lub małej liczbie minut.",
       ],
     },
+    {
+      heading: "Moduł 4: Planer FPL (FPL_PLANNER)",
+      featured: true,
+      paragraphs: [
+        "Planer rekonstruuje Twój skład z oficjalnego FPL Team ID (lub Składu Demo) i pozwala planować transfery, chipy oraz XI na wiele kolejek naprzód — w trzech niezależnych wariantach A/B/C zapisywanych lokalnie.",
+        "Ceny: PP (purchase) to cena zakupu z historii transferów / startu sezonu; CP (current) to aktualna cena rynkowa now_cost; SP (selling) liczymy oficjalną regułą FPL — 50% zysku (CP−PP) zaokrąglane w dół do £0.1m, dodane do PP. Możesz też ręcznie skorygować SP.",
+        "Darmowe transfery (FT) kroczą w zakresie 1–5. Po użyciu Wildcard lub Free Hit zapisane FT są zachowywane bez +1 (np. miałeś 2 FT → nadal masz 2 FT w kolejnej GW).",
+        "Po Free Hicie skład i bank wracają do stanu sprzed FH w następnej kolejce (rollback R8).",
+        "Model xPts v1: oczekiwane minuty z ostatnich 6 meczów, stawki Per 90 skurczone bayesowsko, siła ataku/obrony Dixona-Colesa oraz mnożniki Kapitana ×2, Triple Captain ×3 i Bench Boost na ławce.",
+      ],
+      bullets: [
+        "Warianty A/B/C: porównuj sumę xPts, hity, bank, FT i chipy bez kasowania planu po odświeżeniu.",
+        "Reguły R1–R12: formacja, limit 3/klub (w tym stan zastany 4/3), bank ≥ 0, konflikty transferów, undo w tej samej GW.",
+        "Eksport Social-First: plakat .jpg + audit.json z diagnostyką DOM.",
+      ],
+    },
   ],
 };
 
 const HOW_TO_USE_EN: KnowledgeTabContent = {
   id: "HOW_TO_USE",
-  label: "3 Stats Lab modules",
+  label: "4 Stats Lab modules",
   intro:
-    "Guide to the full Stats Lab: Stats Centre (tables), Chart Studio (visuals) and Projections & Fixtures (FDR and forecasts).",
+    "Guide to the full Stats Lab: Stats Centre (tables), Chart Studio (visuals), Projections & Fixtures (FDR and forecasts) and FPL Planner (team, transfers & chips).",
   blocks: [
     {
       heading: "Module 1: Stats Centre — Analytical Tables",
@@ -192,6 +208,22 @@ const HOW_TO_USE_EN: KnowledgeTabContent = {
       paragraphs: [
         "Totals = sum in the selected window. Best for “who already banked points” ranks.",
         "Per 90 = rate per 90 minutes. Use after injuries, transfers or limited minutes.",
+      ],
+    },
+    {
+      heading: "Module 4: FPL Planner (FPL_PLANNER)",
+      featured: true,
+      paragraphs: [
+        "The Planner reconstructs your squad from an official FPL Team ID (or Demo Squad) and lets you plan transfers, chips and XI across multiple gameweeks — in three independent A/B/C drafts stored locally.",
+        "Prices: PP (purchase) from transfer history / season start; CP (current) is market now_cost; SP (selling) follows the official FPL rule — 50% of profit (CP−PP) rounded down to £0.1m, added to PP. You can also override SP manually.",
+        "Free transfers (FT) roll within 1–5. After Wildcard or Free Hit, saved FT are preserved without +1 (e.g. you had 2 FT → you still have 2 FT next GW).",
+        "After Free Hit, squad and bank roll back to the pre-FH state in the next gameweek (R8 rollback).",
+        "xPts v1 model: expected minutes from the last 6 matches, Bayesian-shrunk Per 90 rates, Dixon–Coles attack/defence strength, plus Captain ×2, Triple Captain ×3 and Bench Boost on the bench.",
+      ],
+      bullets: [
+        "Drafts A/B/C: compare total xPts, hits, bank, FT and chips without losing the plan on refresh.",
+        "Rules R1–R12: formation, 3-per-club (incl. pre-existing 4/3), bank ≥ 0, transfer conflicts, same-GW undo.",
+        "Social-First export: .jpg poster + audit.json with DOM diagnostics.",
       ],
     },
   ],

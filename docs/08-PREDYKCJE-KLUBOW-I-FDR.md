@@ -1,16 +1,62 @@
-# Predykcje Klubów i Kalendarz FDR — inwentaryzacja i plan modułu
+# Predykcje Klubów i Kalendarz FDR — `PROJECTIONS_CENTRE`
 
 | Pole | Wartość |
 |------|---------|
-| Moduł docelowy | `PROJECTIONS_CENTRE` / `TEAM_PROJECTIONS` (`FIXTURE_TICKER`) |
-| Status dokumentu | **Plan / inwentaryzacja + specyfikacja silnika Dixona-Colesa v0.2** (moduł jeszcze niezaimplementowany) |
-| Status kodu | **Zero-Regression:** Chart Studio 6/6 + Stats Centre 13/13 = **FROZEN** |
-| Silnik docelowy | `lib/stats-lab/projectionsEngine.ts` — **Dixon-Coles v0.2** |
-| Cel | Social-First AAA: FDR, projected goals, CS%, karty meczowe, eksport X/Discord |
+| Moduł | `PROJECTIONS_CENTRE` (`FIXTURES_FDR` · `PROJECTED_GOALS` · `CLEAN_SHEETS` · `MATCHUP_CARDS`) |
+| Status | **`FROZEN / PASS AAA (Zero-Regression)`** — `totalIssuesCount: 0` |
+| Komplet | **4/4 widoki** |
+| UI | `components/admin/stats-lab/StatsLabProjectionsClient.tsx` |
+| Silnik | `lib/stats-lab/projectionsEngine.ts` — **Dixon-Coles v0.2** |
+| i18n PL/EN | `lib/stats-lab/projectionsI18n.ts` |
+| Motywy | `ARENA_DARK` · `SCOUT_DARK` · `ANALYST_LIGHT` (chrome: `menuChrome.ts`) |
+| Eksport | para `.jpg` + `.json` (audyt AI + `inspectFullStatsLabPageDom`) |
 
-Powiązane: [`02-STATS-LAB-STUDIO-KONTEKST.md`](./02-STATS-LAB-STUDIO-KONTEKST.md) · [`07-STATS-CENTRE.md`](./07-STATS-CENTRE.md) · Chart Studio docs/03–06.
+Powiązane: [`00-ACTIVE-ROADMAP.md`](./00-ACTIVE-ROADMAP.md) · [`01-ARCHITEKTURA-I-BAZA-DANYCH.md`](./01-ARCHITEKTURA-I-BAZA-DANYCH.md) · [`02-SILNIK-ANALITYCZNY-I-METRYKI.md`](./02-SILNIK-ANALITYCZNY-I-METRYKI.md) · [`07-STATS-CENTRE.md`](./07-STATS-CENTRE.md) · Chart Studio docs/03–06.
 
-**Ten dokument nie zmienia zamrożonego kodu.** Opisuje stan danych, plan wpięcia nowego wątku Stats Lab oraz pełną specyfikację matematyki i UX (sekcje 6–7).
+**Zakaz dalszych zmian UI/logiki Predykcji** bez osobnej decyzji produktowej.  
+**Zero-Regression:** nie modyfikować `StatsLabProjectionsClient.tsx`, `projectionsEngine.ts`, ani zamrożonych modułów Chart Studio / Stats Centre.
+
+---
+
+## 0. Finalne poprawki AAA (zamrożone)
+
+### 0.1 Skale CS: `matchCsPct` (0…100) vs `expectedCs` (0…1)
+
+W silniku i UI utrzymano **rozdział jednostek**:
+
+| Pole / koncept | Skala | Użycie |
+|----------------|-------|--------|
+| `csPct` / `csPctHome` / `csPctAway` / `combinedAtLeastOneCsPct` (`matchCsPct`) | **0…100** | Wyświetlanie `%` na plakatach i w komórkach |
+| `csProb` / `totalExpectedCs` / `combinedAtLeastOneCsProb` (`expectedCs ≈ matchCsPct / 100`) | **0…1** | Sumy oczekiwanych CS, DGW `p1+p2`, QA modelu |
+
+Zakaz mieszania procentów z prawdopodobieństwami w sumach kolumn `SUMA CS`.
+
+### 0.2 Etykiety kart meczowych (`MATCHUP_CARDS`)
+
+Spójne etykiety wierszy/kolumn względem stron boiska:
+
+- gospodarz → `homeShortName` (`homeTeamShort`),
+- gość → `awayShortName` (`awayTeamShort`),
+- Top 3 dokładne wyniki z siatki Dixona-Colesa (`topExactScores` / `scoreMatrix`) zawsze w orientacji **home : away**.
+
+### 0.3 Sortowanie po nagłówku `GW{n}`
+
+- `sortBy = "gw:${gw}"` (lokalnie w kliencie; BGW / pusta komórka **zawsze na końcu** tabeli przy `asc` i `desc`).
+- Domyślny kierunek: `FIXTURES_FDR` + miara `FDR` → `asc`; pozostałe widoki/miary → `desc`.
+- Ponowny klik w ten sam nagłówek przełącza `asc` ↔ `desc`.
+
+### 0.4 Ukrywanie kolejek `×` + pasek przywracania
+
+- Osobny przycisk `×` obok `GW{n}` (tylko gdy `visibleGameweeks.length > 1`).
+- Podczas eksportu `.jpg` (`isExporting`) znacznik `×` jest **ukryty**.
+- Pasek `Ukryte kolejki` / `Hidden GWs` + `Przywróć wszystkie GW` leży **bezpośrednio nad tabelą** (poza `exportRef`).
+
+### 0.5 Stopka plakatu + chrome UI
+
+- Przyjazna stopka (bez żargonu Dixona-Colesa / Zero-Data-Leakage na plakacie) — pełny opis w Bazie Wiedzy.
+- Brak fragmentu `Aktualizacja: —` gdy brak prawdziwej daty sync.
+- Status eksportu: `✓ Dane i prognozy zweryfikowane` / `✓ Projections verified`.
+- Kolorystyka przycisków zgodna z `lib/stats-lab/menuChrome.ts` we wszystkich 3 motywach → **`totalIssuesCount: 0`**.
 
 ---
 
@@ -532,18 +578,19 @@ Jednoznaczna notacja venue:
 - Tryb **`Plakat 1-GW 3-kolumnowy`** (styl FPL Joe).
 - Tryb **`Weryfikacja: Predykcje vs Rzeczywistość`** dla zakończonych kolejek (porównanie `lambda` / Top-3 / 1X2 z wynikiem rzeczywistym — wyłącznie dla GW z `finished` meczami; bez naruszenia Zero-Data-Leakage przy budowie modelu dla kolejnych GW).
 
-### 7.3 Stopka wiarygodności na każdym plakacie
+### 7.3 Stopka wiarygodności na każdym plakacie (final AAA)
 
-Każdy eksport JPG musi zawierać czytelną stopkę (PL/EN, kontrast we wszystkich 3 motywach), np.:
+Przyjazna stopka (PL/EN), bez akademickiego żargonu na plakacie:
 
-> **Model Dixona-Colesa FPL Arena · xG + siła drużyn · Dane sprzed deadline'u GW**  
-> Sync: `{synced_at}` · Sezon: `{season_code}` · Zakres / GW: `{range_or_gw}`
+> **Prognozy FPL Arena oparte na formie drużyn (gole, xG, defensywa) oraz sile terminarza Premier League**  
+> Sezon: `{season}` · Zakres: `{gwRange}`[ · Aktualizacja: `{syncedAt}`] · Opis wyliczeń w Bazie Wiedzy
 
 Wymagania:
 
-- źródło wyliczeń + zasada Zero-Data-Leakage widoczna na pierwszy rzut oka,
-- czas synchronizacji z `fpl_lab_sync_meta` / timestamp sync fixtures,
-- brak uciętego tekstu w stopce (`layoutDiagnostics.truncatedOrOverflowingElements: []`).
+- fragment `Aktualizacja:` tylko gdy jest prawdziwa data sync (nigdy `Aktualizacja: —`),
+- metodologia Dixona-Colesa / Zero-Data-Leakage → Baza Wiedzy (nie stopka),
+- brak uciętego tekstu (`layoutDiagnostics.truncatedOrOverflowingElements: []`),
+- status przy eksporcie: `✓ Dane i prognozy zweryfikowane`.
 
 ### 7.4 Kontrakt jakości UI (Zero-Regression Social-First)
 

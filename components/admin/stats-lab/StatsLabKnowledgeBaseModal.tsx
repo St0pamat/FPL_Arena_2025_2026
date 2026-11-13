@@ -13,7 +13,7 @@ import {
 import type { StatsLabChartThemeId } from "@/components/admin/stats-lab/chartTheme";
 import { getThemeTokens } from "@/lib/stats-lab/themeTokens";
 
-type ActiveModuleTab = "centre" | "studio" | "projections";
+type ActiveModuleTab = "centre" | "studio" | "projections" | "planner";
 
 type Props = {
   open: boolean;
@@ -34,10 +34,12 @@ function moduleHint(
   if (lang === "pl") {
     if (tab === "centre") return "Kontekst: Stats Centre (Tabele Analityczne)";
     if (tab === "studio") return "Kontekst: Studio Wykresów";
+    if (tab === "planner") return "Kontekst: Planer FPL (Drużyna i Transfery)";
     return "Kontekst: Predykcje i Terminarz";
   }
   if (tab === "centre") return "Context: Stats Centre (Analytical Tables)";
   if (tab === "studio") return "Context: Chart Studio";
+  if (tab === "planner") return "Context: FPL Planner (Team & Transfers)";
   return "Context: Projections & Fixtures";
 }
 

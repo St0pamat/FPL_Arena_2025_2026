@@ -50,7 +50,8 @@ import type {
 export type StatsLabAuditModule =
   | "CHART_STUDIO"
   | "STATS_CENTRE"
-  | "PROJECTIONS_CENTRE";
+  | "PROJECTIONS_CENTRE"
+  | "FPL_PLANNER";
 
 export type StatsLabAuditSubView =
   | StatsLabVizMode
@@ -698,8 +699,74 @@ export function buildAuditJsonFileName(input: {
       ? "studio"
       : input.module === "PROJECTIONS_CENTRE"
         ? "projections"
-        : "centre";
+        : input.module === "FPL_PLANNER"
+          ? "planner"
+          : "centre";
   return `fpl-arena-stats-lab-audit-${mod}-${pos}-${view}-${gw}.json`;
+}
+
+export type PlannerDiagnostics = {
+  teamId: number;
+  isDemoSquad: boolean;
+  activeVariant: "A" | "B" | "C";
+  currentGw: number;
+  bankTenths: number;
+  freeTransfers: number;
+  transferCostPts: number;
+  grossXPts: number;
+  netXPts: number;
+  activeChip: string | null;
+  isValidGw: boolean;
+  errors: Array<{ key: string; detail?: string }>;
+  warnings: string[];
+  picksSummary: Array<{
+    slot: number;
+    elementId: number;
+    webName: string;
+    isCaptain: boolean;
+    isViceCaptain: boolean;
+    sellingPriceTenths: number;
+  }>;
+};
+
+export type PlannerAiAuditReport = {
+  meta: {
+    exportedAt: string;
+    module: "FPL_PLANNER";
+    subView: string;
+    lang: StatsLabLang;
+    themeId: StatsLabChartThemeId;
+    seasonCode: string;
+  };
+  plannerDiagnostics: PlannerDiagnostics;
+  layoutDiagnostics: LayoutDiagnostics;
+  pageAndMenuDiagnostics?: StatsLabPageAndMenuDiagnostics;
+};
+
+export function buildPlannerAiAuditReport(input: {
+  lang: StatsLabLang;
+  themeId: StatsLabChartThemeId;
+  seasonCode: string;
+  subView: string;
+  diagnostics: PlannerDiagnostics;
+  rootElement: HTMLElement;
+}): PlannerAiAuditReport {
+  return {
+    meta: {
+      exportedAt: new Date().toISOString(),
+      module: "FPL_PLANNER",
+      subView: input.subView,
+      lang: input.lang,
+      themeId: input.themeId,
+      seasonCode: input.seasonCode,
+    },
+    plannerDiagnostics: input.diagnostics,
+    layoutDiagnostics: inspectCanvasLayoutDom(input.rootElement),
+    pageAndMenuDiagnostics: inspectFullStatsLabPageDom({
+      themeId: input.themeId,
+      exportRootElement: input.rootElement,
+    }),
+  };
 }
 
 export type ProjectionsDisplayedEntityAudit = {

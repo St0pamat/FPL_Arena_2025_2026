@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { BarChart3, BookOpen, CalendarRange, Table2 } from "lucide-react";
+import { BarChart3, BookOpen, CalendarRange, ClipboardList, Table2 } from "lucide-react";
 import type {
   StatsLabBootstrapData,
   StatsLabComparisonResult,
@@ -19,10 +19,11 @@ import {
 import { StatsLabStudioClient } from "@/components/admin/stats-lab/StatsLabStudioClient";
 import { StatsCentreView } from "@/components/admin/stats-lab/StatsCentreView";
 import { StatsLabProjectionsClient } from "@/components/admin/stats-lab/StatsLabProjectionsClient";
+import { StatsLabPlannerClient } from "@/components/admin/stats-lab/StatsLabPlannerClient";
 import { StatsLabKnowledgeBaseModal } from "@/components/admin/stats-lab/StatsLabKnowledgeBaseModal";
 import { getStatsLabMenuChrome } from "@/lib/stats-lab/menuChrome";
 
-type ModuleTab = "centre" | "studio" | "projections";
+export type ModuleTab = "centre" | "studio" | "projections" | "planner";
 
 type Props = {
   bootstrap: StatsLabBootstrapData;
@@ -182,11 +183,18 @@ export function StatsLabModuleShell({
     if (
       tabParam === "centre" ||
       tabParam === "studio" ||
-      tabParam === "projections"
+      tabParam === "projections" ||
+      tabParam === "planner"
     ) {
       return tabParam;
     }
-    if (initialTab === "centre" || initialTab === "projections") return initialTab;
+    if (
+      initialTab === "centre" ||
+      initialTab === "projections" ||
+      initialTab === "planner"
+    ) {
+      return initialTab;
+    }
     return "studio";
   });
   const [lang, setLang] = useState<StatsLabLang>("pl");
@@ -197,9 +205,12 @@ export function StatsLabModuleShell({
     const initial: ModuleTab =
       tabParam === "centre" ||
       tabParam === "studio" ||
-      tabParam === "projections"
+      tabParam === "projections" ||
+      tabParam === "planner"
         ? tabParam
-        : initialTab === "centre" || initialTab === "projections"
+        : initialTab === "centre" ||
+            initialTab === "projections" ||
+            initialTab === "planner"
           ? initialTab
           : "studio";
     return new Set<ModuleTab>([initial]);
@@ -250,7 +261,8 @@ export function StatsLabModuleShell({
     if (
       tabParam === "centre" ||
       tabParam === "studio" ||
-      tabParam === "projections"
+      tabParam === "projections" ||
+      tabParam === "planner"
     ) {
       setTab(tabParam);
       setVisitedTabs((prev) => {
@@ -333,6 +345,16 @@ export function StatsLabModuleShell({
         >
           <CalendarRange className="h-3.5 w-3.5" />
           {PROJECTIONS_MODULE_LABEL[lang]}
+        </button>
+        <button
+          type="button"
+          onClick={() => switchTab("planner")}
+          className={shellNavTabClass(tab === "planner", chartTheme)}
+        >
+          <ClipboardList className="h-3.5 w-3.5" />
+          {lang === "pl"
+            ? "📋 Planer FPL (Drużyna i Transfery)"
+            : "📋 FPL Planner (Team & Transfers)"}
         </button>
 
         <div className="ml-auto flex flex-wrap items-center gap-2">
@@ -440,6 +462,22 @@ export function StatsLabModuleShell({
             aria-hidden={tab !== "projections"}
           >
             <StatsLabProjectionsClient lang={lang} themeId={chartTheme} />
+          </div>
+        ) : null}
+
+        {visitedTabs.has("planner") ? (
+          <div
+            className={tab === "planner" ? undefined : "hidden"}
+            data-stats-lab-active-workspace={
+              tab === "planner" ? "true" : undefined
+            }
+            aria-hidden={tab !== "planner"}
+          >
+            <StatsLabPlannerClient
+              seasonCode={bootstrap.seasonCode}
+              lang={lang}
+              themeId={chartTheme}
+            />
           </div>
         ) : null}
       </div>

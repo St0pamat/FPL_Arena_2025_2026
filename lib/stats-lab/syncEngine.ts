@@ -226,6 +226,9 @@ export type FplBootstrapElement = {
   transfers_out_event?: number | null;
   cost_change_start?: number | null;
   cost_change_event?: number | null;
+  chance_of_playing_next_round?: number | null;
+  news?: string | null;
+  ep_next?: string | number | null;
   defensive_contribution?: number | null;
   minutes?: number | null;
   starts?: number | null;
@@ -475,8 +478,18 @@ export function mapBootstrapPlayer(
     transfers_out: parseFplInt(el.transfers_out),
     transfers_in_event: parseFplInt(el.transfers_in_event),
     transfers_out_event: parseFplInt(el.transfers_out_event),
-    cost_change_start: parseFplInt(el.cost_change_start),
+    cost_change_start:
+      typeof el.cost_change_start === "number" ? el.cost_change_start : 0,
     cost_change_event: parseFplInt(el.cost_change_event),
+    chance_of_playing_next_round:
+      typeof el.chance_of_playing_next_round === "number"
+        ? el.chance_of_playing_next_round
+        : null,
+    news: typeof el.news === "string" ? el.news : "",
+    ep_next:
+      el.ep_next != null && !Number.isNaN(Number(el.ep_next))
+        ? Number(el.ep_next)
+        : null,
     defensive_contribution: parseFplInt(el.defensive_contribution),
     minutes: parseFplInt(el.minutes),
     starts: parseFplInt(el.starts),

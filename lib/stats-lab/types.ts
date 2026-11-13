@@ -131,8 +131,15 @@ export interface FplLabPlayer {
   transfers_out: number;
   transfers_in_event: number;
   transfers_out_event: number;
+  /** Zmiana ceny od startu sezonu w dziesiątych częściach £ (np. 3 = +£0.3m). */
   cost_change_start: number;
   cost_change_event: number;
+  /** Szansa gry w następnej kolejce: 0|25|50|75|100 lub null (przed syncem / brak danych). */
+  chance_of_playing_next_round?: number | null;
+  /** Komunikat kontuzji / zawieszenia z bootstrapu. */
+  news?: string | null;
+  /** Oficjalne Expected Points FPL na następną kolejkę. */
+  ep_next?: number | null;
   defensive_contribution: number;
   minutes: number;
   starts: number;
