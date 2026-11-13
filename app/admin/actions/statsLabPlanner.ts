@@ -271,6 +271,9 @@ export async function queryStatsLabPlannerAction(input?: {
       entryState = await reconstructFplEntryState({
         teamId,
         playersById: xPtsCtx.playersById,
+        clubShortByTeamId: new Map(
+          clubs.map((c) => [c.fpl_team_id, c.short_name] as const),
+        ),
         currentGwHint: lastFinishedGw,
       });
       isDemoSquad = false;
@@ -349,6 +352,9 @@ export async function loadPlannerTeamByIdAction(input: {
     const entryState = await reconstructFplEntryState({
       teamId,
       playersById,
+      clubShortByTeamId: new Map(
+        dataset.clubs.map((c) => [c.fpl_team_id, c.short_name] as const),
+      ),
       currentGwHint: dataset.lastFinishedGw,
     });
     return { ok: true, entryState, error: null };

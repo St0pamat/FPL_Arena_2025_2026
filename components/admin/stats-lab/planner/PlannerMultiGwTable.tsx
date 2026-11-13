@@ -8,9 +8,23 @@ import type { StatsLabLang } from "@/lib/stats-lab/i18n";
 import type { ReconstructedSquadPick } from "@/lib/stats-lab/fplEntryApi";
 import type { PlayerGwProjection } from "@/lib/stats-lab/plannerEngine";
 import {
-  plannerUi,
+  formatTenthsAsPounds,
+  plannerSourceLabel,
+  pt,
+  ptTip,
   type PlannerChipType,
 } from "@/lib/stats-lab/plannerI18n";
+import {
+  actionAria,
+  formatBenchSlotLabel,
+  lockedProfitTenths,
+} from "@/lib/stats-lab/plannerUiFormat";
+import {
+  captainArmbandKind,
+  captainArmbandLabel,
+  formatFixturePills,
+} from "@/lib/stats-lab/plannerFixtureUi";
+import { shellLabel } from "@/lib/stats-lab/i18n";
 import { getStatsLabMenuChrome } from "@/lib/stats-lab/menuChrome";
 import {
   fplLabBadgeUrl,
@@ -35,10 +49,6 @@ export type PlannerMultiGwTableProps = {
   onMetricChange?: (m: MultiGwTableMetric) => void;
   onOpenPlayerInfo: (elementId: number) => void;
 };
-
-function tenthsToPounds(tenths: number): string {
-  return `£${(Math.round(tenths) / 10).toFixed(1)}m`;
-}
 
 function fdrBg(level: number, isLight: boolean): string {
   if (isLight) {
@@ -81,15 +91,8 @@ function xPtsHeatClass(x: number, isLight: boolean): string {
     : "bg-slate-900 text-slate-400";
 }
 
-function benchLabel(slot: number): string {
-  if (slot === 12) return "GKP";
-  if (slot === 13) return "1. REZ";
-  if (slot === 14) return "2. REZ";
-  return "3. REZ";
-}
-
-function frozenProfitTenths(pick: ReconstructedSquadPick): number {
-  return Math.max(0, pick.sellingPriceTenths - pick.purchasePriceTenths);
+function benchLabel(slot: number, lang: StatsLabLang): string {
+  return formatBenchSlotLabel(lang, slot);
 }
 
 export function PlannerMultiGwTable({
@@ -105,9 +108,7 @@ export function PlannerMultiGwTable({
   onOpenPlayerInfo,
 }: PlannerMultiGwTableProps) {
   const chrome = getStatsLabMenuChrome(themeId);
-  const ui = plannerUi(lang);
   const isLight = chrome.isLight;
-  const isPl = lang === "pl";
   const [metricLocal, setMetricLocal] =
     useState<MultiGwTableMetric>("FIXTURE_XPTS");
   const metric = metricProp ?? metricLocal;
@@ -125,35 +126,33 @@ export function PlannerMultiGwTable({
   const bench = sortedPicks.filter((p) => p.slot >= 12 && p.slot <= 15);
 
   const metricOptions: Array<{ id: MultiGwTableMetric; label: string }> = [
-    {
-      id: "FIXTURE_XPTS",
-      label: isPl ? "Terminarz + xPts" : "Fixtures + xPts",
-    },
-    {
-      id: "XPTS_HEATMAP",
-      label: isPl ? "Siatka xPts" : "xPts heatmap",
-    },
-    {
-      id: "EXPECTED_MINS",
-      label: isPl ? "Oczekiwane minuty" : "Expected minutes",
-    },
-    {
-      id: "PRICES_TABLE",
-      label: isPl ? "Ceny PP / CP / SP" : "Prices PP / CP / SP",
-    },
-  ];
+  {
+    id: "FIXTURE_XPTS",
+    label: pt(lang, "planner.horizon.tab.fixturesPts"),
+  },
+  {
+    id: "XPTS_HEATMAP",
+    label: pt(lang, "planner.horizon.tab.ptsOnly"),
+  },
+  {
+    id: "EXPECTED_MINS",
+    label: pt(lang, "planner.horizon.tab.minutes"),
+  },
+  {
+    id: "PRICES_TABLE",
+    label: pt(lang, "planner.horizon.tab.prices"),
+  },
+];
 
   return (
     <section className={`rounded-2xl border p-3 sm:p-4 ${chrome.panel}`}>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div>
           <h3 className={`text-sm font-black ${chrome.text}`}>
-            {isPl ? "Macierz wielokolejkowa" : "Multi-GW matrix"}
+            {pt(lang, "planner.horizon.title")}
           </h3>
           <p className={`text-[10px] font-semibold ${chrome.mutedLabel}`}>
-            {isPl
-              ? "15 zawodników × nadchodzące kolejki"
-              : "15 players × upcoming gameweeks"}
+            {pt(lang, "planner.horizon.subtitle")}
           </p>
         </div>
         <div className="flex flex-wrap gap-1.5">
@@ -176,8 +175,7 @@ export function PlannerMultiGwTable({
         <PricesTable
           chrome={chrome}
           isLight={isLight}
-          isPl={isPl}
-          ui={ui}
+          lang={lang}
           xi={xi}
           bench={bench}
           playersById={playersById}
@@ -189,7 +187,7 @@ export function PlannerMultiGwTable({
             <thead>
               <tr className={chrome.mutedLabel}>
                 <th className="sticky left-0 z-[1] min-w-[140px] px-2 py-2 font-black uppercase backdrop-blur-sm">
-                  {isPl ? "Zawodnik" : "Player"}
+                  {pt(lang, "planner.market.players")}
                 </th>
                 {availableGameweeks.map((gw) => (
                   <th
@@ -200,10 +198,14 @@ export function PlannerMultiGwTable({
                   </th>
                 ))}
                 <th className="min-w-[72px] px-2 py-2 text-center font-black">
-                  {isPl ? "SUMA xPts" : "SUM xPts"}
+                  {pt(lang, "planner.xpts.horizonSum", {
+                    from: availableGameweeks[0] ?? 0,
+                    to:
+                      availableGameweeks[availableGameweeks.length - 1] ?? 0,
+                  })}
                 </th>
                 <th className="min-w-[56px] px-2 py-2 text-center font-black">
-                  {isPl ? "Mecze" : "Matches"}
+                  {pt(lang, "planner.horizon.matches")}
                 </th>
               </tr>
             </thead>
@@ -211,11 +213,12 @@ export function PlannerMultiGwTable({
               <SectionLabel
                 chrome={chrome}
                 colSpan={availableGameweeks.length + 3}
-                label={isPl ? "Pierwszy skład (XI)" : "Starting XI"}
+                label={pt(lang, "planner.horizon.startingXi")}
               />
               {xi.map((pick) => (
                 <PlayerRow
                   key={pick.slot}
+                  lang={lang}
                   pick={pick}
                   chrome={chrome}
                   isLight={isLight}
@@ -226,24 +229,26 @@ export function PlannerMultiGwTable({
                   activeChip={activeChip}
                   onOpenPlayerInfo={onOpenPlayerInfo}
                   roleBadge={
-                    pick.isCaptain
-                      ? activeChip === "3xc"
-                        ? "3×C"
-                        : "C"
-                      : pick.isViceCaptain
-                        ? "V"
-                        : null
+                    captainArmbandLabel(
+                      lang,
+                      captainArmbandKind({
+                        isCaptain: pick.isCaptain,
+                        isViceCaptain: pick.isViceCaptain,
+                        activeChip,
+                      }),
+                    ) || null
                   }
                 />
               ))}
               <SectionLabel
                 chrome={chrome}
                 colSpan={availableGameweeks.length + 3}
-                label={isPl ? "Ławka rezerwowych" : "Bench"}
+                label={pt(lang, "planner.horizon.bench")}
               />
               {bench.map((pick) => (
                 <PlayerRow
                   key={pick.slot}
+                  lang={lang}
                   pick={pick}
                   chrome={chrome}
                   isLight={isLight}
@@ -253,7 +258,7 @@ export function PlannerMultiGwTable({
                   projectionsByElement={projectionsByElement}
                   activeChip={activeChip}
                   onOpenPlayerInfo={onOpenPlayerInfo}
-                  roleBadge={benchLabel(pick.slot)}
+                  roleBadge={benchLabel(pick.slot, lang)}
                 />
               ))}
             </tbody>
@@ -286,6 +291,7 @@ function SectionLabel({
 }
 
 function PlayerRow({
+  lang,
   pick,
   chrome,
   isLight,
@@ -297,6 +303,7 @@ function PlayerRow({
   onOpenPlayerInfo,
   roleBadge,
 }: {
+  lang: StatsLabLang;
   pick: ReconstructedSquadPick;
   chrome: ReturnType<typeof getStatsLabMenuChrome>;
   isLight: boolean;
@@ -356,11 +363,17 @@ function PlayerRow({
             type="button"
             onClick={() => onOpenPlayerInfo(pick.elementId)}
             className="min-w-0 text-left"
+            aria-label={
+              player?.web_name
+                ? `${player.web_name}${player.club_short_name ? `, ${player.club_short_name}` : ""}`
+                : undefined
+            }
           >
             <p className={`text-[11px] font-bold leading-tight ${chrome.text}`}>
               {player?.web_name ?? `#${pick.elementId}`}
               {roleBadge ? (
                 <span
+                  aria-hidden
                   className={`ml-1 inline-flex rounded px-1 text-[8px] font-black ${
                     isLight
                       ? "bg-amber-200 text-amber-950"
@@ -378,6 +391,11 @@ function PlayerRow({
           <button
             type="button"
             onClick={() => onOpenPlayerInfo(pick.elementId)}
+            aria-label={actionAria(
+              lang,
+              "planner.action.info",
+              player?.web_name ?? `#${pick.elementId}`,
+            )}
             className={`rounded-lg p-1 ${chrome.inactiveBtn}`}
           >
             <Info className="h-3 w-3" />
@@ -390,6 +408,7 @@ function PlayerRow({
         return (
           <td key={gw} className="px-1 py-1 align-middle">
             <GwCell
+              lang={lang}
               metric={metric}
               proj={proj}
               isLight={isLight}
@@ -412,6 +431,7 @@ function PlayerRow({
 }
 
 function GwCell({
+  lang,
   metric,
   proj,
   isLight,
@@ -419,6 +439,7 @@ function GwCell({
   isCaptain,
   activeChip,
 }: {
+  lang: StatsLabLang;
   metric: Exclude<MultiGwTableMetric, "PRICES_TABLE">;
   proj: PlayerGwProjection | undefined;
   isLight: boolean;
@@ -433,7 +454,7 @@ function GwCell({
           isLight ? "bg-slate-100 text-slate-500" : "bg-slate-900 text-slate-500"
         }`}
       >
-        —
+        {shellLabel(lang, "common.emdash")}
       </div>
     );
   }
@@ -458,6 +479,17 @@ function GwCell({
   }
 
   if (metric === "XPTS_HEATMAP") {
+    if (proj.isBlank) {
+      return (
+        <div
+          className={`rounded-lg px-1 py-1.5 text-center text-[9px] font-bold ${
+            isLight ? "bg-slate-100 text-slate-500" : "bg-slate-900 text-slate-400"
+          }`}
+        >
+          {pt(lang, "planner.fixture.bgw.player")}
+        </div>
+      );
+    }
     const shown = proj.xPts * (isCaptain ? capMult : 1);
     return (
       <div
@@ -475,8 +507,10 @@ function GwCell({
     );
   }
 
-  // FIXTURE_XPTS
+  // FIXTURE_XPTS — kolory FDR bez zmian; tylko tekst pigułki przez helper UI
   const fx = proj.fixtures?.[0];
+  const pills = formatFixturePills(lang, proj);
+  const hasMatchPill = pills.some((p) => p.kind === "match");
   return (
     <div
       className={`rounded-lg border border-transparent px-1 py-1 text-center ${
@@ -487,15 +521,16 @@ function GwCell({
           : fdrBg(fx?.fdrLevel ?? 3, isLight)
       }`}
     >
-      <p className="text-[9px] font-black leading-tight">
-        {proj.isBlank
-          ? "BGW —"
-          : proj.isDouble
-            ? `DGW ${fx?.tickerLabel ?? ""}`
-            : fx?.tickerLabel ?? "—"}
+      <p
+        className="whitespace-nowrap text-[11px] font-black leading-tight"
+        title={hasMatchPill ? ptTip(lang, "planner.fixture.venueTip") : undefined}
+      >
+        {pills.map((p) => p.label).join(" · ")}
       </p>
       <p className="mt-0.5 text-[10px] font-black tabular-nums">
-        {proj.xPts.toFixed(1)} pkt
+        {proj.isBlank
+          ? pt(lang, "planner.fixture.bgw.player")
+          : `${proj.xPts.toFixed(1)} ${shellLabel(lang, "common.pts")}`}
       </p>
     </div>
   );
@@ -504,8 +539,7 @@ function GwCell({
 function PricesTable({
   chrome,
   isLight,
-  isPl,
-  ui,
+  lang,
   xi,
   bench,
   playersById,
@@ -513,16 +547,24 @@ function PricesTable({
 }: {
   chrome: ReturnType<typeof getStatsLabMenuChrome>;
   isLight: boolean;
-  isPl: boolean;
-  ui: ReturnType<typeof plannerUi>;
+  lang: StatsLabLang;
   xi: ReconstructedSquadPick[];
   bench: ReconstructedSquadPick[];
   playersById: Map<number, PlannerPlayerCatalogItem>;
   onOpenPlayerInfo: (elementId: number) => void;
 }) {
+  const ppShort = pt(lang, "planner.price.purchase.short");
+  const cpShort = pt(lang, "planner.price.current.short");
+  const spShort = pt(lang, "planner.price.selling.short");
   const rows = [
-    { label: isPl ? "Pierwszy skład (XI)" : "Starting XI", picks: xi },
-    { label: isPl ? "Ławka rezerwowych" : "Bench", picks: bench },
+    {
+      label: pt(lang, "planner.horizon.startingXi"),
+      picks: xi,
+    },
+    {
+      label: pt(lang, "planner.horizon.bench"),
+      picks: bench,
+    },
   ];
 
   return (
@@ -531,18 +573,29 @@ function PricesTable({
         <thead>
           <tr className={chrome.mutedLabel}>
             <th className="px-2 py-2 font-black uppercase">
-              {isPl ? "Zawodnik" : "Player"}
+              {pt(lang, "planner.market.players")}
             </th>
-            <th className="px-2 py-2 font-black">PP</th>
-            <th className="px-2 py-2 font-black">CP</th>
-            <th className="px-2 py-2 font-black">SP</th>
+            <th className="px-2 py-2 font-black" title={pt(lang, "planner.price.purchase")}>
+              {ppShort}
+            </th>
+            <th className="px-2 py-2 font-black" title={pt(lang, "planner.price.current")}>
+              {cpShort}
+            </th>
+            <th className="px-2 py-2 font-black" title={pt(lang, "planner.price.selling")}>
+              {spShort}
+            </th>
+            <th
+              className="px-2 py-2 font-black"
+              title={ptTip(lang, "planner.horizon.lockedProfit")}
+            >
+              {pt(lang, "planner.horizon.lockedProfit")}
+            </th>
             <th className="px-2 py-2 font-black">
-              {isPl ? "Zamrożony zysk" : "Locked profit"}
+              {pt(lang, "planner.horizon.priceSource")}
             </th>
             <th className="px-2 py-2 font-black">
-              {isPl ? "Źródło" : "Source"}
+              {pt(lang, "planner.price.dropColumn")}
             </th>
-            <th className="px-2 py-2 font-black">SP −0.1</th>
             <th className="px-2 py-2 font-black">i</th>
           </tr>
         </thead>
@@ -559,7 +612,10 @@ function PricesTable({
               </tr>
               {section.picks.map((pick) => {
                 const player = playersById.get(pick.elementId);
-                const profit = frozenProfitTenths(pick);
+                const profit = lockedProfitTenths(
+                  pick.purchasePriceTenths,
+                  pick.sellingPriceTenths,
+                );
                 return (
                   <tr
                     key={pick.slot}
@@ -576,7 +632,7 @@ function PricesTable({
                         {player?.web_name ?? `#${pick.elementId}`}
                         {pick.slot >= 12 ? (
                           <span className={`ml-1 text-[9px] ${chrome.mutedLabel}`}>
-                            {benchLabel(pick.slot)}
+                            {benchLabel(pick.slot, lang)}
                           </span>
                         ) : pick.isCaptain ? (
                           <span className="ml-1 text-[9px] font-black text-amber-400">
@@ -588,13 +644,13 @@ function PricesTable({
                       </button>
                     </td>
                     <td className={`px-2 py-1.5 font-bold tabular-nums ${chrome.text}`}>
-                      {tenthsToPounds(pick.purchasePriceTenths)}
+                      {formatTenthsAsPounds(pick.purchasePriceTenths)}
                     </td>
                     <td className={`px-2 py-1.5 font-bold tabular-nums ${chrome.text}`}>
-                      {tenthsToPounds(pick.nowCostTenths)}
+                      {formatTenthsAsPounds(pick.nowCostTenths)}
                     </td>
                     <td className={`px-2 py-1.5 font-bold tabular-nums ${chrome.text}`}>
-                      {tenthsToPounds(pick.sellingPriceTenths)}
+                      {formatTenthsAsPounds(pick.sellingPriceTenths)}
                     </td>
                     <td
                       className={`px-2 py-1.5 font-bold tabular-nums ${
@@ -605,10 +661,10 @@ function PricesTable({
                           : chrome.mutedLabel
                       }`}
                     >
-                      {tenthsToPounds(profit)}
+                      {formatTenthsAsPounds(profit)}
                     </td>
                     <td className={`px-2 py-1.5 font-semibold ${chrome.mutedLabel}`}>
-                      {ui.valueSource[pick.priceSource]}
+                      {plannerSourceLabel(lang, pick.priceSource)}
                     </td>
                     <td className="px-2 py-1.5 font-bold">
                       {pick.willDropAffectSell ? (
@@ -633,6 +689,11 @@ function PricesTable({
                       <button
                         type="button"
                         onClick={() => onOpenPlayerInfo(pick.elementId)}
+                        aria-label={actionAria(
+                          lang,
+                          "planner.action.info",
+                          player?.web_name ?? `#${pick.elementId}`,
+                        )}
                         className={`rounded-lg p-1 ${chrome.inactiveBtn}`}
                       >
                         <Info className="h-3.5 w-3.5" />

@@ -4,6 +4,8 @@
  */
 
 import type { FplLabPlayer } from "@/lib/stats-lab/types";
+import type { PlannerWarning } from "@/lib/stats-lab/plannerI18n";
+import { formatSignedTenthsAsPounds } from "@/lib/stats-lab/plannerI18n";
 import {
   FPL_API_BASE,
   FPL_LAB_HEADERS,
@@ -62,16 +64,31 @@ export type ReconstructedEntryState = {
   picks: ReconstructedSquadPick[];
   usedChips: UsedChipRecord[];
   overLimitClubIds: number[];
-  warnings: string[];
+  warnings: PlannerWarning[];
 };
 
 export type ReconstructFplEntryParams = {
   teamId: number;
   playersById: Map<number, FplLabPlayer>;
+  /** Skróty klubów (ARS, LIV…) do ostrzeżenia clubLimit. */
+  clubShortByTeamId?: ReadonlyMap<number, string>;
   currentGwHint?: number | null;
   ftTopUps?: Array<{ gw: number; setTo: number }>;
   maxFreeTransfers?: number;
 };
+
+/** Lista klubów ponad limit: „ARS, LIV” (bez nawiasów/JSON). */
+export function formatOverLimitClubList(
+  clubIds: number[],
+  clubShortByTeamId?: ReadonlyMap<number, string>,
+): string {
+  return clubIds
+    .map((id) => {
+      const short = clubShortByTeamId?.get(id)?.trim();
+      return short && short.length > 0 ? short : String(id);
+    })
+    .join(", ");
+}
 
 type FplEntryPayload = {
   id?: number;
@@ -154,6 +171,14 @@ export function computeSellingPriceTenths(
     return pur + Math.floor((now - pur) / 2);
   }
   return now;
+}
+
+/** Alias API: sellingPrice(purchase, now) w dziesiątych £. */
+export function sellingPrice(
+  purchasePriceTenths: number,
+  nowCostTenths: number,
+): number {
+  return computeSellingPriceTenths(purchasePriceTenths, nowCostTenths);
 }
 
 /** Czy najbliższy spadek ceny o 0.1m obniży cenę sprzedaży. */
@@ -306,7 +331,7 @@ async function fetchStartedEventPurchaseTenths(
 function emptyPreseasonState(
   teamId: number,
   entry: FplEntryPayload,
-  warnings: string[],
+  warnings: PlannerWarning[],
 ): ReconstructedEntryState {
   const teamName = String(entry.name ?? `Team ${teamId}`).trim();
   const managerName = [
@@ -340,7 +365,7 @@ function emptyPreseasonState(
     overLimitClubIds: [],
     warnings: [
       ...warnings,
-      "Stan preseason: brak zakończonej kolejki — skład zostanie pobrany po pierwszym deadlinie.",
+      { key: "planner.state.preseason" },
     ],
   };
 }
@@ -368,8 +393,15 @@ function chipAt(
   return hit?.name ?? null;
 }
 
-function computeFreeTransfers(args: {
-  historyCurrent: FplHistoryCurrentRow[];
+export type FreeTransfersHistoryRow = {
+  event: number;
+  event_transfers?: number | null;
+  event_transfers_cost?: number | null;
+};
+
+/** Rekonstrukcja FT z historii kolejek + chipów (czysta, bez fetch). */
+export function computeFreeTransfers(args: {
+  historyCurrent: FreeTransfersHistoryRow[];
   usedChips: UsedChipRecord[];
   startedEvent: number;
   ftTopUps: Array<{ gw: number; setTo: number }>;
@@ -439,6 +471,21 @@ function computeFreeTransfers(args: {
   };
 }
 
+/** Alias API: reconstructFreeTransfers. */
+export function reconstructFreeTransfers(args: {
+  historyCurrent: FreeTransfersHistoryRow[];
+  usedChips: UsedChipRecord[];
+  startedEvent: number;
+  ftTopUps: Array<{ gw: number; setTo: number }>;
+  maxFreeTransfers: number;
+}): {
+  freeTransfers: number;
+  ftMismatchWarning: boolean;
+  source: PlannerValueSource;
+} {
+  return computeFreeTransfers(args);
+}
+
 /**
  * Rekonstrukcja stanu początkowego Planera (bez logowania) — QA #1–#4 Tadzia.
  */
@@ -456,7 +503,7 @@ export async function reconstructFplEntryState(
   const playersById = params.playersById;
   const maxFreeTransfers = params.maxFreeTransfers ?? DEFAULT_MAX_FT;
   const ftTopUps = params.ftTopUps ?? [];
-  const warnings: string[] = [];
+  const warnings: PlannerWarning[] = [];
 
   const [entry, history, transfersRaw] = await Promise.all([
     fetchEntryOrThrow(teamId),
@@ -512,9 +559,10 @@ export async function reconstructFplEntryState(
   ) {
     picksPayload = await fetchPicks(teamId, curGw - 1);
     rolledBackFromFreeHit = true;
-    warnings.push(
-      `Free Hit w GW${curGw}: skład i bank przywrócone ze stanu GW${curGw - 1}.`,
-    );
+    warnings.push({
+      key: "planner.entry.freeHitRollback",
+      params: { gw: curGw, prev: curGw - 1 },
+    });
   }
 
   const bankFromPicks = picksPayload.entry_history?.bank;
@@ -592,9 +640,10 @@ export async function reconstructFplEntryState(
       } else {
         const costChangeStart = Number(player?.cost_change_start ?? 0) || 0;
         purchasePriceTenths = nowCostTenths - costChangeStart;
-        warnings.push(
-          `Przybliżona cena zakupu dla element ${elementId} (started_event=${startedEvent}, brak transferu / summary).`,
-        );
+        warnings.push({
+          key: "planner.entry.priceApprox",
+          params: { elementId, startedEvent },
+        });
       }
       priceSource = "derived";
       priceApprox = true;
@@ -626,9 +675,10 @@ export async function reconstructFplEntryState(
   picks.sort((a, b) => a.slot - b.slot);
 
   if (picks.length !== 15) {
-    warnings.push(
-      `Oczekiwano 15 zawodników w składzie, otrzymano ${picks.length}.`,
-    );
+    warnings.push({
+      key: "planner.entry.squadSize",
+      params: { n: picks.length },
+    });
   }
 
   // FT na planningStartGw — QA #3
@@ -652,9 +702,15 @@ export async function reconstructFplEntryState(
     .map(([id]) => id)
     .sort((a, b) => a - b);
   if (overLimitClubIds.length) {
-    warnings.push(
-      `Stan zastany narusza limit 3 graczy/klub (R3): kluby [${overLimitClubIds.join(", ")}].`,
-    );
+    warnings.push({
+      key: "planner.entry.clubLimit",
+      params: {
+        list: formatOverLimitClubList(
+          overLimitClubIds,
+          params.clubShortByTeamId,
+        ),
+      },
+    });
   }
 
   const squadSellingValueTenths = picks.reduce(
@@ -677,9 +733,12 @@ export async function reconstructFplEntryState(
     Number.isFinite(historyValue) &&
     Math.abs(valueConsistencyDeltaTenths) > 5
   ) {
-    warnings.push(
-      `Delta wartości vs history.current[GW${valueGw}].value = ${valueConsistencyDeltaTenths} tenths.`,
-    );
+    warnings.push({
+      key: "planner.entry.valueDelta",
+      params: {
+        value: formatSignedTenthsAsPounds(valueConsistencyDeltaTenths),
+      },
+    });
   }
 
   const teamName = String(entry.name ?? `Team ${teamId}`).trim();

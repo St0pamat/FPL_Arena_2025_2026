@@ -5,6 +5,15 @@ dist/
 .vite/
 *.tsbuildinfo
 
+# Test artifacts
+coverage/
+playwright-report/
+test-results/
+tests/.auth/**
+!tests/.auth/.gitkeep
+tests/screenshots/**
+!tests/screenshots/.gitkeep
+
 # Environment (secrets)
 .env
 .env.local

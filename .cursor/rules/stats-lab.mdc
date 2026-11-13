@@ -1,0 +1,68 @@
+---
+description: "Zasady pracy w module Stats Lab (UI, logika, testy)"
+globs:
+  [
+    "app/admin/(panel)/stats-lab/**",
+    "components/admin/stats-lab/**",
+    "lib/stats-lab/**",
+    "app/admin/actions/statsLab*.ts",
+    "docs/stats-lab-*.md",
+    "tests/**",
+    "e2e/**",
+    "vitest.config.*",
+    "playwright.config.*",
+  ]
+alwaysApply: false
+---
+
+# Stats Lab: zasady pracy
+
+Uzupełnia `fpl-arena-standards.mdc`; FROZEN i `npx tsc --noEmit` nadal obowiązują.
+
+## Zakres zmian
+
+- Każde zadanie to jedna mała zmiana. Zmieniasz tylko pliki potrzebne do bieżącego zadania. Nie robisz przy okazji refaktorów, zmian nazw ani formatowania innych plików.
+- Zadania UX (prezentacja) zmieniają tylko komponenty, style i teksty i18n. Nie ruszają logiki obliczeń xPts, FDR, cen (PP/CP/SP), FT, sum wariantów A/B/C i KPI.
+- Zadania logiki zmieniają tylko pliki logiki w `lib/stats-lab/` (np. `*Engine.ts`, `lib/stats-lab/engine/**`) i ich testy. Nie zmieniają wyglądu ani tekstów UI. Wyjątek: przeniesienie zahardkodowanych komunikatów silnika do słowników i18n.
+- Komponenty oznaczone jako FROZEN (`StatsCentreView.tsx`, `StatsLabStudioClient.tsx` i wykresy Studio) zmieniasz tylko wtedy, gdy zadanie wprost to nakazuje.
+- Wspólny layout i sidebar admina (używany też przez inne moduły) jest poza zakresem. Zmiany mobilne ograniczasz do `/admin/stats-lab`.
+- Nie usuwasz istniejących funkcji: ukrywasz albo przenosisz, nie kasujesz.
+- Jeśli prompt zadania wprost zapisuje wyjątek od tych zasad (np. połączenie logiki i UI, przeniesienie obliczeń z komponentu do czystej funkcji w `lib/stats-lab/`, instalacja narzędzi testowych, CI), prompt ma pierwszeństwo, ale tylko w zakresie, który wymienia.
+
+## Dane i baza
+
+- Zero zapisów do Supabase z kodu Stats Lab i z testów (żadnych insert/update/upsert/delete/rpc, migracji ani zmian schematu). Wyjątek: istniejący Sync (`statsLabSync.ts`), którego nie ruszasz.
+- Jedna produkcyjna baza Supabase dla lokalnego dev i www. Nigdy nie zmieniamy danych lig (The FA League, No Big Six i innych). Nie uruchamiamy Sync; jeśli jest potrzebny, prosimy o to Mateusza, który zrobi go ręcznie.
+- Planer trzyma stan tylko w `localStorage`. Tak zostaje.
+- Testy nie wołają prawdziwego FPL API ani produkcyjnego Supabase. Używają fixture'ów z danymi testowymi.
+
+## Liczby i reguły FPL
+
+- Wszystkie kwoty w dziesiątych £ jako liczby całkowite (`*Tenths`). Zero floatów dla cen. Formatowanie do £ tylko w warstwie wyświetlania.
+- Kolejka bez meczu (BGW): w danych `null`, w UI „—” albo „Bez meczu” / "No fixture". W sumach liczy się jako 0, w średnich jest pomijana.
+- Limit 3 zawodników z jednego klubu. Gdy jest 4/3, pierwsza kolejka z jakimkolwiek transferem (także Wildcard i Free Hit) musi zejść do ≤ 3. Do tego czasu inne transfery są zablokowane komunikatem „Najpierw sprzedaj zawodnika z klubu X”.
+- W predykcjach i backteście używasz tylko danych sprzed deadline'u kolejki (`kickoff_time < deadline_time`).
+- Logika obliczeń ma być w czystych funkcjach (bez Reacta), żeby dało się ją testować.
+
+## Teksty i język
+
+- Każdy tekst widoczny dla gracza idzie przez słowniki i18n (`lib/stats-lab/i18n.ts`, `plannerI18n.ts`, `statsCentreI18n.ts`, `projectionsI18n.ts`), zawsze w PL i EN. Zero stringów wpisanych na sztywno w JSX i w komunikatach silnika.
+- Skróty (PP, CP, SP, xPts, FDR, DGW, BGW) tylko po pełnej nazwie, np. „Cena sprzedaży (SP)”. Nazwy chipów (Wildcard, Free Hit, Bench Boost, Triple Captain) zostają po angielsku.
+
+## Wygląd i dostępność
+
+- Trzy motywy: Arena, Scout, Light. Każda zmiana stylu działa we wszystkich trzech. Używaj wspólnych tokenów i klas zamiast nowych kolorów hex na sztywno.
+- Cel dla NOWEGO kodu: nie dodajemy nowych hex; istniejących hexów nie przepisujemy przy okazji na tokeny.
+- Cel kliknięcia na ekranach dotykowych ma co najmniej 44×44 px. Każdy przycisk z samą ikoną ma `aria-label` w języku interfejsu.
+
+## Testy
+
+- Każda zmiana zachowania ma test: logika ma test jednostkowy (Vitest), komponent ma test React Testing Library, przepływ użytkownika ma test Playwright. Dopóki runnera nie ma w repo, nie instalujesz go sam. Zrobimy to w osobnym zadaniu.
+- Kolejność: najpierw test, który odtwarza błąd (czerwony), potem poprawka, potem zielone testy. Bez zielonych testów zadanie nie jest skończone.
+- Nie usuwasz, nie wyłączasz (`.skip`, `.only`) i nie osłabiasz istniejących testów, żeby przeszły. Jeśli test wygląda na błędny, zatrzymaj się i zapytaj.
+- Przed oddaniem uruchamiasz `npm run lint` i `npm run typecheck`.
+
+## Sposób pracy
+
+- Zanim zmienisz kod: wypisz plan (lista plików i co w nich zmienisz) i czekaj na moje „OK”. Gdy coś jest niejasne, pytaj zamiast zgadywać.
+- Na koniec każdej odpowiedzi: lista zmienionych plików, jak to sprawdzić ręcznie, komendy testów z wynikiem (passed/failed) i sekcja „Pytania do zespołu” (albo „brak”).

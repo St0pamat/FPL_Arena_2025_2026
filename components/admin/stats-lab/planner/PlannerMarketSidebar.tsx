@@ -15,15 +15,24 @@ import type {
   PlayerGwProjection,
 } from "@/lib/stats-lab/plannerEngine";
 import {
-  plannerUi,
-  type PlannerChipType,
+  formatTenthsAsPounds,
+  plannerChipShort,
+  pt,
+  ptTip,
+  resolvePlannerValidationError,
 } from "@/lib/stats-lab/plannerI18n";
+import {
+  actionAria,
+  formatPlusButtonLabel,
+} from "@/lib/stats-lab/plannerUiFormat";
+import { PLANNER_ACTION_HIT_CLASS } from "@/lib/stats-lab/plannerFixtureUi";
 import { getStatsLabMenuChrome } from "@/lib/stats-lab/menuChrome";
 import {
   fplLabBadgeUrl,
   fplLabPlayerPhotoUrl,
 } from "@/lib/stats-lab/mediaUrls";
 import type { FplPositionType } from "@/lib/stats-lab/types";
+import { PlannerFixturePills } from "@/components/admin/stats-lab/planner/PlannerFixturePills";
 
 export type PlannerMarketTab = "PLAYERS" | "WATCHLIST" | "SUMMARY";
 
@@ -46,6 +55,8 @@ export type PlannerMarketSidebarProps = {
   themeId: StatsLabChartThemeId;
   lang: StatsLabLang;
   currentGw: number;
+  /** Pierwsza GW planu — sort xPts (GW…) i FT „na tę kolejkę”. */
+  planningStartGw: number;
   availableGameweeks: number[];
   clubs: PlannerClubMeta[];
   players: PlannerPlayerCatalogItem[];
@@ -75,14 +86,7 @@ export type PlannerMarketSidebarProps = {
 
 const PAGE_SIZE = 20;
 
-const MAX_PRICE_OPTIONS = [
-  { value: 0, labelPl: "Bez limitu", labelEn: "No limit" },
-  { value: 100, labelPl: "≤ £10.0m", labelEn: "≤ £10.0m" },
-  { value: 80, labelPl: "≤ £8.0m", labelEn: "≤ £8.0m" },
-  { value: 65, labelPl: "≤ £6.5m", labelEn: "≤ £6.5m" },
-  { value: 55, labelPl: "≤ £5.5m", labelEn: "≤ £5.5m" },
-  { value: 45, labelPl: "≤ £4.5m", labelEn: "≤ £4.5m" },
-] as const;
+const MAX_PRICE_OPTIONS = [0, 100, 80, 65, 55, 45] as const;
 
 const MAX_TSB_OPTIONS = [100, 50, 25, 10] as const;
 
@@ -96,14 +100,6 @@ function posLabel(t: FplPositionType): string {
   if (t === 2) return "DEF";
   if (t === 3) return "MID";
   return "FWD";
-}
-
-function chipShort(chip: PlannerChipType | null | undefined): string | null {
-  if (!chip) return null;
-  if (chip === "wildcard") return "WC";
-  if (chip === "freehit") return "FH";
-  if (chip === "bboost") return "BB";
-  return "TC";
 }
 
 function fdrCellClass(level: number, isLight: boolean): string {
@@ -146,7 +142,8 @@ export function PlannerMarketSidebar({
   themeId,
   lang,
   currentGw,
-  availableGameweeks,
+  planningStartGw,
+  availableGameweeks: _availableGameweeks,
   clubs,
   players,
   playersById,
@@ -169,7 +166,6 @@ export function PlannerMarketSidebar({
   onRemoveTransfer,
 }: PlannerMarketSidebarProps) {
   const chrome = getStatsLabMenuChrome(themeId);
-  const ui = plannerUi(lang);
   const isLight = chrome.isLight;
   const isPl = lang === "pl";
 
@@ -252,12 +248,16 @@ export function PlannerMarketSidebar({
 
     const score = (p: PlannerPlayerCatalogItem): number => {
       if (sortBy === "xpts_gw")
-        return xPtsGw(projectionsByElement, p.fpl_element_id, currentGw);
+        return xPtsGw(
+          projectionsByElement,
+          p.fpl_element_id,
+          planningStartGw,
+        );
       if (sortBy === "xpts_3gw")
         return xPtsHorizon(
           projectionsByElement,
           p.fpl_element_id,
-          currentGw,
+          planningStartGw,
           3,
         );
       if (sortBy === "total_points") return p.total_points;
@@ -286,7 +286,7 @@ export function PlannerMarketSidebar({
     availableBudgetTenths,
     sortBy,
     projectionsByElement,
-    currentGw,
+    planningStartGw,
   ]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
@@ -375,14 +375,23 @@ export function PlannerMarketSidebar({
       <div className="flex gap-1 border-b border-inherit p-2">
         {(
           [
-            ["PLAYERS", ui.playersTab],
-            ["WATCHLIST", `${ui.watchlistTab} (${watchlistIds.size})`],
-            ["SUMMARY", `${ui.summaryTab} (${plannedTransferCount})`],
+            ["PLAYERS", pt(lang, "planner.market.players")],
+            [
+              "WATCHLIST",
+              pt(lang, "planner.watchlist.count", { n: watchlistIds.size }),
+            ],
+            [
+              "SUMMARY",
+              `${pt(lang, "planner.market.summary")} (${plannedTransferCount})`,
+            ],
           ] as const
         ).map(([id, label]) => (
           <button
             key={id}
             type="button"
+            title={
+              id === "WATCHLIST" ? ptTip(lang, "planner.watchlist") : undefined
+            }
             onClick={() => {
               setTab(id);
               setPage(1);
@@ -415,7 +424,7 @@ export function PlannerMarketSidebar({
               onClick={onClearPendingTransferOut}
               className={`mt-2 rounded-lg px-2.5 py-1 text-[10px] font-black uppercase ${chrome.inactiveBtn}`}
             >
-              {isPl ? "Anuluj wybór (Przywróć)" : "Cancel selection (Restore)"}
+              {pt(lang, "planner.action.cancelPick")}
             </button>
           </div>
         ) : null}
@@ -425,7 +434,6 @@ export function PlannerMarketSidebar({
             chrome={chrome}
             isLight={isLight}
             lang={lang}
-            ui={ui}
             squadMarketValueTenths={squadMarketValueTenths}
             squadSellingValueTenths={squadSellingValueTenths}
             bankTenths={bankTenths}
@@ -445,16 +453,14 @@ export function PlannerMarketSidebar({
                   setSearchQuery(e.target.value);
                   setPage(1);
                 }}
-                placeholder={
-                  isPl ? "Szukaj zawodnika / klubu…" : "Search player / club…"
-                }
+                placeholder={pt(lang, "planner.market.search")}
                 className={`w-full rounded-xl px-3 py-2 text-xs font-semibold outline-none ${chrome.input}`}
               />
 
               <div className="flex flex-wrap gap-1">
                 {(
                   [
-                    [0, isPl ? "Wszyscy" : "All"],
+                    [0, pt(lang, "planner.market.filter.all")],
                     [1, "GKP"],
                     [2, "DEF"],
                     [3, "MID"],
@@ -487,7 +493,7 @@ export function PlannerMarketSidebar({
                   className={`rounded-xl px-2 py-1.5 text-[11px] font-bold outline-none ${chrome.input}`}
                 >
                   <option value={0} className={chrome.option}>
-                    {isPl ? "Wszystkie kluby" : "All clubs"}
+                    {pt(lang, "planner.market.filter.allClubs")}
                   </option>
                   {sortedClubs.map((c) => (
                     <option
@@ -508,13 +514,17 @@ export function PlannerMarketSidebar({
                   }}
                   className={`rounded-xl px-2 py-1.5 text-[11px] font-bold outline-none ${chrome.input}`}
                 >
-                  {MAX_PRICE_OPTIONS.map((o) => (
+                  {MAX_PRICE_OPTIONS.map((value) => (
                     <option
-                      key={o.value}
-                      value={o.value}
+                      key={value}
+                      value={value}
                       className={chrome.option}
                     >
-                      {isPl ? o.labelPl : o.labelEn}
+                      {value === 0
+                        ? pt(lang, "planner.market.maxPriceAll")
+                        : pt(lang, "planner.market.maxPrice", {
+                            n: (value / 10).toFixed(1),
+                          })}
                     </option>
                   ))}
                 </select>
@@ -530,8 +540,8 @@ export function PlannerMarketSidebar({
                   {MAX_TSB_OPTIONS.map((n) => (
                     <option key={n} value={n} className={chrome.option}>
                       {n >= 100
-                        ? "Max TSB 100%"
-                        : `Max TSB ≤ ${n}%`}
+                        ? pt(lang, "planner.market.maxTsbAll")
+                        : pt(lang, "planner.market.maxTsb", { n })}
                     </option>
                   ))}
                 </select>
@@ -542,21 +552,37 @@ export function PlannerMarketSidebar({
                     setSortBy(e.target.value as MarketSortBy);
                     setPage(1);
                   }}
+                  title={
+                    sortBy === "selected_by_percent"
+                      ? ptTip(lang, "planner.market.sort.tsb")
+                      : undefined
+                  }
                   className={`rounded-xl px-2 py-1.5 text-[11px] font-bold outline-none ${chrome.input}`}
                 >
                   {(
                     [
-                      ["xpts_gw", isPl ? "xPts (bieżąca GW)" : "xPts (current GW)"],
-                      ["xpts_3gw", isPl ? "Suma xPts (3 GW)" : "xPts sum (3 GW)"],
-                      ["total_points", isPl ? "Punkty ogółem" : "Total points"],
-                      ["now_cost", isPl ? "Cena £" : "Price £"],
-                      ["selected_by_percent", "TSB%"],
-                      ["form", isPl ? "Forma" : "Form"],
-                      ["dc_bonus_points", isPl ? "Punkty DC" : "DC points"],
+                      ["xpts_gw", "planner.market.sort.xptsGw"],
+                      ["xpts_3gw", "planner.market.sort.xpts3gw"],
+                      ["total_points", "planner.market.sort.totalPoints"],
+                      ["now_cost", "planner.market.sort.price"],
+                      ["selected_by_percent", "planner.market.sort.tsb"],
+                      ["form", "planner.market.sort.form"],
+                      ["dc_bonus_points", "planner.market.sort.dc"],
                     ] as const
-                  ).map(([v, label]) => (
-                    <option key={v} value={v} className={chrome.option}>
-                      {label}
+                  ).map(([v, key]) => (
+                    <option
+                      key={v}
+                      value={v}
+                      className={chrome.option}
+                      title={
+                        key === "planner.market.sort.tsb"
+                          ? ptTip(lang, "planner.market.sort.tsb")
+                          : undefined
+                      }
+                    >
+                      {key === "planner.market.sort.xptsGw"
+                        ? pt(lang, key, { gw: planningStartGw })
+                        : pt(lang, key)}
                     </option>
                   ))}
                 </select>
@@ -572,7 +598,7 @@ export function PlannerMarketSidebar({
                   onlyInBudget ? chrome.activeBtn : chrome.inactiveBtn
                 }`}
               >
-                {isPl ? "Tylko w moim budżecie" : "Only in my budget"}
+                {pt(lang, "planner.market.onlyInBudget")}
               </button>
             </div>
 
@@ -651,12 +677,22 @@ export function PlannerMarketSidebar({
                     <th className="px-1.5 py-2 font-black">+</th>
                     <th className="px-1.5 py-2 font-black">★</th>
                     <th className="px-1.5 py-2 font-black">
-                      {isPl ? "Zawodnik" : "Player"}
+                      {pt(lang, "planner.market.players")}
                     </th>
                     <th className="px-1.5 py-2 font-black">£</th>
-                    <th className="px-1.5 py-2 font-black">TSB</th>
+                    <th
+                      className="px-1.5 py-2 font-black"
+                      title={ptTip(lang, "planner.market.sort.tsb")}
+                    >
+                      TSB
+                    </th>
                     <th className="px-1.5 py-2 font-black">xPts</th>
-                    <th className="px-1.5 py-2 font-black">3GW</th>
+                    <th
+                      className="px-1.5 py-2 font-black"
+                      title={ptTip(lang, "planner.market.sort.xpts3gw.col")}
+                    >
+                      {pt(lang, "planner.market.sort.xpts3gw.col")}
+                    </th>
                     <th className="px-1.5 py-2 font-black">i</th>
                   </tr>
                 </thead>
@@ -665,14 +701,26 @@ export function PlannerMarketSidebar({
                     const flags = rowFlags(p);
                     const proj =
                       projectionsByElement[p.fpl_element_id]?.[currentGw];
-                    const fx = proj?.fixtures?.[0];
                     const starred = watchlistIds.has(p.fpl_element_id);
                     const x3 = xPtsHorizon(
                       projectionsByElement,
                       p.fpl_element_id,
-                      currentGw,
+                      planningStartGw,
                       3,
                     );
+                    const shortfallTenths = Math.max(
+                      0,
+                      p.now_cost - availableBudgetTenths,
+                    );
+                    const plusLabel = formatPlusButtonLabel({
+                      lang,
+                      playerName: p.web_name,
+                      alreadyInSquad: flags.alreadyInSquad,
+                      affordable: flags.affordable,
+                      shortfallTenths,
+                      clubBlocked: flags.clubBlocked,
+                      clubShort: p.club_short_name,
+                    });
                     return (
                       <tr
                         key={p.fpl_element_id}
@@ -690,26 +738,18 @@ export function PlannerMarketSidebar({
                           <button
                             type="button"
                             disabled={!flags.canPlus}
+                            aria-disabled={!flags.canPlus}
                             onClick={() => onPlusClick(p)}
-                            title={
-                              flags.alreadyInSquad
-                                ? isPl
-                                  ? "Już w kadrze"
-                                  : "Already in squad"
-                                : !flags.affordable
-                                  ? isPl
-                                    ? "Za drogi"
-                                    : "Too expensive"
-                                  : flags.clubBlocked
-                                    ? isPl
-                                      ? "Limit klubu"
-                                      : "Club limit"
-                                    : "+"
-                            }
-                            className={`inline-flex h-6 w-6 items-center justify-center rounded-lg disabled:opacity-30 ${
+                            title={plusLabel}
+                            aria-label={plusLabel}
+                            className={`${PLANNER_ACTION_HIT_CLASS} rounded-lg ${
                               flags.canPlus
                                 ? chrome.activeBtn
-                                : chrome.inactiveBtn
+                                : `cursor-not-allowed border ${
+                                    isLight
+                                      ? "border-slate-400 bg-transparent text-slate-700 opacity-70"
+                                      : "border-slate-500 bg-transparent text-slate-200 opacity-70"
+                                  }`
                             }`}
                           >
                             <Plus className="h-3.5 w-3.5" />
@@ -721,6 +761,13 @@ export function PlannerMarketSidebar({
                             onClick={() =>
                               onToggleWatchlist(p.fpl_element_id)
                             }
+                            aria-label={actionAria(
+                              lang,
+                              starred
+                                ? "planner.action.unwatch"
+                                : "planner.action.watch",
+                              p.web_name,
+                            )}
                             className={
                               starred
                                 ? "text-amber-400"
@@ -787,22 +834,24 @@ export function PlannerMarketSidebar({
                             {xPtsGw(
                               projectionsByElement,
                               p.fpl_element_id,
-                              currentGw,
+                              planningStartGw,
                             ).toFixed(1)}
                           </p>
-                          <span
-                            className={`mt-0.5 inline-flex rounded px-1 py-0.5 text-[8px] font-black ${
-                              proj?.isBlank
-                                ? isLight
-                                  ? "bg-slate-200 text-slate-600"
-                                  : "bg-slate-800 text-slate-300"
-                                : fdrCellClass(fx?.fdrLevel ?? 3, isLight)
-                            }`}
-                          >
-                            {proj?.isBlank
-                              ? "BGW"
-                              : fx?.tickerLabel ?? "—"}
-                          </span>
+                          <div className="mt-0.5">
+                            <PlannerFixturePills
+                              lang={lang}
+                              proj={proj}
+                              isLight={isLight}
+                              fdrClass={(level, light) =>
+                                fdrCellClass(level, light)
+                              }
+                              blankClass={
+                                isLight
+                                  ? "border-slate-300 bg-slate-200 text-slate-600"
+                                  : "border-slate-600 bg-slate-800 text-slate-300"
+                              }
+                            />
+                          </div>
                         </td>
                         <td className={`px-1.5 py-1.5 font-bold tabular-nums ${chrome.text}`}>
                           {x3.toFixed(1)}
@@ -813,6 +862,11 @@ export function PlannerMarketSidebar({
                             onClick={() =>
                               onOpenPlayerInfo(p.fpl_element_id)
                             }
+                            aria-label={actionAria(
+                              lang,
+                              "planner.action.info",
+                              p.web_name,
+                            )}
                             className={`rounded-lg p-1 ${chrome.inactiveBtn}`}
                           >
                             <Info className="h-3.5 w-3.5" />
@@ -827,7 +881,7 @@ export function PlannerMarketSidebar({
                         colSpan={8}
                         className={`px-3 py-6 text-center text-xs font-semibold ${chrome.mutedLabel}`}
                       >
-                        {isPl ? "Brak wyników." : "No results."}
+                        {pt(lang, "planner.market.noResults")}
                       </td>
                     </tr>
                   ) : null}
@@ -842,11 +896,10 @@ export function PlannerMarketSidebar({
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 className={`rounded-xl px-2.5 py-1.5 text-[10px] font-black uppercase disabled:opacity-40 ${chrome.inactiveBtn}`}
               >
-                {isPl ? "Poprzednia" : "Previous"}
+                {pt(lang, "planner.gw.prev")}
               </button>
               <p className={`text-[10px] font-bold ${chrome.mutedLabel}`}>
-                {isPl ? "Strona" : "Page"} {pageSafe}{" "}
-                {isPl ? "z" : "of"} {totalPages}
+                {pageSafe}/{totalPages}
               </p>
               <button
                 type="button"
@@ -856,7 +909,7 @@ export function PlannerMarketSidebar({
                 }
                 className={`rounded-xl px-2.5 py-1.5 text-[10px] font-black uppercase disabled:opacity-40 ${chrome.inactiveBtn}`}
               >
-                {isPl ? "Następna" : "Next"}
+                {pt(lang, "planner.gw.next")}
               </button>
             </div>
           </>
@@ -870,7 +923,6 @@ function SummaryTab({
   chrome,
   isLight,
   lang,
-  ui,
   squadMarketValueTenths,
   squadSellingValueTenths,
   bankTenths,
@@ -882,7 +934,6 @@ function SummaryTab({
   chrome: ReturnType<typeof getStatsLabMenuChrome>;
   isLight: boolean;
   lang: StatsLabLang;
-  ui: ReturnType<typeof plannerUi>;
   squadMarketValueTenths: number;
   squadSellingValueTenths: number;
   bankTenths: number;
@@ -896,25 +947,23 @@ function SummaryTab({
     <div className="min-h-0 flex-1 space-y-3 overflow-y-auto">
       <div className={`rounded-xl border p-3 ${chrome.group}`}>
         <p className={`text-[10px] font-black uppercase ${chrome.mutedLabel}`}>
-          {ui.spendingPower}
+          {pt(lang, "planner.price.spendingPower")}
         </p>
         <ul className={`mt-2 space-y-1 text-xs font-semibold ${chrome.text}`}>
           <li>
-            {isPl ? "Wartość rynkowa kadry (CP)" : "Squad market value (CP)"}:{" "}
-            {tenthsToPounds(squadMarketValueTenths)}
+            {pt(lang, "planner.price.teamValueNow")}:{" "}
+            {formatTenthsAsPounds(squadMarketValueTenths)}
           </li>
           <li>
-            {isPl ? "Wartość sprzedaży kadry (SP)" : "Squad selling value (SP)"}:{" "}
-            {tenthsToPounds(squadSellingValueTenths)}
+            {pt(lang, "planner.price.teamSellingValue")}:{" "}
+            {formatTenthsAsPounds(squadSellingValueTenths)}
           </li>
           <li>
-            {ui.bank}: {tenthsToPounds(bankTenths)}
+            {pt(lang, "planner.kpi.bank")}: {formatTenthsAsPounds(bankTenths)}
           </li>
           <li className="pt-1 text-sm font-black">
-            {isPl
-              ? "Łączna Siła Nabywcza (Budżet po sprzedaży wszystkich)"
-              : "Total Spending Power (sell-all budget)"}
-            : {tenthsToPounds(spendingPowerTenths)}
+            {pt(lang, "planner.price.spendingPower.long")}:{" "}
+            {formatTenthsAsPounds(spendingPowerTenths)}
           </li>
         </ul>
       </div>
@@ -926,7 +975,9 @@ function SummaryTab({
             : "Transfers & chips log"}
         </p>
         {evaluatedGws.map((gwState) => {
-          const chip = chipShort(gwState.activeChip);
+          const chip = gwState.activeChip
+            ? plannerChipShort(gwState.activeChip)
+            : null;
           const hasR3 = gwState.errors.some(
             (e) =>
               e.key === "clubLimitExceeded" ||
@@ -969,8 +1020,7 @@ function SummaryTab({
                 <ul className="mt-1 list-disc pl-4 text-[10px] font-semibold text-rose-300">
                   {gwState.errors.map((e, i) => (
                     <li key={`${e.key}-${i}`}>
-                      {ui[e.key]}
-                      {e.detail ? ` ${e.detail}` : ""}
+                      {resolvePlannerValidationError(e.key, lang, e.detail)}
                     </li>
                   ))}
                 </ul>

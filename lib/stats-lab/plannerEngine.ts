@@ -24,7 +24,15 @@ import {
   type ProjectionsFixturePrediction,
   type ProjectionsFdrLevel,
 } from "@/lib/stats-lab/projectionsEngine";
-import type { PlannerChipType } from "@/lib/stats-lab/plannerI18n";
+import type {
+  PlannerChipType,
+  PlannerDraftVariant,
+  PlannerWarning,
+} from "@/lib/stats-lab/plannerI18n";
+import {
+  shouldAutoFillCaptain,
+  shouldAutoFillVice,
+} from "@/lib/stats-lab/plannerCaptainRoles";
 
 /* ─────────────────────────────────────────────────
  * Constants — xPts v1
@@ -81,6 +89,13 @@ export type GwPlanDecision = {
   lineupOrder?: number[];
   captainElementId?: number | null;
   viceCaptainElementId?: number | null;
+  /**
+   * A4: gracz wyczyścił kapitana w tej GW (sprzedaż / zejście na ławkę).
+   * true → ensureCaptainVice NIE auto-uzupełnia; ostrzeżenie planner.captain.missing.
+   * false/undefined + brak captainElementId → auto (świeża GW / import / plan sprzed A4).
+   */
+  captainClearedByUser?: boolean;
+  viceClearedByUser?: boolean;
 };
 
 export type ManualOverridesState = {
@@ -128,7 +143,7 @@ export type EvaluatedGwState = {
   viceCaptainElementId: number | null;
   isValid: boolean;
   errors: Array<{ key: PlannerValidationErrorKey; detail?: string }>;
-  warnings: string[];
+  warnings: PlannerWarning[];
   grossXPts: number;
   netXPts: number;
   /** Stan przed Free Hitem (do rollbacku R8). */
@@ -487,6 +502,74 @@ export function computeMatchXPts(args: {
     isHome: match.isHome,
     fdrLevel: match.fdrLevel,
   };
+}
+
+/**
+ * Czyste xPts GW: BGW → null (UI „—”); SGW/DGW → suma meczów.
+ * Nie zmienia `projectPlayerGw` (tam nadal xPts: 0 + isBlank).
+ */
+export function xPtsGw(
+  elementId: number,
+  gameweek: number,
+  ctx: PlannerXPtsContext,
+): number | null {
+  const proj = projectPlayerGw(elementId, gameweek, ctx);
+  if (proj.isBlank) return null;
+  return proj.xPts;
+}
+
+/** Alias: xPts jednego meczu. */
+export function xPtsFixture(args: {
+  player: FplLabPlayer;
+  history: FplLabPlayerGwHistory[];
+  match: PlannerMatchContext;
+  clubFixtures: ClubFinishedFixture[];
+  teamXg90: number;
+}): number {
+  return computeMatchXPts(args).matchXPts;
+}
+
+/** Alias: teamXPts (gross) z captain/vice/chip. */
+export function teamXPts(args: {
+  squad: SquadPlayerState[];
+  gw: number;
+  projectionsByElement: Map<number, PlayerGwProjection>;
+  activeChip: PlannerChipType | null;
+  transfersCostPts?: number;
+}): number {
+  return computeTeamGwXPts({
+    ...args,
+    transfersCostPts: args.transfersCostPts ?? 0,
+  }).grossXPts;
+}
+
+/**
+ * Średnia xPts po horyzoncie: null (BGW) pomijane.
+ * Puste → null.
+ */
+export function meanXPtsOverHorizon(
+  values: ReadonlyArray<number | null>,
+): number | null {
+  let sum = 0;
+  let n = 0;
+  for (const v of values) {
+    if (v == null) continue;
+    sum += v;
+    n += 1;
+  }
+  if (n === 0) return null;
+  return sum / n;
+}
+
+/** Suma horyzontu: null (BGW) liczone jako 0. */
+export function sumXPtsOverHorizon(
+  values: ReadonlyArray<number | null>,
+): number {
+  let sum = 0;
+  for (const v of values) {
+    sum += v ?? 0;
+  }
+  return sum;
 }
 
 /** Agregacja BGW / SGW / DGW → PlayerGwProjection. */
@@ -925,6 +1008,13 @@ function applyLineupOrder(
 function ensureCaptainVice(
   squad: SquadPlayerState[],
   projectionsByElement: Map<number, PlayerGwProjection>,
+  decision?: Pick<
+    GwPlanDecision,
+    | "captainElementId"
+    | "viceCaptainElementId"
+    | "captainClearedByUser"
+    | "viceClearedByUser"
+  >,
 ): SquadPlayerState[] {
   const next = cloneSquad(squad);
   const xi = next.filter((p) => p.slot >= 1 && p.slot <= 11);
@@ -932,19 +1022,34 @@ function ensureCaptainVice(
   let cap = xi.find((p) => p.isCaptain) ?? null;
   let vice = xi.find((p) => p.isViceCaptain) ?? null;
 
+  const autoCap = shouldAutoFillCaptain(decision ?? {});
+  const autoVice = shouldAutoFillVice(decision ?? {});
+
   if (!cap || !xi.some((p) => p.elementId === cap!.elementId)) {
-    const best = xi.slice().sort((a, b) => xPts(b.elementId) - xPts(a.elementId));
-    cap = best[0] ?? null;
+    if (autoCap) {
+      const best = xi
+        .slice()
+        .sort((a, b) => xPts(b.elementId) - xPts(a.elementId));
+      cap = best[0] ?? null;
+    } else {
+      cap = null;
+    }
   }
   if (
     !vice ||
     !xi.some((p) => p.elementId === vice!.elementId) ||
     (cap && vice.elementId === cap.elementId)
   ) {
-    const best = xi
-      .filter((p) => !cap || p.elementId !== cap.elementId)
-      .sort((a, b) => xPts(b.elementId) - xPts(a.elementId));
-    vice = best[0] ?? null;
+    if (autoVice) {
+      const best = xi
+        .filter((p) => !cap || p.elementId !== cap.elementId)
+        .sort((a, b) => xPts(b.elementId) - xPts(a.elementId));
+      vice = best[0] ?? null;
+    } else if (cap && vice && vice.elementId === cap.elementId) {
+      vice = null;
+    } else if (!xi.some((p) => vice != null && p.elementId === vice.elementId)) {
+      vice = null;
+    }
   }
 
   for (const p of next) {
@@ -976,20 +1081,32 @@ function isChipAvailable(args: {
   gw: number;
   usedChips: UsedChipRecord[];
   planChipsSoFar: Array<{ gw: number; chip: PlannerChipType }>;
-}): { ok: true } | { ok: false; reason: string } {
+}): { ok: true } | { ok: false; warning: PlannerWarning } {
   const { chip, gw, usedChips, planChipsSoFar } = args;
   const half = chipHalf(gw);
 
   for (const u of usedChips) {
     if (u.name !== chip) continue;
     if (chipHalf(u.event) === half) {
-      return { ok: false, reason: `Chip ${chip} already used in this half (GW${u.event}).` };
+      return {
+        ok: false,
+        warning: {
+          key: "planner.chip.alreadyUsedHalf",
+          params: { chip, gw: u.event },
+        },
+      };
     }
   }
   for (const p of planChipsSoFar) {
     if (p.chip !== chip) continue;
     if (chipHalf(p.gw) === half) {
-      return { ok: false, reason: `Chip ${chip} already planned in GW${p.gw}.` };
+      return {
+        ok: false,
+        warning: {
+          key: "planner.chip.alreadyPlanned",
+          params: { chip, gw: p.gw },
+        },
+      };
     }
   }
   if (chip === "freehit") {
@@ -999,7 +1116,10 @@ function isChipAvailable(args: {
     if (prevFh) {
       return {
         ok: false,
-        reason: `Free Hit cannot be played in consecutive GWs (blocked after GW${gw - 1}).`,
+        warning: {
+          key: "planner.chip.fhConsecutive",
+          params: { gw: gw - 1 },
+        },
       };
     }
   }
@@ -1063,16 +1183,17 @@ export function evaluateRollingPlan(
 
   for (let gw = startGw; gw <= endGw; gw += 1) {
     const errors: EvaluatedGwState["errors"] = [];
-    const warnings: string[] = [];
+    const warnings: PlannerWarning[] = [];
 
     // R8 — przywróć stan po Free Hicie z poprzedniej kolejki
     if (pendingFhRestore) {
       squad = cloneSquad(pendingFhRestore.squad);
       bankTenths = pendingFhRestore.bankTenths;
       pendingFhRestore = null;
-      warnings.push(
-        `Free Hit rollback: skład i bank przywrócone ze stanu przed FH (GW${gw}).`,
-      );
+      warnings.push({
+        key: "planner.fh.rollback",
+        params: { gw: gw - 1 },
+      });
     }
 
     const decision = decisionByGw.get(gw) ?? {
@@ -1090,7 +1211,7 @@ export function evaluateRollingPlan(
         planChipsSoFar,
       });
       if (!chipOk.ok) {
-        warnings.push(chipOk.reason);
+        warnings.push(chipOk.warning);
         activeChip = null;
       } else {
         planChipsSoFar.push({ gw, chip: activeChip });
@@ -1250,7 +1371,10 @@ export function evaluateRollingPlan(
     if (appliedTransfers.filter((t) => !t.hasConflict).length === 0) {
       for (const [clubId, n] of overClubs) {
         const name = clubNamesById?.get(clubId) ?? String(clubId);
-        warnings.push(`4/3 pre-existing (${n}/3): ${name}`);
+        warnings.push({
+          key: "planner.club.preExisting43",
+          params: { n, name },
+        });
       }
     } else {
       for (const [clubId] of overClubs) {
@@ -1304,15 +1428,35 @@ export function evaluateRollingPlan(
       projectionsByElement.set(p.elementId, proj);
     }
 
-    working = ensureCaptainVice(working, projectionsByElement);
+    working = ensureCaptainVice(working, projectionsByElement, decision);
 
     const cap = working.find((p) => p.isCaptain);
     const vice = working.find((p) => p.isViceCaptain);
-    if (cap && projectionsByElement.get(cap.elementId)?.isBlank) {
-      warnings.push("Captain has BGW.");
+    if (!cap) {
+      if (
+        decision.captainClearedByUser ||
+        decision.captainElementId != null
+      ) {
+        warnings.push({
+          key: "planner.captain.missing",
+          params: { gw },
+        });
+      }
+    } else if (projectionsByElement.get(cap.elementId)?.isBlank) {
+      warnings.push({ key: "planner.captain.noFixture" });
     }
-    if (vice && projectionsByElement.get(vice.elementId)?.isBlank) {
-      warnings.push("Vice-captain has BGW.");
+    if (!vice) {
+      if (
+        decision.viceClearedByUser ||
+        decision.viceCaptainElementId != null
+      ) {
+        warnings.push({
+          key: "planner.vice.missing",
+          params: { gw },
+        });
+      }
+    } else if (projectionsByElement.get(vice.elementId)?.isBlank) {
+      warnings.push({ key: "planner.vice.noFixture" });
     }
 
     // R7/R8/R9 FT + hits
@@ -1387,6 +1531,104 @@ export function evaluateRollingPlan(
   }
 
   return results;
+}
+
+export type PlannerDraftSummaryMetrics = {
+  variant: PlannerDraftVariant;
+  /** Prognoza pierwszej GW planu (`planningStartGw`); null gdy brak w horyzoncie. */
+  xPtsNextGw: number | null;
+  /** Suma grossXPts po horyzoncie (bez zaokrąglania pośredniego). */
+  xPtsHorizonSum: number;
+  /** xPtsHorizonSum − totalHitPts. */
+  xPtsHorizonNet: number;
+  /** FT na pierwszą GW planu; null gdy brak w horyzoncie. */
+  ftNextGw: number | null;
+  /** FT po ostatniej GW planu; null gdy pusty horyzont. */
+  ftEndOfPlan: number | null;
+  totalHitPts: number;
+  finalBankTenths: number;
+  chipsByGw: Partial<Record<number, PlannerChipType>>;
+};
+
+export function buildPlannerDraftSummary(args: {
+  variant: PlannerDraftVariant;
+  gws: EvaluatedGwState[];
+  planningStartGw: number;
+  fallbackBankTenths: number;
+}): PlannerDraftSummaryMetrics {
+  const { variant, gws, planningStartGw, fallbackBankTenths } = args;
+  const first = gws.find((g) => g.gw === planningStartGw) ?? null;
+  const last = gws.length > 0 ? gws[gws.length - 1]! : null;
+  const chipsByGw: Partial<Record<number, PlannerChipType>> = {};
+  let xPtsHorizonSum = 0;
+  let totalHitPts = 0;
+  for (const g of gws) {
+    xPtsHorizonSum += g.grossXPts;
+    totalHitPts += g.transferCostPts;
+    if (g.activeChip) chipsByGw[g.gw] = g.activeChip;
+  }
+  const xPtsHorizonNet = xPtsHorizonSum - totalHitPts;
+  return {
+    variant,
+    xPtsNextGw: first ? first.grossXPts : null,
+    xPtsHorizonSum,
+    xPtsHorizonNet,
+    ftNextGw: first ? first.ftAvailable : null,
+    ftEndOfPlan: last ? last.ftAvailable : null,
+    totalHitPts,
+    finalBankTenths: last?.bankTenths ?? fallbackBankTenths,
+    chipsByGw,
+  };
+}
+
+function normalizeDecisionForCompare(d: GwPlanDecision): {
+  gw: number;
+  activeChip: PlannerChipType | null;
+  captainElementId: number | null;
+  viceCaptainElementId: number | null;
+  captainClearedByUser: boolean;
+  viceClearedByUser: boolean;
+  lineupOrder: number[] | null;
+  transfers: Array<{ outElementId: number; inElementId: number }>;
+} {
+  return {
+    gw: d.gw,
+    activeChip: d.activeChip ?? null,
+    captainElementId: d.captainElementId ?? null,
+    viceCaptainElementId: d.viceCaptainElementId ?? null,
+    captainClearedByUser: d.captainClearedByUser === true,
+    viceClearedByUser: d.viceClearedByUser === true,
+    lineupOrder: d.lineupOrder ? [...d.lineupOrder] : null,
+    transfers: [...d.transfers]
+      .map((t) => ({
+        outElementId: t.outElementId,
+        inElementId: t.inElementId,
+      }))
+      .sort(
+        (a, b) =>
+          a.outElementId - b.outElementId || a.inElementId - b.inElementId,
+      ),
+  };
+}
+
+function decisionsFingerprint(decisions: GwPlanDecision[]): string {
+  const normalized = [...decisions]
+    .map(normalizeDecisionForCompare)
+    .sort((a, b) => a.gw - b.gw);
+  return JSON.stringify(normalized);
+}
+
+/**
+ * Warianty A/B/C identyczne, gdy skład (lineup), transfery, C/VC i chipy
+ * są takie same we wszystkich decyzjach.
+ */
+export function arePlannerVariantsIdentical(
+  decisionsA: GwPlanDecision[],
+  decisionsB: GwPlanDecision[],
+  decisionsC: GwPlanDecision[],
+): boolean {
+  const a = decisionsFingerprint(decisionsA);
+  return a === decisionsFingerprint(decisionsB) && a === decisionsFingerprint(decisionsC);
 }
 
 /** Buduje mapę historii per zawodnik. */

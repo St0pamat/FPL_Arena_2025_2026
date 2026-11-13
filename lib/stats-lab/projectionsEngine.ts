@@ -303,6 +303,61 @@ export interface DixonColesGridResult {
     ProjectionsExactScoreItem,
   ];
   matrixSum: number;
+  /** Renormalizowana macierz P[x][y] (0…maxGoals); nowe pole, bez wpływu na istniejące. */
+  matrix?: number[][];
+}
+
+/** Alias API: siatka Dixona-Colesa (scoreGrid). */
+export function scoreGrid(
+  lambdaH: number,
+  lambdaA: number,
+  rho: number = DEFAULT_RHO,
+): DixonColesGridResult {
+  return buildDixonColesGrid(lambdaH, lambdaA, rho);
+}
+
+/** P(CS) zamknięte: exp(−λ_rywala). */
+export function csProb(lambdaOpp: number): number {
+  return Math.exp(-lambdaOpp);
+}
+
+/** Top 3 dokładne wyniki z siatki. */
+export function top3Scores(
+  lambdaH: number,
+  lambdaA: number,
+  rho: number = DEFAULT_RHO,
+): [
+  ProjectionsExactScoreItem,
+  ProjectionsExactScoreItem,
+  ProjectionsExactScoreItem,
+] {
+  return buildDixonColesGrid(lambdaH, lambdaA, rho).topExactScores;
+}
+
+/** Prawdopodobieństwa 1X2 z siatki. */
+export function outcomeProbs(
+  lambdaH: number,
+  lambdaA: number,
+  rho: number = DEFAULT_RHO,
+): { pWinHome: number; pDraw: number; pWinAway: number } {
+  const g = buildDixonColesGrid(lambdaH, lambdaA, rho);
+  return {
+    pWinHome: g.pWinHome,
+    pDraw: g.pDraw,
+    pWinAway: g.pWinAway,
+  };
+}
+
+export function fdrAttack(lambdaTeam: number): number {
+  return 100 * (1 - lin(lambdaTeam, 0.6, 2.6));
+}
+
+export function fdrDefence(csProbTeam: number): number {
+  return 100 * (1 - lin(csProbTeam, 0.08, 0.55));
+}
+
+export function fdrOverall(pWin: number, pDraw: number): number {
+  return 100 * (1 - lin(pWin + 0.5 * pDraw, 0.15, 0.85));
 }
 
 export function buildDixonColesGrid(
@@ -339,12 +394,16 @@ export function buildDixonColesGrid(
   let pWinAway = 0;
   let twoPlusHome = 0;
   let twoPlusAway = 0;
+  const matrix: number[][] = Array.from({ length: maxGoals + 1 }, () =>
+    Array.from({ length: maxGoals + 1 }, () => 0),
+  );
   for (const c of cells) {
     if (c.x > c.y) pWinHome += c.p;
     else if (c.x === c.y) pDraw += c.p;
     else pWinAway += c.p;
     if (c.x >= 2) twoPlusHome += c.p;
     if (c.y >= 2) twoPlusAway += c.p;
+    matrix[c.x]![c.y] = c.p;
   }
 
   const ranked = [...cells].sort((a, b) => {
@@ -387,6 +446,7 @@ export function buildDixonColesGrid(
     twoPlusAway,
     topExactScores: top,
     matrixSum: 1,
+    matrix,
   };
 }
 
@@ -396,9 +456,9 @@ export function computeFdrBundle(args: {
   pWin: number;
   pDraw: number;
 }): ProjectionsFdrBundle {
-  const attack = 100 * (1 - lin(args.lambdaTeam, 0.6, 2.6));
-  const defence = 100 * (1 - lin(args.csProbTeam, 0.08, 0.55));
-  const overall = 100 * (1 - lin(args.pWin + 0.5 * args.pDraw, 0.15, 0.85));
+  const attack = fdrAttack(args.lambdaTeam);
+  const defence = fdrDefence(args.csProbTeam);
+  const overall = fdrOverall(args.pWin, args.pDraw);
   return {
     overall,
     attack,
@@ -725,8 +785,8 @@ export function predictFixture(
 
   const lambdaHome = clamp(muH * sH.aH * sA.dA, LAMBDA_MIN, LAMBDA_MAX);
   const lambdaAway = clamp(muA * sA.aA * sH.dH, LAMBDA_MIN, LAMBDA_MAX);
-  const csProbHome = Math.exp(-lambdaAway);
-  const csProbAway = Math.exp(-lambdaHome);
+  const csProbHome = csProb(lambdaAway);
+  const csProbAway = csProb(lambdaHome);
 
   const grid = buildDixonColesGrid(lambdaHome, lambdaAway, rho);
   const fdrHome = computeFdrBundle({

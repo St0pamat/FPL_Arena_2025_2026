@@ -9,32 +9,42 @@ import {
   Zap,
 } from "lucide-react";
 import type { StatsLabChartThemeId } from "@/components/admin/stats-lab/chartTheme";
-import type { StatsLabLang } from "@/lib/stats-lab/i18n";
+import {
+  shellLabel,
+  shellTooltip,
+  type StatsLabLang,
+} from "@/lib/stats-lab/i18n";
 import type { PlannerValueSource } from "@/lib/stats-lab/fplEntryApi";
 import type {
   EvaluatedGwState,
   PlannerValidationErrorKey,
 } from "@/lib/stats-lab/plannerEngine";
 import {
-  PLANNER_CHIP_LABELS,
-  PLANNER_TILE_METRIC_LABELS,
-  plannerUi,
+  formatTenthsAsPounds,
+  PLANNER_CHIP_LABEL_KEY,
+  plannerSourceLabel,
+  plannerTileMetricLabel,
+  pt,
+  ptTip,
+  resolvePlannerWarning,
+  resolvePlannerValidationError,
   type PlannerChipType,
   type PlannerDraftVariant,
   type PlannerTileMetric,
+  type PlannerWarning,
 } from "@/lib/stats-lab/plannerI18n";
+import type { PlannerDraftSummaryMetrics } from "@/lib/stats-lab/plannerEngine";
+import {
+  formatChipAccessibleName,
+  formatGwPillAccessibleName,
+  formatHitBar,
+  formatTransfersBadgeTooltip,
+} from "@/lib/stats-lab/plannerUiFormat";
 import { getStatsLabMenuChrome } from "@/lib/stats-lab/menuChrome";
 
 const TEAM_ID_STORAGE_KEY = "fpl-arena-planner-team-id";
 
-export type PlannerDraftSummary = {
-  variant: PlannerDraftVariant;
-  totalGrossXPts: number;
-  totalHitPts: number;
-  finalBankTenths: number;
-  freeTransfers: number;
-  chipsByGw: Partial<Record<number, PlannerChipType>>;
-};
+export type PlannerDraftSummary = PlannerDraftSummaryMetrics;
 
 export type PlannerGwStripMarker = {
   transferCount?: number;
@@ -58,6 +68,9 @@ export type PlannerHeaderAndControlsProps = {
   onSelectVariant: (v: PlannerDraftVariant) => void;
   onCopyVariantTo: (target: PlannerDraftVariant) => void;
   draftSummaries: PlannerDraftSummary[];
+  variantsIdentical?: boolean;
+  planningStartGw: number;
+  planningEndGw: number;
 
   currentGw: number;
   availableGameweeks: number[];
@@ -95,30 +108,25 @@ export type PlannerHeaderAndControlsProps = {
     key: PlannerValidationErrorKey;
     detail?: string;
   }>;
-  validationWarnings?: string[];
+  validationWarnings?: PlannerWarning[];
   evaluatedGw?: EvaluatedGwState | null;
 };
 
-function tenthsToPounds(tenths: number): string {
-  const sign = tenths < 0 ? "-" : "";
-  return `${sign}£${(Math.abs(Math.round(tenths)) / 10).toFixed(1)}m`;
+/** Tylko klasy `bg-*` z chrome.panel — sticky bez dodatkowego bordera/cienia. */
+function chromePanelBg(panelClass: string): string {
+  return panelClass
+    .split(/\s+/)
+    .filter((cls) => cls.startsWith("bg-"))
+    .join(" ");
 }
 
-function chipShort(chip: PlannerChipType): string {
-  if (chip === "wildcard") return "WC";
-  if (chip === "freehit") return "FH";
-  if (chip === "bboost") return "BB";
-  return "TC";
-}
-
-function validationLabel(
-  key: PlannerValidationErrorKey,
-  ui: ReturnType<typeof plannerUi>,
-  detail?: string,
-): string {
-  const base = ui[key] ?? key;
-  return detail ? `${base} ${detail}` : base;
-}
+const TILE_METRIC_OPTIONS: PlannerTileMetric[] = [
+  "FIXTURES",
+  "XPTS",
+  "PRICES",
+  "FORM",
+  "DC",
+];
 
 export function PlannerHeaderAndControls({
   themeId,
@@ -135,6 +143,9 @@ export function PlannerHeaderAndControls({
   onSelectVariant,
   onCopyVariantTo,
   draftSummaries,
+  variantsIdentical = false,
+  planningStartGw,
+  planningEndGw,
   currentGw,
   availableGameweeks,
   onSelectGw,
@@ -166,8 +177,8 @@ export function PlannerHeaderAndControls({
   evaluatedGw,
 }: PlannerHeaderAndControlsProps) {
   const chrome = getStatsLabMenuChrome(themeId);
-  const ui = plannerUi(lang);
   const isLight = chrome.isLight;
+  const emdash = shellLabel(lang, "common.emdash");
   const [showCompare, setShowCompare] = useState(false);
   const [deadlineCollapsed, setDeadlineCollapsed] = useState(false);
   const [editFtOpen, setEditFtOpen] = useState(false);
@@ -232,6 +243,7 @@ export function PlannerHeaderAndControls({
       : null;
 
   const optionClass = chrome.option;
+  const panelBg = chromePanelBg(chrome.panel);
 
   return (
     <div className="space-y-3">
@@ -241,7 +253,7 @@ export function PlannerHeaderAndControls({
           <div className="flex flex-1 flex-col gap-2 sm:flex-row sm:items-end">
             <label className="block min-w-[160px] flex-1">
               <span className={`mb-1 block text-[10px] font-black uppercase tracking-wider ${chrome.mutedLabel}`}>
-                {ui.teamIdLabel}
+                {pt(lang, "planner.teamId")}
               </span>
               <input
                 type="text"
@@ -261,7 +273,7 @@ export function PlannerHeaderAndControls({
               {isLoadingTeam ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
               ) : null}
-              {ui.loadTeamBtn}
+              {pt(lang, "planner.loadSquad")}
             </button>
             <button
               type="button"
@@ -269,7 +281,7 @@ export function PlannerHeaderAndControls({
               onClick={onLoadDemo}
               className={`rounded-xl px-3 py-2 text-xs font-black uppercase ${chrome.inactiveBtn}`}
             >
-              {ui.loadDemoBtn}
+              {shellLabel(lang, "common.demoSquad")}
             </button>
           </div>
 
@@ -297,9 +309,7 @@ export function PlannerHeaderAndControls({
                   isLight ? "text-amber-800" : "text-amber-200"
                 }`}
               >
-                {lang === "pl"
-                  ? "Skład cofnięty po Free Hicie"
-                  : "Squad rolled back after Free Hit"}
+                {pt(lang, "planner.rule.r8.freehitReturn")}
               </p>
             ) : null}
           </div>
@@ -307,7 +317,7 @@ export function PlannerHeaderAndControls({
 
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <span className={`text-[10px] font-black uppercase ${chrome.mutedLabel}`}>
-            {ui.draftVariantLabel}
+            {pt(lang, "planner.variant.menu")}
           </span>
           {(["A", "B", "C"] as PlannerDraftVariant[]).map((v) => (
             <button
@@ -318,7 +328,7 @@ export function PlannerHeaderAndControls({
                 activeVariant === v ? chrome.activeBtn : chrome.inactiveBtn
               }`}
             >
-              {lang === "pl" ? `Wariant ${v}` : `Draft ${v}`}
+              {pt(lang, "planner.variant.label", { id: v })}
             </button>
           ))}
           <div className="flex flex-wrap gap-1.5">
@@ -332,7 +342,7 @@ export function PlannerHeaderAndControls({
                   className={`inline-flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-[10px] font-black uppercase ${chrome.secondaryBtn}`}
                 >
                   <Copy className="h-3 w-3" />
-                  {lang === "pl" ? `Kopiuj do ${t}` : `Copy to ${t}`}
+                  {pt(lang, "planner.variant.copyTo", { id: t })}
                 </button>
               ))}
             {activeVariant !== "A" ? (
@@ -342,7 +352,7 @@ export function PlannerHeaderAndControls({
                 className={`inline-flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-[10px] font-black uppercase ${chrome.secondaryBtn}`}
               >
                 <Copy className="h-3 w-3" />
-                {lang === "pl" ? "Kopiuj do A" : "Copy to A"}
+                {pt(lang, "planner.variant.copyTo", { id: "A" })}
               </button>
             ) : null}
           </div>
@@ -353,88 +363,193 @@ export function PlannerHeaderAndControls({
               showCompare ? chrome.activeBtn : chrome.inactiveBtn
             }`}
           >
-            {lang === "pl" ? "Porównaj A / B / C" : "Compare A / B / C"}
+            {pt(lang, "planner.variant.compare")}
           </button>
         </div>
 
         {showCompare ? (
-          <div className="mt-3 overflow-x-auto">
-            <table className="w-full min-w-[520px] border-collapse text-left text-xs">
-              <thead>
-                <tr className={chrome.mutedLabel}>
-                  <th className="px-2 py-1.5 font-black uppercase">
-                    {lang === "pl" ? "Wariant" : "Draft"}
-                  </th>
-                  <th className="px-2 py-1.5 font-black uppercase">xPts</th>
-                  <th className="px-2 py-1.5 font-black uppercase">
-                    {ui.hitsShort}
-                  </th>
-                  <th className="px-2 py-1.5 font-black uppercase">
-                    {ui.bank}
-                  </th>
-                  <th className="px-2 py-1.5 font-black uppercase">FT</th>
-                  <th className="px-2 py-1.5 font-black uppercase">
-                    Chips
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {(["A", "B", "C"] as PlannerDraftVariant[]).map((v) => {
-                  const s =
-                    draftSummaries.find((d) => d.variant === v) ?? {
-                      variant: v,
-                      totalGrossXPts: 0,
-                      totalHitPts: 0,
-                      finalBankTenths: 0,
-                      freeTransfers: 0,
-                      chipsByGw: {},
-                    };
-                  const chips = Object.entries(s.chipsByGw)
-                    .map(
-                      ([gw, chip]) =>
-                        `${chipShort(chip as PlannerChipType)}@GW${gw}`,
-                    )
-                    .join(", ");
-                  return (
-                    <tr
-                      key={v}
-                      className={`border-t ${
-                        isLight ? "border-slate-200" : "border-slate-800"
-                      } ${activeVariant === v ? (isLight ? "bg-emerald-50" : "bg-emerald-500/10") : ""}`}
+          <div className="mt-3 space-y-2">
+            {variantsIdentical ? (
+              <p
+                className={`rounded-xl border px-3 py-2 text-xs font-semibold ${
+                  isLight
+                    ? "border-amber-400 bg-amber-50 text-amber-950"
+                    : "border-amber-400/50 bg-amber-500/15 text-amber-100"
+                }`}
+              >
+                {pt(lang, "planner.compare.identical")}
+              </p>
+            ) : null}
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[720px] border-collapse text-left text-xs">
+                <thead>
+                  <tr className={chrome.mutedLabel}>
+                    <th
+                      className={`sticky left-0 z-10 px-2 py-1.5 font-black uppercase ${panelBg}`}
                     >
-                      <td className={`px-2 py-2 font-black ${chrome.text}`}>
-                        {v}
-                      </td>
-                      <td className={`px-2 py-2 font-bold tabular-nums ${chrome.text}`}>
-                        {s.totalGrossXPts.toFixed(1)}
-                      </td>
-                      <td
-                        className={`px-2 py-2 font-bold tabular-nums ${
-                          s.totalHitPts > 0
-                            ? isLight
-                              ? "text-rose-700"
-                              : "text-rose-300"
-                            : chrome.text
-                        }`}
+                      {pt(lang, "planner.draft.variant")}
+                    </th>
+                    <th className="px-2 py-1.5 font-black uppercase">
+                      {pt(lang, "planner.xpts.nextGw", {
+                        gw: planningStartGw,
+                      })}
+                    </th>
+                    <th className="px-2 py-1.5 font-black uppercase">
+                      {pt(lang, "planner.xpts.horizonSum", {
+                        from: planningStartGw,
+                        to: planningEndGw,
+                      })}
+                    </th>
+                    <th className="px-2 py-1.5 font-black uppercase">
+                      {pt(lang, "planner.compare.hits")}
+                    </th>
+                    <th className="px-2 py-1.5 font-black uppercase">
+                      {pt(lang, "planner.kpi.bank")}
+                    </th>
+                    <th className="px-2 py-1.5 font-black uppercase">
+                      {pt(lang, "planner.ft.nextGw", { gw: planningStartGw })}
+                    </th>
+                    <th className="px-2 py-1.5 font-black uppercase">
+                      {pt(lang, "planner.ft.endOfPlan")}
+                    </th>
+                    <th className="px-2 py-1.5 font-black uppercase">
+                      {pt(lang, "planner.compare.chips")}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(["A", "B", "C"] as PlannerDraftVariant[]).map((v) => {
+                    const s =
+                      draftSummaries.find((d) => d.variant === v) ?? {
+                        variant: v,
+                        xPtsNextGw: null,
+                        xPtsHorizonSum: 0,
+                        xPtsHorizonNet: 0,
+                        ftNextGw: null,
+                        ftEndOfPlan: null,
+                        totalHitPts: 0,
+                        finalBankTenths: 0,
+                        chipsByGw: {},
+                      };
+                    const chipEntries = Object.entries(s.chipsByGw);
+                    const chips =
+                      chipEntries.length === 0
+                        ? pt(lang, "planner.compare.noChip")
+                        : chipEntries
+                            .map(
+                              ([gw, chip]) =>
+                                `${pt(lang, PLANNER_CHIP_LABEL_KEY[chip as PlannerChipType])} (GW${gw})`,
+                            )
+                            .join(", ");
+                    const showNetAndGross =
+                      s.xPtsHorizonNet !== s.xPtsHorizonSum;
+                    const mainHorizon = showNetAndGross
+                      ? s.xPtsHorizonNet
+                      : s.xPtsHorizonSum;
+                    const rowActive = activeVariant === v;
+                    const sameAsA =
+                      variantsIdentical && v !== "A"
+                        ? pt(lang, "planner.compare.sameAs", { v: "A" })
+                        : null;
+                    const stickyBg = rowActive
+                      ? isLight
+                        ? "bg-emerald-50"
+                        : "bg-emerald-500/10"
+                      : panelBg;
+                    return (
+                      <tr
+                        key={v}
+                        className={`border-t ${
+                          isLight ? "border-slate-200" : "border-slate-800"
+                        } ${rowActive ? (isLight ? "bg-emerald-50" : "bg-emerald-500/10") : ""}`}
                       >
-                        {s.totalHitPts > 0
-                          ? `−${s.totalHitPts}`
-                          : "0"}
-                      </td>
-                      <td className={`px-2 py-2 font-bold tabular-nums ${chrome.text}`}>
-                        {tenthsToPounds(s.finalBankTenths)}
-                      </td>
-                      <td className={`px-2 py-2 font-bold tabular-nums ${chrome.text}`}>
-                        {s.freeTransfers}
-                      </td>
-                      <td className={`px-2 py-2 font-semibold ${chrome.mutedLabel}`}>
-                        {chips || "—"}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                        <td
+                          className={`sticky left-0 z-10 px-2 py-2 font-black ${chrome.text} ${stickyBg}`}
+                        >
+                          {v}
+                          {sameAsA ? (
+                            <span
+                              className={`mt-0.5 block text-[10px] font-semibold ${chrome.mutedLabel}`}
+                            >
+                              {sameAsA}
+                            </span>
+                          ) : null}
+                        </td>
+                        <td
+                          className={`px-2 py-2 font-normal tabular-nums ${chrome.text}`}
+                        >
+                          {sameAsA
+                            ? emdash
+                            : s.xPtsNextGw == null
+                              ? emdash
+                              : s.xPtsNextGw.toFixed(1)}
+                        </td>
+                        <td className={`px-2 py-2 tabular-nums ${chrome.text}`}>
+                          {showNetAndGross ? (
+                            <div>
+                              <div>
+                                <span className="font-bold">
+                                  {mainHorizon.toFixed(1)}
+                                </span>
+                                <span
+                                  className={`ml-1.5 font-normal ${chrome.mutedLabel}`}
+                                >
+                                  {pt(lang, "planner.hit.netto")}
+                                </span>
+                              </div>
+                              <div
+                                className={`text-[10px] font-normal ${chrome.mutedLabel}`}
+                              >
+                                {pt(lang, "planner.hit.brutto", {
+                                  value: s.xPtsHorizonSum.toFixed(1),
+                                })}
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="font-bold">
+                              {mainHorizon.toFixed(1)}
+                            </span>
+                          )}
+                        </td>
+                        <td
+                          className={`px-2 py-2 font-bold tabular-nums ${
+                            s.totalHitPts > 0
+                              ? isLight
+                                ? "text-rose-700"
+                                : "text-rose-300"
+                              : chrome.text
+                          }`}
+                        >
+                          {s.totalHitPts > 0
+                            ? `−${s.totalHitPts}`
+                            : "0"}
+                        </td>
+                        <td
+                          className={`px-2 py-2 font-bold tabular-nums ${chrome.text}`}
+                        >
+                          {formatTenthsAsPounds(s.finalBankTenths)}
+                        </td>
+                        <td
+                          className={`px-2 py-2 font-normal tabular-nums ${chrome.text}`}
+                        >
+                          {s.ftNextGw == null ? emdash : s.ftNextGw}
+                        </td>
+                        <td
+                          className={`px-2 py-2 font-normal tabular-nums ${chrome.text}`}
+                        >
+                          {s.ftEndOfPlan == null ? emdash : s.ftEndOfPlan}
+                        </td>
+                        <td
+                          className={`px-2 py-2 font-semibold ${chrome.mutedLabel}`}
+                        >
+                          {sameAsA ? emdash : chips}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         ) : null}
       </section>
@@ -446,34 +561,49 @@ export function PlannerHeaderAndControls({
             type="button"
             disabled={prevGw == null}
             onClick={() => prevGw != null && onSelectGw(prevGw)}
+            title={ptTip(lang, "planner.gw.prev")}
+            aria-label={ptTip(lang, "planner.gw.prev")}
             className={`inline-flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-[10px] font-black uppercase disabled:opacity-40 ${chrome.inactiveBtn}`}
           >
             <ChevronLeft className="h-3.5 w-3.5" />
-            PREV
+            {pt(lang, "planner.gw.prev")}
           </button>
           <div className="flex min-w-0 flex-1 gap-1.5 overflow-x-auto pb-1">
             {availableGameweeks.map((gw) => {
               const marker = gwMarkers?.[gw];
               const active = gw === currentGw;
+              const transferCount = marker?.transferCount ?? 0;
               return (
                 <button
                   key={gw}
                   type="button"
                   onClick={() => onSelectGw(gw)}
+                  aria-label={formatGwPillAccessibleName({
+                    lang,
+                    gw,
+                    transferCount,
+                  })}
                   className={`relative shrink-0 rounded-xl px-2.5 py-1.5 text-[11px] font-black ${
                     active ? chrome.activeBtn : chrome.inactiveBtn
                   }`}
                 >
-                  GW{gw}
+                  <span className="block">GW{gw}</span>
                   <span className="mt-0.5 flex justify-center gap-0.5 text-[8px] font-bold leading-none opacity-90">
-                    {marker?.transferCount ? (
-                      <span>{marker.transferCount}T</span>
+                    {transferCount > 0 ? (
+                      <span
+                        title={formatTransfersBadgeTooltip(lang, transferCount)}
+                        className="rounded bg-black/20 px-1"
+                      >
+                        {transferCount} ⇄
+                      </span>
                     ) : null}
                     {marker?.chip ? (
-                      <span>{chipShort(marker.chip)}</span>
+                      <span>
+                        {pt(lang, PLANNER_CHIP_LABEL_KEY[marker.chip])}
+                      </span>
                     ) : null}
                     {marker?.hasValidationIssue ? (
-                      <span>⚠️</span>
+                      <span aria-hidden>⚠️</span>
                     ) : null}
                   </span>
                 </button>
@@ -484,9 +614,11 @@ export function PlannerHeaderAndControls({
             type="button"
             disabled={nextGw == null}
             onClick={() => nextGw != null && onSelectGw(nextGw)}
+            title={ptTip(lang, "planner.gw.next")}
+            aria-label={ptTip(lang, "planner.gw.next")}
             className={`inline-flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-[10px] font-black uppercase disabled:opacity-40 ${chrome.inactiveBtn}`}
           >
-            NEXT
+            {pt(lang, "planner.gw.next")}
             <ChevronRight className="h-3.5 w-3.5" />
           </button>
         </div>
@@ -496,9 +628,11 @@ export function PlannerHeaderAndControls({
             <button
               type="button"
               onClick={() => setDeadlineCollapsed((c) => !c)}
+              title={shellTooltip(lang, "common.deadline")}
               className={`mb-2 inline-flex min-h-[28px] items-center gap-1.5 rounded-xl px-3 py-1 text-[10px] font-black uppercase transition-colors ${chrome.inactiveBtn}`}
             >
-              {lang === "pl" ? "Deadline" : "Deadline"} · GW{currentGw}{" "}
+              {shellLabel(lang, "common.deadline")} ·{" "}
+              {shellLabel(lang, "common.gw", { gw: currentGw })}{" "}
               {deadlineCollapsed
                 ? (lang === "pl" ? "(rozwiń)" : "(expand)")
                 : (lang === "pl" ? "(zwiń)" : "(collapse)")}
@@ -536,9 +670,10 @@ export function PlannerHeaderAndControls({
         <KpiTile
           chrome={chrome}
           isLight={isLight}
-          label={ui.transfers}
+          label={pt(lang, "planner.ft.nextGw", { gw: planningStartGw })}
           value={`${freeTransfers} FT`}
-          source={ui.valueSource[freeTransfersSource]}
+          source={plannerSourceLabel(lang, freeTransfersSource)}
+          editTitle={pt(lang, "planner.action.editFt")}
           onEdit={
             onManualSetFt
               ? () => setEditFtOpen((o) => !o)
@@ -571,7 +706,7 @@ export function PlannerHeaderAndControls({
         <KpiTile
           chrome={chrome}
           isLight={isLight}
-          label={ui.cost}
+          label={pt(lang, "planner.kpi.cost")}
           value={
             hitsCostPts > 0 ? `−${hitsCostPts} pkt` : "0 pkt"
           }
@@ -589,9 +724,10 @@ export function PlannerHeaderAndControls({
         <KpiTile
           chrome={chrome}
           isLight={isLight}
-          label={ui.bank}
-          value={tenthsToPounds(bankTenths)}
-          source={ui.valueSource[bankSource]}
+          label={pt(lang, "planner.kpi.bank")}
+          value={formatTenthsAsPounds(bankTenths)}
+          source={plannerSourceLabel(lang, bankSource)}
+          editTitle={pt(lang, "planner.action.editBank")}
           valueClass={
             bankTenths < 0
               ? isLight
@@ -661,13 +797,12 @@ export function PlannerHeaderAndControls({
         <KpiTile
           chrome={chrome}
           isLight={isLight}
-          label={ui.projectedPts}
+          label={pt(lang, "planner.xpts.nextGw", { gw: currentGw })}
           value={`${grossXPts.toFixed(1)} xPts`}
         >
-          {hitsCostPts > 0 ? (
+          {hitsCostPts > 0 && netXPts !== grossXPts ? (
             <p className={`mt-1 text-[10px] font-bold ${chrome.mutedLabel}`}>
-              {lang === "pl" ? "Netto po hitach" : "Net after hits"}:{" "}
-              {netXPts.toFixed(1)} xPts
+              {pt(lang, "planner.hit.netto")}: {netXPts.toFixed(1)} xPts
             </p>
           ) : null}
         </KpiTile>
@@ -681,7 +816,23 @@ export function PlannerHeaderAndControls({
               : "border-emerald-400/50 bg-emerald-500/15 text-emerald-100"
           }`}
         >
-          {ui.spendingPower}: {tenthsToPounds(spendingPowerTenths)}
+          {pt(lang, "planner.kpi.spendingPower")}:{" "}
+          {formatTenthsAsPounds(spendingPowerTenths)}
+        </span>
+        <span
+          className={`inline-flex items-center rounded-full border px-3 py-1.5 text-[11px] font-bold ${
+            isLight
+              ? "border-slate-300 bg-white text-slate-900"
+              : "border-slate-600 bg-slate-900/60 text-slate-100"
+          }`}
+        >
+          {formatHitBar({
+            lang,
+            used: evaluatedGw?.validTransfersCount ?? 0,
+            ft: freeTransfers,
+            cost: hitsCostPts,
+            activeChip,
+          })}
         </span>
       </div>
 
@@ -696,43 +847,47 @@ export function PlannerHeaderAndControls({
               "bboost",
             ] as PlannerChipType[]
           ).map((chip) => {
-            const usedGw = usedChipsByType[chip];
+            const usedGw = usedChipsByType[chip] ?? null;
             const isActive = activeChip === chip;
             const isSpent = usedGw != null && usedGw !== currentGw;
-            const label = PLANNER_CHIP_LABELS[lang][chip];
+            const label = pt(lang, PLANNER_CHIP_LABEL_KEY[chip]);
+            const statusLine = isSpent
+              ? pt(lang, "chip.usedIn", { gw: usedGw! })
+              : pt(lang, "chip.available");
             return (
               <button
                 key={chip}
                 type="button"
                 disabled={isSpent}
                 onClick={() => onToggleChip(chip)}
-                className={`rounded-xl px-3 py-2 text-[11px] font-black uppercase disabled:cursor-not-allowed disabled:opacity-40 ${
+                aria-label={formatChipAccessibleName({
+                  lang,
+                  chip,
+                  usedGw: isSpent ? usedGw : null,
+                })}
+                className={`rounded-xl px-3 py-2 text-left text-[11px] font-black uppercase disabled:cursor-not-allowed disabled:opacity-40 ${
                   isActive
                     ? chrome.activeBtn
                     : chrome.inactiveBtn
                 }`}
-                title={
-                  isSpent
-                    ? `${label} · GW${usedGw}`
-                    : label
-                }
+                title={statusLine}
               >
-                {label}
-                {isSpent ? (
-                  <span className="ml-1 opacity-80">GW{usedGw}</span>
-                ) : null}
+                <span className="block leading-tight">{label}</span>
+                <span className="mt-0.5 block text-[9px] font-semibold normal-case opacity-80">
+                  {statusLine}
+                </span>
               </button>
             );
           })}
         </div>
         <p className={`mt-2 text-[10px] font-semibold leading-snug ${chrome.mutedLabel}`}>
-          {ui.chipFtRuleHint}
+          {pt(lang, "planner.rule.r7r8.ftAfterChip")}
         </p>
 
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <label className="inline-flex items-center gap-2">
             <span className={`text-[10px] font-black uppercase ${chrome.mutedLabel}`}>
-              {lang === "pl" ? "Metryka kafelka" : "Tile metric"}
+              {pt(lang, "planner.metric.select")}
             </span>
             <select
               value={tileMetric}
@@ -741,13 +896,9 @@ export function PlannerHeaderAndControls({
               }
               className={`rounded-xl px-2.5 py-1.5 text-[11px] font-bold outline-none ${chrome.input}`}
             >
-              {(
-                Object.keys(
-                  PLANNER_TILE_METRIC_LABELS[lang],
-                ) as PlannerTileMetric[]
-              ).map((m) => (
+              {TILE_METRIC_OPTIONS.map((m) => (
                 <option key={m} value={m} className={optionClass}>
-                  {PLANNER_TILE_METRIC_LABELS[lang][m]}
+                  {plannerTileMetricLabel(lang, m)}
                 </option>
               ))}
             </select>
@@ -759,7 +910,7 @@ export function PlannerHeaderAndControls({
             className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-[10px] font-black uppercase ${chrome.activeBtn}`}
           >
             <Zap className="h-3.5 w-3.5" />
-            {ui.optimiseXiBtn}
+            {pt(lang, "planner.action.optimise")}
           </button>
           <button
             type="button"
@@ -767,21 +918,21 @@ export function PlannerHeaderAndControls({
             onClick={onUndo}
             className={`rounded-xl px-3 py-1.5 text-[10px] font-black uppercase disabled:opacity-40 ${chrome.inactiveBtn}`}
           >
-            ↩ {ui.undoBtn}
+            ↩ {pt(lang, "planner.action.undo")}
           </button>
           <button
             type="button"
             onClick={onResetGw}
             className={`rounded-xl px-3 py-1.5 text-[10px] font-black uppercase ${chrome.inactiveBtn}`}
           >
-            {ui.resetGwBtn}
+            {pt(lang, "planner.action.resetGw")}
           </button>
           <button
             type="button"
             onClick={onResetPlan}
             className={`rounded-xl px-3 py-1.5 text-[10px] font-black uppercase ${chrome.inactiveBtn}`}
           >
-            {ui.resetAllBtn}
+            {pt(lang, "planner.action.resetPlan")}
           </button>
         </div>
       </section>
@@ -800,15 +951,15 @@ export function PlannerHeaderAndControls({
           }`}
         >
           <p className="text-[10px] font-black uppercase tracking-wider">
-            {lang === "pl"
-              ? "Walidacja reguł R1–R12"
-              : "Rules validation R1–R12"}
+            <span title={ptTip(lang, "planner.validation.title")}>
+              {pt(lang, "planner.validation.title")}
+            </span>
           </p>
           {errors.length ? (
             <ul className="mt-1.5 list-disc space-y-1 pl-4 text-xs font-semibold">
               {errors.map((e, i) => (
                 <li key={`${e.key}-${i}`}>
-                  {validationLabel(e.key, ui, e.detail)}
+                  {resolvePlannerValidationError(e.key, lang, e.detail)}
                 </li>
               ))}
             </ul>
@@ -816,7 +967,9 @@ export function PlannerHeaderAndControls({
           {warnings.length ? (
             <ul className="mt-1.5 list-disc space-y-1 pl-4 text-xs font-semibold opacity-90">
               {warnings.map((w, i) => (
-                <li key={`w-${i}`}>{w}</li>
+                <li key={`w-${w.key}-${i}`}>
+                  {resolvePlannerWarning(w, lang)}
+                </li>
               ))}
             </ul>
           ) : null}
@@ -833,6 +986,7 @@ function KpiTile({
   value,
   source,
   valueClass,
+  editTitle,
   onEdit,
   children,
 }: {
@@ -842,6 +996,7 @@ function KpiTile({
   value: string;
   source?: string;
   valueClass?: string;
+  editTitle?: string;
   onEdit?: () => void;
   children?: ReactNode;
 }) {
@@ -856,8 +1011,8 @@ function KpiTile({
             type="button"
             onClick={onEdit}
             className={`inline-flex min-h-[28px] min-w-[28px] items-center justify-center rounded-lg px-2 text-[12px] font-black leading-none ${chrome.inactiveBtn}`}
-            title="Edit"
-            aria-label="Edit"
+            title={editTitle}
+            aria-label={editTitle}
           >
             ✎
           </button>

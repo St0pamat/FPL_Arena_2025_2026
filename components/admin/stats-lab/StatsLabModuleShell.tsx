@@ -8,9 +8,7 @@ import type {
   StatsLabComparisonResult,
 } from "@/lib/stats-lab/analyticsEngine";
 import type { StatsLabQueryFilter } from "@/lib/stats-lab/presets";
-import type { StatsLabLang } from "@/lib/stats-lab/i18n";
-import { centreUi } from "@/lib/stats-lab/statsCentreI18n";
-import { PROJECTIONS_MODULE_LABEL } from "@/lib/stats-lab/projectionsI18n";
+import { shellLabel, shellTooltip, type StatsLabLang } from "@/lib/stats-lab/i18n";
 import type { KnowledgeHelpAnchor } from "@/lib/stats-lab/knowledgeBaseContent";
 import {
   STATS_LAB_CHART_THEMES,
@@ -218,7 +216,6 @@ export function StatsLabModuleShell({
   const [knowledgeOpen, setKnowledgeOpen] = useState(false);
   const [knowledgeAnchor, setKnowledgeAnchor] =
     useState<KnowledgeHelpAnchor | null>(null);
-  const ui = centreUi(lang);
   const chrome = getStatsLabMenuChrome(chartTheme);
 
   const seedSelectedIds = useMemo(
@@ -324,41 +321,47 @@ export function StatsLabModuleShell({
       >
         <button
           type="button"
+          title={shellTooltip(lang, "nav.centre")}
           onClick={() => switchTab("centre")}
           className={shellNavTabClass(tab === "centre", chartTheme)}
         >
           <Table2 className="h-3.5 w-3.5" />
-          {ui.moduleCentre}
+          {shellLabel(lang, "nav.centre")}
         </button>
         <button
           type="button"
+          title={shellTooltip(lang, "nav.studio")}
           onClick={() => switchTab("studio")}
           className={shellNavTabClass(tab === "studio", chartTheme)}
         >
           <BarChart3 className="h-3.5 w-3.5" />
-          {ui.moduleStudio}
+          {shellLabel(lang, "nav.studio")}
         </button>
         <button
           type="button"
+          title={shellTooltip(lang, "nav.projections")}
           onClick={() => switchTab("projections")}
           className={shellNavTabClass(tab === "projections", chartTheme)}
         >
           <CalendarRange className="h-3.5 w-3.5" />
-          {PROJECTIONS_MODULE_LABEL[lang]}
+          {shellLabel(lang, "nav.projections")}
         </button>
         <button
           type="button"
+          title={shellTooltip(lang, "nav.planner")}
           onClick={() => switchTab("planner")}
           className={shellNavTabClass(tab === "planner", chartTheme)}
         >
           <ClipboardList className="h-3.5 w-3.5" />
-          {lang === "pl"
-            ? "📋 Planer FPL (Drużyna i Transfery)"
-            : "📋 FPL Planner (Team & Transfers)"}
+          {shellLabel(lang, "nav.planner")}
         </button>
 
         <div className="ml-auto flex flex-wrap items-center gap-2">
-          <div className={shellNavChipGroupClass(chartTheme)}>
+          <div
+            className={shellNavChipGroupClass(chartTheme)}
+            role="group"
+            aria-label={shellLabel(lang, "shell.aria.lang")}
+          >
             <button
               type="button"
               onClick={() => applyLang("pl")}
@@ -375,7 +378,11 @@ export function StatsLabModuleShell({
             </button>
           </div>
 
-          <div className={shellNavChipGroupClass(chartTheme)}>
+          <div
+            className={shellNavChipGroupClass(chartTheme)}
+            role="group"
+            aria-label={shellLabel(lang, "shell.aria.theme")}
+          >
             {(
               Object.keys(STATS_LAB_CHART_THEMES) as StatsLabChartThemeId[]
             ).map((id) => (
@@ -401,13 +408,12 @@ export function StatsLabModuleShell({
 
           <button
             type="button"
+            title={shellTooltip(lang, "nav.knowledge")}
             onClick={() => openKnowledge("general")}
             className={`inline-flex min-h-[28px] items-center justify-center gap-1.5 rounded-lg px-2.5 py-1 text-[11px] uppercase tracking-wider ${chrome.knowledgeBtn}`}
           >
             <BookOpen className="h-3.5 w-3.5" />
-            {lang === "pl"
-              ? "📚 Baza Wiedzy i Zasady FPL"
-              : "📚 Knowledge Base & FPL Rules"}
+            {shellLabel(lang, "nav.knowledge")}
           </button>
         </div>
       </div>

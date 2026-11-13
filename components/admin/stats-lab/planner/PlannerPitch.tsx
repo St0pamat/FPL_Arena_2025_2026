@@ -18,16 +18,32 @@ import {
   type SquadPlayerState,
 } from "@/lib/stats-lab/plannerEngine";
 import {
-  plannerUi,
+  formatTenthsAsPounds,
+  plannerSourceLabel,
+  pt,
+  resolvePlannerValidationError,
   type PlannerChipType,
   type PlannerTileMetric,
 } from "@/lib/stats-lab/plannerI18n";
+import {
+  actionAria,
+  formatBenchSlotLabel,
+  formatPlayerTileAccessibleName,
+} from "@/lib/stats-lab/plannerUiFormat";
+import {
+  PLANNER_ACTION_HIT_CLASS,
+  captainArmbandAria,
+  captainArmbandKind,
+  captainArmbandLabel,
+  formatFixturePills,
+} from "@/lib/stats-lab/plannerFixtureUi";
 import { getStatsLabMenuChrome } from "@/lib/stats-lab/menuChrome";
 import {
   fplLabBadgeUrl,
   fplLabPlayerPhotoUrl,
 } from "@/lib/stats-lab/mediaUrls";
 import type { FplLabPlayer } from "@/lib/stats-lab/types";
+import { PlannerFixturePills } from "@/components/admin/stats-lab/planner/PlannerFixturePills";
 
 export type PlannerPitchProps = {
   themeId: StatsLabChartThemeId;
@@ -54,7 +70,17 @@ export type PlannerPitchProps = {
   onToggleWatchlist: (elementId: number) => void;
   activeChip: PlannerChipType | null;
   isExporting?: boolean;
+  /** Ostrzeżenia C/VC missing dla bieżącej GW — banner przy boisku. */
+  missingCaptain?: boolean;
+  missingVice?: boolean;
 };
+
+function hasRoleMissingBanner(
+  missingCaptain: boolean | undefined,
+  missingVice: boolean | undefined,
+): boolean {
+  return !!missingCaptain || !!missingVice;
+}
 
 function tenthsToPounds(tenths: number): string {
   return `£${(Math.round(tenths) / 10).toFixed(1)}m`;
@@ -107,11 +133,8 @@ function catalogAsPlayersMap(
   return playersById as unknown as Map<number, FplLabPlayer>;
 }
 
-function formationMessage(
-  key: FormationErrorKey,
-  ui: ReturnType<typeof plannerUi>,
-): string {
-  return ui[key];
+function formationMessage(key: FormationErrorKey, lang: StatsLabLang): string {
+  return resolvePlannerValidationError(key, lang);
 }
 
 export function PlannerPitch({
@@ -136,9 +159,10 @@ export function PlannerPitch({
   onToggleWatchlist,
   activeChip,
   isExporting = false,
+  missingCaptain = false,
+  missingVice = false,
 }: PlannerPitchProps) {
   const chrome = getStatsLabMenuChrome(themeId);
-  const ui = plannerUi(lang);
   const isLight = chrome.isLight;
   const [formationBanner, setFormationBanner] = useState<string | null>(null);
   const [infoElementId, setInfoElementId] = useState<number | null>(null);
@@ -200,7 +224,7 @@ export function PlannerPitch({
     const check = swapAllowed(from, to);
     if (!check.ok) {
       setFormationBanner(
-        formationMessage(check.errorKey ?? "formationErrorGkOnly", ui),
+        formationMessage(check.errorKey ?? "formationErrorGkOnly", lang),
       );
       return;
     }
@@ -251,6 +275,28 @@ export function PlannerPitch({
         </div>
       ) : null}
 
+      {hasRoleMissingBanner(missingCaptain, missingVice) && !isExporting ? (
+        <div
+          data-testid="pitch-role-missing"
+          className={`w-full space-y-0.5 rounded-xl border px-3 py-2 text-sm font-semibold ${
+            isLight
+              ? "border-amber-400 bg-amber-50 text-amber-950"
+              : "border-amber-400/50 bg-amber-500/15 text-amber-100"
+          }`}
+        >
+          {missingCaptain ? (
+            <p data-testid="pitch-captain-missing">
+              {pt(lang, "planner.captain.missing")}
+            </p>
+          ) : null}
+          {missingVice ? (
+            <p data-testid="pitch-vice-missing">
+              {pt(lang, "planner.vice.missing")}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
       <div
         className={`relative w-full overflow-hidden rounded-2xl border ${pitchBorder} ${pitchBg} p-3 sm:p-4`}
         data-planner-pitch="true"
@@ -270,7 +316,6 @@ export function PlannerPitch({
               currentGw,
               availableGameweeks,
               lang,
-              ui,
               isLight,
               isExporting,
               activeChip,
@@ -303,7 +348,6 @@ export function PlannerPitch({
               currentGw,
               availableGameweeks,
               lang,
-              ui,
               isLight,
               isExporting,
               activeChip,
@@ -336,7 +380,6 @@ export function PlannerPitch({
               currentGw,
               availableGameweeks,
               lang,
-              ui,
               isLight,
               isExporting,
               activeChip,
@@ -369,7 +412,6 @@ export function PlannerPitch({
               currentGw,
               availableGameweeks,
               lang,
-              ui,
               isLight,
               isExporting,
               activeChip,
@@ -403,7 +445,7 @@ export function PlannerPitch({
       >
         <div className="mb-2 flex items-center justify-between gap-2">
           <p className={`text-[10px] font-black uppercase tracking-wider ${chrome.mutedLabel}`}>
-            {lang === "pl" ? "Ławka rezerwowych" : "Bench"}
+            {pt(lang, "planner.horizon.bench")}
           </p>
           {activeChip === "bboost" ? (
             <span
@@ -413,49 +455,43 @@ export function PlannerPitch({
                   : "border-amber-400/50 bg-amber-500/20 text-amber-100"
               }`}
             >
-              Bench Boost {lang === "pl" ? "aktywny" : "active"}
+              {pt(lang, "planner.pitch.benchBoostActive")}
             </span>
           ) : null}
         </div>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          {benchSlots.map((slot) =>
-            renderTile(slot, {
-              bySlot,
-              removedElementIdsInGw,
-              selectedSlotForSwap,
-              playersById,
-              projectionsByElement,
-              tileMetric,
-              currentGw,
-              availableGameweeks,
-              lang,
-              ui,
-              isLight,
-              isExporting,
-              activeChip,
-              watchlistIds,
-              dragSlot,
-              swapAllowed,
-              onTileClickSwap,
-              onSelectSlotForSwap,
-              onMarkPlayerForTransferOut,
-              onUndoTransferOut,
-              onSetCaptain,
-              onSetViceCaptain,
-              onToggleWatchlist,
-              setInfoElementId,
-              setDragSlot,
-              trySwap,
-              benchLabel:
-                slot === 12
-                  ? "GKP"
-                  : slot === 13
-                    ? "1. REZ"
-                    : slot === 14
-                      ? "2. REZ"
-                      : "3. REZ",
-            }),
-          )}
+          {benchSlots.map((slot) => (
+            <div key={slot}>
+              {renderTile(slot, {
+                bySlot,
+                removedElementIdsInGw,
+                selectedSlotForSwap,
+                playersById,
+                projectionsByElement,
+                tileMetric,
+                currentGw,
+                availableGameweeks,
+                lang,
+                isLight,
+                isExporting,
+                activeChip,
+                watchlistIds,
+                dragSlot,
+                swapAllowed,
+                onTileClickSwap,
+                onSelectSlotForSwap,
+                onMarkPlayerForTransferOut,
+                onUndoTransferOut,
+                onSetCaptain,
+                onSetViceCaptain,
+                onToggleWatchlist,
+                setInfoElementId,
+                setDragSlot,
+                trySwap,
+                benchLabel: formatBenchSlotLabel(lang, slot),
+              })}
+            </div>
+          ))}
         </div>
       </div>
 
@@ -506,7 +542,6 @@ type TileCtx = {
   currentGw: number;
   availableGameweeks: number[];
   lang: StatsLabLang;
-  ui: ReturnType<typeof plannerUi>;
   isLight: boolean;
   isExporting: boolean;
   activeChip: PlannerChipType | null;
@@ -540,7 +575,7 @@ function renderTile(slot: number, ctx: TileCtx): ReactNode {
             : "border-slate-600 bg-slate-950/50 text-slate-400"
         }`}
       >
-        {ctx.lang === "pl" ? "Pusty slot" : "Empty slot"}
+        {pt(ctx.lang, "planner.pitch.emptySlot")}
       </div>
     );
   }
@@ -563,14 +598,12 @@ function renderTile(slot: number, ctx: TileCtx): ReactNode {
 
   const proj = ctx.projectionsByElement[pick.elementId]?.[ctx.currentGw];
   const isXi = slot >= 1 && slot <= 11;
-  const capLabel =
-    pick.isCaptain && ctx.activeChip === "3xc"
-      ? "3×C"
-      : pick.isCaptain
-        ? "C"
-        : pick.isViceCaptain
-          ? "V"
-          : null;
+  const armbandKind = captainArmbandKind({
+    isCaptain: pick.isCaptain,
+    isViceCaptain: pick.isViceCaptain,
+    activeChip: ctx.activeChip,
+  });
+  const armbandText = captainArmbandLabel(ctx.lang, armbandKind) || null;
   const chance = chanceBadge(player?.chance_of_playing_next_round);
   const starred = ctx.watchlistIds.has(pick.elementId);
 
@@ -584,10 +617,10 @@ function renderTile(slot: number, ctx: TileCtx): ReactNode {
         }`}
       >
         <p className="text-[10px] font-black uppercase">
-          {ctx.lang === "pl" ? "Do wymiany" : "To replace"}
+          {pt(ctx.lang, "planner.action.forSale")}
         </p>
         <p className="text-xs font-bold leading-tight">
-          {ctx.lang === "pl" ? "Wybierz z listy" : "Pick from list"}
+          {pt(ctx.lang, "planner.pitch.pickFromList")}
         </p>
         {ctx.onUndoTransferOut && !ctx.isExporting ? (
           <button
@@ -595,15 +628,26 @@ function renderTile(slot: number, ctx: TileCtx): ReactNode {
             className="rounded-lg border border-current px-2 py-1 text-[10px] font-black uppercase"
             onClick={() => ctx.onUndoTransferOut?.(pick.elementId)}
           >
-            Undo
+            {pt(ctx.lang, "planner.action.undo")}
           </button>
         ) : null}
       </div>
     );
   }
 
+  const playerName = player?.web_name ?? `#${pick.elementId}`;
+  const tileAria = formatPlayerTileAccessibleName({
+    lang: ctx.lang,
+    webName: playerName,
+    clubShort: player?.club_short_name ?? "",
+    isCaptain: pick.isCaptain,
+    isViceCaptain: pick.isViceCaptain,
+  });
+
   return (
     <div
+      role="group"
+      aria-label={tileAria}
       draggable={!ctx.isExporting}
       onDragStart={() => ctx.setDragSlot(slot)}
       onDragEnd={() => ctx.setDragSlot(null)}
@@ -613,32 +657,43 @@ function renderTile(slot: number, ctx: TileCtx): ReactNode {
         if (ctx.dragSlot != null) ctx.trySwap(ctx.dragSlot, slot);
         ctx.setDragSlot(null);
       }}
-      className={`relative flex min-h-[132px] flex-col rounded-xl border px-1.5 pb-2 pt-1 shadow-sm ${
+      data-testid="player-tile"
+      className={`relative flex max-w-full min-h-[132px] flex-col rounded-xl border px-1.5 pb-2 pt-1 shadow-sm ${
         ctx.isLight
           ? "border-slate-300 bg-white text-slate-900"
           : "border-slate-700 bg-slate-950/80 text-slate-100"
       } ${ringClass}`}
     >
-      {/* Akcje */}
-      <div className="mb-0.5 flex items-start justify-between gap-0.5">
-        <div className="flex items-center gap-0.5">
+      {/* Akcje: ✕ ⇄ C VC w jednym rzędzie (C/VC tylko XI); ☆ ⓘ na zdjęciu */}
+      <div className="mb-0.5 flex max-w-full items-center justify-between gap-0.5">
+        <div className="flex min-w-0 items-center gap-0.5">
           {!ctx.isExporting ? (
             <>
               <button
                 type="button"
-                title="Transfer out"
-                className="inline-flex h-5 w-5 items-center justify-center rounded bg-rose-500/20 text-rose-300 hover:bg-rose-500/30"
+                title={actionAria(ctx.lang, "planner.action.sell", playerName)}
+                aria-label={actionAria(
+                  ctx.lang,
+                  "planner.action.sell",
+                  playerName,
+                )}
+                className={`${PLANNER_ACTION_HIT_CLASS} bg-rose-500/20 text-rose-300 hover:bg-rose-500/30`}
                 onClick={(e) => {
                   e.stopPropagation();
                   ctx.onMarkPlayerForTransferOut(slot, pick.elementId);
                 }}
               >
-                <X className="h-3 w-3" />
+                <X className="h-3.5 w-3.5" />
               </button>
               <button
                 type="button"
-                title="Swap"
-                className={`inline-flex h-5 w-5 items-center justify-center rounded ${
+                title={actionAria(ctx.lang, "planner.action.swap", playerName)}
+                aria-label={actionAria(
+                  ctx.lang,
+                  "planner.action.swap",
+                  playerName,
+                )}
+                className={`${PLANNER_ACTION_HIT_CLASS} ${
                   selected
                     ? "bg-sky-500/30 text-sky-200"
                     : "bg-slate-500/20 text-slate-200 hover:bg-slate-500/30"
@@ -648,23 +703,12 @@ function renderTile(slot: number, ctx: TileCtx): ReactNode {
                   ctx.onTileClickSwap(slot);
                 }}
               >
-                <ArrowLeftRight className="h-3 w-3" />
+                <ArrowLeftRight className="h-3.5 w-3.5" />
               </button>
             </>
           ) : null}
         </div>
-        <div className="flex items-center gap-0.5">
-          {capLabel ? (
-            <span
-              className={`inline-flex h-5 min-w-[20px] items-center justify-center rounded px-1 text-[9px] font-black ${
-                ctx.isLight
-                  ? "bg-amber-200 text-amber-950"
-                  : "bg-amber-400 text-slate-950"
-              }`}
-            >
-              {capLabel}
-            </span>
-          ) : null}
+        <div className="flex shrink-0 items-center gap-0.5">
           {chance ? (
             <span
               className={`inline-flex h-5 items-center rounded px-1 text-[9px] font-black ${
@@ -680,53 +724,49 @@ function renderTile(slot: number, ctx: TileCtx): ReactNode {
             <>
               <button
                 type="button"
-                className="inline-flex h-5 w-5 items-center justify-center rounded bg-amber-500/20 text-[9px] font-black text-amber-200"
+                aria-pressed={pick.isCaptain}
+                className={`${PLANNER_ACTION_HIT_CLASS} border text-[10px] font-black ${
+                  pick.isCaptain
+                    ? "border-amber-400 bg-amber-400/30 text-amber-100"
+                    : "border-amber-400/50 bg-transparent text-amber-200"
+                }`}
                 onClick={(e) => {
                   e.stopPropagation();
                   ctx.onSetCaptain(pick.elementId);
                 }}
-                title="Captain"
+                title={actionAria(
+                  ctx.lang,
+                  "planner.action.captain",
+                  playerName,
+                )}
+                aria-label={actionAria(
+                  ctx.lang,
+                  "planner.action.captain",
+                  playerName,
+                )}
               >
                 C
               </button>
               <button
                 type="button"
-                className="inline-flex h-5 w-5 items-center justify-center rounded bg-slate-500/20 text-[9px] font-black text-slate-200"
+                aria-pressed={pick.isViceCaptain}
+                className={`${PLANNER_ACTION_HIT_CLASS} border text-[10px] font-black ${
+                  pick.isViceCaptain
+                    ? "border-slate-300 bg-slate-400/30 text-slate-50"
+                    : "border-slate-400/50 bg-transparent text-slate-200"
+                }`}
                 onClick={(e) => {
                   e.stopPropagation();
                   ctx.onSetViceCaptain(pick.elementId);
                 }}
-                title="Vice"
+                title={actionAria(ctx.lang, "planner.action.vice", playerName)}
+                aria-label={actionAria(
+                  ctx.lang,
+                  "planner.action.vice",
+                  playerName,
+                )}
               >
-                V
-              </button>
-            </>
-          ) : null}
-          {!ctx.isExporting ? (
-            <>
-              <button
-                type="button"
-                className={`inline-flex h-5 w-5 items-center justify-center rounded ${
-                  starred ? "text-amber-400" : "text-slate-400"
-                }`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  ctx.onToggleWatchlist(pick.elementId);
-                }}
-              >
-                <Star
-                  className={`h-3 w-3 ${starred ? "fill-amber-400" : ""}`}
-                />
-              </button>
-              <button
-                type="button"
-                className="inline-flex h-5 w-5 items-center justify-center rounded text-slate-300 hover:bg-slate-500/20"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  ctx.setInfoElementId(pick.elementId);
-                }}
-              >
-                <Info className="h-3 w-3" />
+                VC
               </button>
             </>
           ) : null}
@@ -739,32 +779,93 @@ function renderTile(slot: number, ctx: TileCtx): ReactNode {
         </p>
       ) : null}
 
-      {/* Foto */}
-      <div className="relative mx-auto mb-1 h-12 w-12">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={fplLabPlayerPhotoUrl(player?.player_code ?? 0)}
-          alt={player?.web_name ?? ""}
-          crossOrigin="anonymous"
-          className="h-12 w-12 rounded-full object-cover object-top"
-          onError={(e) => {
-            (e.currentTarget as HTMLImageElement).style.display = "none";
-          }}
-        />
-        {player?.club_pulse_code ? (
-          // eslint-disable-next-line @next/next/no-img-element
+      {/* Foto + opaska C/VC/TC; ☆ ⓘ w prawym górnym rogu zdjęcia (w obrębie karty) */}
+      <div className="relative mx-auto mb-1 w-full max-w-[5.75rem] sm:max-w-[6.75rem]">
+        <div className="relative mx-auto h-11 w-11 sm:h-14 sm:w-14">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={fplLabBadgeUrl(player.club_pulse_code)}
-            alt=""
+            src={fplLabPlayerPhotoUrl(player?.player_code ?? 0)}
+            alt={player?.web_name ?? ""}
             crossOrigin="anonymous"
-            className="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full bg-black/40 object-contain p-0.5"
+            className="h-11 w-11 rounded-full object-cover object-top sm:h-14 sm:w-14"
+            onError={(e) => {
+              (e.currentTarget as HTMLImageElement).style.display = "none";
+            }}
           />
+          {armbandText && armbandKind ? (
+            <span
+              data-testid="captain-armband"
+              role="img"
+              aria-label={captainArmbandAria(ctx.lang, armbandKind)}
+              className={`absolute -left-0.5 -top-0.5 inline-flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-black ${
+                ctx.isLight
+                  ? "bg-amber-200 text-amber-950"
+                  : "bg-amber-400 text-slate-950"
+              }`}
+            >
+              {armbandText}
+            </span>
+          ) : null}
+          {player?.club_pulse_code ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={fplLabBadgeUrl(player.club_pulse_code)}
+              alt=""
+              crossOrigin="anonymous"
+              className="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full bg-black/40 object-contain p-0.5"
+            />
+          ) : null}
+        </div>
+        {!ctx.isExporting ? (
+          <div className="absolute right-0 top-0 z-10 flex flex-col items-center gap-0.5">
+            <button
+              type="button"
+              className={`${PLANNER_ACTION_HIT_CLASS} ${
+                starred ? "text-amber-400" : "text-slate-400"
+              }`}
+              onClick={(e) => {
+                e.stopPropagation();
+                ctx.onToggleWatchlist(pick.elementId);
+              }}
+              aria-label={actionAria(
+                ctx.lang,
+                starred
+                  ? "planner.action.unwatch"
+                  : "planner.action.watch",
+                playerName,
+              )}
+            >
+              <Star
+                className={`h-3.5 w-3.5 ${starred ? "fill-amber-400" : ""}`}
+              />
+            </button>
+            <button
+              type="button"
+              className={`${PLANNER_ACTION_HIT_CLASS} text-slate-300 hover:bg-slate-500/20`}
+              onClick={(e) => {
+                e.stopPropagation();
+                ctx.setInfoElementId(pick.elementId);
+              }}
+              aria-label={actionAria(
+                ctx.lang,
+                "planner.action.info",
+                playerName,
+              )}
+            >
+              <Info className="h-3.5 w-3.5" />
+            </button>
+          </div>
         ) : null}
       </div>
 
-      <p className="px-0.5 text-center text-[11px] font-bold leading-tight sm:text-xs">
-        {player?.web_name ?? `#${pick.elementId}`}
+      <p className="px-0.5 text-center text-[13px] font-semibold leading-tight sm:text-[14px]">
+        {playerName}
       </p>
+      {player?.club_short_name ? (
+        <p className="px-0.5 text-center text-[9px] font-semibold opacity-70">
+          {player.club_short_name}
+        </p>
+      ) : null}
 
       <div className="mt-1 px-0.5">
         <TileMetricBlock
@@ -812,18 +913,16 @@ function TileMetricBlock({
     const mult =
       pick.isCaptain ? (activeChip === "3xc" ? 3 : 2) : 1;
     const shown = base * mult;
-    const fx = proj?.fixtures?.[0];
+    const pills = formatFixturePills(lang, proj);
     return (
       <div className="text-center">
-        <p className="text-[12px] font-black tabular-nums text-emerald-500">
+        <p className="text-[12px] font-semibold tabular-nums text-emerald-500">
           {pick.isCaptain && mult > 1
             ? `${base.toFixed(1)} ×${mult} = ${shown.toFixed(1)}`
             : `${base.toFixed(1)} xPts`}
         </p>
-        <p className="text-[9px] font-semibold opacity-80">
-          {proj?.isBlank
-            ? "BGW —"
-            : fx?.tickerLabel ?? (lang === "pl" ? "brak" : "n/a")}
+        <p className="text-[11px] font-semibold opacity-80">
+          {pills.map((p) => p.label).join(" · ")}
         </p>
       </div>
     );
@@ -876,50 +975,28 @@ function TileMetricBlock({
     );
   }
 
-  // FIXTURES (default) — 3 GW strip
+  // FIXTURES (default) — 1 GW = 1 wiersz (DGW = 2 pigułki w nowrap)
   const gws = [currentGw, currentGw + 1, currentGw + 2];
   const main = projectionsByElement[elementId]?.[gws[0]!];
-  const mainFx = main?.fixtures?.[0];
   return (
-    <div className="space-y-1 text-center">
-      <div
-        className={`mx-auto inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[9px] font-black ${
-          main?.isBlank
-            ? isLight
-              ? "border-slate-300 bg-slate-100 text-slate-600"
-              : "border-slate-600 bg-slate-800 text-slate-300"
-            : fdrPillClass(mainFx?.fdrLevel ?? 3, isLight)
-        }`}
-      >
-        {main?.isBlank
-          ? "BGW —"
-          : main?.isDouble
-            ? `DGW ${mainFx?.tickerLabel ?? ""}`
-            : mainFx?.tickerLabel ?? "—"}
-      </div>
-      <div className="flex justify-center gap-0.5">
-        {gws.slice(1).map((gw) => {
-          const p = projectionsByElement[elementId]?.[gw];
-          const fx = p?.fixtures?.[0];
-          return (
-            <span
-              key={gw}
-              className={`rounded border px-1 py-0.5 text-[8px] font-bold ${
-                p?.isBlank
-                  ? isLight
-                    ? "border-slate-200 bg-slate-50 text-slate-500"
-                    : "border-slate-700 bg-slate-900 text-slate-400"
-                  : fdrPillClass(fx?.fdrLevel ?? 3, isLight)
-              }`}
-              title={`GW${gw}`}
-            >
-              {p?.isBlank ? "—" : fx?.opponentShortName?.slice(0, 3) ?? "·"}
-            </span>
-          );
-        })}
-      </div>
-      <p className="text-[9px] font-bold tabular-nums opacity-90">
-        {(main?.xPts ?? 0).toFixed(1)} xPts ·{" "}
+    <div className="space-y-1 text-center" data-testid="fixture-pills-stack">
+      {gws.map((gw) => {
+        const p = projectionsByElement[elementId]?.[gw];
+        return (
+          <PlannerFixturePills
+            key={gw}
+            lang={lang}
+            proj={p}
+            isLight={isLight}
+            fdrClass={fdrPillClass}
+          />
+        );
+      })}
+      <p className="text-[12px] font-semibold tabular-nums opacity-90">
+        <span className="font-semibold text-emerald-500">
+          {(main?.xPts ?? 0).toFixed(1)} xPts
+        </span>
+        {" · "}
         {tenthsToPounds(pick.sellingPriceTenths)}
       </p>
     </div>
@@ -953,7 +1030,6 @@ function PlayerInfoModal({
   ) => void;
 }) {
   const chrome = getStatsLabMenuChrome(themeId);
-  const ui = plannerUi(lang);
   const isLight = chrome.isLight;
   const proj = projectionsByElement[elementId]?.[currentGw];
   const sell = pick?.sellingPriceTenths ?? player?.now_cost ?? 50;
@@ -1021,35 +1097,26 @@ function PlayerInfoModal({
         <div className="mt-4 grid grid-cols-3 gap-2">
           {(
             [
-              [
-                lang === "pl" ? "Cena zakupu (PP)" : "Purchase (PP)",
-                pick?.purchasePriceTenths ?? player?.now_cost ?? 0,
-              ],
-              [
-                lang === "pl" ? "Cena rynkowa (CP)" : "Current (CP)",
-                pick?.nowCostTenths ?? player?.now_cost ?? 0,
-              ],
-              [
-                lang === "pl" ? "Cena sprzedaży (SP)" : "Selling (SP)",
-                sell,
-              ],
+              ["planner.price.purchase.short", pick?.purchasePriceTenths ?? player?.now_cost ?? 0],
+              ["planner.price.current.short", pick?.nowCostTenths ?? player?.now_cost ?? 0],
+              ["planner.price.selling.short", sell],
             ] as const
-          ).map(([label, value]) => (
+          ).map(([labelKey, value]) => (
             <div
-              key={label}
+              key={labelKey}
               className={`rounded-xl border p-2 text-center ${chrome.group}`}
             >
               <p className={`text-[9px] font-black uppercase ${chrome.mutedLabel}`}>
-                {label}
+                {pt(lang, labelKey)}
               </p>
               <p className={`mt-1 text-sm font-black tabular-nums ${chrome.text}`}>
-                {tenthsToPounds(Number(value))}
+                {formatTenthsAsPounds(Number(value))}
               </p>
             </div>
           ))}
         </div>
         <p className={`mt-2 text-center text-[10px] font-bold ${chrome.mutedLabel}`}>
-          {ui.valueSource[source]}
+          {plannerSourceLabel(lang, source)}
         </p>
 
         {pick && onUpdateCustomSellingPrice ? (
@@ -1089,7 +1156,9 @@ function PlayerInfoModal({
                 : "border-emerald-400/40 bg-emerald-500/15 text-emerald-100"
           }`}
         >
-          {pick?.willDropAffectSell ? ui.priceDropRisk : ui.priceDropSafe}
+          {pick?.willDropAffectSell
+            ? pt(lang, "planner.price.dropAffects")
+            : pt(lang, "planner.price.dropSafe")}
         </p>
 
         <div className={`mt-4 rounded-xl border p-3 ${chrome.group}`}>
@@ -1114,7 +1183,6 @@ function PlayerInfoModal({
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             {upcoming.map((gw) => {
               const p = projectionsByElement[elementId]?.[gw];
-              const fx = p?.fixtures?.[0];
               return (
                 <div
                   key={gw}
@@ -1123,21 +1191,14 @@ function PlayerInfoModal({
                   <p className={`text-[9px] font-black ${chrome.mutedLabel}`}>
                     GW{gw}
                   </p>
-                  <p
-                    className={`mt-1 inline-flex rounded border px-1.5 py-0.5 text-[10px] font-black ${
-                      p?.isBlank
-                        ? isLight
-                          ? "border-slate-300 bg-slate-100 text-slate-600"
-                          : "border-slate-600 bg-slate-800 text-slate-300"
-                        : fdrPillClass(fx?.fdrLevel ?? 3, isLight)
-                    }`}
-                  >
-                    {p?.isBlank
-                      ? "BGW"
-                      : p?.isDouble
-                        ? `DGW ${fx?.tickerLabel ?? ""}`
-                        : fx?.tickerLabel ?? "—"}
-                  </p>
+                  <div className="mt-1">
+                    <PlannerFixturePills
+                      lang={lang}
+                      proj={p}
+                      isLight={isLight}
+                      fdrClass={fdrPillClass}
+                    />
+                  </div>
                   <p className={`mt-1 text-xs font-black tabular-nums ${chrome.text}`}>
                     {(p?.xPts ?? 0).toFixed(1)} xPts
                   </p>

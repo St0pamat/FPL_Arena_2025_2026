@@ -15,6 +15,93 @@ import type { StatsLabPeriodMode } from "@/lib/stats-lab/presets";
 export type StatsLabLang = "pl" | "en";
 export type StatsLabScaleMode = "PERCENTILE" | "RAW";
 
+/**
+ * Shell Stats Lab — nav.* / common.* (jedyna definicja; bez duplikatów w plannerI18n).
+ * Etykieta + opcjonalny tooltip.
+ */
+export const STATS_LAB_SHELL_LABELS = {
+  pl: {
+    "nav.centre": "Statystyki",
+    "nav.studio": "Wykresy",
+    "nav.projections": "Predykcje",
+    "nav.planner": "Planer",
+    "nav.knowledge": "Baza wiedzy",
+    "common.pts": "pkt",
+    "common.emdash": "—",
+    "common.loading": "Ładujemy dane…",
+    "common.gw": "GW{gw}",
+    "common.deadline": "Termin transferów",
+    "common.demoSquad": "Skład demo",
+    "shell.aria.lang": "Zmień język",
+    "shell.aria.theme": "Zmień motyw",
+  },
+  en: {
+    "nav.centre": "Statistics",
+    "nav.studio": "Charts",
+    "nav.projections": "Projections",
+    "nav.planner": "Planner",
+    "nav.knowledge": "Knowledge base",
+    "common.pts": "pts",
+    "common.emdash": "—",
+    "common.loading": "Loading data…",
+    "common.gw": "GW{gw}",
+    "common.deadline": "Deadline",
+    "common.demoSquad": "Demo squad",
+    "shell.aria.lang": "Change language",
+    "shell.aria.theme": "Change theme",
+  },
+} as const;
+
+export const STATS_LAB_SHELL_TOOLTIPS = {
+  pl: {
+    "nav.centre": "Tabele analityczne",
+    "nav.studio": "Studio wykresów",
+    "nav.projections": "Predykcje i terminarz",
+    "nav.planner": "Drużyna i transfery",
+    "nav.knowledge": "Baza wiedzy i zasady FPL",
+    "common.deadline": "Deadline kolejki",
+  },
+  en: {
+    "nav.centre": "Analytics tables",
+    "nav.studio": "Chart studio",
+    "nav.projections": "Projections and fixtures",
+    "nav.planner": "Squad and transfers",
+    "nav.knowledge": "Knowledge base and FPL rules",
+    "common.deadline": "Gameweek deadline",
+  },
+} as const;
+
+export type StatsLabShellLabelKey = keyof (typeof STATS_LAB_SHELL_LABELS)["pl"];
+export type StatsLabShellTooltipKey =
+  keyof (typeof STATS_LAB_SHELL_TOOLTIPS)["pl"];
+
+export function formatShellTemplate(
+  template: string,
+  params: Record<string, string | number> = {},
+): string {
+  return template.replace(/\{(\w+)\}/g, (match, key: string) => {
+    if (Object.prototype.hasOwnProperty.call(params, key)) {
+      return String(params[key]);
+    }
+    return match;
+  });
+}
+
+export function shellLabel(
+  lang: StatsLabLang,
+  key: StatsLabShellLabelKey,
+  params: Record<string, string | number> = {},
+): string {
+  return formatShellTemplate(STATS_LAB_SHELL_LABELS[lang][key], params);
+}
+
+export function shellTooltip(
+  lang: StatsLabLang,
+  key: StatsLabShellTooltipKey,
+): string {
+  return STATS_LAB_SHELL_TOOLTIPS[lang][key];
+}
+
 export function statShort(key: FplStatKey, lang: StatsLabLang): string {
   const d = getFplStatDefinition(key);
   if (!d) return key;

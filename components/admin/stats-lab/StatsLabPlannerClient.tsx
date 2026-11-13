@@ -32,6 +32,8 @@ import { willNextPriceDropAffectSellingPrice } from "@/lib/stats-lab/fplEntryApi
 import type { StatsLabLang } from "@/lib/stats-lab/i18n";
 import { getStatsLabMenuChrome } from "@/lib/stats-lab/menuChrome";
 import {
+  arePlannerVariantsIdentical,
+  buildPlannerDraftSummary,
   evaluateRollingPlan,
   optimiseStartingXiForGw,
   type EvaluatedGwState,
@@ -41,13 +43,22 @@ import {
   type SquadPlayerState,
 } from "@/lib/stats-lab/plannerEngine";
 import {
-  PLANNER_CHIP_LABELS,
-  PLANNER_MODULE_LABEL,
-  plannerUi,
+  assignCaptain,
+  assignViceCaptain,
+  clearRolesForElement,
+} from "@/lib/stats-lab/plannerCaptainRoles";
+import { shellLabel } from "@/lib/stats-lab/i18n";
+import {
+  PLANNER_CHIP_LABEL_KEY,
+  formatTenthsAsPounds,
+  pt,
+  resolvePlannerWarning,
   type PlannerChipType,
   type PlannerDraftVariant,
   type PlannerTileMetric,
+  type PlannerWarning,
 } from "@/lib/stats-lab/plannerI18n";
+import { formatHitBar } from "@/lib/stats-lab/plannerUiFormat";
 import type { FplLabPlayer } from "@/lib/stats-lab/types";
 
 const TEAM_ID_KEY = "fpl-stats-lab-planner-team-id";
@@ -209,14 +220,6 @@ function lineupFromSquad(squad: SquadPlayerState[]): number[] {
     .map((p) => p.elementId);
 }
 
-function chipPosterLabel(chip: PlannerChipType | null): string | null {
-  if (!chip) return null;
-  if (chip === "wildcard") return "WILDCARD";
-  if (chip === "freehit") return "FREE HIT";
-  if (chip === "bboost") return "BENCH BOOST";
-  return "TRIPLE CAPTAIN";
-}
-
 function newTransferId(): string {
   return `t-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -227,7 +230,6 @@ export function StatsLabPlannerClient({
   themeId,
 }: Props) {
   const chrome = getStatsLabMenuChrome(themeId);
-  const ui = plannerUi(lang);
   const isLight = chrome.isLight;
   const exportRef = useRef<HTMLDivElement | null>(null);
   const [pending, startTransition] = useTransition();
@@ -399,27 +401,24 @@ export function StatsLabPlannerClient({
   }, [entry, activeGwState]);
 
   const draftSummaries = useMemo(() => {
-    return (["A", "B", "C"] as PlannerDraftVariant[]).map((v) => {
-      const gws = evaluatedByVariant[v];
-      const last = gws[gws.length - 1];
-      const chipsByGw: Partial<Record<number, PlannerChipType>> = {};
-      let totalGross = 0;
-      let totalHits = 0;
-      for (const g of gws) {
-        totalGross += g.grossXPts;
-        totalHits += g.transferCostPts;
-        if (g.activeChip) chipsByGw[g.gw] = g.activeChip;
-      }
-      return {
+    if (!payload) return [];
+    return (["A", "B", "C"] as PlannerDraftVariant[]).map((v) =>
+      buildPlannerDraftSummary({
         variant: v,
-        totalGrossXPts: totalGross,
-        totalHitPts: totalHits,
-        finalBankTenths: last?.bankTenths ?? entry?.bankTenths ?? 0,
-        freeTransfers: last?.ftAvailable ?? entry?.freeTransfers ?? 1,
-        chipsByGw,
-      };
-    });
-  }, [evaluatedByVariant, entry]);
+        gws: evaluatedByVariant[v],
+        planningStartGw: payload.planningStartGw,
+        fallbackBankTenths: entry?.bankTenths ?? 0,
+      }),
+    );
+  }, [evaluatedByVariant, entry, payload]);
+
+  const variantsIdentical = useMemo(() => {
+    return arePlannerVariantsIdentical(
+      decisionsList(drafts.A.decisionsByGw),
+      decisionsList(drafts.B.decisionsByGw),
+      decisionsList(drafts.C.decisionsByGw),
+    );
+  }, [drafts]);
 
   const gwMarkers = useMemo(() => {
     const m: Record<
@@ -586,17 +585,27 @@ export function StatsLabPlannerClient({
       b.nowCostTenths = tmpNow;
       b.sellingPriceTenths = tmpSell;
       const dec = ensureDecision(draft.decisionsByGw, currentGw);
+      const effectiveRoles = {
+        captainElementId: activeGwState.captainElementId,
+        viceCaptainElementId: activeGwState.viceCaptainElementId,
+      };
+      let roles = {
+        captainElementId: dec.captainElementId ?? null,
+        viceCaptainElementId: dec.viceCaptainElementId ?? null,
+        captainClearedByUser: dec.captainClearedByUser,
+        viceClearedByUser: dec.viceClearedByUser,
+      };
+      // Zejście na ławkę (slot > 11) czyści rolę jak sprzedaż — flaga clearedByUser.
+      // effectiveRoles obejmuje auto-C/VC (decyzja bez zapisanego id).
+      for (const p of squad) {
+        if (p.slot >= 12) {
+          roles = clearRolesForElement(roles, p.elementId, effectiveRoles);
+        }
+      }
       draft.decisionsByGw[currentGw] = {
         ...dec,
         lineupOrder: lineupFromSquad(squad),
-        captainElementId:
-          squad.find((p) => p.isCaptain)?.elementId ??
-          dec.captainElementId ??
-          null,
-        viceCaptainElementId:
-          squad.find((p) => p.isViceCaptain)?.elementId ??
-          dec.viceCaptainElementId ??
-          null,
+        ...roles,
       };
       return draft;
     });
@@ -660,10 +669,24 @@ export function StatsLabPlannerClient({
       const nextOrder = order.map((id) =>
         id === args.outElementId ? args.inElementId : id,
       );
+      const roles = clearRolesForElement(
+        {
+          captainElementId: dec.captainElementId ?? null,
+          viceCaptainElementId: dec.viceCaptainElementId ?? null,
+          captainClearedByUser: dec.captainClearedByUser,
+          viceClearedByUser: dec.viceClearedByUser,
+        },
+        args.outElementId,
+        {
+          captainElementId: activeGwState.captainElementId,
+          viceCaptainElementId: activeGwState.viceCaptainElementId,
+        },
+      );
       draft.decisionsByGw[currentGw] = {
         ...dec,
         transfers: [...dec.transfers, transfer],
         lineupOrder: nextOrder,
+        ...roles,
       };
       return draft;
     });
@@ -671,31 +694,41 @@ export function StatsLabPlannerClient({
   }
 
   function onSetCaptain(elementId: number) {
+    if (!activeGwState) return;
+    const pick = activeGwState.squad.find((p) => p.elementId === elementId);
+    if (!pick || pick.slot < 1 || pick.slot > 11) return;
     pushUndoAndUpdate((draft) => {
       const dec = ensureDecision(draft.decisionsByGw, currentGw);
-      draft.decisionsByGw[currentGw] = {
-        ...dec,
-        captainElementId: elementId,
-        viceCaptainElementId:
-          dec.viceCaptainElementId === elementId
-            ? null
-            : dec.viceCaptainElementId ?? null,
-      };
+      const patch = assignCaptain(
+        {
+          captainElementId: dec.captainElementId ?? null,
+          viceCaptainElementId: dec.viceCaptainElementId ?? null,
+          captainClearedByUser: dec.captainClearedByUser,
+          viceClearedByUser: dec.viceClearedByUser,
+        },
+        elementId,
+      );
+      draft.decisionsByGw[currentGw] = { ...dec, ...patch };
       return draft;
     });
   }
 
   function onSetViceCaptain(elementId: number) {
+    if (!activeGwState) return;
+    const pick = activeGwState.squad.find((p) => p.elementId === elementId);
+    if (!pick || pick.slot < 1 || pick.slot > 11) return;
     pushUndoAndUpdate((draft) => {
       const dec = ensureDecision(draft.decisionsByGw, currentGw);
-      draft.decisionsByGw[currentGw] = {
-        ...dec,
-        viceCaptainElementId: elementId,
-        captainElementId:
-          dec.captainElementId === elementId
-            ? null
-            : dec.captainElementId ?? null,
-      };
+      const patch = assignViceCaptain(
+        {
+          captainElementId: dec.captainElementId ?? null,
+          viceCaptainElementId: dec.viceCaptainElementId ?? null,
+          captainClearedByUser: dec.captainClearedByUser,
+          viceClearedByUser: dec.viceClearedByUser,
+        },
+        elementId,
+      );
+      draft.decisionsByGw[currentGw] = { ...dec, ...patch };
       return draft;
     });
   }
@@ -859,7 +892,9 @@ export function StatsLabPlannerClient({
           activeChip: activeGwState.activeChip,
           isValidGw: activeGwState.isValid,
           errors: activeGwState.errors,
-          warnings: activeGwState.warnings,
+          warnings: activeGwState.warnings.map((w: PlannerWarning) =>
+            resolvePlannerWarning(w, lang),
+          ),
           picksSummary: activeGwState.squad.map((p) => ({
             slot: p.slot,
             elementId: p.elementId,
@@ -900,7 +935,7 @@ export function StatsLabPlannerClient({
   }
 
   const chipLabel = activeGwState?.activeChip
-    ? PLANNER_CHIP_LABELS[lang][activeGwState.activeChip]
+    ? pt(lang, PLANNER_CHIP_LABEL_KEY[activeGwState.activeChip])
     : null;
 
   return (
@@ -908,13 +943,13 @@ export function StatsLabPlannerClient({
       {/* Toolbar */}
       <div className={`flex flex-wrap items-center gap-2 rounded-2xl border p-2 ${chrome.panel}`}>
         <p className={`mr-auto text-xs font-black uppercase tracking-wider ${chrome.mutedLabel}`}>
-          {PLANNER_MODULE_LABEL[lang]}
+          {pt(lang, "planner.brand.title")}
         </p>
         {(
           [
-            ["pitch_market", lang === "pl" ? "Boisko + Rynek" : "Pitch + Market"],
-            ["pitch_poster", lang === "pl" ? "Pełny Plakat Boiska" : "Full Pitch Poster"],
-            ["multi_gw", lang === "pl" ? "Tabela Wielokolejkowa" : "Multi-GW Table"],
+            ["pitch_market", pt(lang, "planner.view.pitchMarket")],
+            ["pitch_poster", pt(lang, "planner.view.poster")],
+            ["multi_gw", pt(lang, "planner.view.table")],
           ] as const
         ).map(([id, label]) => (
           <button
@@ -972,6 +1007,9 @@ export function StatsLabPlannerClient({
         onSelectVariant={setActiveVariant}
         onCopyVariantTo={onCopyVariantTo}
         draftSummaries={draftSummaries}
+        variantsIdentical={variantsIdentical}
+        planningStartGw={payload.planningStartGw}
+        planningEndGw={payload.planningEndGw}
         currentGw={currentGw}
         availableGameweeks={payload.availableGameweeks}
         onSelectGw={setCurrentGw}
@@ -1037,6 +1075,7 @@ export function StatsLabPlannerClient({
         evaluatedGw={activeGwState}
       />
 
+
       {/* Pitch+Market workspace: market lives OUTSIDE exportRef for symmetric posters */}
       <div
         className={
@@ -1058,27 +1097,32 @@ export function StatsLabPlannerClient({
             </p>
             <h2 className={`text-lg font-black sm:text-xl ${chrome.text}`}>
               {entry.teamName} ·{" "}
-              {lang === "pl" ? `Wariant ${activeVariant}` : `Draft ${activeVariant}`}{" "}
-              · GW{currentGw}
-              {chipPosterLabel(activeGwState?.activeChip ?? null)
-                ? ` · ${chipPosterLabel(activeGwState?.activeChip ?? null)}`
+              {pt(lang, "planner.variant.label", { id: activeVariant })} ·{" "}
+              {shellLabel(lang, "common.gw", { gw: currentGw })}
+              {activeGwState?.activeChip
+                ? ` · ${pt(lang, PLANNER_CHIP_LABEL_KEY[activeGwState.activeChip])}`
                 : ""}
             </h2>
             <p className={`text-[11px] font-semibold ${chrome.mutedLabel}`}>
-              {lang === "pl" ? "Prognoza" : "Projection"}:{" "}
-              {(activeGwState?.grossXPts ?? 0).toFixed(1)} xPts (
-              {lang === "pl" ? "Netto" : "Net"}:{" "}
-              {(activeGwState?.netXPts ?? 0).toFixed(1)}) •{" "}
-              {lang === "pl" ? "Transfery" : "Transfers"}:{" "}
-              {activeGwState?.validTransfersCount ?? 0}/
-              {activeGwState?.ftAvailable ?? entry.freeTransfers} FT (
-              {activeGwState?.transferCostPts
-                ? `−${activeGwState.transferCostPts}`
-                : "0"}{" "}
-              pkt) • Bank: £
-              {((activeGwState?.bankTenths ?? entry.bankTenths) / 10).toFixed(1)}
-              m • {lang === "pl" ? "Budżet (SP)" : "Budget (SP)"}: £
-              {(spendingPowerTenths / 10).toFixed(1)}m
+              {pt(lang, "planner.kpi.xpts")}:{" "}
+              {(activeGwState?.grossXPts ?? 0).toFixed(1)} xPts
+              {(activeGwState?.transferCostPts ?? 0) > 0
+                ? ` (${pt(lang, "planner.hit.netto").toLowerCase()} ${(activeGwState?.netXPts ?? 0).toFixed(1)})`
+                : ""}{" "}
+              •{" "}
+              {formatHitBar({
+                lang,
+                used: activeGwState?.validTransfersCount ?? 0,
+                ft: activeGwState?.ftAvailable ?? entry.freeTransfers,
+                cost: activeGwState?.transferCostPts ?? 0,
+                activeChip: activeGwState?.activeChip ?? null,
+              })}{" "}
+              • {pt(lang, "planner.kpi.bank")}:{" "}
+              {formatTenthsAsPounds(
+                activeGwState?.bankTenths ?? entry.bankTenths,
+              )}{" "}
+              • {pt(lang, "planner.price.spendingPower")}:{" "}
+              {formatTenthsAsPounds(spendingPowerTenths)}
               {chipLabel ? ` • ${chipLabel}` : ""}
             </p>
           </div>
@@ -1106,6 +1150,16 @@ export function StatsLabPlannerClient({
               onToggleWatchlist={onToggleWatchlist}
               activeChip={activeGwState?.activeChip ?? null}
               isExporting={isExporting || layoutMode === "pitch_poster"}
+              missingCaptain={
+                activeGwState?.warnings.some(
+                  (w) => w.key === "planner.captain.missing",
+                ) ?? false
+              }
+              missingVice={
+                activeGwState?.warnings.some(
+                  (w) => w.key === "planner.vice.missing",
+                ) ?? false
+              }
             />
 
             {activeGwState &&
@@ -1113,8 +1167,8 @@ export function StatsLabPlannerClient({
               0 ? (
               <div className={`mt-3 w-full rounded-xl border p-2 ${chrome.group}`}>
                 <p className={`mb-1 text-[10px] font-black uppercase ${chrome.mutedLabel}`}>
-                  {lang === "pl" ? "Transfery GW" : "GW transfers"}
-                  {currentGw}
+                  {pt(lang, "planner.kpi.transfers")}{" "}
+                  {shellLabel(lang, "common.gw", { gw: currentGw })}
                 </p>
                 <ul className="space-y-1">
                   {activeGwState.transfers
@@ -1128,11 +1182,15 @@ export function StatsLabPlannerClient({
                           className={`text-[11px] font-bold ${chrome.text}`}
                         >
                           {outP?.web_name ?? `#${t.outElementId}`} (
-                          {outP?.club_short_name ?? "—"} · SP £
-                          {(t.outSellingPriceTenths / 10).toFixed(1)}m) ➔{" "}
+                          {outP?.club_short_name ??
+                            shellLabel(lang, "common.emdash")}{" "}
+                          · {pt(lang, "planner.price.selling.short")}{" "}
+                          {formatTenthsAsPounds(t.outSellingPriceTenths)}) ➔{" "}
                           {inP?.web_name ?? `#${t.inElementId}`} (
-                          {inP?.club_short_name ?? "—"} · CP £
-                          {(t.inPurchasePriceTenths / 10).toFixed(1)}m)
+                          {inP?.club_short_name ??
+                            shellLabel(lang, "common.emdash")}{" "}
+                          · {pt(lang, "planner.price.current.short")}{" "}
+                          {formatTenthsAsPounds(t.inPurchasePriceTenths)})
                         </li>
                       );
                     })}
@@ -1142,7 +1200,7 @@ export function StatsLabPlannerClient({
           </div>
 
           <div className={`mt-4 w-full border-t border-inherit pt-3 text-center text-[10px] font-semibold ${chrome.mutedLabel}`}>
-            <p>{ui.posterFooter}</p>
+            <p>{pt(lang, "planner.poster.footer")}</p>
             <p className="mt-1">
               <a
                 href="https://www.fpl-arena.com"
@@ -1153,9 +1211,7 @@ export function StatsLabPlannerClient({
                 www.fpl-arena.com
               </a>{" "}
               • Powered by St0pa | FPL Arena •{" "}
-              {lang === "pl"
-                ? "✓ Dane i prognozy zweryfikowane"
-                : "✓ Projections verified"}
+              {pt(lang, "planner.poster.verified")}
             </p>
           </div>
         </div>
@@ -1165,6 +1221,7 @@ export function StatsLabPlannerClient({
             themeId={themeId}
             lang={lang}
             currentGw={currentGw}
+            planningStartGw={payload.planningStartGw}
             availableGameweeks={payload.availableGameweeks}
             clubs={payload.clubs}
             players={payload.players}

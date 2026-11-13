@@ -1,0 +1,81 @@
+{
+  "ftMax": 5,
+  "cases": [
+    {
+      "id": "start_to_1_ft",
+      "startedEvent": 1,
+      "history": [{ "event": 1, "event_transfers": 0, "event_transfers_cost": 0 }],
+      "chips": [],
+      "ftTopUps": [],
+      "expectedFreeTransfers": 1,
+      "expectedMismatch": false
+    },
+    {
+      "id": "five_blank_gws_reach_max_5",
+      "startedEvent": 1,
+      "history": [
+        { "event": 1, "event_transfers": 0, "event_transfers_cost": 0 },
+        { "event": 2, "event_transfers": 0, "event_transfers_cost": 0 },
+        { "event": 3, "event_transfers": 0, "event_transfers_cost": 0 },
+        { "event": 4, "event_transfers": 0, "event_transfers_cost": 0 },
+        { "event": 5, "event_transfers": 0, "event_transfers_cost": 0 },
+        { "event": 6, "event_transfers": 0, "event_transfers_cost": 0 }
+      ],
+      "chips": [],
+      "ftTopUps": [],
+      "expectedFreeTransfers": 5,
+      "expectedMismatch": false
+    },
+    {
+      "id": "wildcard_at_2_ft_stays_2",
+      "startedEvent": 1,
+      "history": [
+        { "event": 1, "event_transfers": 0, "event_transfers_cost": 0 },
+        { "event": 2, "event_transfers": 0, "event_transfers_cost": 0 },
+        { "event": 3, "event_transfers": 5, "event_transfers_cost": 0 }
+      ],
+      "chips": [{ "name": "wildcard", "event": 3, "time": "2025-08-20T00:00:00Z" }],
+      "ftTopUps": [],
+      "expectedFreeTransfers": 2,
+      "expectedMismatch": false
+    },
+    {
+      "id": "freehit_at_3_ft_stays_3",
+      "startedEvent": 1,
+      "history": [
+        { "event": 1, "event_transfers": 0, "event_transfers_cost": 0 },
+        { "event": 2, "event_transfers": 0, "event_transfers_cost": 0 },
+        { "event": 3, "event_transfers": 0, "event_transfers_cost": 0 },
+        { "event": 4, "event_transfers": 3, "event_transfers_cost": 0 }
+      ],
+      "chips": [{ "name": "freehit", "event": 4, "time": "2025-09-01T00:00:00Z" }],
+      "ftTopUps": [],
+      "expectedFreeTransfers": 3,
+      "expectedMismatch": false
+    },
+    {
+      "id": "two_transfers_at_1_ft_cost_4_consistent",
+      "startedEvent": 1,
+      "history": [
+        { "event": 1, "event_transfers": 0, "event_transfers_cost": 0 },
+        { "event": 2, "event_transfers": 2, "event_transfers_cost": 4 }
+      ],
+      "chips": [],
+      "ftTopUps": [],
+      "expectedFreeTransfers": 1,
+      "expectedMismatch": false
+    },
+    {
+      "id": "ft_topup_gw16_to_5",
+      "startedEvent": 1,
+      "history": [
+        { "event": 1, "event_transfers": 0, "event_transfers_cost": 0 },
+        { "event": 15, "event_transfers": 1, "event_transfers_cost": 0 }
+      ],
+      "chips": [],
+      "ftTopUps": [{ "gw": 16, "setTo": 5 }],
+      "expectedFreeTransfers": 5,
+      "expectedMismatch": false
+    }
+  ]
+}
