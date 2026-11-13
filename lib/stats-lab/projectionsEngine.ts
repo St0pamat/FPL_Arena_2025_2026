@@ -4,6 +4,7 @@
  */
 
 import type { FplLabClub, FplLabFixtureRow } from "@/lib/stats-lab/types";
+import { formatFixturePillLabel } from "@/lib/stats-lab/plannerFixtureUi";
 
 /* ─────────────────────────────────────────────────
  * Public unions / enums
@@ -886,11 +887,6 @@ export function predictFixture(
   };
 }
 
-function tickerMatrix(shortName: string, wasHome: boolean): string {
-  const s = shortName.trim() || "???";
-  return wasHome ? s.toUpperCase() : s.toLowerCase();
-}
-
 function toTeamFixtureItem(
   pred: ProjectionsFixturePrediction,
   teamId: number,
@@ -920,7 +916,12 @@ function toTeamFixtureItem(
       : pred.verification.actualHomeGoals;
   }
 
-  const upper = oppShort.toUpperCase();
+  const pillPl =
+    formatFixturePillLabel("pl", oppShort, wasHome) ??
+    `${String(oppShort).toUpperCase().slice(0, 3)} (${wasHome ? "D" : "W"})`;
+  const pillEn =
+    formatFixturePillLabel("en", oppShort, wasHome) ??
+    `${String(oppShort).toUpperCase().slice(0, 3)} (${wasHome ? "H" : "A"})`;
   return {
     fixtureId: pred.fixtureId,
     gameweek: pred.gameweek,
@@ -930,9 +931,9 @@ function toTeamFixtureItem(
     opponentShortName: oppShort,
     opponentName: oppName,
     opponentPulseCode: oppPulse,
-    tickerLabelMatrix: tickerMatrix(oppShort, wasHome),
-    tickerLabelSingleGwPl: `${upper} (${wasHome ? "D" : "W"})`,
-    tickerLabelSingleGwEn: `${upper} (${wasHome ? "H" : "A"})`,
+    tickerLabelMatrix: pillEn,
+    tickerLabelSingleGwPl: pillPl,
+    tickerLabelSingleGwEn: pillEn,
     projectedGoals,
     projectedGoalsConceded,
     csProb,

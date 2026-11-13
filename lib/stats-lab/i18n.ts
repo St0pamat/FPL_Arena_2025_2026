@@ -26,6 +26,10 @@ export const STATS_LAB_SHELL_LABELS = {
     "nav.projections": "Predykcje",
     "nav.planner": "Planer",
     "nav.knowledge": "Baza wiedzy",
+    "page.title.planner": "Planer FPL",
+    "page.title.centre": "Stats Centre",
+    "page.title.studio": "Studio wykresów",
+    "page.title.projections": "Predykcje",
     "common.pts": "pkt",
     "common.emdash": "—",
     "common.loading": "Ładujemy dane…",
@@ -41,6 +45,10 @@ export const STATS_LAB_SHELL_LABELS = {
     "nav.projections": "Projections",
     "nav.planner": "Planner",
     "nav.knowledge": "Knowledge base",
+    "page.title.planner": "FPL Planner",
+    "page.title.centre": "Stats Centre",
+    "page.title.studio": "Chart Studio",
+    "page.title.projections": "Predictions",
     "common.pts": "pts",
     "common.emdash": "—",
     "common.loading": "Loading data…",
@@ -93,6 +101,33 @@ export function shellLabel(
   params: Record<string, string | number> = {},
 ): string {
   return formatShellTemplate(STATS_LAB_SHELL_LABELS[lang][key], params);
+}
+
+export type StatsLabPageTab =
+  | "planner"
+  | "centre"
+  | "studio"
+  | "projections";
+
+export function statsLabPageTitle(
+  lang: StatsLabLang,
+  tab: StatsLabPageTab,
+): string {
+  return shellLabel(lang, `page.title.${tab}`);
+}
+
+export function parseStatsLabPageTab(
+  raw: string | null | undefined,
+): StatsLabPageTab {
+  if (
+    raw === "planner" ||
+    raw === "centre" ||
+    raw === "studio" ||
+    raw === "projections"
+  ) {
+    return raw;
+  }
+  return "studio";
 }
 
 export function shellTooltip(
@@ -226,6 +261,9 @@ export const UI_COPY = {
     recalculating: "Przeliczam porównanie…",
     pool: "Pula",
     onChart: "Na wykresie",
+    heatmapRankedByPoints: "Ranking wg punktów",
+    heatmapRatingTooltip:
+      "Średnia percentyli wybranych metryk na tle porównywanej puli",
     percentileExplain:
       "Tło grupy (0–100): im wyższa nota w kryterium, tym lepiej na tle analizowanej grupy (100 = lider). OCENA (0–100) to średnia z wybranych cech.",
     rawExplain:
@@ -282,6 +320,9 @@ export const UI_COPY = {
     recalculating: "Recalculating comparison…",
     pool: "Pool",
     onChart: "On chart",
+    heatmapRankedByPoints: "Ranked by points",
+    heatmapRatingTooltip:
+      "Average of selected-metric percentiles vs the comparison pool",
     percentileExplain:
       "Group rank (0–100): higher score means better vs the analysed group (100 = leader). RATING (0–100) is the average of your selected traits.",
     rawExplain:

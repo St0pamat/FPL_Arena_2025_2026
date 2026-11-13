@@ -8,7 +8,12 @@ import type {
   StatsLabComparisonResult,
 } from "@/lib/stats-lab/analyticsEngine";
 import type { StatsLabQueryFilter } from "@/lib/stats-lab/presets";
-import { shellLabel, shellTooltip, type StatsLabLang } from "@/lib/stats-lab/i18n";
+import {
+  shellLabel,
+  shellTooltip,
+  statsLabPageTitle,
+  type StatsLabLang,
+} from "@/lib/stats-lab/i18n";
 import type { KnowledgeHelpAnchor } from "@/lib/stats-lab/knowledgeBaseContent";
 import {
   STATS_LAB_CHART_THEMES,
@@ -20,6 +25,13 @@ import { StatsLabProjectionsClient } from "@/components/admin/stats-lab/StatsLab
 import { StatsLabPlannerClient } from "@/components/admin/stats-lab/StatsLabPlannerClient";
 import { StatsLabKnowledgeBaseModal } from "@/components/admin/stats-lab/StatsLabKnowledgeBaseModal";
 import { getStatsLabMenuChrome } from "@/lib/stats-lab/menuChrome";
+import {
+  shellNavChipClass,
+  shellNavChipGroupClass,
+  shellNavClass,
+  shellNavTabClass,
+  shellRootClass,
+} from "@/lib/stats-lab/shellNavChrome";
 
 export type ModuleTab = "centre" | "studio" | "projections" | "planner";
 
@@ -97,73 +109,6 @@ function persistThemeAndLang(
   }
 }
 
-function shellRootClass(themeId: StatsLabChartThemeId): string {
-  const base =
-    "space-y-5 overflow-x-hidden rounded-2xl p-4 transition-colors duration-200";
-  if (themeId === "ANALYST_LIGHT") {
-    return `${base} border border-slate-300 bg-slate-100 text-slate-900 shadow-sm`;
-  }
-  if (themeId === "SCOUT_DARK") {
-    return `${base} border border-teal-900/70 bg-[#06181e] text-teal-50`;
-  }
-  return `${base} border border-slate-800/80 bg-[#070b14] text-slate-100`;
-}
-
-function shellNavClass(themeId: StatsLabChartThemeId): string {
-  const base = "flex flex-wrap items-center gap-2 rounded-2xl p-2";
-  if (themeId === "ANALYST_LIGHT") {
-    return `${base} border border-slate-300 bg-white shadow-sm`;
-  }
-  if (themeId === "SCOUT_DARK") {
-    return `${base} border border-teal-800/80 bg-[#09222a]`;
-  }
-  return `${base} border border-slate-800 bg-[#0c1322]`;
-}
-
-function shellNavInactiveClass(themeId: StatsLabChartThemeId): string {
-  if (themeId === "ANALYST_LIGHT") {
-    return "border border-slate-300 bg-slate-100 text-slate-800 hover:bg-slate-200 hover:text-slate-950";
-  }
-  if (themeId === "SCOUT_DARK") {
-    return "border border-teal-800 bg-[#06181e] text-teal-100 hover:bg-teal-900/60 hover:text-white";
-  }
-  return "border border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800 hover:text-white";
-}
-
-function shellNavActiveClass(themeId: StatsLabChartThemeId): string {
-  if (themeId === "ANALYST_LIGHT") {
-    return "border border-emerald-800 bg-emerald-700 font-black text-white";
-  }
-  return "border border-[#39ff14] bg-[#39ff14] font-black text-slate-950";
-}
-
-function shellNavChipGroupClass(themeId: StatsLabChartThemeId): string {
-  if (themeId === "ANALYST_LIGHT") {
-    return "inline-flex rounded-xl border border-slate-300 bg-slate-50 p-1";
-  }
-  if (themeId === "SCOUT_DARK") {
-    return "inline-flex rounded-xl border border-teal-800 bg-[#06181e] p-1";
-  }
-  return "inline-flex rounded-xl border border-slate-700 bg-[#070b14] p-1";
-}
-
-function shellNavTabClass(
-  active: boolean,
-  themeId: StatsLabChartThemeId,
-): string {
-  return `inline-flex min-h-[28px] items-center gap-2 rounded-xl px-4 py-2.5 text-[11px] font-black uppercase tracking-wider ${
-    active ? shellNavActiveClass(themeId) : shellNavInactiveClass(themeId)
-  }`;
-}
-
-function shellNavChipClass(
-  active: boolean,
-  themeId: StatsLabChartThemeId,
-): string {
-  return `min-h-[28px] rounded-lg px-2.5 py-1.5 text-[10px] font-black uppercase ${
-    active ? shellNavActiveClass(themeId) : shellNavInactiveClass(themeId)
-  }`;
-}
 
 export function StatsLabModuleShell({
   bootstrap,
@@ -315,12 +260,33 @@ export function StatsLabModuleShell({
       data-stats-lab-lang={lang}
       data-stats-lab-active-tab={tab}
     >
+      <header className="mb-4" data-stats-lab-region="PAGE_TITLE">
+        <p
+          className={`text-[10px] font-black uppercase tracking-[0.3em] ${
+            chartTheme === "ANALYST_LIGHT" ? "text-teal-700" : "text-emerald-400"
+          }`}
+        >
+          FPL Arena · Stats Lab
+        </p>
+        <h1
+          className={`mt-2 text-3xl font-extrabold tracking-tight ${
+            chartTheme === "ANALYST_LIGHT" ? "text-slate-900" : "text-white"
+          }`}
+          data-stats-lab-page-title={tab}
+        >
+          {statsLabPageTitle(lang, tab)}
+        </h1>
+      </header>
+
       <div
         data-stats-lab-region="SHELL_HEADER_NAV"
         className={shellNavClass(chartTheme)}
       >
         <button
           type="button"
+          data-stats-lab-nav-tab="centre"
+          data-active={tab === "centre" ? "true" : "false"}
+          aria-current={tab === "centre" ? "page" : undefined}
           title={shellTooltip(lang, "nav.centre")}
           onClick={() => switchTab("centre")}
           className={shellNavTabClass(tab === "centre", chartTheme)}
@@ -330,6 +296,9 @@ export function StatsLabModuleShell({
         </button>
         <button
           type="button"
+          data-stats-lab-nav-tab="studio"
+          data-active={tab === "studio" ? "true" : "false"}
+          aria-current={tab === "studio" ? "page" : undefined}
           title={shellTooltip(lang, "nav.studio")}
           onClick={() => switchTab("studio")}
           className={shellNavTabClass(tab === "studio", chartTheme)}
@@ -339,6 +308,9 @@ export function StatsLabModuleShell({
         </button>
         <button
           type="button"
+          data-stats-lab-nav-tab="projections"
+          data-active={tab === "projections" ? "true" : "false"}
+          aria-current={tab === "projections" ? "page" : undefined}
           title={shellTooltip(lang, "nav.projections")}
           onClick={() => switchTab("projections")}
           className={shellNavTabClass(tab === "projections", chartTheme)}
@@ -348,6 +320,9 @@ export function StatsLabModuleShell({
         </button>
         <button
           type="button"
+          data-stats-lab-nav-tab="planner"
+          data-active={tab === "planner" ? "true" : "false"}
+          aria-current={tab === "planner" ? "page" : undefined}
           title={shellTooltip(lang, "nav.planner")}
           onClick={() => switchTab("planner")}
           className={shellNavTabClass(tab === "planner", chartTheme)}

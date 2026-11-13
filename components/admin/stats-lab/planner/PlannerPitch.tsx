@@ -38,6 +38,7 @@ import {
   formatFixturePills,
 } from "@/lib/stats-lab/plannerFixtureUi";
 import { getStatsLabMenuChrome } from "@/lib/stats-lab/menuChrome";
+import { getPlannerActionChrome } from "@/lib/stats-lab/themeTokens";
 import {
   fplLabBadgeUrl,
   fplLabPlayerPhotoUrl,
@@ -69,7 +70,10 @@ export type PlannerPitchProps = {
   watchlistIds: Set<number>;
   onToggleWatchlist: (elementId: number) => void;
   activeChip: PlannerChipType | null;
+  /** true tylko podczas zapisu JPEG — ukrywa też banner missing. */
   isExporting?: boolean;
+  /** Plakat / podgląd eksportu: bez przycisków akcji, ale banner missing zostaje. */
+  hideActionChrome?: boolean;
   /** Ostrzeżenia C/VC missing dla bieżącej GW — banner przy boisku. */
   missingCaptain?: boolean;
   missingVice?: boolean;
@@ -159,9 +163,11 @@ export function PlannerPitch({
   onToggleWatchlist,
   activeChip,
   isExporting = false,
+  hideActionChrome = false,
   missingCaptain = false,
   missingVice = false,
 }: PlannerPitchProps) {
+  const chromeHidden = hideActionChrome || isExporting;
   const chrome = getStatsLabMenuChrome(themeId);
   const isLight = chrome.isLight;
   const [formationBanner, setFormationBanner] = useState<string | null>(null);
@@ -234,7 +240,7 @@ export function PlannerPitch({
   }
 
   function onTileClickSwap(slot: number) {
-    if (isExporting) return;
+    if (chromeHidden) return;
     if (selectedSlotForSwap == null) {
       onSelectSlotForSwap(slot);
       return;
@@ -243,13 +249,13 @@ export function PlannerPitch({
   }
 
   const pitchBg = isLight
-    ? "bg-gradient-to-b from-emerald-100 via-emerald-50 to-emerald-100"
+    ? "bg-gradient-to-b from-slate-100 via-white to-slate-100"
     : themeId === "SCOUT_DARK"
-      ? "bg-gradient-to-b from-[#0a2a22] via-[#071c17] to-[#0a2a22]"
+      ? "bg-gradient-to-b from-[#122a3a] via-[#0b1c2e] to-[#122a3a]"
       : "bg-gradient-to-b from-emerald-950 via-slate-950 to-emerald-950";
 
   const pitchBorder = isLight
-    ? "border-emerald-300"
+    ? "border-slate-300"
     : themeId === "SCOUT_DARK"
       ? "border-teal-700/80"
       : "border-emerald-800/80";
@@ -316,8 +322,9 @@ export function PlannerPitch({
               currentGw,
               availableGameweeks,
               lang,
+              themeId,
               isLight,
-              isExporting,
+              isExporting: chromeHidden,
               activeChip,
               watchlistIds,
               dragSlot,
@@ -348,8 +355,9 @@ export function PlannerPitch({
               currentGw,
               availableGameweeks,
               lang,
+              themeId,
               isLight,
-              isExporting,
+              isExporting: chromeHidden,
               activeChip,
               watchlistIds,
               dragSlot,
@@ -380,8 +388,9 @@ export function PlannerPitch({
               currentGw,
               availableGameweeks,
               lang,
+              themeId,
               isLight,
-              isExporting,
+              isExporting: chromeHidden,
               activeChip,
               watchlistIds,
               dragSlot,
@@ -412,8 +421,9 @@ export function PlannerPitch({
               currentGw,
               availableGameweeks,
               lang,
+              themeId,
               isLight,
-              isExporting,
+              isExporting: chromeHidden,
               activeChip,
               watchlistIds,
               dragSlot,
@@ -472,8 +482,9 @@ export function PlannerPitch({
                 currentGw,
                 availableGameweeks,
                 lang,
+                themeId,
                 isLight,
-                isExporting,
+                isExporting: chromeHidden,
                 activeChip,
                 watchlistIds,
                 dragSlot,
@@ -542,6 +553,7 @@ type TileCtx = {
   currentGw: number;
   availableGameweeks: number[];
   lang: StatsLabLang;
+  themeId: StatsLabChartThemeId;
   isLight: boolean;
   isExporting: boolean;
   activeChip: PlannerChipType | null;
@@ -643,6 +655,7 @@ function renderTile(slot: number, ctx: TileCtx): ReactNode {
     isCaptain: pick.isCaptain,
     isViceCaptain: pick.isViceCaptain,
   });
+  const actions = getPlannerActionChrome(ctx.themeId);
 
   return (
     <div
@@ -677,7 +690,7 @@ function renderTile(slot: number, ctx: TileCtx): ReactNode {
                   "planner.action.sell",
                   playerName,
                 )}
-                className={`${PLANNER_ACTION_HIT_CLASS} bg-rose-500/20 text-rose-300 hover:bg-rose-500/30`}
+                className={`${PLANNER_ACTION_HIT_CLASS} ${actions.sell}`}
                 onClick={(e) => {
                   e.stopPropagation();
                   ctx.onMarkPlayerForTransferOut(slot, pick.elementId);
@@ -694,9 +707,7 @@ function renderTile(slot: number, ctx: TileCtx): ReactNode {
                   playerName,
                 )}
                 className={`${PLANNER_ACTION_HIT_CLASS} ${
-                  selected
-                    ? "bg-sky-500/30 text-sky-200"
-                    : "bg-slate-500/20 text-slate-200 hover:bg-slate-500/30"
+                  selected ? actions.swapSelected : actions.swap
                 }`}
                 onClick={(e) => {
                   e.stopPropagation();
@@ -725,10 +736,8 @@ function renderTile(slot: number, ctx: TileCtx): ReactNode {
               <button
                 type="button"
                 aria-pressed={pick.isCaptain}
-                className={`${PLANNER_ACTION_HIT_CLASS} border text-[10px] font-black ${
-                  pick.isCaptain
-                    ? "border-amber-400 bg-amber-400/30 text-amber-100"
-                    : "border-amber-400/50 bg-transparent text-amber-200"
+                className={`${PLANNER_ACTION_HIT_CLASS} text-[10px] font-black ${
+                  pick.isCaptain ? actions.captainPressed : actions.captainIdle
                 }`}
                 onClick={(e) => {
                   e.stopPropagation();
@@ -750,10 +759,8 @@ function renderTile(slot: number, ctx: TileCtx): ReactNode {
               <button
                 type="button"
                 aria-pressed={pick.isViceCaptain}
-                className={`${PLANNER_ACTION_HIT_CLASS} border text-[10px] font-black ${
-                  pick.isViceCaptain
-                    ? "border-slate-300 bg-slate-400/30 text-slate-50"
-                    : "border-slate-400/50 bg-transparent text-slate-200"
+                className={`${PLANNER_ACTION_HIT_CLASS} text-[10px] font-black ${
+                  pick.isViceCaptain ? actions.vicePressed : actions.viceIdle
                 }`}
                 onClick={(e) => {
                   e.stopPropagation();
@@ -797,11 +804,7 @@ function renderTile(slot: number, ctx: TileCtx): ReactNode {
               data-testid="captain-armband"
               role="img"
               aria-label={captainArmbandAria(ctx.lang, armbandKind)}
-              className={`absolute -left-0.5 -top-0.5 inline-flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-black ${
-                ctx.isLight
-                  ? "bg-amber-200 text-amber-950"
-                  : "bg-amber-400 text-slate-950"
-              }`}
+              className={`absolute -left-0.5 -top-0.5 inline-flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-black ${actions.armband}`}
             >
               {armbandText}
             </span>
@@ -821,7 +824,7 @@ function renderTile(slot: number, ctx: TileCtx): ReactNode {
             <button
               type="button"
               className={`${PLANNER_ACTION_HIT_CLASS} ${
-                starred ? "text-amber-400" : "text-slate-400"
+                starred ? actions.watchActive : actions.watchIdle
               }`}
               onClick={(e) => {
                 e.stopPropagation();
@@ -836,12 +839,12 @@ function renderTile(slot: number, ctx: TileCtx): ReactNode {
               )}
             >
               <Star
-                className={`h-3.5 w-3.5 ${starred ? "fill-amber-400" : ""}`}
+                className={`h-3.5 w-3.5 ${starred ? "fill-[#f59e0b]" : ""}`}
               />
             </button>
             <button
               type="button"
-              className={`${PLANNER_ACTION_HIT_CLASS} text-slate-300 hover:bg-slate-500/20`}
+              className={`${PLANNER_ACTION_HIT_CLASS} ${actions.info}`}
               onClick={(e) => {
                 e.stopPropagation();
                 ctx.setInfoElementId(pick.elementId);
@@ -916,7 +919,13 @@ function TileMetricBlock({
     const pills = formatFixturePills(lang, proj);
     return (
       <div className="text-center">
-        <p className="text-[12px] font-semibold tabular-nums text-emerald-500">
+        <p
+          className={`text-[12px] font-semibold tabular-nums ${
+            isLight
+              ? "text-[#0f766e]"
+              : "text-emerald-400"
+          }`}
+        >
           {pick.isCaptain && mult > 1
             ? `${base.toFixed(1)} ×${mult} = ${shown.toFixed(1)}`
             : `${base.toFixed(1)} xPts`}
@@ -993,7 +1002,11 @@ function TileMetricBlock({
         );
       })}
       <p className="text-[12px] font-semibold tabular-nums opacity-90">
-        <span className="font-semibold text-emerald-500">
+        <span
+          className={`font-semibold ${
+            isLight ? "text-[#0f766e]" : "text-emerald-400"
+          }`}
+        >
           {(main?.xPts ?? 0).toFixed(1)} xPts
         </span>
         {" · "}

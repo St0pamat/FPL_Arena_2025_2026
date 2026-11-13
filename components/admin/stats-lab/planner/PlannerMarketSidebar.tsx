@@ -607,8 +607,10 @@ export function PlannerMarketSidebar({
               <div
                 className={`rounded-xl border p-2 ${
                   isLight
-                    ? "border-emerald-400 bg-emerald-50"
-                    : "border-emerald-400/40 bg-emerald-500/10"
+                    ? "border-[#0f766e] bg-[#0f766e]/10"
+                    : chrome.isScout
+                      ? "border-[#2dd4bf]/40 bg-[#2dd4bf]/10"
+                      : "border-[#39FF14]/40 bg-[#39FF14]/10"
                 }`}
               >
                 <div className="mb-2 flex items-center justify-between gap-2">
@@ -650,8 +652,10 @@ export function PlannerMarketSidebar({
                               ? "text-rose-700"
                               : "text-rose-300"
                             : isLight
-                              ? "text-emerald-700"
-                              : "text-emerald-300"
+                              ? "text-[#0f766e]"
+                              : chrome.isScout
+                                ? "text-[#2dd4bf]"
+                                : "text-[#39FF14]"
                         }
                       >
                         Bank {tenthsToPounds(bankAfter)}

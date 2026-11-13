@@ -34,6 +34,7 @@ import { getStatsLabMenuChrome } from "@/lib/stats-lab/menuChrome";
 import {
   arePlannerVariantsIdentical,
   buildPlannerDraftSummary,
+  computePosterTeamValueTenths,
   evaluateRollingPlan,
   optimiseStartingXiForGw,
   type EvaluatedGwState,
@@ -464,6 +465,20 @@ export function StatsLabPlannerClient({
   const squadMarketValueTenths = useMemo(() => {
     if (!activeGwState) return entry?.squadMarketValueTenths ?? 0;
     return activeGwState.squad.reduce((s, p) => s + p.nowCostTenths, 0);
+  }, [activeGwState, entry]);
+
+  /** Plakat: CP składu + bank (nie SP / nie samo „Do wydania”). */
+  const posterTeamValueTenths = useMemo(() => {
+    if (activeGwState) {
+      return computePosterTeamValueTenths({
+        playerNowCostTenths: activeGwState.squad.map((p) => p.nowCostTenths),
+        bankTenths: activeGwState.bankTenths,
+      });
+    }
+    return computePosterTeamValueTenths({
+      playerNowCostTenths: entry?.picks.map((p) => p.nowCostTenths) ?? [],
+      bankTenths: entry?.bankTenths ?? 0,
+    });
   }, [activeGwState, entry]);
 
   const squadSellingValueTenths = useMemo(() => {
@@ -1093,7 +1108,7 @@ export function StatsLabPlannerClient({
         >
           <div className="mb-3 w-full space-y-1 border-b border-inherit pb-3">
             <p className={`text-[10px] font-black uppercase tracking-[0.2em] ${chrome.mutedLabel}`}>
-              FPL ARENA • STATS LAB PLANNER
+              {pt(lang, "planner.poster.brand")}
             </p>
             <h2 className={`text-lg font-black sm:text-xl ${chrome.text}`}>
               {entry.teamName} ·{" "}
@@ -1121,8 +1136,8 @@ export function StatsLabPlannerClient({
               {formatTenthsAsPounds(
                 activeGwState?.bankTenths ?? entry.bankTenths,
               )}{" "}
-              • {pt(lang, "planner.price.spendingPower")}:{" "}
-              {formatTenthsAsPounds(spendingPowerTenths)}
+              • {pt(lang, "planner.poster.teamValue")}:{" "}
+              {formatTenthsAsPounds(posterTeamValueTenths)}
               {chipLabel ? ` • ${chipLabel}` : ""}
             </p>
           </div>
@@ -1149,7 +1164,10 @@ export function StatsLabPlannerClient({
               watchlistIds={watchlistIds}
               onToggleWatchlist={onToggleWatchlist}
               activeChip={activeGwState?.activeChip ?? null}
-              isExporting={isExporting || layoutMode === "pitch_poster"}
+              isExporting={isExporting}
+              hideActionChrome={
+                isExporting || layoutMode === "pitch_poster"
+              }
               missingCaptain={
                 activeGwState?.warnings.some(
                   (w) => w.key === "planner.captain.missing",

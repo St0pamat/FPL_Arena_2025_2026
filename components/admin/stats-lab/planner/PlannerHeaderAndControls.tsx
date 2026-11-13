@@ -453,15 +453,25 @@ export function PlannerHeaderAndControls({
                         : null;
                     const stickyBg = rowActive
                       ? isLight
-                        ? "bg-emerald-50"
-                        : "bg-emerald-500/10"
+                        ? "bg-[#0f766e]/10"
+                        : chrome.isScout
+                          ? "bg-[#2dd4bf]/10"
+                          : "bg-[#39FF14]/10"
                       : panelBg;
                     return (
                       <tr
                         key={v}
                         className={`border-t ${
                           isLight ? "border-slate-200" : "border-slate-800"
-                        } ${rowActive ? (isLight ? "bg-emerald-50" : "bg-emerald-500/10") : ""}`}
+                        } ${
+                          rowActive
+                            ? isLight
+                              ? "bg-[#0f766e]/10"
+                              : chrome.isScout
+                                ? "bg-[#2dd4bf]/10"
+                                : "bg-[#39FF14]/10"
+                            : ""
+                        }`}
                       >
                         <td
                           className={`sticky left-0 z-10 px-2 py-2 font-black ${chrome.text} ${stickyBg}`}
@@ -716,8 +726,10 @@ export function PlannerHeaderAndControls({
                 ? "text-rose-700"
                 : "text-rose-300"
               : isLight
-                ? "text-emerald-700"
-                : "text-emerald-300"
+                ? "text-[#0f766e]"
+                : chrome.isScout
+                  ? "text-[#2dd4bf]"
+                  : "text-[#39FF14]"
           }
         />
 
@@ -734,8 +746,10 @@ export function PlannerHeaderAndControls({
                 ? "text-rose-700"
                 : "text-rose-300"
               : isLight
-                ? "text-emerald-700"
-                : "text-emerald-300"
+                ? "text-[#0f766e]"
+                : chrome.isScout
+                  ? "text-[#2dd4bf]"
+                  : "text-[#39FF14]"
           }
           onEdit={
             onManualAdjustBankTenths || onManualSetBankTenths
@@ -812,8 +826,10 @@ export function PlannerHeaderAndControls({
         <span
           className={`inline-flex items-center rounded-full border px-3 py-1.5 text-[11px] font-black ${
             isLight
-              ? "border-emerald-600 bg-emerald-50 text-emerald-950"
-              : "border-emerald-400/50 bg-emerald-500/15 text-emerald-100"
+              ? "border-[#0f766e] bg-[#0f766e]/10 text-slate-950"
+              : chrome.isScout
+                ? "border-[#2dd4bf]/50 bg-[#2dd4bf]/15 text-[#f0fdfa]"
+                : "border-[#39FF14]/50 bg-[#39FF14]/15 text-slate-100"
           }`}
         >
           {pt(lang, "planner.kpi.spendingPower")}:{" "}

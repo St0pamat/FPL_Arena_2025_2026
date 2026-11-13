@@ -374,11 +374,7 @@ function PlayerRow({
               {roleBadge ? (
                 <span
                   aria-hidden
-                  className={`ml-1 inline-flex rounded px-1 text-[8px] font-black ${
-                    isLight
-                      ? "bg-amber-200 text-amber-950"
-                      : "bg-amber-400 text-slate-950"
-                  }`}
+                  className="ml-1 inline-flex rounded px-1 text-[8px] font-black bg-[#f59e0b] text-[#1c1917]"
                 >
                   {roleBadge}
                 </span>
@@ -635,11 +631,11 @@ function PricesTable({
                             {benchLabel(pick.slot, lang)}
                           </span>
                         ) : pick.isCaptain ? (
-                          <span className="ml-1 text-[9px] font-black text-amber-400">
+                          <span className="ml-1 text-[9px] font-black text-[#f59e0b]">
                             C
                           </span>
                         ) : pick.isViceCaptain ? (
-                          <span className="ml-1 text-[9px] font-black">V</span>
+                          <span className="ml-1 text-[9px] font-black">VC</span>
                         ) : null}
                       </button>
                     </td>
@@ -656,8 +652,8 @@ function PricesTable({
                       className={`px-2 py-1.5 font-bold tabular-nums ${
                         profit > 0
                           ? isLight
-                            ? "text-emerald-700"
-                            : "text-emerald-300"
+                            ? "text-[#0f766e]"
+                            : "text-[#39FF14]"
                           : chrome.mutedLabel
                       }`}
                     >
@@ -678,7 +674,7 @@ function PricesTable({
                       ) : (
                         <span
                           className={
-                            isLight ? "text-emerald-700" : "text-emerald-300"
+                            isLight ? "text-[#0f766e]" : "text-[#39FF14]"
                           }
                         >
                           OK

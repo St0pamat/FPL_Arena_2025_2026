@@ -44,7 +44,9 @@ import {
   centreColFullLabel,
   centreColLabel,
   centreColShort,
+  centreEmptyFilterMessage,
   centreUi,
+  logStatsCentreLoadError,
 } from "@/lib/stats-lab/statsCentreI18n";
 import { toJpeg } from "html-to-image";
 import {
@@ -491,12 +493,12 @@ export function StatsCentreView({
         setResult(data);
         setPage(1);
       } catch (e) {
-        setError(
-          e instanceof Error ? e.message : "Błąd zapytania Stats Centre.",
-        );
+        logStatsCentreLoadError(e);
+        setResult(null);
+        setError(centreUi(lang).loadError);
       }
     });
-  }, []);
+  }, [lang]);
 
   useEffect(() => {
     if (bootstrap.players.length === 0) return;
@@ -622,14 +624,19 @@ export function StatsCentreView({
       parts.push(`Min. ${filter.minMinutes} min`);
     }
     parts.push(scaleLabel);
-    parts.push(
-      lang === "pl"
-        ? `Pula: ${result?.totalRows ?? 0} ${poolNoun}`
-        : `Pool: ${result?.totalRows ?? 0} ${poolNoun}`,
-    );
+    if (error) {
+      parts.push(lang === "pl" ? "Pula: —" : "Pool: —");
+    } else {
+      parts.push(
+        lang === "pl"
+          ? `Pula: ${result?.totalRows ?? 0} ${poolNoun}`
+          : `Pool: ${result?.totalRows ?? 0} ${poolNoun}`,
+      );
+    }
     return parts.join(" · ");
   }, [
     bootstrap.seasonCode,
+    error,
     filter.centreMode,
     filter.minMinutes,
     filter.rangeMode,
@@ -1173,9 +1180,24 @@ export function StatsCentreView({
       </div>
 
       {error ? (
-        <p className="rounded-xl border border-rose-500/30 bg-rose-950/40 px-4 py-3 text-sm text-rose-200">
-          {error}
-        </p>
+        <div
+          className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rose-500/30 bg-rose-950/40 px-4 py-3"
+          data-centre-load-error="true"
+        >
+          <p className="text-sm text-rose-200">{error}</p>
+          <button
+            type="button"
+            data-centre-retry="true"
+            disabled={pending}
+            onClick={() => {
+              if (pending) return;
+              runQuery(filter);
+            }}
+            className={`rounded-xl px-3 py-2 text-[11px] font-black uppercase tracking-wider disabled:cursor-not-allowed disabled:opacity-50 ${chrome.activeBtn}`}
+          >
+            {ui.retry}
+          </button>
+        </div>
       ) : null}
 
       {/* Exportable poster node */}
@@ -1217,9 +1239,19 @@ export function StatsCentreView({
           className="overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
           data-centre-table-wrap
         >
-          {!result || pageRows.length === 0 ? (
-            <p className={`px-6 py-16 text-center text-sm ${surface.mutedClass}`}>
-              {ui.empty}
+          {error ? (
+            <p
+              className={`px-6 py-16 text-center text-sm ${surface.mutedClass}`}
+              data-centre-table-state="error"
+            >
+              {ui.loadError}
+            </p>
+          ) : !result || pageRows.length === 0 ? (
+            <p
+              className={`px-6 py-16 text-center text-sm ${surface.mutedClass}`}
+              data-centre-table-state="empty"
+            >
+              {centreEmptyFilterMessage(lang, filter)}
             </p>
           ) : (
             <table className="min-w-full border-collapse text-left">

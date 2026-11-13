@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { BarChart3, Database } from "lucide-react";
+import { Database } from "lucide-react";
 import {
   loadStatsLabBootstrapDataAction,
   queryStatsLabComparisonAction,
@@ -10,6 +10,7 @@ import {
   applyStatsLabPreset,
   createDefaultStatsLabFilter,
 } from "@/lib/stats-lab/presets";
+import { parseStatsLabPageTab } from "@/lib/stats-lab/i18n";
 import { DEFAULT_STATS_LAB_SEASON } from "@/lib/stats-lab/syncEngine";
 import type { StatsLabComparisonResult } from "@/lib/stats-lab/analyticsEngine";
 
@@ -68,39 +69,19 @@ export default async function AdminStatsLabStudioPage({
     }
   }
 
+  const pageTab = parseStatsLabPageTab(searchParams?.tab);
   const initialTab =
-    searchParams?.tab === "centre"
+    pageTab === "centre"
       ? ("centre" as const)
-      : searchParams?.tab === "projections"
+      : pageTab === "projections"
         ? ("projections" as const)
-        : ("studio" as const);
+        : pageTab === "planner"
+          ? ("planner" as const)
+          : ("studio" as const);
 
   return (
     <main className="flex-1 bg-[#0B0F19] p-4 sm:p-6 lg:p-8">
       <div className="mx-auto max-w-[1600px] space-y-5">
-        <header className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <p className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.3em] text-emerald-400">
-              <BarChart3 className="h-3.5 w-3.5" />
-              FPL Arena · Stats Lab
-            </p>
-            <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-white">
-              Stats Centre & Studio
-            </h1>
-            <p className="mt-1 max-w-2xl text-sm text-slate-400">
-              Tabele analityczne (FFS-style) + Studio wykresów — jeden moduł, dwa
-              silniki, wspólna baza FPL.
-            </p>
-          </div>
-          <Link
-            href="/admin/stats-lab/sync"
-            className="inline-flex items-center gap-2 rounded-xl border border-slate-700 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-slate-300 hover:border-[#39FF14]/40 hover:text-[#39FF14]"
-          >
-            <Database className="h-3.5 w-3.5" />
-            Sync FPL
-          </Link>
-        </header>
-
         <Suspense
           fallback={
             <p className="text-sm text-slate-500">Ładowanie Stats Lab…</p>

@@ -413,6 +413,8 @@ export const CENTRE_UI = {
     player: "Zawodnik",
     club: "Klub",
     empty: "Brak wierszy dla wybranych filtrów.",
+    loadError: "Nie udało się wczytać danych. Spróbuj ponownie.",
+    retry: "Spróbuj ponownie",
     gwFrom: "GW od",
     gwTo: "GW do",
     copied: "Skopiowano JPG do schowka!",
@@ -457,6 +459,8 @@ export const CENTRE_UI = {
     player: "Player",
     club: "Club",
     empty: "No rows for the selected filters.",
+    loadError: "Couldn't load data. Try again.",
+    retry: "Try again",
     gwFrom: "GW from",
     gwTo: "GW to",
     copied: "Table JPG copied to clipboard!",
@@ -472,4 +476,103 @@ export const CENTRE_UI = {
 
 export function centreUi(lang: StatsLabLang) {
   return CENTRE_UI[lang];
+}
+
+const POS_LABEL_PL: Record<number, string> = {
+  1: "bramkarzy",
+  2: "obrońców",
+  3: "pomocników",
+  4: "napastników",
+};
+const POS_LABEL_EN: Record<number, string> = {
+  1: "goalkeepers",
+  2: "defenders",
+  3: "midfielders",
+  4: "forwards",
+};
+const POS_NAME_PL: Record<number, string> = {
+  1: "Bramkarze",
+  2: "Obrońcy",
+  3: "Pomocnicy",
+  4: "Napastnicy",
+};
+const POS_NAME_EN: Record<number, string> = {
+  1: "GK",
+  2: "DEF",
+  3: "MID",
+  4: "FWD",
+};
+
+/**
+ * Komunikat pustego wyniku — wskazuje filtry (nie mylić z błędem wczytania).
+ * Nigdy nie pisze „min. 0 min” / „min. 1 min” jako głównej przyczyny.
+ */
+export function centreEmptyFilterMessage(
+  lang: StatsLabLang,
+  filter: {
+    positions: number[];
+    minMinutes: number;
+    centreMode: string;
+  },
+): string {
+  const positions = filter.positions.filter((p) => p >= 1 && p <= 4);
+  const min = Math.max(0, Math.round(Number(filter.minMinutes) || 0));
+  const mentionMinutes = min > 1;
+  const minHint = mentionMinutes
+    ? lang === "pl"
+      ? ` z min. ${min} min. Zmniejsz minimalne minuty.`
+      : ` with min. ${min} min. Lower the minutes filter.`
+    : lang === "pl"
+      ? ". Zmień zakres GW, klub lub inne filtry."
+      : ". Change GW range, club or other filters.";
+
+  if (lang === "pl") {
+    if (positions.length === 1) {
+      const noun = POS_LABEL_PL[positions[0]!] ?? "zawodników";
+      return `Brak ${noun}${mentionMinutes ? ` z min. ${min} min. Zmniejsz minimalne minuty.` : minHint}`;
+    }
+    if (positions.length > 1) {
+      const names = positions
+        .map((p) => POS_NAME_PL[p] ?? String(p))
+        .join(", ");
+      return `Brak zawodników na wybranych pozycjach (${names})${mentionMinutes ? ` z min. ${min} min. Zmniejsz minimalne minuty.` : minHint}`;
+    }
+    if (mentionMinutes) {
+      return `Brak zawodników z min. ${min} min. Zmniejsz minimalne minuty.`;
+    }
+    return CENTRE_UI.pl.empty;
+  }
+
+  if (positions.length === 1) {
+    const noun = POS_LABEL_EN[positions[0]!] ?? "players";
+    return `No ${noun}${mentionMinutes ? ` with min. ${min} min. Lower the minutes filter.` : minHint}`;
+  }
+  if (positions.length > 1) {
+    const names = positions.map((p) => POS_NAME_EN[p] ?? String(p)).join(", ");
+    return `No players in selected positions (${names})${mentionMinutes ? ` with min. ${min} min. Lower the minutes filter.` : minHint}`;
+  }
+  if (mentionMinutes) {
+    return `No players with min. ${min} min. Lower the minutes filter.`;
+  }
+  return CENTRE_UI.en.empty;
+}
+
+export function logStatsCentreLoadError(err: unknown): void {
+  const message =
+    err instanceof Error
+      ? err.message
+      : typeof err === "string"
+        ? err
+        : "Unknown Stats Centre load error";
+  const code =
+    err && typeof err === "object" && "code" in err
+      ? String((err as { code?: unknown }).code ?? "unknown")
+      : err && typeof err === "object" && "status" in err
+        ? String((err as { status?: unknown }).status ?? "unknown")
+        : "unknown";
+  console.error("[Stats Centre] load failed", {
+    action: "queryStatsCentreAction",
+    message,
+    code,
+  });
 }

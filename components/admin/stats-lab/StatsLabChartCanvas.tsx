@@ -593,6 +593,7 @@ export function StatsLabChartCanvas({
             spotlightId={spotlightPlayerId}
             onSelectPlayer={onSelectPlayer}
             variant={variant === "export" ? "export" : "interactive"}
+            rankedByStat={filter.sortByStat}
           />
         )}
       </div>

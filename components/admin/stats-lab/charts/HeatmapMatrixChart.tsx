@@ -8,6 +8,7 @@ import {
   type FplStatKey,
 } from "@/lib/stats-lab/types";
 import type { StatsLabLang, StatsLabScaleMode } from "@/lib/stats-lab/i18n";
+import { t } from "@/lib/stats-lab/i18n";
 import { fplLabBadgeUrl, fplLabPlayerPhotoUrl } from "@/lib/stats-lab/mediaUrls";
 import {
   formatStatDisplay,
@@ -34,6 +35,8 @@ type Props = {
   spotlightId?: number | null;
   onSelectPlayer?: (id: number) => void;
   variant?: HeatmapVariant;
+  /** Metryka rankingu TOP N (tylko etykieta + główna liczba; bez zmiany sortu). */
+  rankedByStat?: FplStatKey;
   /** @deprecated — sort lokalny; ignorowane (kompatybilność Canvas) */
   themeId?: string;
   sortKey?: FplStatKey | "composite";
@@ -229,10 +232,24 @@ export function HeatmapMatrixChart({
   spotlightId = null,
   onSelectPlayer,
   variant = "interactive",
+  rankedByStat = "total_points",
 }: Props) {
   const isExport = variant === "export";
   const isLight = theme.id === "ANALYST_LIGHT";
   const showGroupAvgRow = Boolean(showAvg) && Boolean(poolAverages);
+  const ui = t(lang);
+  const rankingHeader =
+    rankedByStat === "total_points"
+      ? ui.heatmapRankedByPoints
+      : (() => {
+          const def = getFplStatDefinition(rankedByStat);
+          const metric =
+            (lang === "en" ? def?.labelEn : def?.labelPl) ?? rankedByStat;
+          return lang === "pl"
+            ? `Ranking wg: ${metric}`
+            : `Ranked by: ${metric}`;
+        })();
+  const ratingTooltip = ui.heatmapRatingTooltip;
   const [localSortKey, setLocalSortKey] = useState<LocalSortKey>(null);
   const [localSortDir, setLocalSortDir] = useState<SortDir>("DESC");
 
@@ -337,35 +354,30 @@ export function HeatmapMatrixChart({
         ? "#059669"
         : "#39FF14";
     const labelAccent = isLight ? "#059669" : "#39FF14";
-    const microAccent = isLight ? "#047857" : "#86efac";
 
     return (
       <div
-        className={`flex w-full min-h-[64px] flex-col items-center justify-center rounded-xl border-2 px-2.5 py-1.5 text-center shadow-sm ${
-          isLeader ? "ring-2 ring-amber-400/70" : ""
+        className={`flex w-full min-h-[64px] flex-col items-center justify-center rounded-xl border px-2 py-1.5 text-center ${
+          isLeader ? "ring-1 ring-amber-400/70" : ""
         }`}
         style={{ borderColor: borderAccent }}
+        title={ratingTooltip}
+        data-heatmap-rating-cell="true"
       >
         <p
-          className="text-[10px] font-black uppercase tracking-wider"
+          className="text-[9px] font-bold uppercase tracking-wider opacity-80"
           style={{ color: isLeader ? "#f59e0b" : labelAccent }}
         >
-          {lang === "pl" ? "OCENA" : "RATING"}
+          {lang === "pl" ? "Ocena" : "Rating"}
         </p>
         <p
-          className="whitespace-nowrap text-2xl font-black leading-none tabular-nums sm:text-3xl"
+          className="whitespace-nowrap text-sm font-extrabold leading-none tabular-nums sm:text-base"
           style={{ color: isLeader ? "#f59e0b" : labelAccent }}
         >
           {score}
           {isLeader ? (
-            <span className="ml-0.5 text-[15px] text-amber-400">★</span>
+            <span className="ml-0.5 text-[11px] text-amber-400">★</span>
           ) : null}
-        </p>
-        <p
-          className="mt-0.5 text-[9.5px] font-medium leading-tight opacity-80"
-          style={{ color: isLeader ? "#fbbf24" : microAccent }}
-        >
-          {lang === "pl" ? "z wybranych cech" : "selected stats"}
         </p>
       </div>
     );
@@ -445,8 +457,9 @@ export function HeatmapMatrixChart({
             background: theme.panelBg,
             color: theme.muted,
           }}
+          data-heatmap-ranking-header="true"
         >
-          {lang === "pl" ? "Zawodnik" : "Player"}
+          {rankingHeader}
         </div>
         {metrics.map((key, idx) => {
           const def = getFplStatDefinition(key);
@@ -654,6 +667,36 @@ export function HeatmapMatrixChart({
                     style={{ color: theme.muted }}
                   >
                     {metaLine}
+                  </p>
+                </div>
+                <div
+                  className="ml-auto flex shrink-0 flex-col items-end justify-center pl-2"
+                  data-heatmap-rank-primary="true"
+                >
+                  <p
+                    className="whitespace-nowrap text-2xl font-black leading-none tabular-nums sm:text-3xl"
+                    style={{ color: theme.text }}
+                  >
+                    {Math.round(
+                      Number(
+                        p.rawValues[rankedByStat] ??
+                          p.displayValues[rankedByStat] ??
+                          0,
+                      ),
+                    )}
+                  </p>
+                  <p
+                    className="mt-0.5 text-[10px] font-bold uppercase tracking-wide"
+                    style={{ color: theme.muted }}
+                  >
+                    {rankedByStat === "total_points"
+                      ? lang === "pl"
+                        ? "pkt"
+                        : "pts"
+                      : (lang === "en"
+                          ? getFplStatDefinition(rankedByStat)?.shortLabelEn
+                          : getFplStatDefinition(rankedByStat)?.shortLabelPl) ??
+                        rankedByStat}
                   </p>
                 </div>
               </div>

@@ -66,6 +66,13 @@ async function waitForLocalServer(baseURL: string, timeoutMs = 120_000): Promise
 }
 
 export default async function globalSetup(config: FullConfig): Promise<void> {
+  // Blokada także przy bezpośrednim `npx playwright test` (omija npm run test:e2e).
+  const { assertE2eReadonly } = await import("../../scripts/assert-e2e-readonly.mjs");
+  const readonly = assertE2eReadonly(process.env);
+  if (!readonly.ok) {
+    throw new Error(readonly.message);
+  }
+
   loadEnvTestLocal();
 
   const baseURL = config.projects[0]?.use?.baseURL ?? "http://localhost:3000";

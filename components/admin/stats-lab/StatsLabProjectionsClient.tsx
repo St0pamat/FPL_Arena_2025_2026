@@ -28,6 +28,7 @@ import {
 } from "@/lib/stats-lab/auditExport";
 import type { StatsLabLang } from "@/lib/stats-lab/i18n";
 import { fplLabBadgeUrl } from "@/lib/stats-lab/mediaUrls";
+import { formatFixturePillLabel } from "@/lib/stats-lab/plannerFixtureUi";
 import {
   fdrLevel,
   type ProjectionsCellLayout,
@@ -546,6 +547,13 @@ function tickerLabel(
   singleGw: boolean,
   lang: StatsLabLang,
 ): string {
+  // Jak w Planerze: WIELKIE litery + (D|W)/(H|A) — ten sam helper.
+  const fromHelper = formatFixturePillLabel(
+    lang,
+    fx.opponentShortName,
+    fx.wasHome,
+  );
+  if (fromHelper) return fromHelper;
   if (!singleGw) return fx.tickerLabelMatrix;
   return lang === "pl" ? fx.tickerLabelSingleGwPl : fx.tickerLabelSingleGwEn;
 }

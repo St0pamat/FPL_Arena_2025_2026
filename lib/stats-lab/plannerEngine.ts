@@ -115,6 +115,21 @@ export type SquadPlayerState = {
   isViceCaptain: boolean;
 };
 
+/**
+ * Wartość drużyny na plakacie: suma `now_cost` (CP) składu w GW + bank.
+ * Nie używa cen sprzedaży (SP) — to nie jest „Do wydania”.
+ */
+export function computePosterTeamValueTenths(args: {
+  playerNowCostTenths: readonly number[];
+  bankTenths: number;
+}): number {
+  const squadSum = args.playerNowCostTenths.reduce(
+    (sum, n) => sum + Math.round(Number(n) || 0),
+    0,
+  );
+  return squadSum + Math.round(Number(args.bankTenths) || 0);
+}
+
 export type FormationErrorKey =
   | "formationErrorMinDef"
   | "formationErrorMinMid"

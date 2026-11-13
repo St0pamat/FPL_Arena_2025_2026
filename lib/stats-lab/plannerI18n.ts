@@ -240,8 +240,10 @@ export const PLANNER_LABELS = {
       "Ceny w przyszłych kolejkach są dzisiejsze — nie zgadujemy wzrostów i spadków.",
     "planner.rule.r12.fixturesChanged":
       "Terminarz się zmienił — przeliczyliśmy kolejki {list}.",
+    "planner.poster.brand": "Planer FPL",
+    "planner.poster.teamValue": "Wartość drużyny",
     "planner.poster.footer":
-      "Ceny sprzedaży jak w FPL • przenoszone transfery • prognozowane punkty",
+      "fpl-arena.com · Dane: FPL · Predykcje: FPL Arena",
     "planner.poster.verified": "Dane z FPL · prognozy FPL Arena",
     "planner.entry.freeHitRollback":
       "Free Hit w GW{gw}: skład i bank przywrócone ze stanu GW{prev}.",
@@ -254,7 +256,7 @@ export const PLANNER_LABELS = {
       "Wartość składu różni się od FPL o {value}",
     "planner.validation.title": "Zgodność z zasadami FPL",
     "planner.draft.variant": "Wariant",
-    "planner.pitch.emptySlot": "Wolne miejsce: dodaj zawodnika",
+    "planner.pitch.emptySlot": "Wolne miejsce",
     "planner.pitch.benchBoostActive":
       "Bench Boost aktywny: punkty ławki też się liczą",
     "planner.pitch.pickFromList": "Wybierz z listy",
@@ -480,8 +482,10 @@ export const PLANNER_LABELS = {
       "Future gameweeks use today's prices — we don't forecast rises or falls.",
     "planner.rule.r12.fixturesChanged":
       "The fixture list changed — we recalculated gameweeks {list}.",
+    "planner.poster.brand": "FPL Planner",
+    "planner.poster.teamValue": "Team value",
     "planner.poster.footer":
-      "Selling prices as in FPL • rolling transfers • predicted points",
+      "fpl-arena.com · Data: FPL · Predictions: FPL Arena",
     "planner.poster.verified": "Data from FPL · forecasts by FPL Arena",
     "planner.entry.freeHitRollback":
       "Free Hit in GW{gw}: squad and bank restored from GW{prev}.",
@@ -494,7 +498,7 @@ export const PLANNER_LABELS = {
       "Squad value differs from FPL by {value}",
     "planner.validation.title": "FPL rules check",
     "planner.draft.variant": "Draft",
-    "planner.pitch.emptySlot": "Empty slot: add a player",
+    "planner.pitch.emptySlot": "Empty slot",
     "planner.pitch.benchBoostActive":
       "Bench Boost active: bench points count too",
     "planner.pitch.pickFromList": "Pick from list",

@@ -24,7 +24,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "test:e2e": "playwright test"
+    "test:e2e": "node scripts/guard-e2e.mjs && playwright test"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",
