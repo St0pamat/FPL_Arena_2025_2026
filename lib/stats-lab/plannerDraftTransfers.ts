@@ -68,21 +68,29 @@ export function removePlannedTransfer(
  * ✕ na graczu kupionym w tej kolejce cofa ten transfer:
  * wraca sprzedany, lineupOrder z powrotem wskazuje jego id.
  * Gdy ten sam id został później sprzedany dalej, nie cofamy (zostaje zwykła sprzedaż).
+ *
+ * `evaluatedTransfers` pochodzi z silnika i ma `hasConflict`.
+ * Surowy zapis decyzji tej flagi nie ma. Konflikt (np. kupowany jest już w kadrze)
+ * wyglądałby jak prawdziwy zakup: ✕ usuwałby ten zapis i wpisywał sprzedanego
+ * do lineupOrder zamiast oznaczyć gracza do sprzedaży.
  */
 export function undoPurchaseOfElement(
   decision: GwPlanDecision,
   inElementId: number,
+  evaluatedTransfers: readonly PlannedTransfer[],
 ): { decision: GwPlanDecision; undone: boolean } {
-  const transfer = [...decision.transfers]
+  const purchase = [...evaluatedTransfers]
     .reverse()
     .find((row) => !row.hasConflict && row.inElementId === inElementId);
-  if (!transfer) return { decision, undone: false };
-  const soldOnLater = decision.transfers.some(
+  if (!purchase) return { decision, undone: false };
+  const soldOnLater = evaluatedTransfers.some(
     (row) =>
-      row.id !== transfer.id &&
+      row.id !== purchase.id &&
       !row.hasConflict &&
       row.outElementId === inElementId,
   );
   if (soldOnLater) return { decision, undone: false };
-  return { decision: withoutTransfer(decision, transfer), undone: true };
+  const stored = decision.transfers.find((row) => row.id === purchase.id);
+  if (!stored) return { decision, undone: false };
+  return { decision: withoutTransfer(decision, stored), undone: true };
 }

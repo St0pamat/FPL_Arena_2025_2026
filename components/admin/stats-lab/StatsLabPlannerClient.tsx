@@ -636,7 +636,11 @@ export function StatsLabPlannerClient({
     if (!activeGwState) return;
     const currentDecision = drafts[activeVariant].decisionsByGw[currentGw];
     if (currentDecision) {
-      const undone = undoPurchaseOfElement(currentDecision, elementId);
+      const undone = undoPurchaseOfElement(
+        currentDecision,
+        elementId,
+        activeGwState.transfers,
+      );
       if (undone.undone) {
         pushUndoAndUpdate((draft) => {
           draft.decisionsByGw[currentGw] = undone.decision;

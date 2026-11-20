@@ -180,7 +180,12 @@ describe("U6b spójność banku po transferze", () => {
       captainElementId: null,
       captainClearedByUser: true,
     };
-    const undone = undoPurchaseOfElement(soldCaptain, 80);
+    const boughtState = evaluate(entry, players, soldCaptain);
+    const undone = undoPurchaseOfElement(
+      soldCaptain,
+      80,
+      boughtState.transfers,
+    );
     expect(undone.undone).toBe(true);
     expect(undone.decision.transfers).toHaveLength(0);
     expect(undone.decision.lineupOrder).toContain(8);
@@ -241,7 +246,7 @@ describe("U6b spójność banku po transferze", () => {
     expect(both.squad.some((player) => player.elementId === 81)).toBe(true);
     assertMoney(both, baseline);
 
-    const undoSecond = undoPurchaseOfElement(decision, 81);
+    const undoSecond = undoPurchaseOfElement(decision, 81, both.transfers);
     expect(undoSecond.undone).toBe(true);
     const afterSecond = evaluate(entry, players, undoSecond.decision);
     expect(afterSecond.squad.some((player) => player.elementId === 81)).toBe(false);
@@ -250,7 +255,11 @@ describe("U6b spójność banku po transferze", () => {
     expect(afterSecond.bankTenths).toBe(5 + 78 - 57);
     assertMoney(afterSecond, baseline);
 
-    const undoFirst = undoPurchaseOfElement(undoSecond.decision, 80);
+    const undoFirst = undoPurchaseOfElement(
+      undoSecond.decision,
+      80,
+      afterSecond.transfers,
+    );
     expect(undoFirst.undone).toBe(true);
     const restored = evaluate(entry, players, undoFirst.decision);
     expect(restored.bankTenths).toBe(5);
@@ -278,7 +287,12 @@ describe("U6b spójność banku po transferze", () => {
     );
 
     const viaList = removePlannedTransfer(bought, "t-hudson");
-    const viaCross = undoPurchaseOfElement(bought, 80).decision;
+    const boughtState = evaluate(entry, players, bought);
+    const viaCross = undoPurchaseOfElement(
+      bought,
+      80,
+      boughtState.transfers,
+    ).decision;
     expect(viaList.lineupOrder).toEqual(viaCross.lineupOrder);
     expect(viaList.transfers).toEqual([]);
     const afterList = evaluate(entry, players, viaList);
@@ -287,7 +301,112 @@ describe("U6b spójność banku po transferze", () => {
   });
 
   it("✕ na graczu, którego nie kupiono w tej kolejce, nie udaje cofnięcia", () => {
-    const result = undoPurchaseOfElement(emptyDecision(), 8);
+    const result = undoPurchaseOfElement(emptyDecision(), 8, []);
     expect(result.undone).toBe(false);
+  });
+
+  it("✕ na graczu z konfliktowego transferu nie cofa zapisu i nie podmienia lineupOrder", () => {
+    const { players, entry, lineup } = scenario();
+    const withHudson = {
+      ...entry,
+      picks: entry.picks.map((pick) =>
+        pick.elementId === 8
+          ? {
+              ...pick,
+              elementId: 80,
+              purchasePriceTenths: 57,
+              nowCostTenths: 57,
+              sellingPriceTenths: 57,
+            }
+          : pick,
+      ),
+    };
+    const squadLineup = lineup.map((id) => (id === 8 ? 80 : id));
+    const decision: GwPlanDecision = {
+      ...emptyDecision(),
+      transfers: [transfer("t-stale", 8, 80, 78, 57)],
+      lineupOrder: squadLineup,
+    };
+    const state = evaluate(withHudson, players, decision);
+    expect(state.transfers.find((row) => row.id === "t-stale")?.hasConflict).toBe(
+      true,
+    );
+    expect(state.squad.some((player) => player.elementId === 80)).toBe(true);
+    expect(state.squad.some((player) => player.elementId === 8)).toBe(false);
+
+    const undone = undoPurchaseOfElement(decision, 80, state.transfers);
+    expect(undone.undone).toBe(false);
+    expect(undone.decision).toBe(decision);
+    expect(undone.decision.lineupOrder).toEqual(squadLineup);
+    expect(undone.decision.transfers).toHaveLength(1);
+
+    const still = evaluate(withHudson, players, undone.decision);
+    expect(still.bankTenths).toBe(state.bankTenths);
+    expect(still.squad.map((player) => player.elementId).sort()).toEqual(
+      state.squad.map((player) => player.elementId).sort(),
+    );
+    assertMoney(still, teamValue(state));
+  });
+
+  it("przy konflikcie i prawdziwym zakupie ✕ cofa tylko zakup bez konfliktu", () => {
+    const { players, entry, lineup } = scenario();
+    const base = evaluate(entry, players, emptyDecision());
+    const baseline = teamValue(base);
+    const outPick = entry.picks.find((pick) => pick.elementId === 12);
+    const inPick = entry.picks.find((pick) => pick.elementId === 13);
+    if (!outPick || !inPick) throw new Error("brak picków 12 i 13");
+
+    let decision = appendPlannedTransfer(
+      emptyDecision(),
+      transfer("t-hudson", 8, 80, 78, 57),
+      lineup,
+    );
+    decision = appendPlannedTransfer(
+      decision,
+      transfer(
+        "t-conflict",
+        12,
+        13,
+        outPick.sellingPriceTenths,
+        inPick.nowCostTenths,
+      ),
+      lineup,
+    );
+    const state = evaluate(entry, players, decision);
+    expect(state.transfers.find((row) => row.id === "t-hudson")?.hasConflict).toBe(
+      false,
+    );
+    expect(
+      state.transfers.find((row) => row.id === "t-conflict")?.hasConflict,
+    ).toBe(true);
+    expect(state.squad.some((player) => player.elementId === 80)).toBe(true);
+    expect(state.squad.filter((player) => player.elementId === 13)).toHaveLength(
+      1,
+    );
+
+    const onSquadPlayer = undoPurchaseOfElement(decision, 13, state.transfers);
+    expect(onSquadPlayer.undone).toBe(false);
+    expect(onSquadPlayer.decision.transfers.map((row) => row.id)).toEqual([
+      "t-hudson",
+      "t-conflict",
+    ]);
+    expect(onSquadPlayer.decision.lineupOrder).toEqual(decision.lineupOrder);
+
+    const onPurchase = undoPurchaseOfElement(decision, 80, state.transfers);
+    expect(onPurchase.undone).toBe(true);
+    expect(onPurchase.decision.transfers.map((row) => row.id)).toEqual([
+      "t-conflict",
+    ]);
+    expect(onPurchase.decision.lineupOrder).toContain(8);
+    expect(onPurchase.decision.lineupOrder).not.toContain(80);
+
+    const after = evaluate(entry, players, onPurchase.decision);
+    expect(after.bankTenths).toBe(5);
+    expect(after.squad.some((player) => player.elementId === 8)).toBe(true);
+    expect(after.squad.some((player) => player.elementId === 80)).toBe(false);
+    expect(after.squad.filter((player) => player.elementId === 13)).toHaveLength(
+      1,
+    );
+    assertMoney(after, baseline);
   });
 });
