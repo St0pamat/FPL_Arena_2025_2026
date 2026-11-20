@@ -172,7 +172,7 @@ function ratio(fg: string, background: string): number {
 }
 
 describe("U6b karta: ⓘ, kropki FDR, wąska odznaka", () => {
-  it("ⓘ stoi poza tabliczką, ma pole 32 px i nie wychodzi ujemnym offsetem", () => {
+  it("nazwisko ma wielokropek i nie leży pod osobnym przyciskiem ⓘ", () => {
     renderCard("ARENA_DARK", {
       11: proj(1, 11, 3),
       12: proj(1, 12, 2),
@@ -180,16 +180,9 @@ describe("U6b karta: ⓘ, kropki FDR, wąska odznaka", () => {
       14: proj(1, 14, 5),
     });
     const name = screen.getByTestId("card-player-name");
-    const plate = name.closest(".ppc-plate");
-    const info = screen.getByRole("button", { name: /Informacje:/ });
-    expect(plate?.contains(info)).toBe(false);
-    expect(info.className).toContain("min-h-8");
-    expect(info.className).toContain("min-w-8");
-    expect(info.className).toContain("ppc-act-info");
-    const infoRule = CSS.match(/\.ppc-act-info\s*\{([^}]*)\}/)?.[1] ?? "";
-    expect(infoRule).toContain("left: 2rem");
-    expect(infoRule).toContain("top: 0");
-    expect(infoRule).not.toMatch(/-\d/);
+    expect(screen.queryByRole("button", { name: /Informacje:/ })).toBeNull();
+    expect(document.querySelector(".ppc-act-info")).toBeNull();
+    expect(name.getAttribute("aria-label")).toMatch(/^Info:/);
     const nameRule = CSS.match(/\.ppc-name\s*\{([^}]*)\}/)?.[1] ?? "";
     expect(nameRule).toContain("text-overflow: ellipsis");
     expect(nameRule).toContain("padding: 0 2px");
@@ -310,7 +303,7 @@ describe("U6b boisko 320/360 i okno Info", () => {
 
   it("Esc zamyka Info, C i VC są pierwsze, etykiety cen są pełne", () => {
     renderFiveDefenders();
-    fireEvent.click(screen.getByRole("button", { name: "Informacje: P1" }));
+    fireEvent.click(screen.getAllByRole("button", { name: "Info: P1" })[0]!);
     const dialog = screen.getByRole("dialog");
     const buttons = within(dialog).getAllByRole("button");
     expect(buttons[0]?.getAttribute("aria-label")).toMatch(/^Kapitan:/);

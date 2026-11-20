@@ -16,7 +16,6 @@ import type { FplStatCategory, FplStatKey } from "@/lib/stats-lab/types";
 import {
   FPL_STAT_DEFINITIONS,
   getFplPositionLabelEn,
-  getFplStatDefinition,
 } from "@/lib/stats-lab/types";
 import type {
   StatsLabLang,
@@ -436,7 +435,8 @@ export function StatsLabControlPanel({
                         <button
                           key={d.key}
                           type="button"
-                          title={lang === "en" ? d.descriptionEn : d.descriptionPl}
+                          title={`${statLabel(d.key, lang)}. ${lang === "en" ? d.descriptionEn : d.descriptionPl}`}
+                          aria-label={statLabel(d.key, lang)}
                           onClick={() => toggleMetric(d.key)}
                           className={`rounded-md px-2 py-1 text-[10px] font-semibold ${
                             on
@@ -444,7 +444,7 @@ export function StatsLabControlPanel({
                               : chrome.inactiveBtn
                           }`}
                         >
-                          {statShort(d.key, lang)}
+                          {statLabel(d.key, lang)}
                         </button>
                       );
                     },
@@ -526,10 +526,13 @@ export function StatsLabControlPanel({
               ).map((preset) => {
                 const active =
                   ui.axisX === preset.axisX && ui.axisY === preset.axisY;
+                const full = `${statLabel(preset.axisX, lang)} vs ${statLabel(preset.axisY, lang)}`;
                 return (
                   <button
                     key={preset.id}
                     type="button"
+                    title={full}
+                    aria-label={full}
                     onClick={() =>
                       onUiChange({
                         axisX: preset.axisX,
@@ -1025,7 +1028,7 @@ export function StatsLabControlPanel({
       <p className="px-1 text-[10px] text-slate-600">
         {copy.metricsCount}:{" "}
         {filter.activeMetrics
-          .map((k) => getFplStatDefinition(k)?.[lang === "en" ? "shortLabelEn" : "shortLabelPl"] ?? k)
+          .map((k) => statLabel(k, lang))
           .join(" · ")}
       </p>
     </aside>

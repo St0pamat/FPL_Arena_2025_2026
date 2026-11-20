@@ -18,7 +18,9 @@ export type CaptainViceDecisionPatch = {
 };
 
 /**
- * Ustawienie C: na obecnym VC → zamiana ról (gdy C też było ustawione);
+ * Ustawienie C: ponowne kliknięcie na obecnym C zdejmuje opaskę
+ * (captainClearedByUser, bez auto-doboru).
+ * Na obecnym VC → zamiana ról (gdy C też było ustawione);
  * gdy C puste a cel to VC → C=X, VC=null + viceClearedByUser.
  * Inwariant „VC nie null po swapie” tylko gdy przed swapem obie role były ustawione.
  */
@@ -28,6 +30,14 @@ export function assignCaptain(
 ): CaptainViceDecisionPatch {
   const cap = current.captainElementId ?? null;
   const vice = current.viceCaptainElementId ?? null;
+  if (cap != null && cap === elementId) {
+    return {
+      captainElementId: null,
+      viceCaptainElementId: vice,
+      captainClearedByUser: true,
+      viceClearedByUser: current.viceClearedByUser ?? false,
+    };
+  }
   if (vice != null && vice === elementId) {
     return {
       captainElementId: elementId,

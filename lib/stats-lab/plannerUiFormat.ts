@@ -6,6 +6,7 @@
 import { shellLabel, type StatsLabLang } from "@/lib/stats-lab/i18n";
 import {
   formatTenthsAbsValue,
+  formatTenthsAsPounds,
   plannerChipOfficialName,
   pt,
   ptTip,
@@ -181,6 +182,21 @@ export function plannerDisplayFullName(
   }
   const full = [first, second].filter(Boolean).join(" ");
   return full || web;
+}
+
+/**
+ * Budżet pustego slotu. Ujemna lub nieliczbowa kwota → „brak budżetu”.
+ * `tenths` to bank, albo bank + cena sprzedaży gracza oznaczonego do zejścia.
+ */
+export function emptySlotBudgetText(
+  lang: StatsLabLang,
+  tenths: number | null | undefined,
+): string {
+  const n = Number(tenths);
+  if (!Number.isFinite(n) || n < 0) return pt(lang, "planner.pitch.noBudget");
+  return pt(lang, "planner.pitch.emptyBudget", {
+    value: formatTenthsAsPounds(n),
+  });
 }
 
 /** xPts na karcie: BGW = 0, DGW = suma meczów, brak liczby = 0 (nigdy NaN). */

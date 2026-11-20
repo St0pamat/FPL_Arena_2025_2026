@@ -165,7 +165,12 @@ export function Scatter2DChart({
   const quadrantBadges = useMemo(() => {
     const bh = 24;
     const inset = 8;
-    const make = (key: string, text: string, corner: "ne" | "nw" | "se" | "sw") => {
+    const make = (
+      key: string,
+      text: string,
+      title: string,
+      corner: "ne" | "nw" | "se" | "sw",
+    ) => {
       const w = Math.max(118, text.length * 7.2 + 20);
       const x =
         corner === "ne" || corner === "se"
@@ -175,7 +180,7 @@ export function Scatter2DChart({
         corner === "ne" || corner === "nw"
           ? PAD.t + inset
           : PAD.t + plotH - inset - bh;
-      return { key, x, y, w, h: bh, text };
+      return { key, x, y, w, h: bh, text, title };
     };
     return [
       make(
@@ -183,25 +188,31 @@ export function Scatter2DChart({
         lang === "pl"
           ? `↗ CZOŁÓWKA: ${shortX} + ${shortY}`
           : `↗ ELITE: ${shortX} + ${shortY}`,
+        lang === "pl"
+          ? `Czołówka: ${labelX} + ${labelY}`
+          : `Elite: ${labelX} + ${labelY}`,
         "ne",
       ),
       make(
         "nw",
         lang === "pl" ? `↖ DOBRY: ${shortY}` : `↖ STRONG: ${shortY}`,
+        lang === "pl" ? `Dobry: ${labelY}` : `Strong: ${labelY}`,
         "nw",
       ),
       make(
         "se",
         lang === "pl" ? `↘ DOBRY: ${shortX}` : `↘ STRONG: ${shortX}`,
+        lang === "pl" ? `Dobry: ${labelX}` : `Strong: ${labelX}`,
         "se",
       ),
       make(
         "sw",
         lang === "pl" ? "↙ PONIŻEJ ŚR." : "↙ BELOW AVG",
+        lang === "pl" ? "Poniżej średniej" : "Below average",
         "sw",
       ),
     ];
-  }, [lang, shortX, shortY, plotW, plotH]);
+  }, [lang, shortX, shortY, labelX, labelY, plotW, plotH]);
 
   const reservedBoxes = useMemo(
     () =>
@@ -405,6 +416,11 @@ export function Scatter2DChart({
           <span
             className="text-[11.5px] font-semibold"
             style={{ color: theme.muted }}
+            title={
+              lang === "pl"
+                ? `Średnia grupy (${labelX}: ${avgLabelX} · ${labelY}: ${avgLabelY})`
+                : `Group average (${labelX}: ${avgLabelX} · ${labelY}: ${avgLabelY})`
+            }
           >
             {lang === "pl"
               ? `Linie przerywane = Średnia grupy (${shortX}: ${avgLabelX} · ${shortY}: ${avgLabelY})`
@@ -527,7 +543,8 @@ export function Scatter2DChart({
 
         {/* Narożne odznaki ćwiartek */}
         {quadrantBadges.map((b) => (
-          <g key={b.key}>
+          <g key={b.key} aria-label={b.title}>
+            <title>{b.title}</title>
             <rect
               x={b.x}
               y={b.y}
@@ -725,16 +742,16 @@ export function Scatter2DChart({
                   className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] font-bold"
                   style={{ color: theme.muted }}
                 >
-                  <span className="whitespace-nowrap">
-                    {shortX}:{" "}
+                  <span className="whitespace-nowrap" title={labelX} aria-label={labelX}>
+                    {labelX}:{" "}
                     {formatMetricDisplayValue(
                       axisX,
                       p.displayValues[axisX] ?? 0,
                       per90,
                     )}
                   </span>
-                  <span className="whitespace-nowrap">
-                    {shortY}:{" "}
+                  <span className="whitespace-nowrap" title={labelY} aria-label={labelY}>
+                    {labelY}:{" "}
                     {formatMetricDisplayValue(
                       axisY,
                       p.displayValues[axisY] ?? 0,
@@ -770,8 +787,8 @@ export function Scatter2DChart({
           <p className="font-bold">
             {hovered.club?.short_name} · {hovered.web_name}
           </p>
-          <p>
-            {shortX}:{" "}
+          <p title={labelX} aria-label={labelX}>
+            {labelX}:{" "}
             {formatMetricDisplayValue(
               axisX,
               scaleMode === "PERCENTILE"
@@ -781,8 +798,8 @@ export function Scatter2DChart({
             )}
             {scaleMode === "PERCENTILE" ? " (P)" : ""}
           </p>
-          <p>
-            {shortY}:{" "}
+          <p title={labelY} aria-label={labelY}>
+            {labelY}:{" "}
             {formatMetricDisplayValue(
               axisY,
               scaleMode === "PERCENTILE"

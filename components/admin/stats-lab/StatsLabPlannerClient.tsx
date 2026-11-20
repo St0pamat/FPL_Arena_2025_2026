@@ -1185,6 +1185,7 @@ export function StatsLabPlannerClient({
                   (w) => w.key === "planner.vice.missing",
                 ) ?? false
               }
+              emptySlotBudgetTenths={availableBudgetTenths}
             />
 
             {activeGwState &&

@@ -261,6 +261,8 @@ export const PLANNER_LABELS = {
     "planner.draft.variant": "Wariant",
     "planner.pitch.emptySlot": "Wolne miejsce",
     "planner.pitch.emptyAdd": "Dodaj zawodnika: {pos}",
+    "planner.pitch.emptyBudget": "do {value}",
+    "planner.pitch.noBudget": "brak budżetu",
     "planner.pos.gkp": "BR",
     "planner.pos.def": "OB",
     "planner.pos.mid": "PO",
@@ -272,6 +274,7 @@ export const PLANNER_LABELS = {
     "planner.card.sep": "·",
     "planner.card.xptsMult": "{base}×{mult}={shown}",
     "planner.card.actions": "Akcje: {player}",
+    "planner.card.info": "Info: {player}",
     "planner.action.close": "Zamknij",
     "planner.kpi.bankShortfall": "brakuje {value}",
     "planner.pitch.benchBoostActive":
@@ -520,6 +523,8 @@ export const PLANNER_LABELS = {
     "planner.draft.variant": "Draft",
     "planner.pitch.emptySlot": "Empty slot",
     "planner.pitch.emptyAdd": "Add a player: {pos}",
+    "planner.pitch.emptyBudget": "up to {value}",
+    "planner.pitch.noBudget": "no budget",
     "planner.pos.gkp": "GK",
     "planner.pos.def": "DEF",
     "planner.pos.mid": "MID",
@@ -531,6 +536,7 @@ export const PLANNER_LABELS = {
     "planner.card.sep": "·",
     "planner.card.xptsMult": "{base}×{mult}={shown}",
     "planner.card.actions": "Actions: {player}",
+    "planner.card.info": "Info: {player}",
     "planner.action.close": "Close",
     "planner.kpi.bankShortfall": "short {value}",
     "planner.pitch.benchBoostActive":

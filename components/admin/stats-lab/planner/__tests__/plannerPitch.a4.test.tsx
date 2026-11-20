@@ -7,6 +7,7 @@ import type { PlannerPlayerCatalogItem } from "@/app/admin/actions/statsLabPlann
 import type { ReconstructedSquadPick } from "@/lib/stats-lab/fplEntryApi";
 import type { PlayerGwProjection } from "@/lib/stats-lab/plannerEngine";
 import { PlannerPitch } from "@/components/admin/stats-lab/planner/PlannerPitch";
+import { assignCaptain } from "@/lib/stats-lab/plannerCaptainRoles";
 import { pt } from "@/lib/stats-lab/plannerI18n";
 
 function catalog(
@@ -236,9 +237,64 @@ describe("A4+U3 PlannerPitch — ostrzeżenia missing przy boisku", () => {
     );
 
     expect(screen.queryByTestId("pitch-role-missing")).toBeNull();
-    await user.click(screen.getByRole("button", { name: /Informacje: P7/ }));
+    await user.click(screen.getAllByRole("button", { name: "Info: P7" })[0]!);
     await user.click(screen.getByRole("button", { name: /Kapitan: P7/ }));
     expect(onSetCaptain).toHaveBeenCalled();
+  });
+
+  it("ponowne kliknięcie C na kapitanie zdejmuje opaskę i pokazuje baner", async () => {
+    const user = userEvent.setup();
+    const base = buildSquad();
+    let roles = {
+      captainElementId: 7 as number | null,
+      viceCaptainElementId: 9 as number | null,
+      captainClearedByUser: false,
+      viceClearedByUser: false,
+    };
+    const propsFor = () => ({
+      squadPicks: base.picks.map((p) => ({
+        ...p,
+        isCaptain: p.elementId === roles.captainElementId,
+        isViceCaptain: p.elementId === roles.viceCaptainElementId,
+      })),
+      missingCaptain:
+        roles.captainElementId == null && roles.captainClearedByUser,
+      onSetCaptain: (id: number) => {
+        roles = assignCaptain(roles, id);
+      },
+    });
+    const { rerender } = renderPitch(propsFor());
+    expect(screen.queryByTestId("pitch-captain-missing")).toBeNull();
+    expect(screen.getByLabelText("Kapitan").textContent).toBe("C");
+
+    await user.click(screen.getAllByRole("button", { name: "Info: P7" })[0]!);
+    await user.click(screen.getByRole("button", { name: /Kapitan: P7/ }));
+    rerender(
+      <PlannerPitch
+        themeId="ARENA_DARK"
+        lang="pl"
+        currentGw={10}
+        availableGameweeks={[10, 11, 12]}
+        selectedSlotForSwap={null}
+        playersById={base.playersById}
+        projectionsByElement={base.projectionsByElement}
+        tileMetric="FIXTURES"
+        onSelectSlotForSwap={() => undefined}
+        onSwapSlots={() => undefined}
+        onMarkPlayerForTransferOut={() => undefined}
+        onSetViceCaptain={() => undefined}
+        watchlistIds={new Set()}
+        onToggleWatchlist={() => undefined}
+        activeChip={null}
+        {...propsFor()}
+      />,
+    );
+
+    expect(screen.getByTestId("pitch-captain-missing").textContent).toBe(
+      "Wybierz kapitana",
+    );
+    expect(screen.queryByLabelText("Kapitan")).toBeNull();
+    expect(screen.getByLabelText("Wicekapitan").textContent).toBe("VC");
   });
 });
 
@@ -261,17 +317,17 @@ describe("A4+U3 PlannerPitch — akcje karty w rogach", () => {
   it("przycisk C/VC w Info ma aria-pressed u zawodnika z opaską", async () => {
     const user = userEvent.setup();
     renderPitch();
-    await user.click(screen.getByRole("button", { name: /Informacje: P7/ }));
+    await user.click(screen.getAllByRole("button", { name: "Info: P7" })[0]!);
     const capBtn = screen.getByRole("button", { name: /Kapitan: P7/ });
     expect(capBtn.getAttribute("aria-pressed")).toBe("true");
     await user.click(screen.getByRole("button", { name: "Zamknij" }));
 
-    await user.click(screen.getByRole("button", { name: /Informacje: P9/ }));
+    await user.click(screen.getAllByRole("button", { name: "Info: P9" })[0]!);
     const viceBtn = screen.getByRole("button", { name: /Wicekapitan: P9/ });
     expect(viceBtn.getAttribute("aria-pressed")).toBe("true");
     await user.click(screen.getByRole("button", { name: "Zamknij" }));
 
-    await user.click(screen.getByRole("button", { name: /Informacje: P8/ }));
+    await user.click(screen.getAllByRole("button", { name: "Info: P8" })[0]!);
     const otherCap = screen.getByRole("button", { name: /Kapitan: P8/ });
     expect(otherCap.getAttribute("aria-pressed")).toBe("false");
   });

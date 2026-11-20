@@ -133,6 +133,43 @@ describe("A4 assignCaptain / assignViceCaptain (FPL swap)", () => {
     expect(next.captainElementId).toBe(2);
   });
 
+  it("ponowne C na kapitanie zdejmuje opaskę; VC zostaje; silnik prosi o wybór", () => {
+    const cleared = assignCaptain(
+      { captainElementId: 1, viceCaptainElementId: 13 },
+      1,
+    );
+    expect(cleared.captainElementId).toBeNull();
+    expect(cleared.viceCaptainElementId).toBe(13);
+    expect(cleared.captainClearedByUser).toBe(true);
+    expect(cleared.viceClearedByUser).toBe(false);
+    expect(shouldAutoFillCaptain(cleared)).toBe(false);
+
+    const gws = evaluateRollingPlan({
+      entry: FIXTURE_ENTRY,
+      playersById: FIXTURE_PLAYERS_BY_ID,
+      decisions: [decision(13, cleared)],
+      startGw: 13,
+      endGw: 13,
+      projectGw: (elementId, gw) => ({
+        elementId,
+        gameweek: gw,
+        xPts: 4,
+        expectedMinutes: 80,
+        p0: 0.05,
+        p60: 0.9,
+        p1: 0.95,
+        isBlank: false,
+        isDouble: false,
+        fixtures: [],
+      }),
+    });
+    expect(gws[0]!.captainElementId).toBeNull();
+    expect(gws[0]!.viceCaptainElementId).toBe(13);
+    expect(gws[0]!.warnings.map((w) => w.key)).toContain(
+      "planner.captain.missing",
+    );
+  });
+
   it("C on player without role: VC unchanged", () => {
     const next = assignCaptain(
       { captainElementId: 1, viceCaptainElementId: 2 },

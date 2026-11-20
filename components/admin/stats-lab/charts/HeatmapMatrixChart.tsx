@@ -476,6 +476,7 @@ export function HeatmapMatrixChart({
               key={key}
               type={isExport ? undefined : "button"}
               title={full ?? key}
+              aria-label={full ?? key}
               onClick={
                 isExport ? undefined : () => handleLocalSort(key)
               }
@@ -497,6 +498,7 @@ export function HeatmapMatrixChart({
                 className={`whitespace-nowrap text-[14px] font-black leading-none tracking-tight sm:text-[15px] ${
                   isLight ? "text-slate-900" : "text-white"
                 }`}
+                title={full ?? key}
               >
                 {short ?? key}
               </span>
@@ -520,6 +522,8 @@ export function HeatmapMatrixChart({
             <div className={ocenaSep}>
               <HeaderTag
                 type={isExport ? undefined : "button"}
+                title={ratingTooltip}
+                aria-label={ratingTooltip}
                 onClick={
                   isExport
                     ? undefined
@@ -688,6 +692,18 @@ export function HeatmapMatrixChart({
                   <p
                     className="mt-0.5 text-[10px] font-bold uppercase tracking-wide"
                     style={{ color: theme.muted }}
+                    title={
+                      (lang === "en"
+                        ? getFplStatDefinition(rankedByStat)?.labelEn
+                        : getFplStatDefinition(rankedByStat)?.labelPl) ??
+                      rankedByStat
+                    }
+                    aria-label={
+                      (lang === "en"
+                        ? getFplStatDefinition(rankedByStat)?.labelEn
+                        : getFplStatDefinition(rankedByStat)?.labelPl) ??
+                      rankedByStat
+                    }
                   >
                     {rankedByStat === "total_points"
                       ? lang === "pl"

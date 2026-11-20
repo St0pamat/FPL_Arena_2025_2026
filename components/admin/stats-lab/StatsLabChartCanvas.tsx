@@ -513,6 +513,8 @@ export function StatsLabChartCanvas({
             onSelectPlayer={onSelectPlayer}
             variant={variant}
             per90={filter.per90}
+            poolSortStat={filter.sortByStat}
+            poolSortByComposite={filter.sortByComposite === true}
           />
         ) : vizMode === "POINTS_BREAKDOWN" ? (
           <PointsBreakdownChart
@@ -637,6 +639,8 @@ export function StatsLabChartCanvas({
                         ? "font-bold text-slate-900"
                         : "font-bold text-white"
                     }
+                    title={statLabel(key, lang)}
+                    aria-label={statLabel(key, lang)}
                   >
                     {statLabel(key, lang, true)}:
                   </span>

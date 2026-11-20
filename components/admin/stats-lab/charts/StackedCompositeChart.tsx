@@ -5,7 +5,7 @@ import { ArrowDown, ArrowUp } from "lucide-react";
 import type { PlottedStatsLabPlayer } from "@/lib/stats-lab/analyticsEngine";
 import type { FplStatKey } from "@/lib/stats-lab/types";
 import type { StatsLabLang, StatsLabScaleMode } from "@/lib/stats-lab/i18n";
-import { statShort } from "@/lib/stats-lab/i18n";
+import { statLabel, statShort, t } from "@/lib/stats-lab/i18n";
 import {
   formatMetricDisplayValue,
   getMetricColor,
@@ -34,7 +34,104 @@ type Props = {
   onSelectPlayer: (id: number) => void;
   variant?: "studio" | "export";
   per90?: boolean;
+  /** Kolejność z silnika, zanim użytkownik kliknie legendę. */
+  poolSortStat?: FplStatKey;
+  poolSortByComposite?: boolean;
 };
+
+function activeSortKey(args: {
+  localSortKey: LocalSortKey;
+  poolSortStat: FplStatKey;
+  poolSortByComposite: boolean;
+}): FplStatKey | "composite" {
+  if (args.localSortKey != null) return args.localSortKey;
+  if (args.poolSortByComposite) return "composite";
+  return args.poolSortStat;
+}
+
+function sortCaptionFor(
+  key: FplStatKey | "composite",
+  lang: StatsLabLang,
+): string | null {
+  if (key === "composite") return null;
+  const copy = t(lang);
+  if (key === "total_points") return copy.sortedByPoints;
+  return copy.sortedByMetric.replace("{name}", statLabel(key, lang));
+}
+
+function RankValueBox({
+  player,
+  sortKey,
+  lang,
+  per90,
+  theme,
+}: {
+  player: PlottedStatsLabPlayer;
+  sortKey: FplStatKey | "composite";
+  lang: StatsLabLang;
+  per90: boolean;
+  theme: StatsLabChartTheme;
+}) {
+  const copy = t(lang);
+  const isLight = theme.id === "ANALYST_LIGHT";
+  const accent = isLight ? "#059669" : "#39FF14";
+  const isRating = sortKey === "composite";
+  const full = isRating ? copy.heatmapRatingTooltip : statLabel(sortKey, lang);
+  const primaryLabel = isRating
+    ? copy.ratingWord
+    : sortKey === "total_points"
+      ? copy.pointsWord
+      : statShort(sortKey, lang);
+  const rawPoints = Number(player.rawValues.total_points);
+  const primaryValue = isRating
+    ? player.compositeScore.toFixed(0)
+    : sortKey === "total_points"
+      ? String(Number.isFinite(rawPoints) ? Math.round(rawPoints) : 0)
+      : formatMetricDisplayValue(
+          sortKey,
+          Number(player.displayValues[sortKey] ?? 0),
+          per90,
+        );
+  const rating = Math.round(player.compositeScore);
+  const caption = sortCaptionFor(sortKey, lang);
+
+  return (
+    <div className="flex min-w-0 items-center justify-center">
+      <div
+        className="inline-flex flex-col items-center justify-center rounded-xl border-2 px-2.5 py-1.5 text-center"
+        style={{ borderColor: accent }}
+        data-testid="rank-primary"
+      >
+        <p
+          className="text-[10px] font-black uppercase tracking-wider"
+          style={{ color: accent }}
+          title={caption ?? full}
+          aria-label={caption ?? full}
+        >
+          {primaryLabel}
+        </p>
+        <p
+          className="text-2xl font-black leading-none tabular-nums sm:text-3xl"
+          style={{ color: accent }}
+          data-testid="rank-primary-value"
+        >
+          {primaryValue}
+        </p>
+        {isRating ? null : (
+          <p
+            className="mt-1 text-[10px] font-bold leading-tight"
+            style={{ color: theme.muted }}
+            title={copy.heatmapRatingTooltip}
+            aria-label={`${copy.ratingWord} ${rating}. ${copy.heatmapRatingTooltip}`}
+            data-testid="rank-rating"
+          >
+            {copy.ratingWord} {rating}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
 
 function MetricLegendBar({
   metrics,
@@ -64,9 +161,13 @@ function MetricLegendBar({
   if (isExport) {
     return (
       <div className="flex flex-wrap gap-4">
-        {metrics.map((key, i) => (
+        {metrics.map((key, i) => {
+          const full = statLabel(key, lang);
+          return (
           <span
             key={key}
+            title={full}
+            aria-label={full}
             className={`inline-flex items-center gap-2 text-base font-bold ${
               isLight ? "text-slate-800" : ""
             }`}
@@ -76,9 +177,10 @@ function MetricLegendBar({
               className="h-4 w-4 rounded-full"
               style={{ background: getMetricColor(i, theme.id) }}
             />
-            {statShort(key, lang)}
+            {full}
           </span>
-        ))}
+          );
+        })}
         {showComposite ? (
           <span
             className={`inline-flex items-center gap-2 text-base font-bold ${
@@ -97,10 +199,13 @@ function MetricLegendBar({
     <div className="flex flex-wrap gap-2">
       {metrics.map((key, i) => {
         const active = sortKey === key;
+        const full = statLabel(key, lang);
         return (
           <button
             key={key}
             type="button"
+            title={full}
+            aria-label={full}
             onClick={() => onSort(key)}
             className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider ${
               isLight
@@ -124,7 +229,7 @@ function MetricLegendBar({
               className="h-2 w-2 rounded-full"
               style={{ background: getMetricColor(i, theme.id) }}
             />
-            {statShort(key, lang)}
+            {full}
             {active ? (
               sortDir === "DESC" ? (
                 <ArrowDown className="h-3 w-3" />
@@ -210,6 +315,8 @@ export function StackedCompositeChart({
   onSelectPlayer,
   variant = "studio",
   per90 = false,
+  poolSortStat = "total_points",
+  poolSortByComposite = false,
 }: Props) {
   // Lokalny sort: null = kolejność 1:1 z analyticsEngine (sortByStat / Top N)
   const [localSortKey, setLocalSortKey] = useState<LocalSortKey>(null);
@@ -236,6 +343,12 @@ export function StackedCompositeChart({
     () => orderPlayers(players, localSortKey, localSortDir, scaleMode),
     [players, localSortKey, localSortDir, scaleMode],
   );
+  const rankSortKey = activeSortKey({
+    localSortKey,
+    poolSortStat,
+    poolSortByComposite,
+  });
+  const sortCaption = sortCaptionFor(rankSortKey, lang);
 
   if (scaleMode === "RAW") {
     return (
@@ -254,6 +367,8 @@ export function StackedCompositeChart({
         onSelectPlayer={onSelectPlayer}
         variant={variant}
         per90={per90}
+        rankSortKey={rankSortKey}
+        sortCaption={sortCaption}
       />
     );
   }
@@ -264,10 +379,6 @@ export function StackedCompositeChart({
     ...ordered.map((p) => p.compositeScore),
     1,
   );
-  const compositeMicro =
-    lang === "pl" ? "z wybranych cech" : "selected stats";
-  const compositeBoxLabel = lang === "pl" ? "OCENA" : "RATING";
-
   return (
     <div className={isExport ? "space-y-5" : "space-y-3"}>
       <MetricLegendBar
@@ -280,6 +391,16 @@ export function StackedCompositeChart({
         isExport={isExport}
         showComposite
       />
+
+      {sortCaption ? (
+        <p
+          data-testid="studio-sort-caption"
+          className="text-[12px] font-bold"
+          style={{ color: theme.muted }}
+        >
+          {sortCaption}
+        </p>
+      ) : null}
 
       <div className={isExport ? "space-y-4" : "space-y-3"}>
         {ordered.map((p, rank) => {
@@ -355,7 +476,8 @@ export function StackedCompositeChart({
                         return (
                           <div
                             key={seg.key}
-                            title={`${statShort(seg.key, lang)}: ${formatMetricDisplayValue(seg.key, seg.value, per90)} · P${Math.round(seg.pct)}`}
+                            title={`${statLabel(seg.key, lang)}: ${formatMetricDisplayValue(seg.key, seg.value, per90)} · P${Math.round(seg.pct)}`}
+                            aria-label={`${statLabel(seg.key, lang)}: ${formatMetricDisplayValue(seg.key, seg.value, per90)}`}
                             className="relative flex min-w-[44px] items-center justify-center overflow-hidden"
                             style={{
                               flex: `${seg.pct / sumPct} 1 44px`,
@@ -399,6 +521,8 @@ export function StackedCompositeChart({
                           return (
                             <span
                               key={`${p.fpl_element_id}-leg-${key}`}
+                              title={statLabel(key, lang)}
+                              aria-label={statLabel(key, lang)}
                               className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap"
                               style={{
                                 color: isLight ? undefined : theme.text,
@@ -410,7 +534,7 @@ export function StackedCompositeChart({
                                   background: getMetricColor(i, theme.id),
                                 }}
                               />
-                              {statShort(key, lang)}{" "}
+                              {statLabel(key, lang)}{" "}
                               {formatMetricDisplayValue(key, val, per90)}
                             </span>
                           );
@@ -420,33 +544,13 @@ export function StackedCompositeChart({
                   ) : null}
                 </div>
 
-                <div className="flex min-w-0 items-center justify-center">
-                  <div
-                    className="inline-flex flex-col items-center justify-center rounded-xl border-2 px-2.5 py-1.5 text-center"
-                    style={{
-                      borderColor: isLight ? "#059669" : "#39FF14",
-                    }}
-                  >
-                    <p
-                      className="text-[10px] font-black uppercase tracking-wider"
-                      style={{ color: isLight ? "#059669" : "#39FF14" }}
-                    >
-                      {compositeBoxLabel}
-                    </p>
-                    <p
-                      className="text-2xl font-black leading-none tabular-nums sm:text-3xl"
-                      style={{ color: isLight ? "#059669" : "#39FF14" }}
-                    >
-                      {p.compositeScore.toFixed(0)}
-                    </p>
-                    <p
-                      className="mt-0.5 text-[9.5px] font-medium leading-tight opacity-80"
-                      style={{ color: isLight ? "#047857" : "#86efac" }}
-                    >
-                      {compositeMicro}
-                    </p>
-                  </div>
-                </div>
+                <RankValueBox
+                  player={p}
+                  sortKey={rankSortKey}
+                  lang={lang}
+                  per90={per90}
+                  theme={theme}
+                />
               </div>
             </button>
           );
@@ -471,6 +575,8 @@ type RawBarsProps = {
   onSelectPlayer: (id: number) => void;
   variant?: "studio" | "export";
   per90?: boolean;
+  rankSortKey: FplStatKey | "composite";
+  sortCaption: string | null;
 };
 
 /** Jednorzędowe paski porównawcze — osobna skala na metrykę w trybie RAW. */
@@ -488,6 +594,8 @@ function GroupedRawBars({
   onSelectPlayer,
   variant = "studio",
   per90 = false,
+  rankSortKey,
+  sortCaption,
 }: RawBarsProps) {
   const isExport = variant === "export";
   const isLight = theme.id === "ANALYST_LIGHT";
@@ -503,15 +611,6 @@ function GroupedRawBars({
     ]),
   ) as Record<FplStatKey, number>;
 
-  const showCompositeBox =
-    localSortKey == null || localSortKey === "composite";
-  const primarySortKey =
-    localSortKey != null && localSortKey !== "composite"
-      ? localSortKey
-      : null;
-  const compositeMicro =
-    lang === "pl" ? "z wybranych cech" : "selected stats";
-
   return (
     <div className={isExport ? "space-y-5" : "space-y-3"}>
       <MetricLegendBar
@@ -525,22 +624,19 @@ function GroupedRawBars({
         showComposite
       />
 
+      {sortCaption ? (
+        <p
+          data-testid="studio-sort-caption"
+          className="text-[12px] font-bold"
+          style={{ color: theme.muted }}
+        >
+          {sortCaption}
+        </p>
+      ) : null}
+
       <div className={isExport ? "space-y-4" : "space-y-3"}>
         {players.map((p, rank) => {
           const isSpot = spotlightId === p.fpl_element_id;
-          const rightLabel = showCompositeBox
-            ? lang === "pl"
-              ? "OCENA"
-              : "RATING"
-            : statShort(primarySortKey!, lang);
-          const rightValue = showCompositeBox
-            ? p.compositeScore.toFixed(0)
-            : formatMetricDisplayValue(
-                primarySortKey!,
-                p.displayValues[primarySortKey!] ?? 0,
-                per90,
-              );
-          const rightAccent = isLight ? "#059669" : "#39FF14";
 
           return (
             <button
@@ -611,7 +707,9 @@ function GroupedRawBars({
                             className="h-2 w-2 shrink-0 rounded-full"
                             style={{ background: color }}
                           />
-                          {statShort(key, lang)}
+                          <span title={statLabel(key, lang)} aria-label={statLabel(key, lang)}>
+                            {statShort(key, lang)}
+                          </span>
                         </div>
                         <div
                           className={`relative flex h-8 items-center overflow-hidden rounded-md ${
@@ -646,33 +744,13 @@ function GroupedRawBars({
                   })}
                 </div>
 
-                <div className="flex min-w-0 items-center justify-center">
-                  <div
-                    className="inline-flex flex-col items-center justify-center rounded-xl border-2 px-2.5 py-1.5 text-center"
-                    style={{ borderColor: rightAccent }}
-                  >
-                    <p
-                      className="text-[10px] font-black uppercase tracking-wider"
-                      style={{ color: rightAccent }}
-                    >
-                      {rightLabel}
-                    </p>
-                    <p
-                      className="text-2xl font-black leading-none tabular-nums sm:text-3xl"
-                      style={{ color: rightAccent }}
-                    >
-                      {rightValue}
-                    </p>
-                    {showCompositeBox ? (
-                      <p
-                        className="mt-0.5 text-[9.5px] font-medium leading-tight opacity-80"
-                        style={{ color: isLight ? "#047857" : "#86efac" }}
-                      >
-                        {compositeMicro}
-                      </p>
-                    ) : null}
-                  </div>
-                </div>
+                <RankValueBox
+                  player={p}
+                  sortKey={rankSortKey}
+                  lang={lang}
+                  per90={per90}
+                  theme={theme}
+                />
               </div>
             </button>
           );
