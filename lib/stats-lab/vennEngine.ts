@@ -316,6 +316,17 @@ export function applyVennPresetToFilter(
   };
 }
 
+/**
+ * Venn bez ręcznej listy bierze całą pulę filtra.
+ * Pusty wybór ręczny nie może spaść do Top N.
+ */
+export function vennUsesFullPool(
+  pickMode: "AUTO" | "MANUAL",
+  selectedPlayerIds: readonly number[],
+): boolean {
+  return pickMode !== "MANUAL" || selectedPlayerIds.length === 0;
+}
+
 /* ─────────────────────────────────────────────────
  * Geometria kół i siatka żetonów
  * ───────────────────────────────────────────────── */

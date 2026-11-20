@@ -68,6 +68,7 @@ import {
   applyVennPresetToFilter,
   cloneVennConditions,
   getVennPreset,
+  vennUsesFullPool,
 } from "@/lib/stats-lab/vennEngine";
 import type { PointsSortKey } from "@/components/admin/stats-lab/charts/PointsBreakdownChart";
 import type { KnowledgeHelpAnchor } from "@/lib/stats-lab/knowledgeBaseContent";
@@ -206,7 +207,12 @@ export function StatsLabStudioClient({
             // STREAKS: sortuj całą pulę po serii przed Top N
             streakSortKey: isStreaks ? streakSortKey : undefined,
             sortByComposite: allowComposite,
-            returnAllEligible: isVenn && ui.pickMode !== "MANUAL",
+            returnAllEligible:
+              isVenn &&
+              vennUsesFullPool(
+                ui.pickMode,
+                ui.pickMode === "MANUAL" ? nextFilter.selectedPlayerIds : [],
+              ),
             // POINTS_BREAKDOWN: Top N + kolejność = oficjalne sumy FPL (nie Per 90)
             sortByRawValues: isPointsBreakdown ? true : false,
             ...(isPointsBreakdown
@@ -440,6 +446,8 @@ export function StatsLabStudioClient({
         next.vennConditions = cloneVennConditions(
           getVennPreset("COMPLETE_DEFENDER").conditions,
         );
+        // Preset czyści ręczną listę. Zostawienie MANUAL ucinałoby pulę do Top N.
+        next.pickMode = "AUTO";
       }
       return next;
     });

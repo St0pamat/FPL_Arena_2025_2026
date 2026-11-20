@@ -9,6 +9,7 @@ import {
   layoutVennRegion,
   planVennTokens,
   shortenPlayerLabel,
+  vennUsesFullPool,
   type VennCondition,
   type VennRegionId,
   type VennSubject,
@@ -229,6 +230,13 @@ describe("U8 preset i limit puli", () => {
       "FWD_FINISHERS",
       "GK_WALL",
     ]);
+  });
+
+  it("pusty wybór ręczny na Vennie bierze całą pulę, a nie Top N", () => {
+    expect(vennUsesFullPool("MANUAL", [])).toBe(true);
+    expect(vennUsesFullPool("AUTO", [])).toBe(true);
+    expect(vennUsesFullPool("MANUAL", [12, 40])).toBe(false);
+    expect(vennUsesFullPool("AUTO", [12])).toBe(true);
   });
 
   it("pełna pula Venna nie tnie do Top N, inne wykresy tak", () => {
