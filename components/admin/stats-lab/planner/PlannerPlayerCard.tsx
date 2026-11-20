@@ -32,6 +32,7 @@ import {
 import { fplLabBadgeUrl } from "@/lib/stats-lab/mediaUrls";
 import { PlannerFixturePills } from "@/components/admin/stats-lab/planner/PlannerFixturePills";
 import {
+  fdrDotClass,
   fdrPillClass,
   plannerCardPalette,
 } from "@/components/admin/stats-lab/planner/plannerCardPalette";
@@ -246,6 +247,18 @@ export function PlannerPlayerCard({
           >
             <ArrowLeftRight className="h-3.5 w-3.5" />
           </button>
+          <button
+            type="button"
+            title={actionAria(lang, "planner.action.info", playerName)}
+            aria-label={actionAria(lang, "planner.action.info", playerName)}
+            className={`ppc-act ppc-act-info ${PLANNER_ACTION_HIT_CLASS} rounded-full ${palette.icon}`}
+            onClick={(event) => {
+              event.stopPropagation();
+              onInfo();
+            }}
+          >
+            <Info className="h-3.5 w-3.5" />
+          </button>
         </>
       ) : null}
 
@@ -285,20 +298,6 @@ export function PlannerPlayerCard({
       </div>
 
       <div className={`ppc-plate ${palette.plate}`}>
-        {showActions ? (
-          <button
-            type="button"
-            title={actionAria(lang, "planner.action.info", playerName)}
-            aria-label={actionAria(lang, "planner.action.info", playerName)}
-            className={`ppc-act ppc-act-info ${PLANNER_ACTION_HIT_CLASS} rounded-full ${palette.icon}`}
-            onClick={(event) => {
-              event.stopPropagation();
-              onInfo();
-            }}
-          >
-            <Info className="h-3.5 w-3.5" />
-          </button>
-        ) : null}
         <b
           className={`ppc-name ${palette.name}`}
           data-testid="card-player-name"
@@ -320,10 +319,11 @@ export function PlannerPlayerCard({
             <span
               key={dot.gw}
               data-testid="fdr-dot"
+              data-fdr-level={dot.fdrLevel ?? "blank"}
               className={`ppc-dot ${
                 dot.fdrLevel == null
                   ? palette.dotBlank
-                  : fdrPillClass(dot.fdrLevel, isLight)
+                  : fdrDotClass(dot.fdrLevel, themeId)
               }`}
             />
           ))}

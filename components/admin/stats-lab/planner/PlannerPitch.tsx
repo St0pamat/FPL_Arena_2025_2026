@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Star, X } from "lucide-react";
 import type { StatsLabChartThemeId } from "@/components/admin/stats-lab/chartTheme";
 import type { StatsLabLang } from "@/lib/stats-lab/i18n";
@@ -748,6 +748,16 @@ function PlayerInfoModal({
     .filter((g) => g >= currentGw)
     .slice(0, 6);
 
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      if (event.key !== "Escape") return;
+      event.stopPropagation();
+      onClose();
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
   return (
     <div
       className="fixed inset-0 z-[70] flex items-end justify-center bg-black/60 p-3 backdrop-blur-[2px] sm:items-center"
@@ -759,7 +769,58 @@ function PlayerInfoModal({
         className={`max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border p-4 shadow-2xl ${chrome.panel}`}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-start gap-3">
+        <div className="flex items-start gap-2" data-testid="info-role-actions">
+          <div className="flex min-w-0 flex-1 flex-wrap gap-2">
+            {isXi ? (
+              <>
+                <button
+                  type="button"
+                  aria-pressed={!!pick?.isCaptain}
+                  className={`min-h-11 rounded-xl px-3 text-[11px] font-black ${
+                    pick?.isCaptain ? chrome.activeBtn : chrome.inactiveBtn
+                  }`}
+                  aria-label={actionAria(lang, "planner.action.captain", webName)}
+                  onClick={() => onSetCaptain(elementId)}
+                >
+                  {pt(lang, "planner.role.badgeC")}
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={!!pick?.isViceCaptain}
+                  className={`min-h-11 rounded-xl px-3 text-[11px] font-black ${
+                    pick?.isViceCaptain ? chrome.activeBtn : chrome.inactiveBtn
+                  }`}
+                  aria-label={actionAria(lang, "planner.action.vice", webName)}
+                  onClick={() => onSetViceCaptain(elementId)}
+                >
+                  {pt(lang, "planner.role.badgeVC")}
+                </button>
+              </>
+            ) : null}
+            <button
+              type="button"
+              className={`inline-flex min-h-11 items-center gap-1 rounded-xl px-3 text-[11px] font-black ${chrome.inactiveBtn}`}
+              aria-label={actionAria(
+                lang,
+                starred ? "planner.action.unwatch" : "planner.action.watch",
+                webName,
+              )}
+              onClick={() => onToggleWatchlist(elementId)}
+            >
+              <Star className={`h-3.5 w-3.5 ${starred ? "fill-[#f59e0b]" : ""}`} />
+            </button>
+          </div>
+          <button
+            type="button"
+            className={`rounded-lg border p-2 ${chrome.inactiveBtn}`}
+            aria-label={pt(lang, "planner.action.close")}
+            onClick={onClose}
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="mt-3 flex items-start gap-3">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={fplLabPlayerPhotoUrl(player?.player_code ?? 0)}
@@ -795,70 +856,21 @@ function PlayerInfoModal({
               </p>
             ) : null}
           </div>
-          <button
-            type="button"
-            className={`rounded-lg border p-2 ${chrome.inactiveBtn}`}
-            aria-label={pt(lang, "planner.action.close")}
-            onClick={onClose}
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-
-        <div className="mt-3 flex flex-wrap gap-2">
-          {isXi ? (
-            <>
-              <button
-                type="button"
-                aria-pressed={!!pick?.isCaptain}
-                className={`min-h-11 rounded-xl px-3 text-[11px] font-black ${
-                  pick?.isCaptain ? chrome.activeBtn : chrome.inactiveBtn
-                }`}
-                aria-label={actionAria(lang, "planner.action.captain", webName)}
-                onClick={() => onSetCaptain(elementId)}
-              >
-                {pt(lang, "planner.role.badgeC")}
-              </button>
-              <button
-                type="button"
-                aria-pressed={!!pick?.isViceCaptain}
-                className={`min-h-11 rounded-xl px-3 text-[11px] font-black ${
-                  pick?.isViceCaptain ? chrome.activeBtn : chrome.inactiveBtn
-                }`}
-                aria-label={actionAria(lang, "planner.action.vice", webName)}
-                onClick={() => onSetViceCaptain(elementId)}
-              >
-                {pt(lang, "planner.role.badgeVC")}
-              </button>
-            </>
-          ) : null}
-          <button
-            type="button"
-            className={`inline-flex min-h-11 items-center gap-1 rounded-xl px-3 text-[11px] font-black ${chrome.inactiveBtn}`}
-            aria-label={actionAria(
-              lang,
-              starred ? "planner.action.unwatch" : "planner.action.watch",
-              webName,
-            )}
-            onClick={() => onToggleWatchlist(elementId)}
-          >
-            <Star className={`h-3.5 w-3.5 ${starred ? "fill-[#f59e0b]" : ""}`} />
-          </button>
         </div>
 
         <div className="mt-4 grid grid-cols-3 gap-2">
           {(
             [
-              ["planner.price.purchase.short", pick?.purchasePriceTenths ?? player?.now_cost ?? 0],
-              ["planner.price.current.short", pick?.nowCostTenths ?? player?.now_cost ?? 0],
-              ["planner.price.selling.short", sell],
+              ["planner.price.purchase.label", pick?.purchasePriceTenths ?? player?.now_cost ?? 0],
+              ["planner.price.current.label", pick?.nowCostTenths ?? player?.now_cost ?? 0],
+              ["planner.price.selling.label", sell],
             ] as const
           ).map(([labelKey, value]) => (
             <div
               key={labelKey}
               className={`rounded-xl border p-2 text-center ${chrome.group}`}
             >
-              <p className={`text-[9px] font-black uppercase ${chrome.mutedLabel}`}>
+              <p className={`text-[11px] font-bold leading-tight ${chrome.mutedLabel}`}>
                 {pt(lang, labelKey)}
               </p>
               <p className={`mt-1 text-sm font-black tabular-nums ${chrome.text}`}>
@@ -915,7 +927,7 @@ function PlayerInfoModal({
 
         <div className={`mt-4 rounded-xl border p-3 ${chrome.group}`}>
           <p className={`text-[10px] font-black uppercase ${chrome.mutedLabel}`}>
-            xPts v1 · GW{currentGw}
+            {pt(lang, "planner.card.xpts")} · GW{currentGw}
           </p>
           <p className={`mt-1 text-2xl font-black tabular-nums ${chrome.text}`}>
             {(proj?.xPts ?? 0).toFixed(2)}

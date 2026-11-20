@@ -1,5 +1,40 @@
 import type { StatsLabChartThemeId } from "@/components/admin/stats-lab/chartTheme";
 
+/**
+ * Kropki FDR. Te same odcienie co pigułki Light (emerald / slate / amber / rose),
+ * ale kryjące: na ciemnej karcie łatwy mecz ma jaśniejsze tło i obwódkę,
+ * na białej — ciemniejszy zielony, żeby kontrast do tła tabliczki był ≥ 3:1.
+ */
+export function fdrDotClass(
+  level: number,
+  themeId: StatsLabChartThemeId,
+): string {
+  const dark = themeId !== "ANALYST_LIGHT";
+  if (level <= 1) {
+    return dark
+      ? "bg-emerald-300 border border-emerald-100"
+      : "bg-emerald-600 border border-emerald-800";
+  }
+  if (level === 2) {
+    return dark
+      ? "bg-emerald-500 border border-emerald-300"
+      : "bg-emerald-700 border border-emerald-900";
+  }
+  if (level === 3) {
+    return dark
+      ? "bg-slate-200 border border-slate-100"
+      : "bg-slate-500 border border-slate-700";
+  }
+  if (level === 4) {
+    return dark
+      ? "bg-amber-200 border border-amber-100"
+      : "bg-amber-600 border border-amber-800";
+  }
+  return dark
+    ? "bg-rose-500 border border-rose-300"
+    : "bg-rose-600 border border-rose-800";
+}
+
 export function fdrPillClass(level: number, isLight: boolean): string {
   if (isLight) {
     if (level <= 1) return "bg-emerald-600 text-white border-emerald-700";
@@ -41,7 +76,7 @@ export function plannerCardPalette(themeId: StatsLabChartThemeId): CardPalette {
       icon: "border border-slate-400/40 bg-[#ffffff] text-[#334155]",
       empty: "text-[#0f172a]",
       blankPill: "bg-[#cbd5e1] text-[#1e293b]",
-      dotBlank: "bg-[#cbd5e1]",
+      dotBlank: "bg-slate-500",
     };
   }
   if (themeId === "SCOUT_DARK") {
@@ -55,7 +90,7 @@ export function plannerCardPalette(themeId: StatsLabChartThemeId): CardPalette {
       icon: "border border-slate-300/40 bg-[#0b1c2e] text-[#cbd5e1]",
       empty: "text-[#f0fdfa]",
       blankPill: "bg-[#334155] text-[#e2e8f0]",
-      dotBlank: "bg-[#334155]",
+      dotBlank: "bg-slate-500",
     };
   }
   return {
@@ -68,6 +103,6 @@ export function plannerCardPalette(themeId: StatsLabChartThemeId): CardPalette {
     icon: "border border-slate-300/40 bg-[#0c1322] text-[#cbd5e1]",
     empty: "text-[#e2e8f0]",
     blankPill: "bg-[#334155] text-[#e2e8f0]",
-    dotBlank: "bg-[#334155]",
+    dotBlank: "bg-slate-500",
   };
 }

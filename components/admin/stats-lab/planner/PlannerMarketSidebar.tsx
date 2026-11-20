@@ -590,6 +590,7 @@ export function PlannerMarketSidebar({
 
               <button
                 type="button"
+                aria-pressed={onlyInBudget}
                 onClick={() => {
                   setOnlyInBudget((v) => !v);
                   setPage(1);

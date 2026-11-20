@@ -80,6 +80,13 @@ export type PlannedTransfer = {
   outSellingPriceTenths: number;
   inPurchasePriceTenths: number;
   hasConflict?: boolean;
+  /** Role z decyzji tuż przed tym transferem. ✕ przywraca je razem ze sprzedanym. */
+  captainBefore?: {
+    captainElementId: number | null;
+    viceCaptainElementId: number | null;
+    captainClearedByUser?: boolean;
+    viceClearedByUser?: boolean;
+  };
 };
 
 export type GwPlanDecision = {
@@ -979,7 +986,46 @@ function applyLineupOrder(
 ): SquadPlayerState[] {
   const byId = new Map(squad.map((p) => [p.elementId, { ...p }] as const));
   let next: SquadPlayerState[];
-  if (lineupOrder && lineupOrder.length === 15) {
+  if (lineupOrder && lineupOrder.length === 15 && squad.length === 15) {
+    // Id spoza kadry (stary lineupOrder po cofnięciu transferu) nie dostaje ceny £5.0m.
+    // Wolne miejsce zajmuje prawdziwy gracz, który został w składzie.
+    const used = new Set<number>();
+    const drafted: Array<SquadPlayerState | null> = lineupOrder.map((id, idx) => {
+      const known = byId.get(id);
+      if (!known || used.has(known.elementId)) return null;
+      used.add(known.elementId);
+      return {
+        ...known,
+        slot: idx + 1,
+        isCaptain: false,
+        isViceCaptain: false,
+      };
+    });
+    const leftovers = squad.filter((p) => !used.has(p.elementId));
+    let leftoverIndex = 0;
+    next = drafted.map((row, idx) => {
+      if (row) return row;
+      const fallback = leftovers[leftoverIndex];
+      leftoverIndex += 1;
+      if (!fallback) {
+        return {
+          elementId: lineupOrder[idx] ?? 0,
+          slot: idx + 1,
+          purchasePriceTenths: 0,
+          nowCostTenths: 0,
+          sellingPriceTenths: 0,
+          isCaptain: false,
+          isViceCaptain: false,
+        };
+      }
+      return {
+        ...fallback,
+        slot: idx + 1,
+        isCaptain: false,
+        isViceCaptain: false,
+      };
+    });
+  } else if (lineupOrder && lineupOrder.length === 15) {
     next = lineupOrder.map((id, idx) => {
       const base = byId.get(id) ?? {
         elementId: id,
