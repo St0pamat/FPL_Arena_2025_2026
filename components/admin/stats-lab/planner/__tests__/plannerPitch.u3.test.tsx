@@ -421,6 +421,9 @@ describe("U3 PlannerPitch armband + BGW captain", () => {
       />,
     );
 
+    await user.click(
+      screen.getByRole("button", { name: "Details: Haaland" }),
+    );
     const setCap = screen.getByRole("button", {
       name: "Captain: Haaland",
     });

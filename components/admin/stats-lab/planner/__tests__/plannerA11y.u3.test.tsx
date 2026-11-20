@@ -6,6 +6,7 @@
 import React from "react";
 import { describe, expect, it } from "vitest";
 import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { PlannerPlayerCatalogItem } from "@/app/admin/actions/statsLabPlanner";
 import type { ReconstructedSquadPick } from "@/lib/stats-lab/fplEntryApi";
 import type {
@@ -121,7 +122,7 @@ function assertAllButtonsNamed(root: HTMLElement, lang: string) {
 }
 
 describe("U3 a11y render — every button / role=button in Planner surfaces", () => {
-  it("renders Header + Pitch + MultiGw + Market + theme control; all controls named (PL and EN)", () => {
+  it("renders Header + Pitch + MultiGw + Market + theme control; all controls named (PL and EN)", async () => {
     const picks: ReconstructedSquadPick[] = [];
     const playersById = new Map<number, PlannerPlayerCatalogItem>();
     for (let slot = 1; slot <= 15; slot++) {
@@ -336,6 +337,14 @@ describe("U3 a11y render — every button / role=button in Planner surfaces", ()
 
       const root = screen.getByTestId(`planner-a11y-${lang}`);
       assertAllButtonsNamed(root, lang);
+      const user = userEvent.setup();
+      const infoButtons = within(root).getAllByRole("button", {
+        name: lang === "pl" ? /Informacje: Salah/ : /Details: Salah/,
+      });
+      const cardInfo =
+        infoButtons.find((button) => button.closest("[data-card='u6']")) ??
+        infoButtons[0]!;
+      await user.click(cardInfo);
 
       // Sanity: kluczowe kontrolki z promptu
       expect(

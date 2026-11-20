@@ -1,12 +1,7 @@
 "use client";
 
 import { useMemo, useState, type ReactNode } from "react";
-import {
-  ArrowLeftRight,
-  Info,
-  Star,
-  X,
-} from "lucide-react";
+import { Star, X } from "lucide-react";
 import type { StatsLabChartThemeId } from "@/components/admin/stats-lab/chartTheme";
 import type { StatsLabLang } from "@/lib/stats-lab/i18n";
 import type { ReconstructedSquadPick } from "@/lib/stats-lab/fplEntryApi";
@@ -27,24 +22,21 @@ import {
 } from "@/lib/stats-lab/plannerI18n";
 import {
   actionAria,
+  formatBenchSlotChipLabel,
   formatBenchSlotLabel,
-  formatPlayerTileAccessibleName,
+  groupPitchSlots,
+  plannerDisplayFullName,
 } from "@/lib/stats-lab/plannerUiFormat";
-import {
-  PLANNER_ACTION_HIT_CLASS,
-  captainArmbandAria,
-  captainArmbandKind,
-  captainArmbandLabel,
-  formatFixturePills,
-} from "@/lib/stats-lab/plannerFixtureUi";
+import { captainArmbandKind } from "@/lib/stats-lab/plannerFixtureUi";
 import { getStatsLabMenuChrome } from "@/lib/stats-lab/menuChrome";
-import { getPlannerActionChrome } from "@/lib/stats-lab/themeTokens";
-import {
-  fplLabBadgeUrl,
-  fplLabPlayerPhotoUrl,
-} from "@/lib/stats-lab/mediaUrls";
+import { fplLabPlayerPhotoUrl } from "@/lib/stats-lab/mediaUrls";
 import type { FplLabPlayer } from "@/lib/stats-lab/types";
 import { PlannerFixturePills } from "@/components/admin/stats-lab/planner/PlannerFixturePills";
+import { fdrPillClass } from "@/components/admin/stats-lab/planner/plannerCardPalette";
+import {
+  PlannerEmptySlot,
+  PlannerPlayerCard,
+} from "@/components/admin/stats-lab/planner/PlannerPlayerCard";
 
 export type PlannerPitchProps = {
   themeId: StatsLabChartThemeId;
@@ -84,37 +76,6 @@ function hasRoleMissingBanner(
   missingVice: boolean | undefined,
 ): boolean {
   return !!missingCaptain || !!missingVice;
-}
-
-function tenthsToPounds(tenths: number): string {
-  return `£${(Math.round(tenths) / 10).toFixed(1)}m`;
-}
-
-function fdrPillClass(level: number, isLight: boolean): string {
-  if (isLight) {
-    if (level <= 1) return "bg-emerald-600 text-white border-emerald-700";
-    if (level === 2) return "bg-emerald-100 text-emerald-950 border-emerald-300";
-    if (level === 3) return "bg-slate-200 text-slate-900 border-slate-300";
-    if (level === 4) return "bg-amber-200 text-amber-950 border-amber-400";
-    return "bg-rose-600 text-white border-rose-700";
-  }
-  if (level <= 1) return "bg-emerald-500/30 text-emerald-100 border-emerald-400/50";
-  if (level === 2) return "bg-emerald-500/20 text-emerald-100 border-emerald-400/40";
-  if (level === 3) return "bg-slate-500/30 text-slate-100 border-slate-400/40";
-  if (level === 4) return "bg-amber-500/25 text-amber-100 border-amber-400/40";
-  return "bg-rose-500/30 text-rose-100 border-rose-400/50";
-}
-
-function chanceBadge(
-  chance: number | null | undefined,
-): string | null {
-  if (chance == null) return null;
-  if (chance >= 100) return null;
-  if (chance <= 0) return "0%";
-  if (chance <= 25) return "25%";
-  if (chance <= 50) return "50%";
-  if (chance <= 75) return "75%";
-  return `${chance}%`;
 }
 
 function picksToSquadState(
@@ -172,6 +133,7 @@ export function PlannerPitch({
   const isLight = chrome.isLight;
   const [formationBanner, setFormationBanner] = useState<string | null>(null);
   const [infoElementId, setInfoElementId] = useState<number | null>(null);
+  const [actionSlot, setActionSlot] = useState<number | null>(null);
   const [dragSlot, setDragSlot] = useState<number | null>(null);
 
   const squadState = useMemo(
@@ -192,26 +154,26 @@ export function PlannerPitch({
   const xiSlots = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] as const;
   const benchSlots = [12, 13, 14, 15] as const;
 
-  const lineGk = xiSlots.filter((s) => {
-    const p = bySlot.get(s);
-    if (!p) return false;
-    return playersById.get(p.elementId)?.element_type === 1;
-  });
-  const lineDef = xiSlots.filter((s) => {
-    const p = bySlot.get(s);
-    if (!p) return false;
-    return playersById.get(p.elementId)?.element_type === 2;
-  });
-  const lineMid = xiSlots.filter((s) => {
-    const p = bySlot.get(s);
-    if (!p) return false;
-    return playersById.get(p.elementId)?.element_type === 3;
-  });
-  const lineFwd = xiSlots.filter((s) => {
-    const p = bySlot.get(s);
-    if (!p) return false;
-    return playersById.get(p.elementId)?.element_type === 4;
-  });
+  const pitchLines = groupPitchSlots(
+    xiSlots.map((slot) => {
+      const pick = bySlot.get(slot);
+      if (!pick) return { slot, elementType: null };
+      const elementType = playersById.get(pick.elementId)?.element_type;
+      if (
+        elementType === 1 ||
+        elementType === 2 ||
+        elementType === 3 ||
+        elementType === 4
+      ) {
+        return { slot, elementType };
+      }
+      return { slot, elementType: null };
+    }),
+  );
+  const lineGk = pitchLines.gk;
+  const lineDef = pitchLines.def;
+  const lineMid = pitchLines.mid;
+  const lineFwd = pitchLines.fwd;
 
   function swapAllowed(from: number, to: number): {
     ok: boolean;
@@ -304,10 +266,10 @@ export function PlannerPitch({
       ) : null}
 
       <div
-        className={`relative w-full overflow-hidden rounded-2xl border ${pitchBorder} ${pitchBg} p-3 sm:p-4`}
+        className={`relative w-full overflow-hidden rounded-2xl border ${pitchBorder} ${pitchBg} px-1 py-3 sm:px-4 sm:py-4`}
         data-planner-pitch="true"
       >
-        <div className="pointer-events-none absolute inset-3 rounded-xl border border-white/20 sm:inset-4" />
+        <div className="pointer-events-none absolute inset-1 rounded-xl border border-white/20 sm:inset-4" />
 
         <PitchLine
           slots={lineGk.length ? lineGk : [1]}
@@ -337,6 +299,7 @@ export function PlannerPitch({
               onSetViceCaptain,
               onToggleWatchlist,
               setInfoElementId,
+              setActionSlot,
               setDragSlot,
               trySwap,
             })
@@ -370,6 +333,7 @@ export function PlannerPitch({
               onSetViceCaptain,
               onToggleWatchlist,
               setInfoElementId,
+              setActionSlot,
               setDragSlot,
               trySwap,
             })
@@ -403,6 +367,7 @@ export function PlannerPitch({
               onSetViceCaptain,
               onToggleWatchlist,
               setInfoElementId,
+              setActionSlot,
               setDragSlot,
               trySwap,
             })
@@ -436,6 +401,7 @@ export function PlannerPitch({
               onSetViceCaptain,
               onToggleWatchlist,
               setInfoElementId,
+              setActionSlot,
               setDragSlot,
               trySwap,
             })
@@ -469,9 +435,23 @@ export function PlannerPitch({
             </span>
           ) : null}
         </div>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <div
+          className="grid w-full min-w-0 justify-evenly gap-x-1"
+          style={{ gridTemplateColumns: "repeat(4, minmax(0, 6.5rem))" }}
+          data-testid="bench-row"
+        >
           {benchSlots.map((slot) => (
-            <div key={slot}>
+            <div key={slot} className="flex min-w-0 flex-col items-stretch">
+              <span
+                className={`mb-1 self-center rounded-full border px-2 text-[10px] font-extrabold leading-4 ${
+                  isLight
+                    ? "border-slate-300 bg-white text-slate-600"
+                    : "border-slate-700 bg-slate-950/80 text-slate-300"
+                }`}
+                aria-hidden="true"
+              >
+                {formatBenchSlotChipLabel(lang, slot)}
+              </span>
               {renderTile(slot, {
                 bySlot,
                 removedElementIdsInGw,
@@ -497,9 +477,10 @@ export function PlannerPitch({
                 onSetViceCaptain,
                 onToggleWatchlist,
                 setInfoElementId,
+                setActionSlot,
                 setDragSlot,
                 trySwap,
-                benchLabel: formatBenchSlotLabel(lang, slot),
+                benchAccessibleLabel: formatBenchSlotLabel(lang, slot),
               })}
             </div>
           ))}
@@ -518,6 +499,45 @@ export function PlannerPitch({
           projectionsByElement={projectionsByElement}
           onClose={() => setInfoElementId(null)}
           onUpdateCustomSellingPrice={onUpdateCustomSellingPrice}
+          onSetCaptain={onSetCaptain}
+          onSetViceCaptain={onSetViceCaptain}
+          onToggleWatchlist={onToggleWatchlist}
+          starred={watchlistIds.has(infoElementId)}
+        />
+      ) : null}
+
+      {actionSlot != null && !chromeHidden ? (
+        <CardActionSheet
+          slot={actionSlot}
+          lang={lang}
+          themeId={themeId}
+          bySlot={bySlot}
+          playersById={playersById}
+          onClose={() => setActionSlot(null)}
+          onSell={(slot, elementId) => {
+            setActionSlot(null);
+            onMarkPlayerForTransferOut(slot, elementId);
+          }}
+          onSwap={(slot) => {
+            setActionSlot(null);
+            onTileClickSwap(slot);
+          }}
+          onInfo={(elementId) => {
+            setActionSlot(null);
+            setInfoElementId(elementId);
+          }}
+          onSetCaptain={(elementId) => {
+            setActionSlot(null);
+            onSetCaptain(elementId);
+          }}
+          onSetViceCaptain={(elementId) => {
+            setActionSlot(null);
+            onSetViceCaptain(elementId);
+          }}
+          onToggleWatchlist={(elementId) => {
+            onToggleWatchlist(elementId);
+          }}
+          watchlistIds={watchlistIds}
         />
       ) : null}
     </div>
@@ -533,9 +553,15 @@ function PitchLine({
 }) {
   if (!slots.length) return null;
   return (
-    <div className="relative z-[1] mb-3 flex w-full flex-wrap items-start justify-center gap-3 md:gap-5">
+    <div
+      className="relative z-[1] mb-2 grid w-full min-w-0 justify-evenly gap-x-1"
+      style={{
+        gridTemplateColumns: `repeat(${slots.length}, minmax(0, 6.5rem))`,
+      }}
+      data-testid="pitch-line"
+    >
       {slots.map((slot) => (
-        <div key={slot} className="w-[104px] sm:w-[112px]">
+        <div key={slot} className="min-w-0">
           {renderTile(slot)}
         </div>
       ))}
@@ -571,24 +597,17 @@ type TileCtx = {
   onSetViceCaptain: (elementId: number) => void;
   onToggleWatchlist: (elementId: number) => void;
   setInfoElementId: (id: number) => void;
+  setActionSlot: (slot: number) => void;
   setDragSlot: (slot: number | null) => void;
   trySwap: (from: number, to: number) => void;
-  benchLabel?: string;
+  benchAccessibleLabel?: string;
 };
 
 function renderTile(slot: number, ctx: TileCtx): ReactNode {
   const pick = ctx.bySlot.get(slot);
   if (!pick) {
     return (
-      <div
-        className={`flex min-h-[132px] items-center justify-center rounded-xl border border-dashed px-2 text-center text-[10px] font-bold ${
-          ctx.isLight
-            ? "border-slate-300 bg-white/80 text-slate-500"
-            : "border-slate-600 bg-slate-950/50 text-slate-400"
-        }`}
-      >
-        {pt(ctx.lang, "planner.pitch.emptySlot")}
-      </div>
+      <PlannerEmptySlot themeId={ctx.themeId} lang={ctx.lang} slot={slot} />
     );
   }
 
@@ -615,14 +634,11 @@ function renderTile(slot: number, ctx: TileCtx): ReactNode {
     isViceCaptain: pick.isViceCaptain,
     activeChip: ctx.activeChip,
   });
-  const armbandText = captainArmbandLabel(ctx.lang, armbandKind) || null;
-  const chance = chanceBadge(player?.chance_of_playing_next_round);
-  const starred = ctx.watchlistIds.has(pick.elementId);
 
   if (removed) {
     return (
       <div
-        className={`flex min-h-[132px] flex-col items-center justify-center gap-2 rounded-xl border border-dashed px-2 py-3 text-center ${
+        className={`flex min-h-[104px] flex-col items-center justify-center gap-2 rounded-xl border border-dashed px-2 py-3 text-center ${
           ctx.isLight
             ? "border-rose-400 bg-rose-50 text-rose-900"
             : "border-rose-400/50 bg-rose-500/10 text-rose-100"
@@ -648,371 +664,40 @@ function renderTile(slot: number, ctx: TileCtx): ReactNode {
   }
 
   const playerName = player?.web_name ?? `#${pick.elementId}`;
-  const tileAria = formatPlayerTileAccessibleName({
-    lang: ctx.lang,
-    webName: playerName,
-    clubShort: player?.club_short_name ?? "",
-    isCaptain: pick.isCaptain,
-    isViceCaptain: pick.isViceCaptain,
-  });
-  const actions = getPlannerActionChrome(ctx.themeId);
+  const fullName = plannerDisplayFullName(player) || playerName;
 
   return (
-    <div
-      role="group"
-      aria-label={tileAria}
+    <PlannerPlayerCard
+      themeId={ctx.themeId}
+      lang={ctx.lang}
+      isLight={ctx.isLight}
+      isExporting={ctx.isExporting}
+      pick={pick}
+      player={player}
+      proj={proj}
+      projectionsForElement={ctx.projectionsByElement[pick.elementId]}
+      currentGw={ctx.currentGw}
+      tileMetric={ctx.tileMetric}
+      activeChip={ctx.activeChip}
+      armbandKind={isXi ? armbandKind : null}
+      playerName={playerName}
+      fullName={fullName}
+      benchAccessibleLabel={ctx.benchAccessibleLabel}
+      ringClass={ringClass}
+      onSell={() => ctx.onMarkPlayerForTransferOut(slot, pick.elementId)}
+      onSwap={() => ctx.onTileClickSwap(slot)}
+      onInfo={() => ctx.setInfoElementId(pick.elementId)}
+      onOpenActions={() => ctx.setActionSlot(slot)}
       draggable={!ctx.isExporting}
       onDragStart={() => ctx.setDragSlot(slot)}
       onDragEnd={() => ctx.setDragSlot(null)}
-      onDragOver={(e) => e.preventDefault()}
-      onDrop={(e) => {
-        e.preventDefault();
+      onDragOver={(event) => event.preventDefault()}
+      onDrop={(event) => {
+        event.preventDefault();
         if (ctx.dragSlot != null) ctx.trySwap(ctx.dragSlot, slot);
         ctx.setDragSlot(null);
       }}
-      data-testid="player-tile"
-      className={`relative flex max-w-full min-h-[132px] flex-col rounded-xl border px-1.5 pb-2 pt-1 shadow-sm ${
-        ctx.isLight
-          ? "border-slate-300 bg-white text-slate-900"
-          : "border-slate-700 bg-slate-950/80 text-slate-100"
-      } ${ringClass}`}
-    >
-      {/* Akcje: ✕ ⇄ C VC w jednym rzędzie (C/VC tylko XI); ☆ ⓘ na zdjęciu */}
-      <div className="mb-0.5 flex max-w-full items-center justify-between gap-0.5">
-        <div className="flex min-w-0 items-center gap-0.5">
-          {!ctx.isExporting ? (
-            <>
-              <button
-                type="button"
-                title={actionAria(ctx.lang, "planner.action.sell", playerName)}
-                aria-label={actionAria(
-                  ctx.lang,
-                  "planner.action.sell",
-                  playerName,
-                )}
-                className={`${PLANNER_ACTION_HIT_CLASS} ${actions.sell}`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  ctx.onMarkPlayerForTransferOut(slot, pick.elementId);
-                }}
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-              <button
-                type="button"
-                title={actionAria(ctx.lang, "planner.action.swap", playerName)}
-                aria-label={actionAria(
-                  ctx.lang,
-                  "planner.action.swap",
-                  playerName,
-                )}
-                className={`${PLANNER_ACTION_HIT_CLASS} ${
-                  selected ? actions.swapSelected : actions.swap
-                }`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  ctx.onTileClickSwap(slot);
-                }}
-              >
-                <ArrowLeftRight className="h-3.5 w-3.5" />
-              </button>
-            </>
-          ) : null}
-        </div>
-        <div className="flex shrink-0 items-center gap-0.5">
-          {chance ? (
-            <span
-              className={`inline-flex h-5 items-center rounded px-1 text-[9px] font-black ${
-                ctx.isLight
-                  ? "bg-rose-100 text-rose-800"
-                  : "bg-rose-500/25 text-rose-100"
-              }`}
-            >
-              {chance}
-            </span>
-          ) : null}
-          {!ctx.isExporting && isXi ? (
-            <>
-              <button
-                type="button"
-                aria-pressed={pick.isCaptain}
-                className={`${PLANNER_ACTION_HIT_CLASS} text-[10px] font-black ${
-                  pick.isCaptain ? actions.captainPressed : actions.captainIdle
-                }`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  ctx.onSetCaptain(pick.elementId);
-                }}
-                title={actionAria(
-                  ctx.lang,
-                  "planner.action.captain",
-                  playerName,
-                )}
-                aria-label={actionAria(
-                  ctx.lang,
-                  "planner.action.captain",
-                  playerName,
-                )}
-              >
-                C
-              </button>
-              <button
-                type="button"
-                aria-pressed={pick.isViceCaptain}
-                className={`${PLANNER_ACTION_HIT_CLASS} text-[10px] font-black ${
-                  pick.isViceCaptain ? actions.vicePressed : actions.viceIdle
-                }`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  ctx.onSetViceCaptain(pick.elementId);
-                }}
-                title={actionAria(ctx.lang, "planner.action.vice", playerName)}
-                aria-label={actionAria(
-                  ctx.lang,
-                  "planner.action.vice",
-                  playerName,
-                )}
-              >
-                VC
-              </button>
-            </>
-          ) : null}
-        </div>
-      </div>
-
-      {ctx.benchLabel ? (
-        <p className="mb-0.5 text-center text-[9px] font-black uppercase tracking-wider opacity-70">
-          {ctx.benchLabel}
-        </p>
-      ) : null}
-
-      {/* Foto + opaska C/VC/TC; ☆ ⓘ w prawym górnym rogu zdjęcia (w obrębie karty) */}
-      <div className="relative mx-auto mb-1 w-full max-w-[5.75rem] sm:max-w-[6.75rem]">
-        <div className="relative mx-auto h-11 w-11 sm:h-14 sm:w-14">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={fplLabPlayerPhotoUrl(player?.player_code ?? 0)}
-            alt={player?.web_name ?? ""}
-            crossOrigin="anonymous"
-            className="h-11 w-11 rounded-full object-cover object-top sm:h-14 sm:w-14"
-            onError={(e) => {
-              (e.currentTarget as HTMLImageElement).style.display = "none";
-            }}
-          />
-          {armbandText && armbandKind ? (
-            <span
-              data-testid="captain-armband"
-              role="img"
-              aria-label={captainArmbandAria(ctx.lang, armbandKind)}
-              className={`absolute -left-0.5 -top-0.5 inline-flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-black ${actions.armband}`}
-            >
-              {armbandText}
-            </span>
-          ) : null}
-          {player?.club_pulse_code ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={fplLabBadgeUrl(player.club_pulse_code)}
-              alt=""
-              crossOrigin="anonymous"
-              className="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full bg-black/40 object-contain p-0.5"
-            />
-          ) : null}
-        </div>
-        {!ctx.isExporting ? (
-          <div className="absolute right-0 top-0 z-10 flex flex-col items-center gap-0.5">
-            <button
-              type="button"
-              className={`${PLANNER_ACTION_HIT_CLASS} ${
-                starred ? actions.watchActive : actions.watchIdle
-              }`}
-              onClick={(e) => {
-                e.stopPropagation();
-                ctx.onToggleWatchlist(pick.elementId);
-              }}
-              aria-label={actionAria(
-                ctx.lang,
-                starred
-                  ? "planner.action.unwatch"
-                  : "planner.action.watch",
-                playerName,
-              )}
-            >
-              <Star
-                className={`h-3.5 w-3.5 ${starred ? "fill-[#f59e0b]" : ""}`}
-              />
-            </button>
-            <button
-              type="button"
-              className={`${PLANNER_ACTION_HIT_CLASS} ${actions.info}`}
-              onClick={(e) => {
-                e.stopPropagation();
-                ctx.setInfoElementId(pick.elementId);
-              }}
-              aria-label={actionAria(
-                ctx.lang,
-                "planner.action.info",
-                playerName,
-              )}
-            >
-              <Info className="h-3.5 w-3.5" />
-            </button>
-          </div>
-        ) : null}
-      </div>
-
-      <p className="px-0.5 text-center text-[13px] font-semibold leading-tight sm:text-[14px]">
-        {playerName}
-      </p>
-      {player?.club_short_name ? (
-        <p className="px-0.5 text-center text-[9px] font-semibold opacity-70">
-          {player.club_short_name}
-        </p>
-      ) : null}
-
-      <div className="mt-1 px-0.5">
-        <TileMetricBlock
-          pick={pick}
-          player={player}
-          proj={proj}
-          tileMetric={ctx.tileMetric}
-          currentGw={ctx.currentGw}
-          projectionsByElement={ctx.projectionsByElement}
-          elementId={pick.elementId}
-          isLight={ctx.isLight}
-          activeChip={ctx.activeChip}
-          lang={ctx.lang}
-        />
-      </div>
-    </div>
-  );
-}
-
-function TileMetricBlock({
-  pick,
-  player,
-  proj,
-  tileMetric,
-  currentGw,
-  projectionsByElement,
-  elementId,
-  isLight,
-  activeChip,
-  lang,
-}: {
-  pick: ReconstructedSquadPick;
-  player: PlannerPlayerCatalogItem | undefined;
-  proj: PlayerGwProjection | undefined;
-  tileMetric: PlannerTileMetric;
-  currentGw: number;
-  projectionsByElement: Record<number, Record<number, PlayerGwProjection>>;
-  elementId: number;
-  isLight: boolean;
-  activeChip: PlannerChipType | null;
-  lang: StatsLabLang;
-}) {
-  if (tileMetric === "XPTS") {
-    const base = proj?.xPts ?? 0;
-    const mult =
-      pick.isCaptain ? (activeChip === "3xc" ? 3 : 2) : 1;
-    const shown = base * mult;
-    const pills = formatFixturePills(lang, proj);
-    return (
-      <div className="text-center">
-        <p
-          className={`text-[12px] font-semibold tabular-nums ${
-            isLight
-              ? "text-[#0f766e]"
-              : "text-emerald-400"
-          }`}
-        >
-          {pick.isCaptain && mult > 1
-            ? `${base.toFixed(1)} ×${mult} = ${shown.toFixed(1)}`
-            : `${base.toFixed(1)} xPts`}
-        </p>
-        <p className="text-[11px] font-semibold opacity-80">
-          {pills.map((p) => p.label).join(" · ")}
-        </p>
-      </div>
-    );
-  }
-
-  if (tileMetric === "PRICES") {
-    return (
-      <div className="text-center">
-        <p className="text-[10px] font-black tabular-nums leading-tight">
-          {(pick.purchasePriceTenths / 10).toFixed(1)} /{" "}
-          {(pick.nowCostTenths / 10).toFixed(1)} /{" "}
-          {(pick.sellingPriceTenths / 10).toFixed(1)}
-        </p>
-        <p className="mt-0.5 text-[9px] font-bold">
-          {pick.willDropAffectSell ? (
-            <span className="text-amber-500">⚠️ SP</span>
-          ) : (
-            <span className="text-emerald-500">● SP OK</span>
-          )}
-        </p>
-      </div>
-    );
-  }
-
-  if (tileMetric === "FORM") {
-    return (
-      <div className="text-center text-[10px] font-bold leading-tight">
-        <p>
-          {lang === "pl" ? "Forma" : "Form"}:{" "}
-          {(player?.form ?? 0).toFixed(1)}
-        </p>
-        <p className="opacity-80">
-          TSB: {(player?.selected_by_percent ?? 0).toFixed(1)}%
-        </p>
-      </div>
-    );
-  }
-
-  if (tileMetric === "DC") {
-    return (
-      <div className="text-center text-[10px] font-bold leading-tight">
-        <p>
-          DC Pkt: {player?.dc_bonus_points ?? 0}
-        </p>
-        <p className="opacity-80">
-          DC: {player?.defensive_contribution ?? 0} ·{" "}
-          {(proj?.xPts ?? 0).toFixed(1)} xPts
-        </p>
-      </div>
-    );
-  }
-
-  // FIXTURES (default) — 1 GW = 1 wiersz (DGW = 2 pigułki w nowrap)
-  const gws = [currentGw, currentGw + 1, currentGw + 2];
-  const main = projectionsByElement[elementId]?.[gws[0]!];
-  return (
-    <div className="space-y-1 text-center" data-testid="fixture-pills-stack">
-      {gws.map((gw) => {
-        const p = projectionsByElement[elementId]?.[gw];
-        return (
-          <PlannerFixturePills
-            key={gw}
-            lang={lang}
-            proj={p}
-            isLight={isLight}
-            fdrClass={fdrPillClass}
-          />
-        );
-      })}
-      <p className="text-[12px] font-semibold tabular-nums opacity-90">
-        <span
-          className={`font-semibold ${
-            isLight ? "text-[#0f766e]" : "text-emerald-400"
-          }`}
-        >
-          {(main?.xPts ?? 0).toFixed(1)} xPts
-        </span>
-        {" · "}
-        {tenthsToPounds(pick.sellingPriceTenths)}
-      </p>
-    </div>
+    />
   );
 }
 
@@ -1027,6 +712,10 @@ function PlayerInfoModal({
   projectionsByElement,
   onClose,
   onUpdateCustomSellingPrice,
+  onSetCaptain,
+  onSetViceCaptain,
+  onToggleWatchlist,
+  starred,
 }: {
   elementId: number;
   themeId: StatsLabChartThemeId;
@@ -1041,12 +730,19 @@ function PlayerInfoModal({
     elementId: number,
     sellingPriceTenths: number,
   ) => void;
+  onSetCaptain: (elementId: number) => void;
+  onSetViceCaptain: (elementId: number) => void;
+  onToggleWatchlist: (elementId: number) => void;
+  starred: boolean;
 }) {
   const chrome = getStatsLabMenuChrome(themeId);
   const isLight = chrome.isLight;
   const proj = projectionsByElement[elementId]?.[currentGw];
   const sell = pick?.sellingPriceTenths ?? player?.now_cost ?? 50;
   const source = pick?.priceSource ?? "derived";
+  const webName = player?.web_name ?? `#${elementId}`;
+  const fullName = plannerDisplayFullName(player) || webName;
+  const isXi = (pick?.slot ?? 0) >= 1 && (pick?.slot ?? 0) <= 11;
 
   const upcoming = availableGameweeks
     .filter((g) => g >= currentGw)
@@ -1072,9 +768,10 @@ function PlayerInfoModal({
             className="h-16 w-16 rounded-xl object-cover object-top"
           />
           <div className="min-w-0 flex-1">
-            <h3 className={`text-lg font-black ${chrome.text}`}>
-              {player?.web_name ?? `#${elementId}`}
-            </h3>
+            <h3 className={`text-lg font-black ${chrome.text}`}>{fullName}</h3>
+            {fullName !== webName ? (
+              <p className={`text-sm font-semibold ${chrome.text}`}>{webName}</p>
+            ) : null}
             <p className={`text-sm ${chrome.mutedLabel}`}>
               {player?.club_short_name} ·{" "}
               {player?.element_type === 1
@@ -1101,9 +798,51 @@ function PlayerInfoModal({
           <button
             type="button"
             className={`rounded-lg border p-2 ${chrome.inactiveBtn}`}
+            aria-label={pt(lang, "planner.action.close")}
             onClick={onClose}
           >
             <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="mt-3 flex flex-wrap gap-2">
+          {isXi ? (
+            <>
+              <button
+                type="button"
+                aria-pressed={!!pick?.isCaptain}
+                className={`min-h-11 rounded-xl px-3 text-[11px] font-black ${
+                  pick?.isCaptain ? chrome.activeBtn : chrome.inactiveBtn
+                }`}
+                aria-label={actionAria(lang, "planner.action.captain", webName)}
+                onClick={() => onSetCaptain(elementId)}
+              >
+                {pt(lang, "planner.role.badgeC")}
+              </button>
+              <button
+                type="button"
+                aria-pressed={!!pick?.isViceCaptain}
+                className={`min-h-11 rounded-xl px-3 text-[11px] font-black ${
+                  pick?.isViceCaptain ? chrome.activeBtn : chrome.inactiveBtn
+                }`}
+                aria-label={actionAria(lang, "planner.action.vice", webName)}
+                onClick={() => onSetViceCaptain(elementId)}
+              >
+                {pt(lang, "planner.role.badgeVC")}
+              </button>
+            </>
+          ) : null}
+          <button
+            type="button"
+            className={`inline-flex min-h-11 items-center gap-1 rounded-xl px-3 text-[11px] font-black ${chrome.inactiveBtn}`}
+            aria-label={actionAria(
+              lang,
+              starred ? "planner.action.unwatch" : "planner.action.watch",
+              webName,
+            )}
+            onClick={() => onToggleWatchlist(elementId)}
+          >
+            <Star className={`h-3.5 w-3.5 ${starred ? "fill-[#f59e0b]" : ""}`} />
           </button>
         </div>
 
@@ -1220,6 +959,113 @@ function PlayerInfoModal({
             })}
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function CardActionSheet({
+  slot,
+  lang,
+  themeId,
+  bySlot,
+  playersById,
+  watchlistIds,
+  onClose,
+  onSell,
+  onSwap,
+  onInfo,
+  onSetCaptain,
+  onSetViceCaptain,
+  onToggleWatchlist,
+}: {
+  slot: number;
+  lang: StatsLabLang;
+  themeId: StatsLabChartThemeId;
+  bySlot: Map<number, ReconstructedSquadPick>;
+  playersById: Map<number, PlannerPlayerCatalogItem>;
+  watchlistIds: Set<number>;
+  onClose: () => void;
+  onSell: (slot: number, elementId: number) => void;
+  onSwap: (slot: number) => void;
+  onInfo: (elementId: number) => void;
+  onSetCaptain: (elementId: number) => void;
+  onSetViceCaptain: (elementId: number) => void;
+  onToggleWatchlist: (elementId: number) => void;
+}) {
+  const pick = bySlot.get(slot);
+  if (!pick) return null;
+  const player = playersById.get(pick.elementId);
+  const webName = player?.web_name ?? `#${pick.elementId}`;
+  const fullName = plannerDisplayFullName(player) || webName;
+  const chrome = getStatsLabMenuChrome(themeId);
+  const isXi = slot >= 1 && slot <= 11;
+  const starred = watchlistIds.has(pick.elementId);
+  const row = `flex min-h-11 w-full items-center rounded-xl px-3 text-left text-sm font-bold ${chrome.inactiveBtn}`;
+
+  return (
+    <div
+      className="fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-3"
+      onClick={onClose}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        data-testid="card-action-sheet"
+        aria-label={pt(lang, "planner.card.actions", { player: fullName })}
+        className={`w-full max-w-sm space-y-2 rounded-2xl border p-3 ${chrome.panel}`}
+        onClick={(event) => event.stopPropagation()}
+      >
+        <button type="button" className={row} onClick={() => onSell(slot, pick.elementId)}>
+          {actionAria(lang, "planner.action.sell", webName)}
+        </button>
+        <button type="button" className={row} onClick={() => onSwap(slot)}>
+          {actionAria(lang, "planner.action.swap", webName)}
+        </button>
+        <button type="button" className={row} onClick={() => onInfo(pick.elementId)}>
+          {actionAria(lang, "planner.action.info", webName)}
+        </button>
+        {isXi ? (
+          <>
+            <button
+              type="button"
+              className={row}
+              aria-pressed={pick.isCaptain}
+              aria-label={actionAria(lang, "planner.action.captain", webName)}
+              onClick={() => onSetCaptain(pick.elementId)}
+            >
+              {actionAria(lang, "planner.action.captain", webName)}
+            </button>
+            <button
+              type="button"
+              className={row}
+              aria-pressed={pick.isViceCaptain}
+              aria-label={actionAria(lang, "planner.action.vice", webName)}
+              onClick={() => onSetViceCaptain(pick.elementId)}
+            >
+              {actionAria(lang, "planner.action.vice", webName)}
+            </button>
+          </>
+        ) : null}
+        <button
+          type="button"
+          className={row}
+          aria-label={actionAria(
+            lang,
+            starred ? "planner.action.unwatch" : "planner.action.watch",
+            webName,
+          )}
+          onClick={() => onToggleWatchlist(pick.elementId)}
+        >
+          {actionAria(
+            lang,
+            starred ? "planner.action.unwatch" : "planner.action.watch",
+            webName,
+          )}
+        </button>
+        <button type="button" className={row} onClick={onClose}>
+          {pt(lang, "planner.action.close")}
+        </button>
       </div>
     </div>
   );

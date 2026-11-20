@@ -132,18 +132,207 @@ export function formatPlusButtonLabel(args: {
 export function formatPlayerTileAccessibleName(args: {
   lang: StatsLabLang;
   webName: string;
+  /** Imię i nazwisko. Gdy różni się od web_name, trafia do aria-label. */
+  fullName?: string | null;
   clubShort: string;
   isCaptain?: boolean;
   isViceCaptain?: boolean;
+  benchLabel?: string | null;
 }): string {
-  const parts = [args.webName];
+  const web = args.webName.trim();
+  const full = args.fullName?.trim() ?? "";
+  const spoken =
+    full && full.toLowerCase() !== web.toLowerCase() ? full : web;
+  const parts = [spoken];
   if (args.isCaptain) {
     parts.push(args.lang === "pl" ? "kapitan" : "captain");
   } else if (args.isViceCaptain) {
     parts.push(args.lang === "pl" ? "wicekapitan" : "vice-captain");
   }
   if (args.clubShort) parts.push(args.clubShort);
+  if (args.benchLabel) parts.push(args.benchLabel);
   return parts.join(", ");
+}
+
+/**
+ * Pełne imię i nazwisko do Info i aria-label.
+ * Gdy katalog ma first === second === web_name (fixture testowe), zostaje web_name.
+ */
+export function plannerDisplayFullName(
+  player:
+    | {
+        web_name?: string | null;
+        first_name?: string | null;
+        second_name?: string | null;
+      }
+    | null
+    | undefined,
+): string {
+  const web = String(player?.web_name ?? "").trim();
+  const first = String(player?.first_name ?? "").trim();
+  const second = String(player?.second_name ?? "").trim();
+  if (!first && !second) return web;
+  if (
+    first &&
+    second &&
+    first.toLowerCase() === second.toLowerCase()
+  ) {
+    return web || first;
+  }
+  const full = [first, second].filter(Boolean).join(" ");
+  return full || web;
+}
+
+/** xPts na karcie: BGW = 0, DGW = suma meczów, brak liczby = 0 (nigdy NaN). */
+export function cardDisplayedXPts(
+  proj:
+    | {
+        isBlank?: boolean;
+        xPts?: number;
+        fixtures?: Array<{ matchXPts?: number }>;
+      }
+    | null
+    | undefined,
+): number {
+  if (!proj || proj.isBlank) return 0;
+  const fixtures = proj.fixtures ?? [];
+  if (fixtures.length > 0) {
+    let sum = 0;
+    for (const fx of fixtures) {
+      const n = Number(fx.matchXPts);
+      if (Number.isFinite(n)) sum += n;
+    }
+    return Number.isFinite(sum) ? sum : 0;
+  }
+  const n = Number(proj.xPts);
+  return Number.isFinite(n) ? n : 0;
+}
+
+export function formatCardXPts(value: number): string {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return "0.0";
+  return n.toFixed(1);
+}
+
+export type CardFdrDot = { gw: number; fdrLevel: number | null };
+
+/** Trzy kropki FDR kolejnych kolejek. Brak meczu = null (szara kropka). */
+export function cardNextFdrDots(
+  byGw:
+    | Record<
+        number,
+        | {
+            isBlank?: boolean;
+            fixtures?: Array<{ fdrLevel?: number }>;
+          }
+        | undefined
+      >
+    | undefined,
+  currentGw: number,
+): CardFdrDot[] {
+  const dots: CardFdrDot[] = [];
+  for (let offset = 1; offset <= 3; offset += 1) {
+    const gw = currentGw + offset;
+    const proj = byGw?.[gw];
+    if (!proj || proj.isBlank || !proj.fixtures?.length) {
+      dots.push({ gw, fdrLevel: null });
+      continue;
+    }
+    let max = 0;
+    let any = false;
+    for (const fx of proj.fixtures) {
+      const n = Number(fx.fdrLevel);
+      if (!Number.isFinite(n)) continue;
+      any = true;
+      if (n > max) max = n;
+    }
+    dots.push({ gw, fdrLevel: any ? max : null });
+  }
+  return dots;
+}
+
+export type PitchLineKey = "gk" | "def" | "mid" | "fwd";
+
+const PITCH_LINE_MAX: Record<PitchLineKey, number> = {
+  gk: 1,
+  def: 5,
+  mid: 5,
+  fwd: 3,
+};
+
+/**
+ * Rzędy boiska. Pusty slot (brak picka, elementType null) zostaje w linii,
+ * żeby 14 zawodników pokazało wolne miejsce zamiast zniknąć.
+ */
+export function groupPitchSlots(
+  slots: Array<{ slot: number; elementType: 1 | 2 | 3 | 4 | null }>,
+): Record<PitchLineKey, number[]> {
+  const lines: Record<PitchLineKey, number[]> = {
+    gk: [],
+    def: [],
+    mid: [],
+    fwd: [],
+  };
+  const empty: number[] = [];
+  for (const row of slots) {
+    if (row.slot < 1 || row.slot > 11) continue;
+    if (row.elementType === 1) lines.gk.push(row.slot);
+    else if (row.elementType === 2) lines.def.push(row.slot);
+    else if (row.elementType === 3) lines.mid.push(row.slot);
+    else if (row.elementType === 4) lines.fwd.push(row.slot);
+    else empty.push(row.slot);
+  }
+  const order: PitchLineKey[] = ["gk", "def", "mid", "fwd"];
+  for (const slot of empty) {
+    let placed: PitchLineKey | null = null;
+    for (const key of order) {
+      const band = lines[key];
+      if (!band.length || band.length >= PITCH_LINE_MAX[key]) continue;
+      const min = Math.min(...band);
+      const max = Math.max(...band);
+      if (slot >= min && slot <= max) {
+        placed = key;
+        break;
+      }
+    }
+    if (!placed) {
+      let best: PitchLineKey = slot === 1 ? "gk" : "fwd";
+      let bestDist = Infinity;
+      for (const key of order) {
+        if (lines[key].length >= PITCH_LINE_MAX[key]) continue;
+        const anchor = lines[key].length
+          ? Math.min(...lines[key])
+          : key === "gk"
+            ? 1
+            : key === "def"
+              ? 3
+              : key === "mid"
+                ? 7
+                : 10;
+        const dist = Math.abs(anchor - slot);
+        if (dist < bestDist) {
+          bestDist = dist;
+          best = key;
+        }
+      }
+      placed = best;
+    }
+    lines[placed].push(slot);
+  }
+  for (const key of order) lines[key].sort((a, b) => a - b);
+  if (!lines.gk.length) lines.gk = [1];
+  return lines;
+}
+
+/** Krótka etykieta nad kartą ławki: BR/1/2/3 (PL) albo GK/1/2/3 (EN). */
+export function formatBenchSlotChipLabel(
+  lang: StatsLabLang,
+  slot: number,
+): string {
+  if (slot === 12) return pt(lang, "planner.bench.chipGkp");
+  const n =
+    slot === 13 ? 1 : slot === 14 ? 2 : slot === 15 ? 3 : Math.max(1, slot - 12);
+  return pt(lang, "planner.bench.chipOut", { n });
 }
 
 export function formatChipAccessibleName(args: {

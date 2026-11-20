@@ -1,5 +1,7 @@
 # Wykres Radarowy (Pizza / Polygon Radar) — **ZAMROŻONY / UKOŃCZONY**
 
+Właściciel odmroził cały Stats Lab (Centre, Studio, Predykcje, Planer) poza „Baza i Synchronizacja FPL”.
+
 **Status:** zamknięty etap. Nie zmieniać layoutu tarczy, kartotek ani geometrii bez osobnej decyzji produktowej.
 
 | Pole | Wartość |

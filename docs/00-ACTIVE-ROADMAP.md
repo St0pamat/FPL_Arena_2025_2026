@@ -22,9 +22,11 @@ Powiązane: [`01-ARCHITEKTURA-I-BAZA-DANYCH.md`](./01-ARCHITEKTURA-I-BAZA-DANYCH
 
 ---
 
-## Zero-Regression (FROZEN)
+## Zero-Regression
 
-Bez jawnego polecenia użytkownika **zakaz** modyfikacji:
+Właściciel odmroził cały Stats Lab (Centre, Studio, Predykcje, Planer) poza „Baza i Synchronizacja FPL”.
+
+Poniższa lista opisuje dawny zakres zamrożenia. Dziś bez zmian zostaje tylko „Baza i Synchronizacja FPL” (`/admin/stats-lab/sync`).
 
 | Moduł | Pliki / katalogi |
 |-------|------------------|

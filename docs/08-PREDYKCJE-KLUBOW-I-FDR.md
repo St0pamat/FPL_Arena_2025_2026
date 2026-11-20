@@ -1,5 +1,7 @@
 # Predykcje Klubów i Kalendarz FDR — `PROJECTIONS_CENTRE`
 
+Właściciel odmroził cały Stats Lab (Centre, Studio, Predykcje, Planer) poza „Baza i Synchronizacja FPL”.
+
 | Pole | Wartość |
 |------|---------|
 | Moduł | `PROJECTIONS_CENTRE` (`FIXTURES_FDR` · `PROJECTED_GOALS` · `CLEAN_SHEETS` · `MATCHUP_CARDS`) |

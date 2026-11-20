@@ -77,7 +77,7 @@ export const PLANNER_LABELS = {
     "planner.minutes.uncertain": "Niepewny występ ({p60}% na 60+ min)",
     "planner.defcon": "Wkład defensywny (DefCon)",
     "planner.fdr": "FDR",
-    "planner.metric.fixtures3": "Terminarz (3 GW)",
+    "planner.metric.fixtures3": "Mecz tej kolejki",
     "planner.metric.formOwn": "Forma i posiadanie",
     "planner.metric.select": "Metryka kafelka",
     "planner.kpi.transfers": "Transfery",
@@ -257,6 +257,20 @@ export const PLANNER_LABELS = {
     "planner.validation.title": "Zgodność z zasadami FPL",
     "planner.draft.variant": "Wariant",
     "planner.pitch.emptySlot": "Wolne miejsce",
+    "planner.pitch.emptyAdd": "Dodaj zawodnika: {pos}",
+    "planner.pos.gkp": "BR",
+    "planner.pos.def": "OB",
+    "planner.pos.mid": "PO",
+    "planner.pos.fwd": "NAP",
+    "planner.bench.chipGkp": "BR",
+    "planner.bench.chipOut": "{n}",
+    "planner.fixture.blankMark": "—",
+    "planner.card.xpts": "xPts",
+    "planner.card.sep": "·",
+    "planner.card.xptsMult": "{base}×{mult}={shown}",
+    "planner.card.actions": "Akcje: {player}",
+    "planner.action.close": "Zamknij",
+    "planner.kpi.bankShortfall": "brakuje {value}",
     "planner.pitch.benchBoostActive":
       "Bench Boost aktywny: punkty ławki też się liczą",
     "planner.pitch.pickFromList": "Wybierz z listy",
@@ -318,7 +332,7 @@ export const PLANNER_LABELS = {
       "Uncertain start ({p60}% chance of 60+ min)",
     "planner.defcon": "Defensive contribution (DefCon)",
     "planner.fdr": "FDR",
-    "planner.metric.fixtures3": "Fixtures (3 GW)",
+    "planner.metric.fixtures3": "This gameweek",
     "planner.metric.formOwn": "Form and ownership",
     "planner.metric.select": "Tile metric",
     "planner.kpi.transfers": "Transfers",
@@ -499,6 +513,20 @@ export const PLANNER_LABELS = {
     "planner.validation.title": "FPL rules check",
     "planner.draft.variant": "Draft",
     "planner.pitch.emptySlot": "Empty slot",
+    "planner.pitch.emptyAdd": "Add a player: {pos}",
+    "planner.pos.gkp": "GK",
+    "planner.pos.def": "DEF",
+    "planner.pos.mid": "MID",
+    "planner.pos.fwd": "FWD",
+    "planner.bench.chipGkp": "GK",
+    "planner.bench.chipOut": "{n}",
+    "planner.fixture.blankMark": "—",
+    "planner.card.xpts": "xPts",
+    "planner.card.sep": "·",
+    "planner.card.xptsMult": "{base}×{mult}={shown}",
+    "planner.card.actions": "Actions: {player}",
+    "planner.action.close": "Close",
+    "planner.kpi.bankShortfall": "short {value}",
     "planner.pitch.benchBoostActive":
       "Bench Boost active: bench points count too",
     "planner.pitch.pickFromList": "Pick from list",
@@ -585,7 +613,8 @@ export const PLANNER_TOOLTIPS = {
       "Punkty za akcje defensywne (defensive contribution points). Progi: 10 akcji u obrońcy, 12 u pomocnika i napastnika.",
     "planner.fdr":
       "Trudność meczów 1–5 (1 = bardzo łatwy, 5 = bardzo trudny).",
-    "planner.metric.fixtures3": "Następne trzy mecze na kafelku.",
+    "planner.metric.fixtures3":
+      "Pigułka meczu tej kolejki i trzy kropki trudności kolejnych kolejek.",
     "planner.metric.select": "Co pokazuje linia na kafelku zawodnika.",
     "planner.kpi.transfers":
       "Ile transferów planujesz w tej kolejce i ile masz darmowych (FT).",
@@ -688,7 +717,8 @@ export const PLANNER_TOOLTIPS = {
       "Points for defensive actions (defensive contribution points). Thresholds: 10 actions for defenders, 12 for midfielders and forwards.",
     "planner.fdr":
       "Fixture difficulty 1–5 (1 = very easy, 5 = very hard).",
-    "planner.metric.fixtures3": "Next three fixtures on the player tile.",
+    "planner.metric.fixtures3":
+      "This gameweek's fixture pill and three difficulty dots for the next gameweeks.",
     "planner.metric.select": "What the line on the player tile shows.",
     "planner.kpi.transfers":
       "How many transfers you plan this gameweek and how many free transfers (FT) you have.",
@@ -803,8 +833,11 @@ export function formatPlannerTemplate(
 
 /** Format £{x.x}m z dziesiątych (tylko wyświetlanie). */
 export function formatTenthsAsPounds(tenths: number): string {
-  const sign = tenths < 0 ? "-" : "";
-  return `${sign}£${(Math.abs(Math.round(tenths)) / 10).toFixed(1)}m`;
+  const n = Number(tenths);
+  if (!Number.isFinite(n)) return "£0.0m";
+  const rounded = Math.round(n);
+  const sign = rounded < 0 ? "-" : "";
+  return `${sign}£${(Math.abs(rounded) / 10).toFixed(1)}m`;
 }
 
 /** Wartość |tenths|/10 z 1 miejscem — do parametrów bez znaku. */

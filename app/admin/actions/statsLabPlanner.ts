@@ -40,6 +40,8 @@ export type PlannerClubMeta = {
   name: string;
   short_name: string;
   pulse_code: number | null;
+  /** Kolor koszulki na karcie. Odczyt z istniejącej kolumny, bez zapisu. */
+  primary_color?: string | null;
 };
 
 export type PlannerPlayerCatalogItem = {
@@ -52,6 +54,8 @@ export type PlannerPlayerCatalogItem = {
   fpl_team_id: number;
   club_short_name: string;
   club_pulse_code: number | null;
+  /** Hex klubu do wypełnienia koszulki. Opcjonalne — brak = neutralna koszulka. */
+  club_primary_color?: string | null;
   now_cost: number;
   cost_change_start: number;
   status: string;
@@ -132,6 +136,7 @@ function buildPlayerCatalog(
       fpl_team_id: p.fpl_team_id,
       club_short_name: club?.short_name ?? "—",
       club_pulse_code: club?.pulse_code ?? null,
+      club_primary_color: club?.primary_color ?? null,
       now_cost: Number(p.now_cost) || 0,
       cost_change_start: Number(p.cost_change_start) || 0,
       status: String(p.status ?? "a"),
@@ -244,6 +249,7 @@ export async function queryStatsLabPlannerAction(input?: {
       name: c.name,
       short_name: c.short_name,
       pulse_code: c.pulse_code ?? null,
+      primary_color: c.primary_color ?? null,
     }));
 
   const players = buildPlayerCatalog(

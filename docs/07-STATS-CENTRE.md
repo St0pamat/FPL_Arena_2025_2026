@@ -1,5 +1,7 @@
 # Stats Centre — zamrożony (Zero-Regression — Social-First AAA)
 
+Właściciel odmroził cały Stats Lab (Centre, Studio, Predykcje, Planer) poza „Baza i Synchronizacja FPL”.
+
 | Pole | Wartość |
 |------|---------|
 | Moduł | `STATS_CENTRE` (`/admin/stats-lab` → zakładka Centre / `/admin/stats-lab/centre`) |

@@ -1,5 +1,7 @@
 # Dekompozycja punktów + Profil wielowymiarowy — **ZAMROŻONE (Zero-Regression)**
 
+Właściciel odmroził cały Stats Lab (Centre, Studio, Predykcje, Planer) poza „Baza i Synchronizacja FPL”.
+
 Dokument dla architekta AI / osoby z zewnątrz: **finalny stan kodu** widoków `POINTS_BREAKDOWN` i `STACKED_COMPOSITE`.  
 **Zakaz dalszych zmian UI/logiki tych wykresów** bez osobnej decyzji produktowej. Scatter 2D jest również zamrożony — [`05-WYKRES-SCATTER-2D.md`](./05-WYKRES-SCATTER-2D.md).
 
