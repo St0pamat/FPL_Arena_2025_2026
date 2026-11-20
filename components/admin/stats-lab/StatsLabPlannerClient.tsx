@@ -1217,20 +1217,11 @@ export function StatsLabPlannerClient({
             ) : null}
           </div>
 
-          <div className={`mt-4 w-full border-t border-inherit pt-3 text-center text-[10px] font-semibold ${chrome.mutedLabel}`}>
+          <div
+            className={`mt-4 w-full border-t border-inherit pt-3 text-center text-[10px] font-semibold ${chrome.mutedLabel}`}
+            data-planner-poster-footer="true"
+          >
             <p>{pt(lang, "planner.poster.footer")}</p>
-            <p className="mt-1">
-              <a
-                href="https://www.fpl-arena.com"
-                className="underline"
-                target="_blank"
-                rel="noreferrer"
-              >
-                www.fpl-arena.com
-              </a>{" "}
-              • Powered by St0pa | FPL Arena •{" "}
-              {pt(lang, "planner.poster.verified")}
-            </p>
           </div>
         </div>
 

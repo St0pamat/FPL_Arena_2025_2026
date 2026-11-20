@@ -37,4 +37,23 @@ describe("U5 planner poster copy", () => {
     expect(client).not.toMatch(/STATS LAB PLANNER/);
     expect(client).not.toMatch(/planner\.poster\.squadValue/);
   });
+
+  it("plakat: dokładnie jedna linia stopki, bez „Powered by”", () => {
+    const client = readFileSync(
+      path.join(ROOT, "components/admin/stats-lab/StatsLabPlannerClient.tsx"),
+      "utf8",
+    );
+    const footer = client.match(
+      /data-planner-poster-footer="true"[\s\S]*?<\/div>/,
+    );
+    expect(footer, "brak stopki plakatu").toBeTruthy();
+    const block = footer?.[0] ?? "";
+    const paragraphs = block.match(/<p[\s>]/g) ?? [];
+    expect(paragraphs).toHaveLength(1);
+    expect(block).toContain("planner.poster.footer");
+    expect(block).not.toMatch(/Powered by/i);
+    expect(block).not.toMatch(/www\.fpl-arena\.com/);
+    expect(block).not.toContain("planner.poster.verified");
+    expect(client).not.toMatch(/Powered by/i);
+  });
 });

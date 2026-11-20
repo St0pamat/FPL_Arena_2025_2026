@@ -413,6 +413,8 @@ export const CENTRE_UI = {
     player: "Zawodnik",
     club: "Klub",
     empty: "Brak wierszy dla wybranych filtrów.",
+    loadingPlayers: "Wczytywanie graczy…",
+    poolUnknown: "Pula: —",
     loadError: "Nie udało się wczytać danych. Spróbuj ponownie.",
     retry: "Spróbuj ponownie",
     gwFrom: "GW od",
@@ -459,6 +461,8 @@ export const CENTRE_UI = {
     player: "Player",
     club: "Club",
     empty: "No rows for the selected filters.",
+    loadingPlayers: "Loading players…",
+    poolUnknown: "Pool: —",
     loadError: "Couldn't load data. Try again.",
     retry: "Try again",
     gwFrom: "GW from",
@@ -476,6 +480,22 @@ export const CENTRE_UI = {
 
 export function centreUi(lang: StatsLabLang) {
   return CENTRE_UI[lang];
+}
+
+/**
+ * Licznik puli. `null` = danych jeszcze nie ma (albo błąd) → „Pula: —”.
+ * `0` = zapytanie wróciło i naprawdę nie ma wierszy.
+ */
+export function centrePoolPhrase(
+  lang: StatsLabLang,
+  totalRows: number | null,
+  noun: string,
+): string {
+  if (totalRows == null || !Number.isFinite(totalRows)) {
+    return centreUi(lang).poolUnknown;
+  }
+  const n = Math.max(0, Math.round(totalRows));
+  return lang === "pl" ? `Pula: ${n} ${noun}` : `Pool: ${n} ${noun}`;
 }
 
 const POS_LABEL_PL: Record<number, string> = {
