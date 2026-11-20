@@ -54,7 +54,7 @@ export const STATS_LAB_THEME_HEX: Record<
     card: "#0f313c",
     text: "#f0fdfa",
     textMuted: "#94a3b8",
-    accent: "#2dd4bf",
+    accent: "#f59e0b",
     accentOnText: "#020617",
     gold: "#f59e0b",
     goldText: "#1c1917",
@@ -155,12 +155,12 @@ export const STATS_LAB_THEME_TOKENS: Record<
     track: "bg-slate-800/80",
     missDot: "bg-slate-800 border-2 border-slate-600",
     hitRing: "ring-1 ring-white/50 shadow-sm",
-    accentText: "text-[#2dd4bf]",
-    accentSoft: "bg-[#2dd4bf]/15 text-[#2dd4bf]",
+    accentText: "text-[#f59e0b]",
+    accentSoft: "bg-[#f59e0b]/15 text-[#f59e0b]",
     tableBg: "bg-[#0b1c2e]",
     heroBadge:
-      "border border-[#2dd4bf]/45 bg-[#2dd4bf]/10 text-[#2dd4bf] font-black",
-    rankText: "text-[#2dd4bf] font-black",
+      "border border-[#f59e0b]/45 bg-[#f59e0b]/10 text-[#f59e0b] font-black",
+    rankText: "text-[#f59e0b] font-black",
     isLight: false,
   },
   ANALYST_LIGHT: {
@@ -288,7 +288,7 @@ export const STREAK_METRIC_STYLES: Record<
     light: { accent: "#e11d48", pillBg: "#e11d48", pillText: "#ffffff" },
   },
   maxDcPointsStreak: {
-    dark: { accent: "#2dd4bf", pillBg: "#2dd4bf", pillText: "#020617" },
+    dark: { accent: "#f59e0b", pillBg: "#f59e0b", pillText: "#020617" },
     light: { accent: "#0d9488", pillBg: "#0d9488", pillText: "#ffffff" },
   },
   max60MinStreak: {

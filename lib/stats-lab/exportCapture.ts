@@ -71,11 +71,14 @@ function lockOverflowForCapture(root: HTMLElement): () => void {
     minWidth: root.style.minWidth,
     maxWidth: root.style.maxWidth,
   };
-  const fullWidth = Math.max(
-    root.scrollWidth,
-    root.offsetWidth,
-    STATS_LAB_EXPORT_WIDTH,
-  );
+  const vennFrame = root.dataset.exportFrame === "venn";
+  const fullWidth = vennFrame
+    ? Math.max(root.offsetWidth, 1080)
+    : Math.max(
+        root.scrollWidth,
+        root.offsetWidth,
+        STATS_LAB_EXPORT_WIDTH,
+      );
   root.style.width = `${fullWidth}px`;
   root.style.minWidth = `${fullWidth}px`;
   root.style.maxWidth = "none";
@@ -143,7 +146,9 @@ export async function captureStatsLabPngDataUrl(
   try {
     const opts = {
       quality: 1 as const,
-      pixelRatio: options.pixelRatio ?? STATS_LAB_EXPORT_PIXEL_RATIO,
+      pixelRatio:
+        options.pixelRatio ??
+        (node.dataset.exportFrame === "venn" ? 2 : STATS_LAB_EXPORT_PIXEL_RATIO),
       backgroundColor: options.backgroundColor ?? STATS_LAB_EXPORT_BG,
       cacheBust: true,
       style: CAPTURE_ROOT_STYLE,
@@ -172,7 +177,9 @@ export async function captureStatsLabPngBlob(
     try {
       const direct = await toBlob(node, {
         quality: 1,
-        pixelRatio: options.pixelRatio ?? STATS_LAB_EXPORT_PIXEL_RATIO,
+        pixelRatio:
+          options.pixelRatio ??
+          (node.dataset.exportFrame === "venn" ? 2 : STATS_LAB_EXPORT_PIXEL_RATIO),
         backgroundColor: options.backgroundColor ?? STATS_LAB_EXPORT_BG,
         cacheBust: true,
         style: CAPTURE_ROOT_STYLE,

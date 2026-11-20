@@ -71,6 +71,9 @@ export type PlannerPitchProps = {
   missingVice?: boolean;
   /** Bank albo bank + SP gracza do zejścia. Pusty slot dopisuje „do £X.Xm”. */
   emptySlotBudgetTenths?: number;
+  /** Info z Rynku — to samo okno co nazwisko na boisku. */
+  requestedInfoElementId?: number | null;
+  onRequestedInfoHandled?: () => void;
 };
 
 function hasRoleMissingBanner(
@@ -130,12 +133,17 @@ export function PlannerPitch({
   missingCaptain = false,
   missingVice = false,
   emptySlotBudgetTenths,
+  requestedInfoElementId = null,
+  onRequestedInfoHandled,
 }: PlannerPitchProps) {
   const chromeHidden = hideActionChrome || isExporting;
   const chrome = getStatsLabMenuChrome(themeId);
   const isLight = chrome.isLight;
   const [formationBanner, setFormationBanner] = useState<string | null>(null);
   const [infoElementId, setInfoElementId] = useState<number | null>(null);
+  useEffect(() => {
+    if (requestedInfoElementId != null) setInfoElementId(requestedInfoElementId);
+  }, [requestedInfoElementId]);
   const [actionSlot, setActionSlot] = useState<number | null>(null);
   const [dragSlot, setDragSlot] = useState<number | null>(null);
 
@@ -414,6 +422,11 @@ export function PlannerPitch({
             })
           }
         />
+        <p className={`relative z-[1] px-2 text-center text-[11px] font-semibold leading-snug ${chrome.mutedLabel}`}>
+          {pt(lang, "planner.fdr.legend")}
+          {" · "}
+          {pt(lang, "planner.pitch.venueLegend")}
+        </p>
       </div>
 
       {/* Ławka */}
@@ -444,11 +457,11 @@ export function PlannerPitch({
         </div>
         <div
           className="grid w-full min-w-0 justify-evenly gap-x-1"
-          style={{ gridTemplateColumns: "repeat(4, minmax(0, 6.5rem))" }}
+          style={{ gridTemplateColumns: "repeat(4, minmax(0, 1fr))" }}
           data-testid="bench-row"
         >
           {benchSlots.map((slot) => (
-            <div key={slot} className="flex min-w-0 flex-col items-stretch">
+            <div key={slot} className="mx-auto flex w-full min-w-0 max-w-[6.5rem] flex-col items-stretch">
               <span
                 className={`mb-1 self-center rounded-full border px-2 text-[10px] font-extrabold leading-4 ${
                   isLight
@@ -505,7 +518,10 @@ export function PlannerPitch({
           pick={squadPicks.find((p) => p.elementId === infoElementId) ?? null}
           player={playersById.get(infoElementId) ?? null}
           projectionsByElement={projectionsByElement}
-          onClose={() => setInfoElementId(null)}
+          onClose={() => {
+            setInfoElementId(null);
+            onRequestedInfoHandled?.();
+          }}
           onUpdateCustomSellingPrice={onUpdateCustomSellingPrice}
           onSetCaptain={onSetCaptain}
           onSetViceCaptain={onSetViceCaptain}
@@ -564,12 +580,12 @@ function PitchLine({
     <div
       className="relative z-[1] mb-2 grid w-full min-w-0 justify-evenly gap-x-1"
       style={{
-        gridTemplateColumns: `repeat(${slots.length}, minmax(0, 6.5rem))`,
+        gridTemplateColumns: `repeat(${slots.length}, minmax(0, 1fr))`,
       }}
       data-testid="pitch-line"
     >
       {slots.map((slot) => (
-        <div key={slot} className="min-w-0">
+        <div key={slot} className="mx-auto w-full min-w-0 max-w-[6.5rem]">
           {renderTile(slot)}
         </div>
       ))}
@@ -822,6 +838,7 @@ function PlayerInfoModal({
               onClick={() => onToggleWatchlist(elementId)}
             >
               <Star className={`h-3.5 w-3.5 ${starred ? "fill-[#f59e0b]" : ""}`} />
+              <span>{lang === "pl" ? "Obserwuj" : "Watch"}</span>
             </button>
           </div>
           <button
@@ -850,7 +867,7 @@ function PlayerInfoModal({
             <p className={`text-sm ${chrome.mutedLabel}`}>
               {player?.club_short_name} ·{" "}
               {player?.element_type === 1
-                ? "GKP"
+                ? pt(lang, "planner.pos.gk")
                 : player?.element_type === 2
                   ? "DEF"
                   : player?.element_type === 3
@@ -909,7 +926,7 @@ function PlayerInfoModal({
                 )
               }
             >
-              −0.1m
+              {pt(lang, "planner.price.simulate")}: −£0.1m
             </button>
             <button
               type="button"
@@ -918,7 +935,7 @@ function PlayerInfoModal({
                 onUpdateCustomSellingPrice(elementId, sell + 1)
               }
             >
-              +0.1m
+              +£0.1m
             </button>
           </div>
         ) : null}
@@ -940,17 +957,22 @@ function PlayerInfoModal({
         </p>
 
         <div className={`mt-4 rounded-xl border p-3 ${chrome.group}`}>
-          <p className={`text-[10px] font-black uppercase ${chrome.mutedLabel}`}>
-            {pt(lang, "planner.card.xpts")} · GW{currentGw}
+          <p className={`text-xs font-black ${chrome.text}`}>
+            {pt(lang, "planner.info.xptsLine", {
+              gw: currentGw,
+              value: (proj?.xPts ?? 0).toFixed(1),
+            })}
           </p>
-          <p className={`mt-1 text-2xl font-black tabular-nums ${chrome.text}`}>
-            {(proj?.xPts ?? 0).toFixed(2)}
-          </p>
-          <p className={`mt-1 text-xs ${chrome.mutedLabel}`}>
-            E[min] {(proj?.expectedMinutes ?? 0).toFixed(0)} · p60{" "}
-            {((proj?.p60 ?? 0) * 100).toFixed(0)}% · p1{" "}
-            {((proj?.p1 ?? 0) * 100).toFixed(0)}%
+            <p className={`mt-1 text-xs ${chrome.mutedLabel}`}>
+            {pt(lang, "planner.info.minutesLine", {
+              min: (proj?.expectedMinutes ?? 0).toFixed(0),
+              p60: ((proj?.p60 ?? 0) * 100).toFixed(0),
+              p1: ((proj?.p1 ?? 0) * 100).toFixed(0),
+            })}
             {proj?.isDouble ? " · DGW" : proj?.isBlank ? " · BGW" : ""}
+          </p>
+          <p className={`mt-1 text-[11px] ${chrome.mutedLabel}`}>
+            {pt(lang, "planner.info.xptsHint")}
           </p>
         </div>
 

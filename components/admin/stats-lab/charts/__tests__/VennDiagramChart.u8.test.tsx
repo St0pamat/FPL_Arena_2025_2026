@@ -87,12 +87,17 @@ describe("U8 diagram Venna — render", () => {
       /2 obrońców spełnia co najmniej jeden warunek, tylko 1 wszystkie trzy/,
     );
     expect(document.body.textContent).toMatch(/czyste konta/);
-    expect(document.body.textContent).toMatch(/nikt/);
+    expect(document.body.textContent).toMatch(/gole i asysty \(G\+A\)/);
+    expect(document.body.textContent).toMatch(/mecze z premią DC/);
+    expect(document.body.textContent).toMatch(/0 graczy/);
+    expect(document.body.textContent).toMatch(/Graczy w obszarze/);
     view.unmount();
 
     renderChart({ lang: "en" });
     expect(document.body.textContent).toMatch(/clean sheets/i);
-    expect(document.body.textContent).toMatch(/nobody/);
+    expect(document.body.textContent).toMatch(/goals \+ assists \(G\+A\)/i);
+    expect(document.body.textContent).toMatch(/matches with DC bonus/i);
+    expect(document.body.textContent).toMatch(/0 players/);
   });
 
   it("trzy motywy: etykieta i „nikt” mają kontrast co najmniej 4.5:1", () => {
@@ -105,9 +110,11 @@ describe("U8 diagram Venna — render", () => {
       const theme = STATS_LAB_CHART_THEMES[id];
       const view = renderChart({ theme });
       const root = document.querySelector("[data-venn-root]") as HTMLElement;
-      const label = document.querySelector("[data-venn-label]") as SVGElement;
-      expect(label.getAttribute("fill")).toBe(theme.text);
-      expect(ratio(label.getAttribute("fill") || "", theme.canvasBg)).toBeGreaterThanOrEqual(4.5);
+      const label = document.querySelector("[data-venn-label]") as HTMLElement;
+      expect(label.getAttribute("data-near-circle")).toBeTruthy();
+      const ink = label.style.color;
+      expect(ink).toBeTruthy();
+      expect(ratio(ink, theme.canvasBg)).toBeGreaterThanOrEqual(4.5);
       const empty = document.querySelector("[data-venn-empty]") as SVGElement;
       expect(empty).toBeTruthy();
       expect(ratio(empty.getAttribute("fill") || "", theme.panelBg)).toBeGreaterThanOrEqual(4.5);
@@ -126,16 +133,28 @@ describe("U8 diagram Venna — render", () => {
     );
     renderChart({ players: crowd });
     const plus = document.querySelector("[data-venn-plus='A']");
-    expect(plus?.textContent).toMatch(/^\+\d+$/);
-    const hidden = Number((plus?.textContent ?? "").replace("+", ""));
+    expect(plus?.textContent).toMatch(/\+\d+/);
+    const hidden = Number((plus?.textContent ?? "").replace(/[^\d]/g, ""));
     const tokens = document.querySelectorAll("[data-venn-token='A']");
     expect(tokens.length + hidden).toBe(12);
-    expect(screen.getByText("Defender1 Full")).toBeTruthy();
-    expect(screen.getByText("Defender12 Full")).toBeTruthy();
+    expect(screen.getAllByText("Defender1").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Defender12").length).toBeGreaterThan(0);
+    expect(document.querySelector("[title='Defender1 Full']")).toBeTruthy();
+    const chip = document.querySelector("[data-venn-chip='true']") as HTMLElement;
+    expect(Number.parseFloat(chip.style.fontSize)).toBeGreaterThanOrEqual(14);
+    expect(Number.parseFloat(chip.style.minHeight)).toBeGreaterThanOrEqual(32);
+    const badge = chip.querySelector("[data-venn-badge='true']") as HTMLElement;
+    expect(Number.parseFloat(badge.style.width)).toBeGreaterThanOrEqual(24);
 
     const centre = document.querySelector("[data-venn-token='ABC']");
     expect(centre).toBeNull();
-    fireEvent.focus(tokens[0] as HTMLElement);
+    fireEvent.click(screen.getByRole("button", { name: "3" }));
+    expect(document.querySelectorAll("[data-venn-token='A']").length).toBe(3);
+    fireEvent.click(screen.getByRole("button", { name: "8" }));
+    expect(document.querySelectorAll("[data-venn-token='A']").length).toBe(8);
+
+    const live = document.querySelectorAll("[data-venn-token='A']");
+    fireEvent.focus(live[0] as HTMLElement);
     const tip = screen.getByRole("tooltip");
     expect(tip.textContent).toMatch(/Defender/);
     expect(tip.textContent).toMatch(/Czyste konta \(CS\)/);
@@ -157,7 +176,8 @@ describe("U8 diagram Venna — render", () => {
     renderChart({ density: "counts" });
     expect(document.querySelector("[data-venn-density='counts']")).toBeTruthy();
     expect(document.querySelector("[data-venn-token]")).toBeNull();
-    expect(screen.getByText("OnlyA Full")).toBeTruthy();
+    expect(screen.getByText("OnlyA")).toBeTruthy();
+    expect(document.querySelector("[title='OnlyA Full']")).toBeTruthy();
     expect(document.querySelector("[data-venn-count='A']")?.textContent).toMatch(/1/);
   });
 });

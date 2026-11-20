@@ -37,13 +37,13 @@ export function shellNavInactiveClass(themeId: StatsLabChartThemeId): string {
   return "border border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800 hover:text-slate-50";
 }
 
-/** Jeden accent: Arena #39FF14, Scout #2dd4bf, Light #0f766e. */
+/** Jeden accent: Arena #39FF14, Scout #f59e0b, Light #0f766e. */
 export function shellNavActiveClass(themeId: StatsLabChartThemeId): string {
   if (themeId === "ANALYST_LIGHT") {
     return "border border-[#0f766e] bg-[#0f766e] font-black text-white";
   }
   if (themeId === "SCOUT_DARK") {
-    return "border border-[#2dd4bf] bg-[#2dd4bf] font-black text-[#020617]";
+    return "border border-[#f59e0b] bg-[#f59e0b] font-black text-[#1c1917]";
   }
   return "border border-[#39FF14] bg-[#39FF14] font-black text-[#020617]";
 }
@@ -71,7 +71,7 @@ export function shellNavChipClass(
   active: boolean,
   themeId: StatsLabChartThemeId,
 ): string {
-  return `min-h-[28px] rounded-lg px-2.5 py-1.5 text-[10px] font-black uppercase ${
+  return `inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg px-2.5 py-1.5 text-[10px] font-black uppercase ${
     active ? shellNavActiveClass(themeId) : shellNavInactiveClass(themeId)
   }`;
 }

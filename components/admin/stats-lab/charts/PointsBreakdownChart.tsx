@@ -129,7 +129,7 @@ function negativeTooltip(
 
 function posLegendLabel(key: PosKey, lang: StatsLabLang): string {
   if (lang === "pl") {
-    if (key === "appearanceBasePts") return "Występ (WYS)";
+    if (key === "appearanceBasePts") return "Występ";
     if (key === "sixtyPlusPts") return "60+ min";
     if (key === "goalPts") return "Gole (GOL)";
     if (key === "assistPts") return "Asysty (AST)";
@@ -137,9 +137,9 @@ function posLegendLabel(key: PosKey, lang: StatsLabLang): string {
     if (key === "dcPts") return "Def. Contrib. (DC)";
     if (key === "savePts") return "Obrony (OBR)";
     if (key === "penaltySavePts") return "Karne (KAR)";
-    return "Bonus (BON)";
+    return "Bonus";
   }
-  if (key === "appearanceBasePts") return "Appearance (APP)";
+  if (key === "appearanceBasePts") return "Appearance";
   if (key === "sixtyPlusPts") return "60+ mins";
   if (key === "goalPts") return "Goals (GOL)";
   if (key === "assistPts") return "Assists (AST)";
@@ -147,7 +147,7 @@ function posLegendLabel(key: PosKey, lang: StatsLabLang): string {
   if (key === "dcPts") return "Def. Contrib. (DC)";
   if (key === "savePts") return "Saves (SV)";
   if (key === "penaltySavePts") return "Pen. saved (PS)";
-  return "Bonus (BON)";
+  return "Bonus";
 }
 
 function negLegendLabel(key: NegKey, lang: StatsLabLang): string {
@@ -544,7 +544,9 @@ export function PointsBreakdownChart({
                               background: posSegmentColor(seg.key, isLight),
                             }}
                           />
-                          {posShort[seg.key]} +{seg.value}
+                          <span title={posLegendLabel(seg.key, lang)}>
+                            {posShort[seg.key]} +{seg.value}
+                          </span>
                         </span>
                       ))}
                     </div>

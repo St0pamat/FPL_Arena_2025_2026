@@ -156,7 +156,10 @@ export function buildStatsLabDiscordJson(input: {
         color: 0x39ff14,
         image: { url: `attachment://${input.fileName}` },
         footer: {
-          text: "www.fpl-arena.com • Powered by St0pa | FPL Arena",
+          text:
+            input.lang === "pl"
+              ? "fpl-arena.com · Dane: FPL · Predykcje: FPL Arena"
+              : "fpl-arena.com · Data: FPL · Predictions: FPL Arena",
         },
       },
     ],

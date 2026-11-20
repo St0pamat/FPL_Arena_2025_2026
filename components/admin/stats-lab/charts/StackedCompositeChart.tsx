@@ -119,13 +119,13 @@ function RankValueBox({
         </p>
         {isRating ? null : (
           <p
-            className="mt-1 text-[10px] font-bold leading-tight"
+            className="mt-1 text-[12px] font-bold leading-tight"
             style={{ color: theme.muted }}
             title={copy.heatmapRatingTooltip}
-            aria-label={`${copy.ratingWord} ${rating}. ${copy.heatmapRatingTooltip}`}
+            aria-label={`${lang === "pl" ? "Ocena profilu" : "Profile score"} ${rating}/100. ${copy.heatmapRatingTooltip}`}
             data-testid="rank-rating"
           >
-            {copy.ratingWord} {rating}
+            {lang === "pl" ? "Ocena profilu" : "Profile score"} {rating}/100
           </p>
         )}
       </div>
@@ -401,6 +401,11 @@ export function StackedCompositeChart({
           {sortCaption}
         </p>
       ) : null}
+      <p className="text-[12px] font-semibold" style={{ color: theme.muted }}>
+        {lang === "pl"
+          ? "Długość = ocena na tle grupy"
+          : "Length = score vs group"}
+      </p>
 
       <div className={isExport ? "space-y-4" : "space-y-3"}>
         {ordered.map((p, rank) => {
@@ -487,14 +492,10 @@ export function StackedCompositeChart({
                           >
                             {showValues ? (
                               <span
-                                className="relative z-10 truncate px-1 text-[13px] font-black tabular-nums"
+                                className="relative z-10 px-1 text-[13px] font-black tabular-nums"
                                 style={{ color: textColor }}
                               >
-                                {formatMetricDisplayValue(
-                                  seg.key,
-                                  seg.value,
-                                  per90,
-                                )}
+                                {Math.round(seg.pct)}
                               </span>
                             ) : null}
                           </div>
@@ -502,46 +503,6 @@ export function StackedCompositeChart({
                       })}
                     </div>
                   </div>
-
-                  {showValues ? (
-                    <div
-                      className={`mt-1.5 w-full rounded py-1 font-bold ${
-                        metrics.length >= 7
-                          ? "px-2 text-[10.5px]"
-                          : "px-2.5 text-[11px]"
-                      } ${
-                        isLight
-                          ? "border border-slate-300 bg-slate-100 text-slate-800"
-                          : "border border-slate-800/80 bg-slate-900/75"
-                      }`}
-                    >
-                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                        {metrics.map((key, i) => {
-                          const val = Number(p.displayValues[key]) || 0;
-                          return (
-                            <span
-                              key={`${p.fpl_element_id}-leg-${key}`}
-                              title={statLabel(key, lang)}
-                              aria-label={statLabel(key, lang)}
-                              className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap"
-                              style={{
-                                color: isLight ? undefined : theme.text,
-                              }}
-                            >
-                              <span
-                                className="h-2 w-2 rounded-full"
-                                style={{
-                                  background: getMetricColor(i, theme.id),
-                                }}
-                              />
-                              {statLabel(key, lang)}{" "}
-                              {formatMetricDisplayValue(key, val, per90)}
-                            </span>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ) : null}
                 </div>
 
                 <RankValueBox

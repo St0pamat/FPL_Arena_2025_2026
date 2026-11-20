@@ -19,6 +19,7 @@ import {
 import {
   captainArmbandAria,
   captainArmbandLabel,
+  formatFixturePills,
   type CaptainArmbandKind,
 } from "@/lib/stats-lab/plannerFixtureUi";
 import {
@@ -215,6 +216,22 @@ export function PlannerPlayerCard({
   });
   const armbandText = captainArmbandLabel(lang, armbandKind);
   const dots = cardNextFdrDots(projectionsForElement, currentGw);
+  const dotsTip = pt(lang, "planner.fdr.next3", {
+    list: [1, 2, 3]
+      .map((offset) => {
+        const pills = formatFixturePills(
+          lang,
+          projectionsForElement?.[currentGw + offset],
+        );
+        const text = pills
+          .map((pill) =>
+            pill.kind === "match" ? `${pill.label} ${pill.fdrLevel}` : pill.label,
+          )
+          .join(" ");
+        return text || "—";
+      })
+      .join(" · "),
+  });
   const fill = shirtFill(player?.club_primary_color, player?.club_short_name);
   const showActions = !isExporting;
   const infoLabel = pt(lang, "planner.card.info", {
@@ -346,7 +363,12 @@ export function PlannerPlayerCard({
           compact
           blankClass={palette.blankPill}
         />
-        <div className="ppc-dots" data-testid="fdr-dots" aria-hidden="true">
+        <div
+          className="ppc-dots"
+          data-testid="fdr-dots"
+          title={dotsTip}
+          aria-label={dotsTip}
+        >
           {dots.map((dot) => (
             <span
               key={dot.gw}

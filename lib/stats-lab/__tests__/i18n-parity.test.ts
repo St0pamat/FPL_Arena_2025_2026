@@ -431,10 +431,10 @@ describe("planner i18n templates (A2)", () => {
 
   it("planner.ft.nextGw includes {gw} (PL/EN); outside horizon ftNextGw is null without empty GW", () => {
     expect(pt("pl", "planner.ft.nextGw", { gw: 14 })).toBe(
-      "FT na tę kolejkę (GW14)",
+      "Darmowe transfery (GW14)",
     );
     expect(pt("en", "planner.ft.nextGw", { gw: 14 })).toBe(
-      "FT this gameweek (GW14)",
+      "Free transfers (GW14)",
     );
     expect(PLANNER_LABELS.pl["planner.ft.nextGw"]).toContain("{gw}");
     expect(PLANNER_LABELS.en["planner.ft.nextGw"]).toContain("{gw}");
@@ -574,10 +574,10 @@ describe("planner i18n templates (A2)", () => {
 
   it("02c tooltips: TSB% and lockedProfit", () => {
     expect(ptTip("pl", "planner.market.sort.tsb")).toBe(
-      "Wybrany przez % menedżerów (TSB)",
+      "Posiadanie % menedżerów",
     );
     expect(ptTip("en", "planner.market.sort.tsb")).toBe(
-      "Selected by % of managers (TSB)",
+      "Owned % of managers",
     );
     expect(ptTip("pl", "planner.horizon.lockedProfit")).toContain(
       "połowę wzrostu ceny",

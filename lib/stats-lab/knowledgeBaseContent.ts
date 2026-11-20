@@ -73,7 +73,7 @@ const HOW_TO_USE_PL: KnowledgeTabContent = {
         "Dekompozycja punktów: za co dokładnie gracz zbiera punkty FPL (i kary).",
         "Passy i regularność: serie zwrotów, CS, DC, 60+ min oraz Regularność zwrotów %.",
         "Radar / Pizza: 1–4 graczy na tych samych osiach + szybkie sloty wyboru.",
-        "Scatter 2D: dwie osie X/Y z ćwiartkami względem grupy.",
+        "Wykres punktowy: dwie osie X/Y z ćwiartkami względem grupy.",
         "Macierz heatmap: szybki skan Top N po wielu statystykach + kolumna OCENA.",
         "Diagram Venna: trzy warunki (metryka ≥ próg) w tym samym zakresie kolejek. Środek = wszystkie trzy. Pusty obszar = nikt. Pod wykresem jest pełna lista.",
       ],
@@ -165,7 +165,7 @@ const HOW_TO_USE_EN: KnowledgeTabContent = {
         "Points breakdown: exactly where FPL points (and penalties) come from.",
         "Streaks & consistency: Return / CS / DC / 60+ streaks plus Return consistency %.",
         "Radar / Pizza: 1–4 players on shared axes + quick player slots.",
-        "Scatter 2D: X/Y axes with group quadrants.",
+        "Scatter plot: X/Y axes with group quadrants.",
         "Heatmap matrix: fast Top N scan across many stats + RATING column.",
         "Venn diagram: three conditions (stat ≥ threshold) over the same gameweek range. The centre means all three. An empty area means nobody. The full list sits under the chart.",
       ],
@@ -238,7 +238,7 @@ const POSITION_GUIDE_PL: KnowledgeTabContent = {
     "Co realnie przekłada się na punkty FPL — według pozycji, z naciskiem na Defensive Contributions i BPS.",
   blocks: [
     {
-      heading: "Bramkarze (GKP)",
+      heading: "Bramkarze (BR)",
       paragraphs: [
         "Baza punktów = czyste konta + xGC drużyny (czy obrona dopuszcza mało groźnych sytuacji).",
       ],
@@ -304,7 +304,7 @@ const POSITION_GUIDE_EN: KnowledgeTabContent = {
     "What actually drives FPL points by position — with emphasis on Defensive Contributions and BPS.",
   blocks: [
     {
-      heading: "Goalkeepers (GKP)",
+      heading: "Goalkeepers (GK)",
       paragraphs: [
         "Point base = clean sheets + team xGC (are opponents creating few big chances?).",
       ],

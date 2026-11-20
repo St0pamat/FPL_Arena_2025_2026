@@ -70,16 +70,15 @@ describe("U7 Studio — wskaźnik przeliczania", () => {
       <StudioPendingCue pending hasResult lang="pl" isLight={false} />,
     );
     const cue = screen.getByTestId("studio-pending-cue");
-    expect(cue.textContent ?? "").not.toMatch(/Przelicz|Updating|PRZELICZANIE/i);
-    expect(cue.querySelector("svg")).toBeTruthy();
-    expect(cue.querySelector("[aria-label]")?.getAttribute("aria-label")).toMatch(
-      /Przeliczam/,
-    );
+    expect(cue.textContent ?? "").toMatch(/Przeliczam porównanie/);
+    expect(cue.querySelectorAll("[class*='animate-pulse']").length).toBeGreaterThan(0);
 
     rerender(
       <StudioPendingCue pending hasResult={false} lang="pl" isLight={false} />,
     );
-    expect(screen.queryByTestId("studio-pending-cue")).toBeNull();
+    expect(screen.getByTestId("studio-pending-cue").textContent ?? "").toMatch(
+      /Ładuję dane/,
+    );
 
     rerender(
       <StudioPendingCue pending={false} hasResult lang="en" isLight />,
@@ -124,8 +123,8 @@ describe("U7 Studio — TOP10 punkty i Ocena", () => {
     const ratings = screen
       .getAllByTestId("rank-rating")
       .map((node) => node.textContent);
-    expect(ratings[0]).toMatch(/Ocena 61/);
-    expect(ratings[1]).toMatch(/Ocena 93/);
+    expect(ratings[0]).toMatch(/Ocena profilu 61\/100/);
+    expect(ratings[1]).toMatch(/Ocena profilu 93\/100/);
     expect(screen.getByTestId("studio-sort-caption").textContent).toMatch(
       /Posortowane po punktach/,
     );

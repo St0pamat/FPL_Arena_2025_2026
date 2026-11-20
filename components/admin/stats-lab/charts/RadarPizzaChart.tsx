@@ -592,7 +592,29 @@ export function RadarPizzaChart({
               const labelY = showPills
                 ? clampedBlockY - (plotted.length > 2 ? 25 : 14)
                 : clampedBlockY;
-              const short = statLabel(key, lang, true);
+              const AXIS_NAME: Partial<Record<string, string>> =
+                lang === "pl"
+                  ? {
+                      total_points: "Punkty",
+                      clean_sheets: "Czyste konta",
+                      clearances_blocks_interceptions: "Akcje obr.",
+                      defensive_contributions_total: "Akcje obr.",
+                      dc_bonus_points: "Pkt z DC",
+                      dc_bonus_matches: "Mecze z DC",
+                      expected_goal_involvements: "xGI",
+                      bps: "Bonus BPS",
+                    }
+                  : {
+                      total_points: "Points",
+                      clean_sheets: "Clean sheets",
+                      clearances_blocks_interceptions: "Def. actions",
+                      defensive_contributions_total: "Def. actions",
+                      dc_bonus_points: "DC pts",
+                      dc_bonus_matches: "DC matches",
+                      expected_goal_involvements: "xGI",
+                      bps: "Bonus BPS",
+                    };
+              const short = AXIS_NAME[key] ?? statLabel(key, lang);
               const full = statLabel(key, lang);
 
               const pillW = 54;

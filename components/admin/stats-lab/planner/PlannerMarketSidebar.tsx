@@ -95,8 +95,8 @@ function tenthsToPounds(tenths: number): string {
   return `${sign}£${(Math.abs(Math.round(tenths)) / 10).toFixed(1)}m`;
 }
 
-function posLabel(t: FplPositionType): string {
-  if (t === 1) return "GKP";
+function posLabel(t: FplPositionType, lang: "pl" | "en"): string {
+  if (t === 1) return lang === "pl" ? "BR" : "GK";
   if (t === 2) return "DEF";
   if (t === 3) return "MID";
   return "FWD";
@@ -415,9 +415,17 @@ export function PlannerMarketSidebar({
             }`}
           >
             <p>
-              {isPl
-                ? `Wybierasz zastępcę za: ${pendingPlayer.web_name} (${posLabel(pendingPlayer.element_type)}, sprzedaż SP: ${tenthsToPounds(pendingTransferOut.sellingPriceTenths)}) • Maks. cena zakupu: ${tenthsToPounds(availableBudgetTenths)}`
-                : `Selecting replacement for: ${pendingPlayer.web_name} (${posLabel(pendingPlayer.element_type)}, sell SP: ${tenthsToPounds(pendingTransferOut.sellingPriceTenths)}) • Max buy price: ${tenthsToPounds(availableBudgetTenths)}`}
+              {pt(lang, "planner.market.replacing", {
+                name: pendingPlayer.web_name,
+                pos: posLabel(pendingPlayer.element_type, lang),
+                price: tenthsToPounds(pendingTransferOut.sellingPriceTenths),
+                max: tenthsToPounds(availableBudgetTenths),
+              })}
+            </p>
+            <p className={`mt-1 text-[11px] font-bold ${chrome.mutedLabel}`}>
+              {pt(lang, "planner.market.bankAfterSale", {
+                value: tenthsToPounds(availableBudgetTenths),
+              })}
             </p>
             <button
               type="button"
@@ -461,7 +469,7 @@ export function PlannerMarketSidebar({
                 {(
                   [
                     [0, pt(lang, "planner.market.filter.all")],
-                    [1, "GKP"],
+                    [1, pt(lang, "planner.pos.gk")],
                     [2, "DEF"],
                     [3, "MID"],
                     [4, "FWD"],
@@ -474,7 +482,7 @@ export function PlannerMarketSidebar({
                       setPosFilter(v as FplPositionType | 0);
                       setPage(1);
                     }}
-                    className={`rounded-lg px-2 py-1 text-[10px] font-black ${
+                    className={`min-h-11 rounded-lg px-2 py-1 text-[10px] font-black ${
                       posFilter === v ? chrome.activeBtn : chrome.inactiveBtn
                     }`}
                   >
@@ -675,8 +683,8 @@ export function PlannerMarketSidebar({
             ) : null}
 
             {/* Table */}
-            <div className="min-h-0 flex-1 overflow-auto rounded-xl border border-inherit">
-              <table className="w-full min-w-[420px] border-collapse text-left text-[11px]">
+            <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto rounded-xl border border-inherit">
+              <table className="w-full table-fixed border-collapse text-left text-[11px]">
                 <thead className="sticky top-0 z-[1]">
                   <tr className={`${chrome.group} ${chrome.mutedLabel}`}>
                     <th className="px-1.5 py-2 font-black">+</th>
@@ -687,18 +695,17 @@ export function PlannerMarketSidebar({
                     <th className="px-1.5 py-2 font-black">£</th>
                     <th
                       className="px-1.5 py-2 font-black"
-                      title={ptTip(lang, "planner.market.sort.tsb")}
+                      title={pt(lang, "planner.market.ownership")}
                     >
-                      TSB
+                      {lang === "pl" ? "POS%" : "OWN%"}
                     </th>
-                    <th className="px-1.5 py-2 font-black">xPts</th>
-                    <th
-                      className="px-1.5 py-2 font-black"
-                      title={ptTip(lang, "planner.market.sort.xpts3gw.col")}
-                    >
-                      {pt(lang, "planner.market.sort.xpts3gw.col")}
+                    <th className="px-1.5 py-2 font-black">
+                      xPts
+                      <span className="mt-0.5 block text-[9px] font-semibold normal-case">
+                        {pt(lang, "planner.market.sort.xpts3gw.col")}
+                      </span>
                     </th>
-                    <th className="px-1.5 py-2 font-black">i</th>
+                    <th className="w-11 px-1 py-2 font-black">i</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -823,7 +830,7 @@ export function PlannerMarketSidebar({
                                 ) : null}
                               </p>
                               <p className={`text-[9px] font-semibold ${chrome.mutedLabel}`}>
-                                {posLabel(p.element_type)} · {p.club_short_name}
+                                {posLabel(p.element_type, lang)} · {p.club_short_name}
                               </p>
                             </div>
                           </div>
@@ -842,6 +849,9 @@ export function PlannerMarketSidebar({
                               planningStartGw,
                             ).toFixed(1)}
                           </p>
+                          <p className={`text-[10px] font-bold tabular-nums ${chrome.mutedLabel}`}>
+                            {x3.toFixed(1)}
+                          </p>
                           <div className="mt-0.5">
                             <PlannerFixturePills
                               lang={lang}
@@ -858,10 +868,7 @@ export function PlannerMarketSidebar({
                             />
                           </div>
                         </td>
-                        <td className={`px-1.5 py-1.5 font-bold tabular-nums ${chrome.text}`}>
-                          {x3.toFixed(1)}
-                        </td>
-                        <td className="px-1.5 py-1.5">
+                        <td className="px-1 py-1.5">
                           <button
                             type="button"
                             onClick={() =>
@@ -872,7 +879,7 @@ export function PlannerMarketSidebar({
                               "planner.action.info",
                               p.web_name,
                             )}
-                            className={`rounded-lg p-1 ${chrome.inactiveBtn}`}
+                            className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg ${chrome.inactiveBtn}`}
                           >
                             <Info className="h-3.5 w-3.5" />
                           </button>
@@ -883,7 +890,7 @@ export function PlannerMarketSidebar({
                   {!pageRows.length ? (
                     <tr>
                       <td
-                        colSpan={8}
+                        colSpan={7}
                         className={`px-3 py-6 text-center text-xs font-semibold ${chrome.mutedLabel}`}
                       >
                         {pt(lang, "planner.market.noResults")}

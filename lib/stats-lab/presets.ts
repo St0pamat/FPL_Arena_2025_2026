@@ -194,8 +194,8 @@ export const STATS_LAB_PRESETS: readonly StatsLabPreset[] = [
   },
   {
     id: "VALUE_GEMS",
-    labelPl: "Ukryte Perełki (≤10% + Value)",
-    labelEn: "Hidden Gems (≤10% + Value)",
+    labelPl: "Ukryte perełki (posiadanie ≤10%, dobra cena)",
+    labelEn: "Hidden gems (≤10% owned, good value)",
     descriptionPl:
       "Różnice do 10% Sel% — punkty, value_season, forma, xGI i PPM.",
     descriptionEn:

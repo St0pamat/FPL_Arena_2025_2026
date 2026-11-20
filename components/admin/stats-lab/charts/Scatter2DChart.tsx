@@ -185,9 +185,7 @@ export function Scatter2DChart({
     return [
       make(
         "ne",
-        lang === "pl"
-          ? `↗ CZOŁÓWKA: ${shortX} + ${shortY}`
-          : `↗ ELITE: ${shortX} + ${shortY}`,
+        lang === "pl" ? "↗ Najlepsi w obu" : "↗ Best at both",
         lang === "pl"
           ? `Czołówka: ${labelX} + ${labelY}`
           : `Elite: ${labelX} + ${labelY}`,
@@ -195,19 +193,19 @@ export function Scatter2DChart({
       ),
       make(
         "nw",
-        lang === "pl" ? `↖ DOBRY: ${shortY}` : `↖ STRONG: ${shortY}`,
+        lang === "pl" ? `↖ Dużo: ${shortY}` : `↖ High: ${shortY}`,
         lang === "pl" ? `Dobry: ${labelY}` : `Strong: ${labelY}`,
         "nw",
       ),
       make(
         "se",
-        lang === "pl" ? `↘ DOBRY: ${shortX}` : `↘ STRONG: ${shortX}`,
+        lang === "pl" ? `↘ Dużo: ${shortX}` : `↘ High: ${shortX}`,
         lang === "pl" ? `Dobry: ${labelX}` : `Strong: ${labelX}`,
         "se",
       ),
       make(
         "sw",
-        lang === "pl" ? "↙ PONIŻEJ ŚR." : "↙ BELOW AVG",
+        lang === "pl" ? "↙ Poniżej średniej" : "↙ Below average",
         lang === "pl" ? "Poniżej średniej" : "Below average",
         "sw",
       ),
@@ -742,21 +740,25 @@ export function Scatter2DChart({
                   className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] font-bold"
                   style={{ color: theme.muted }}
                 >
-                  <span className="whitespace-nowrap" title={labelX} aria-label={labelX}>
-                    {labelX}:{" "}
-                    {formatMetricDisplayValue(
-                      axisX,
-                      p.displayValues[axisX] ?? 0,
-                      per90,
-                    )}
+                  <span className="inline-flex max-w-full items-baseline gap-1" title={labelX} aria-label={labelX}>
+                    <span className="min-w-0 break-words">{statShort(axisX, lang)}</span>
+                    <span className="shrink-0 tabular-nums">
+                      {formatMetricDisplayValue(
+                        axisX,
+                        p.displayValues[axisX] ?? 0,
+                        per90,
+                      )}
+                    </span>
                   </span>
-                  <span className="whitespace-nowrap" title={labelY} aria-label={labelY}>
-                    {labelY}:{" "}
-                    {formatMetricDisplayValue(
-                      axisY,
-                      p.displayValues[axisY] ?? 0,
-                      per90,
-                    )}
+                  <span className="inline-flex max-w-full items-baseline gap-1" title={labelY} aria-label={labelY}>
+                    <span className="min-w-0 break-words">{statShort(axisY, lang)}</span>
+                    <span className="shrink-0 tabular-nums">
+                      {formatMetricDisplayValue(
+                        axisY,
+                        p.displayValues[axisY] ?? 0,
+                        per90,
+                      )}
+                    </span>
                   </span>
                 </div>
                 <span

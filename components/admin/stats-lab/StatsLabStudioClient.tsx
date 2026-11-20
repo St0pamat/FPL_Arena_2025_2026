@@ -69,6 +69,7 @@ import {
   cloneVennConditions,
   getVennPreset,
   vennUsesFullPool,
+  type VennPlayersPerArea,
 } from "@/lib/stats-lab/vennEngine";
 import type { PointsSortKey } from "@/components/admin/stats-lab/charts/PointsBreakdownChart";
 import type { KnowledgeHelpAnchor } from "@/lib/stats-lab/knowledgeBaseContent";
@@ -176,6 +177,9 @@ export function StatsLabStudioClient({
     () => defaultStreakKeysForPositions(seededFilter.positions),
   );
   const [isControlPanelCollapsed, setIsControlPanelCollapsed] = useState(false);
+  const [vennPlayersPerArea, setVennPlayersPerArea] =
+    useState<VennPlayersPerArea>(5);
+  const [vennIncludeList, setVennIncludeList] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
 
   const emptyDb = bootstrap.players.length === 0;
@@ -465,6 +469,7 @@ export function StatsLabStudioClient({
       setFilter((prev) => ({ ...prev, sortByComposite: false }));
     }
     if (patch.vizMode === "VENN_3" && ui.vizMode !== "VENN_3") {
+      setResult(null);
       setFilter((prev) => applyVennPresetToFilter(prev, "COMPLETE_DEFENDER"));
     } else if (
       patch.vizMode &&
@@ -671,14 +676,30 @@ export function StatsLabStudioClient({
           <span className={`text-[10px] font-black uppercase tracking-wider ${chrome.mutedLabel}`}>
             {copy.presets}
           </span>
+          {ui.vizMode === "VENN_3" ? (
+            <span className={`text-[10px] font-semibold ${chrome.mutedLabel}`}>
+              {t(ui.lang).vennPresetsIgnored}
+            </span>
+          ) : null}
           {STATS_LAB_PRESETS.map((p) => (
             <button
               key={p.id}
               type="button"
-              title={ui.lang === "en" ? p.descriptionEn : p.descriptionPl}
+              title={
+                ui.vizMode === "VENN_3"
+                  ? t(ui.lang).vennPresetsIgnored
+                  : ui.lang === "en"
+                    ? p.descriptionEn
+                    : p.descriptionPl
+              }
               onClick={() => applyPreset(p.id)}
-              className={`rounded-lg px-2.5 py-1.5 text-[10px] uppercase tracking-wider ${
-                activePreset === p.id ? chrome.activeBtn : chrome.inactiveBtn
+              disabled={ui.vizMode === "VENN_3"}
+              className={`rounded-lg px-2.5 py-1.5 text-[10px] uppercase tracking-wider disabled:cursor-not-allowed disabled:opacity-40 ${
+                ui.vizMode === "VENN_3"
+                  ? chrome.inactiveBtn
+                  : activePreset === p.id
+                    ? chrome.activeBtn
+                    : chrome.inactiveBtn
               }`}
             >
               {ui.lang === "en" ? p.labelEn : p.labelPl}
@@ -776,7 +797,8 @@ export function StatsLabStudioClient({
           </div>
         ) : null}
 
-        <div className="min-w-0 space-y-4">
+        <div className="flex min-w-0 flex-col gap-4">
+          <div className="max-[640px]:order-2">
           <StatsLabExportBar
             exportRef={exportRef}
             result={displayResult}
@@ -799,6 +821,7 @@ export function StatsLabStudioClient({
             }
             vennConditions={ui.vizMode === "VENN_3" ? ui.vennConditions : null}
           />
+          </div>
 
           {/* Poza exportRef / PosterFrame — nigdy nie trafia na PNG */}
           {ui.vizMode === "RADAR_PIZZA" ? (
@@ -835,7 +858,7 @@ export function StatsLabStudioClient({
             />
           ) : null}
 
-          <div data-stats-lab-canvas-preview="true" className="relative">
+          <div data-stats-lab-canvas-preview="true" className="relative max-[640px]:order-1">
             <StudioPendingCue
               pending={pending}
               hasResult={displayResult != null}
@@ -878,6 +901,11 @@ export function StatsLabStudioClient({
                 onSelectPlayer={(id) => onUiChange({ spotlightPlayerId: id })}
                 vennConditions={ui.vennConditions}
                 vennPresetId={ui.vennPresetId}
+                vennPlayersPerArea={vennPlayersPerArea}
+                onVennPlayersPerAreaChange={setVennPlayersPerArea}
+                vennIncludeList={vennIncludeList}
+                onVennIncludeListChange={setVennIncludeList}
+                vennLoading={ui.vizMode === "VENN_3" && (pending || !displayResult)}
               />
             </StatsLabPosterFrame>
           </div>
@@ -886,7 +914,11 @@ export function StatsLabStudioClient({
 
       <p className="text-center text-[10px] text-slate-600">
         <BarChart3 className="mr-1 inline h-3 w-3" />
-        {copy.pool}: {displayResult?.poolSize ?? 0} · {copy.onChart}:{" "}
+        {copy.pool}: {displayResult?.poolSize ?? 0}{" "}
+        {ui.lang === "pl"
+          ? `(min. ${filter.minMinutes} min)`
+          : `(${filter.minMinutes}+ min)`}{" "}
+        · {copy.onChart}:{" "}
         {displayResult?.plottedPlayers.length ?? 0} · PNG plakat 1120px ·
         Discord / X.com
       </p>
@@ -915,6 +947,8 @@ export function StatsLabStudioClient({
         activeStreakKeys={activeStreakKeys}
         vennConditions={ui.vennConditions}
         vennPresetId={ui.vennPresetId}
+        vennPlayersPerArea={vennPlayersPerArea}
+        vennIncludeList={vennIncludeList}
       />
 
     </div>

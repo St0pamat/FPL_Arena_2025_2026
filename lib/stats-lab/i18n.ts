@@ -21,7 +21,7 @@ export type StatsLabScaleMode = "PERCENTILE" | "RAW";
  */
 export const STATS_LAB_SHELL_LABELS = {
   pl: {
-    "nav.centre": "Statystyki",
+    "nav.centre": "Tabele",
     "nav.studio": "Wykresy",
     "nav.projections": "Predykcje",
     "nav.planner": "Planer",
@@ -40,7 +40,7 @@ export const STATS_LAB_SHELL_LABELS = {
     "shell.aria.theme": "Zmień motyw",
   },
   en: {
-    "nav.centre": "Statistics",
+    "nav.centre": "Tables",
     "nav.studio": "Charts",
     "nav.projections": "Projections",
     "nav.planner": "Planner",
@@ -205,18 +205,18 @@ export const VIZ_MODE_LABELS: Record<
     STACKED_COMPOSITE: "Profil wielowymiarowy",
     POINTS_BREAKDOWN: "Dekompozycja punktów",
     STREAKS_EXPLORER: "Passy i regularność",
-    RADAR_PIZZA: "Radar / Pizza",
-    SCATTER_2D: "Scatter 2D",
-    HEATMAP_MATRIX: "Macierz heatmap",
+    RADAR_PIZZA: "Radar",
+    SCATTER_2D: "Wykres punktowy",
+    HEATMAP_MATRIX: "Mapa cieplna",
     VENN_3: "Diagram Venna",
   },
   en: {
     STACKED_COMPOSITE: "Multi-metric profile",
     POINTS_BREAKDOWN: "Points breakdown",
     STREAKS_EXPLORER: "Streaks & consistency",
-    RADAR_PIZZA: "Radar / Pizza",
-    SCATTER_2D: "Scatter 2D",
-    HEATMAP_MATRIX: "Heatmap matrix",
+    RADAR_PIZZA: "Radar",
+    SCATTER_2D: "Scatter plot",
+    HEATMAP_MATRIX: "Heatmap",
     VENN_3: "Venn diagram",
   },
 };
@@ -227,13 +227,13 @@ export const UI_COPY = {
     resetFilters: "Resetuj filtry",
     langPl: "Polski (PL — Społeczność FPL)",
     langEn: "English (Official FPL)",
-    scalePercentile: "Tło grupy (0–100)",
-    scaleRaw: "Wartości statystyk",
+    scalePercentile: "Ocena na tle grupy (0–100)",
+    scaleRaw: "Surowe liczby",
     sectionNumbers: "01 · Zakres i Metryki",
     sectionPlayers: "02 · Wybór Zawodników",
     sectionStyle: "03 · Wygląd i Styl",
     manualPick: "Ręczny wybór",
-    autoTop: "Top N / Auto",
+    autoTop: "Najlepsi N / Automatycznie",
     allClubs: "Wszystkie kluby",
     clearClubs: "Wyczyść",
     showTop: "Pokaż najlepszych (Top N)",
@@ -251,14 +251,14 @@ export const UI_COPY = {
     sortCompositeHint:
       "Ogólna nota z wybranych cech na tle grupy",
     sortByStat: "Sortuj wg statystyki",
-    spotlight: "Spotlight (wyróżnij)",
+    spotlight: "Wyróżnij gracza",
     none: "— brak —",
     chartTitle: "Tytuł wykresu",
     chartSubtitle: "Podtytuł",
     showAvg: "Pokaż średnią grupy",
     showBarValues: "Pokaż wartości na słupkach",
     showMeta: "Pokaż ceny i % posiadania",
-    showNegatives: "Pokaż odjęte punkty / Kary (Minusy)",
+    showNegatives: "Pokaż punkty ujemne",
     emptyChart: "Brak graczy spełniających filtry. Zmień kryteria lub wybierz zawodników ręcznie.",
     recalculating: "Przeliczam porównanie…",
     pool: "Pula",
@@ -266,13 +266,20 @@ export const UI_COPY = {
     vennSection: "Warunki diagramu",
     vennThreshold: "Próg (≥)",
     vennCustom: "Własne",
-    vennNobody: "nikt",
+    vennNobody: "0 graczy",
     vennListTitle: "Zawodnicy według obszaru",
     vennTotalsNote:
-      "Progi porównują sumy w wybranym zakresie kolejek. Per 90 i tło grupy nie zmieniają diagramu.",
-    vennMorePlayers: "Jeszcze {n} w liście pod wykresem",
+      "Progi porównują sumy w wybranym zakresie kolejek. Na 90 min i tło grupy nie zmieniają diagramu.",
+    vennMorePlayers: "+{n} więcej",
     vennReading:
-      "Każde koło to jeden warunek (metryka ≥ próg) w wybranym zakresie kolejek. Środek oznacza wszystkie trzy. Pusty obszar oznacza, że nikt nie spełnia tej kombinacji. Lista pod wykresem ma pełne nazwiska.",
+      "Każde koło to jeden warunek w wybranym zakresie kolejek. Środek oznacza wszystkie trzy. Pusty obszar to 0 graczy. Lista używa nazwy z FPL, pełne nazwisko jest w podpowiedzi.",
+    vennPlayersPerArea: "Graczy w obszarze",
+    vennPlayersAll: "Wszyscy",
+    vennIncludeList: "Dołącz listę zawodników",
+    vennCalculating: "Liczę…",
+    vennMeetsAll: "Spełnia wszystkie 3",
+    vennLegend: "Czyste konta · Gole i asysty · Mecze z premią DC",
+    vennPresetsIgnored: "Nie dotyczy diagramu Venna",
     vennSourceData: "fpl-arena.com · Dane: FPL",
     vennAllThree: "Wszystkie trzy",
     heatmapRankedByPoints: "Ranking wg punktów",
@@ -287,8 +294,8 @@ export const UI_COPY = {
     rawExplain:
       "Wartości statystyk: prawdziwe liczby z bazy — każda metryka ma własną skalę (0…max w grupie).",
     scaleHelpTitle: "Co oznaczają Tło grupy i OCENA?",
-    gross: "Bez straconych punktów (Brutto)",
-    penalties: "Stracone punkty (Kary)",
+    gross: "Zdobyte",
+    penalties: "Odjęte",
     net: "Oficjalne Punkty FPL (Suma Netto)",
     lostPointsBar: "Stracone punkty",
     player: "Zawodnik",
@@ -302,13 +309,13 @@ export const UI_COPY = {
     resetFilters: "Reset filters",
     langPl: "Polski (PL — FPL Community)",
     langEn: "English (Official FPL)",
-    scalePercentile: "Group rank (0–100)",
-    scaleRaw: "Actual stats",
+    scalePercentile: "Score vs group (0–100)",
+    scaleRaw: "Raw stats",
     sectionNumbers: "01 · Scope & Metrics",
     sectionPlayers: "02 · Player Selection",
     sectionStyle: "03 · Look & Style",
     manualPick: "Manual pick",
-    autoTop: "Top N / Auto",
+    autoTop: "Best N / Automatic",
     allClubs: "All clubs",
     clearClubs: "Clear",
     showTop: "Show best (Top N)",
@@ -325,14 +332,14 @@ export const UI_COPY = {
     sortCompositeHint:
       "Overall score from selected stats vs group",
     sortByStat: "Sort by statistic",
-    spotlight: "Spotlight",
+    spotlight: "Highlight a player",
     none: "— none —",
     chartTitle: "Chart title",
     chartSubtitle: "Subtitle",
     showAvg: "Show pool average",
     showBarValues: "Show values on bars",
     showMeta: "Show price & ownership",
-    showNegatives: "Show deducted points / Penalties",
+    showNegatives: "Show negative points",
     emptyChart:
       "No players match the filters. Adjust criteria or pick players manually.",
     recalculating: "Recalculating comparison…",
@@ -341,13 +348,20 @@ export const UI_COPY = {
     vennSection: "Diagram conditions",
     vennThreshold: "Threshold (≥)",
     vennCustom: "Custom",
-    vennNobody: "nobody",
+    vennNobody: "0 players",
     vennListTitle: "Players by region",
     vennTotalsNote:
       "Thresholds compare totals in the selected gameweek range. Per 90 and group rank do not change the diagram.",
-    vennMorePlayers: "{n} more in the list below the chart",
+    vennMorePlayers: "+{n} more",
     vennReading:
-      "Each circle is one condition (stat ≥ threshold) in the selected gameweek range. The centre means all three. An empty area means nobody meets that mix. The list below has full names.",
+      "Each circle is one condition in the selected gameweek range. The centre means all three. An empty area is 0 players. The list uses the FPL display name; the full name is in the tooltip.",
+    vennPlayersPerArea: "Players per area",
+    vennPlayersAll: "All",
+    vennIncludeList: "Include player list",
+    vennCalculating: "Calculating…",
+    vennMeetsAll: "Meets all 3",
+    vennLegend: "Clean sheets · Goals + assists · DC bonus matches",
+    vennPresetsIgnored: "Not used by Venn",
     vennSourceData: "fpl-arena.com · Data: FPL",
     vennAllThree: "All three",
     heatmapRankedByPoints: "Ranked by points",
@@ -362,8 +376,8 @@ export const UI_COPY = {
     rawExplain:
       "Actual stats: true database numbers — each metric uses its own scale (0…group max).",
     scaleHelpTitle: "What do Group rank and RATING mean?",
-    gross: "Without deductions (Gross)",
-    penalties: "Points lost (Penalties)",
+    gross: "Earned",
+    penalties: "Deducted",
     net: "Official FPL Points (Net)",
     lostPointsBar: "Points lost",
     player: "Player",
@@ -430,9 +444,9 @@ export const STREAK_LABELS: Record<
     currentReturnStreak: "Aktualna seria zwrotów",
     maxGoalStreak: "Seria z golem",
     maxAssistStreak: "Seria z asystą",
-    maxGoalOrAssistStreak: "Seria G/A",
+    maxGoalOrAssistStreak: "Mecze z golem lub asystą z rzędu",
     maxCleanSheetStreak: "Seria czystych kont",
-    maxDcPointsStreak: "Seria DC (+2)",
+    maxDcPointsStreak: "Mecze z premią DC z rzędu",
     maxSavesPointStreak: "Seria 3+ obron (pkt GK)",
     maxBonusStreak: "Seria z bonusem (BPS)",
     max60MinStreak: "Seria 60+ min",
@@ -443,9 +457,9 @@ export const STREAK_LABELS: Record<
     currentReturnStreak: "Current return streak",
     maxGoalStreak: "Goal streak",
     maxAssistStreak: "Assist streak",
-    maxGoalOrAssistStreak: "G/A streak",
+    maxGoalOrAssistStreak: "Matches in a row with G/A",
     maxCleanSheetStreak: "Clean sheet streak",
-    maxDcPointsStreak: "DC (+2) streak",
+    maxDcPointsStreak: "Matches in a row with DC bonus",
     maxSavesPointStreak: "3+ Saves streak (+1 pt)",
     maxBonusStreak: "Bonus points streak",
     max60MinStreak: "60+ min streak",
@@ -772,6 +786,22 @@ export function formatVennNumber(value: number): string {
   return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
 }
 
+const VENN_PHRASE: Record<
+  StatsLabLang,
+  Partial<Record<FplStatKey, (shown: string) => string>>
+> = {
+  pl: {
+    clean_sheets: (shown) => `${shown}+ czyste konta`,
+    goals_assists: (shown) => `${shown}+ gole i asysty (G+A)`,
+    dc_bonus_matches: (shown) => `${shown}+ mecze z premią DC (+2)`,
+  },
+  en: {
+    clean_sheets: (shown) => `${shown}+ clean sheets`,
+    goals_assists: (shown) => `${shown}+ goals + assists (G+A)`,
+    dc_bonus_matches: (shown) => `${shown}+ matches with DC bonus (+2)`,
+  },
+};
+
 export function vennConditionPhrase(
   metric: FplStatKey,
   threshold: number,
@@ -788,6 +818,8 @@ export function vennConditionPhrase(
       ? String(Math.round(threshold))
       : formatVennNumber(threshold)
     : "—";
+  const special = VENN_PHRASE[lang][metric];
+  if (special) return special(shown);
   return `${shown}+ ${head}`;
 }
 

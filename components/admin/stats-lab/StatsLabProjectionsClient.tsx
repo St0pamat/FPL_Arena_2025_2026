@@ -226,15 +226,15 @@ function fdrPillClass(
   }
   switch (level) {
     case 1:
-      return "bg-emerald-500/30 text-emerald-100 border-emerald-400/50";
+      return "bg-emerald-300 text-emerald-950 border-emerald-100";
     case 2:
-      return "bg-teal-500/20 text-teal-200 border-teal-400/30";
+      return "bg-emerald-700 text-emerald-50 border-emerald-500";
     case 3:
-      return "bg-slate-500/20 text-slate-200 border-slate-400/30";
+      return "bg-slate-400 text-slate-950 border-slate-200";
     case 4:
-      return "bg-amber-500/25 text-amber-200 border-amber-400/40";
+      return "bg-amber-400 text-amber-950 border-amber-200";
     case 5:
-      return "bg-rose-500/30 text-rose-100 border-rose-400/50";
+      return "bg-rose-600 text-white border-rose-400";
   }
 }
 
@@ -314,7 +314,7 @@ function controlTabClass(
   active: boolean,
   themeId: StatsLabChartThemeId,
 ): string {
-  const base = "min-h-[28px] font-semibold";
+  const base = "min-h-11 font-semibold";
   if (active) {
     return themeId === "ANALYST_LIGHT"
       ? `${base} border border-emerald-800 bg-emerald-700 font-extrabold text-white shadow-sm`
@@ -331,7 +331,7 @@ function controlTabClass(
 
 function exportButtonClass(themeId: StatsLabChartThemeId): string {
   const base =
-    "inline-flex min-h-[28px] items-center gap-1.5 rounded-xl px-4 py-2 text-[10px] font-extrabold uppercase tracking-wider shadow-md transition disabled:opacity-40";
+    "inline-flex min-h-11 items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-extrabold uppercase tracking-wider shadow-md transition disabled:opacity-40";
   if (themeId === "ANALYST_LIGHT") {
     return `${base} border border-emerald-800 bg-emerald-700 text-white hover:bg-emerald-800`;
   }
@@ -340,7 +340,7 @@ function exportButtonClass(themeId: StatsLabChartThemeId): string {
 
 function accentActionButtonClass(themeId: StatsLabChartThemeId): string {
   const base =
-    "min-h-[28px] rounded-xl px-3 py-2 text-[10px] font-extrabold uppercase tracking-wider shadow-md transition";
+    "min-h-11 rounded-xl px-3 py-2 text-xs font-extrabold uppercase tracking-wider shadow-md transition";
   if (themeId === "ANALYST_LIGHT") {
     return `${base} border border-emerald-800 bg-emerald-700 text-white hover:bg-emerald-800`;
   }
@@ -776,7 +776,7 @@ function MetricTile({
   cellLayout: ProjectionsCellLayout;
 }) {
   const label = tickerLabel(fx, singleGw, lang);
-  const badgeSize = cellLayout === "LARGE_BADGE" ? 28 : 20;
+  const badgeSize = cellLayout === "LARGE_BADGE" ? 22 : 16;
   return (
     <div
       className={`flex min-w-[4.5rem] flex-col items-center justify-center gap-0.5 rounded-lg border px-1.5 py-1 ${pillClass}`}
@@ -787,7 +787,7 @@ function MetricTile({
       <span className="whitespace-nowrap text-[11px] font-black leading-tight">
         {label}
       </span>
-      <span className="whitespace-nowrap font-mono text-[10px] font-bold tabular-nums opacity-90">
+      <span className="whitespace-nowrap font-mono text-[14px] font-black tabular-nums">
         {metricText}
       </span>
     </div>
@@ -818,6 +818,7 @@ export function StatsLabProjectionsClient({ lang, themeId }: Props) {
   const [flash, setFlash] = useState<string | null>(null);
 
   const [startGw, setStartGw] = useState(1);
+  const [fdrSettingsOpen, setFdrSettingsOpen] = useState(false);
   const [endGw, setEndGw] = useState(6);
   const [hiddenGws, setHiddenGws] = useState<number[]>([]);
   const [fdrMode, setFdrMode] = useState<ProjectionsFdrMode>("OVERALL");
@@ -980,10 +981,11 @@ export function StatsLabProjectionsClient({ lang, themeId }: Props) {
   );
   const gameweeks = data?.gameweeks ?? [];
   const singleGw = gameweeks.length === 1;
-  const gwRangeLabel = formatProjectionsGwRangeLabel(
-    data?.startGw ?? startGw,
-    data?.endGw ?? endGw,
-  );
+  const gwRangeLabel = data
+    ? formatProjectionsGwRangeLabel(data.startGw, data.endGw)
+    : lang === "pl"
+      ? "Ładuję dane…"
+      : "Loading data…";
 
   const leagueAvg = useMemo(() => {
     const active = teams.filter((t) => t.matchesCount > 0);
@@ -1216,7 +1218,7 @@ export function StatsLabProjectionsClient({ lang, themeId }: Props) {
     return `${PROJECTIONS_SUBVIEW_LABELS[lang].FIXTURES_FDR} — ${ui.scaleLabel}: ${PROJECTIONS_FDR_MODE_LABELS[lang][fdrMode]} (${gwRangeLabel})`;
   }, [fdrMode, gwRangeLabel, lang, selectedMatchupGw, subView, ui.scaleLabel]);
 
-  async function exportPair() {
+  async function exportPair(kind: "image" | "json" = "image") {
     const node = exportRef.current;
     if (!node || !data) return;
     setExportBusy(true);
@@ -1258,9 +1260,12 @@ export function StatsLabProjectionsClient({ lang, themeId }: Props) {
               : subView === "CLEAN_SHEETS"
                 ? `fpl-arena-projections-cs-${lang}`
                 : `fpl-arena-projections-fdr-${fdrMode.toLowerCase()}-${lang}`;
-        const url = await captureProjectionsJpeg(node, surface.canvasBg);
-        downloadDataUrl(url, `${base}.jpg`);
-        downloadJsonFile(`${base}.json`, report);
+        if (kind === "image") {
+          const url = await captureProjectionsJpeg(node, surface.canvasBg);
+          downloadDataUrl(url, `${base}.jpg`);
+        } else {
+          downloadJsonFile(`${base}.json`, report);
+        }
       });
       setFlash("OK");
     } catch (e) {
@@ -1538,14 +1543,14 @@ export function StatsLabProjectionsClient({ lang, themeId }: Props) {
 
         <div className="mt-3 space-y-1.5">
           <div className="flex flex-wrap justify-between gap-2 text-[10px] font-bold">
-            <span className="text-emerald-500">
-              1 ({m.homeShortName}): {m.winPctHome.toFixed(1)}%
+            <span className="text-[12px] text-emerald-500">
+              {lang === "pl" ? "Wygrana" : "Win"} {m.homeShortName} {m.winPctHome.toFixed(1)}%
             </span>
-            <span className={surface.mutedClass}>
-              X ({ui.drawLabel}): {m.drawPct.toFixed(1)}%
+            <span className={`text-[12px] ${surface.mutedClass}`}>
+              {ui.drawLabel} {m.drawPct.toFixed(1)}%
             </span>
-            <span className="text-sky-500">
-              2 ({m.awayShortName}): {m.winPctAway.toFixed(1)}%
+            <span className="text-[12px] text-sky-500">
+              {lang === "pl" ? "Wygrana" : "Win"} {m.awayShortName} {m.winPctAway.toFixed(1)}%
             </span>
           </div>
           <div className="flex h-3 w-full overflow-hidden rounded-full bg-slate-500/20">
@@ -1573,32 +1578,16 @@ export function StatsLabProjectionsClient({ lang, themeId }: Props) {
           </div>
         </div>
 
-        <div className="mt-3 grid gap-2 sm:grid-cols-2">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className={`text-[10px] font-bold uppercase ${surface.mutedClass}`}>
-              {ui.csPctLabel}
-            </span>
-            <div className="flex gap-1.5">
-              <span className={`rounded border px-2 py-0.5 font-mono text-[11px] font-bold ${csPillClass(m.csPctHome, isLight)}`}>
-                {m.csPctHome.toFixed(1)}%
-              </span>
-              <span className={`rounded border px-2 py-0.5 font-mono text-[11px] font-bold ${csPillClass(m.csPctAway, isLight)}`}>
-                {m.csPctAway.toFixed(1)}%
-              </span>
-            </div>
+        <div className="mt-3 grid grid-cols-2 gap-3 text-[13px]">
+          <div className={`rounded-xl border p-2 ${surface.borderClass}`}>
+            <p className={`text-[12px] font-black ${surface.textClass}`}>{m.homeShortName}</p>
+            <p className="mt-1 font-bold">CS {Math.round(m.csPctHome)}%</p>
+            <p className="font-bold">2+ {lang === "pl" ? "gole" : "goals"} {Math.round(m.twoPlusGoalsPctHome)}%</p>
           </div>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className={`text-[10px] font-bold uppercase ${surface.mutedClass}`}>
-              {ui.twoPlusLabel}
-            </span>
-            <div className="flex gap-1.5">
-              <span className={`rounded border px-2 py-0.5 font-mono text-[11px] font-bold ${winPillClass(m.twoPlusGoalsPctHome, isLight)}`}>
-                {m.twoPlusGoalsPctHome.toFixed(1)}%
-              </span>
-              <span className={`rounded border px-2 py-0.5 font-mono text-[11px] font-bold ${winPillClass(m.twoPlusGoalsPctAway, isLight)}`}>
-                {m.twoPlusGoalsPctAway.toFixed(1)}%
-              </span>
-            </div>
+          <div className={`rounded-xl border p-2 text-right ${surface.borderClass}`}>
+            <p className={`text-[12px] font-black ${surface.textClass}`}>{m.awayShortName}</p>
+            <p className="mt-1 font-bold">CS {Math.round(m.csPctAway)}%</p>
+            <p className="font-bold">2+ {lang === "pl" ? "gole" : "goals"} {Math.round(m.twoPlusGoalsPctAway)}%</p>
           </div>
         </div>
 
@@ -1951,7 +1940,7 @@ export function StatsLabProjectionsClient({ lang, themeId }: Props) {
               <button
                 type="button"
                 disabled={exportBusy || (!matchupsSorted.length && matchupDisplayMode !== "POSTER_3COL")}
-                onClick={() => void exportPair()}
+                onClick={() => void exportPair("image")}
                 className={exportButtonClass(themeId)}
               >
                 {exportBusy ? (
@@ -1961,6 +1950,19 @@ export function StatsLabProjectionsClient({ lang, themeId }: Props) {
                 )}
                 {ui.exportPair}
               </button>
+              <details>
+                <summary className={`${controlTabClass(false, themeId)} cursor-pointer list-none`}>
+                  {lang === "pl" ? "Więcej" : "More"}
+                </summary>
+                <button
+                  type="button"
+                  disabled={exportBusy}
+                  onClick={() => void exportPair("json")}
+                  className={`${controlTabClass(false, themeId)} mt-1`}
+                >
+                  {ui.exportJson}
+                </button>
+              </details>
               {pending ? (
                 <span className={`inline-flex items-center gap-1 text-[10px] ${tokens.textMuted}`}>
                   <Loader2 className="h-3 w-3 animate-spin" /> {ui.loading}
@@ -1995,7 +1997,14 @@ export function StatsLabProjectionsClient({ lang, themeId }: Props) {
               </div>
             )}
 
-            <div className="flex flex-wrap items-end gap-3">
+            <button
+              type="button"
+              className={`min-h-11 rounded-xl px-3 text-sm font-bold md:hidden ${tokens.textMuted}`}
+              onClick={() => setFdrSettingsOpen((v) => !v)}
+            >
+              {lang === "pl" ? "Ustawienia" : "Settings"}
+            </button>
+            <div className={`flex flex-wrap items-end gap-3 ${fdrSettingsOpen ? "" : "max-md:hidden"}`}>
               <label
                 className={`text-[10px] font-black uppercase ${tokens.textMuted}`}
               >
@@ -2169,7 +2178,7 @@ export function StatsLabProjectionsClient({ lang, themeId }: Props) {
               <button
                 type="button"
                 disabled={exportBusy || !teams.length}
-                onClick={() => void exportPair()}
+                onClick={() => void exportPair("image")}
                 className={exportButtonClass(themeId)}
               >
                 {exportBusy ? (
@@ -2179,6 +2188,19 @@ export function StatsLabProjectionsClient({ lang, themeId }: Props) {
                 )}
                 {ui.exportPair}
               </button>
+              <details>
+                <summary className={`${controlTabClass(false, themeId)} cursor-pointer list-none`}>
+                  {lang === "pl" ? "Więcej" : "More"}
+                </summary>
+                <button
+                  type="button"
+                  disabled={exportBusy}
+                  onClick={() => void exportPair("json")}
+                  className={`${controlTabClass(false, themeId)} mt-1`}
+                >
+                  {ui.exportJson}
+                </button>
+              </details>
               {pending ? (
                 <span
                   className={`inline-flex items-center gap-1 text-[10px] ${tokens.textMuted}`}
@@ -2356,16 +2378,32 @@ export function StatsLabProjectionsClient({ lang, themeId }: Props) {
               </div>
             </div>
 
+            <p className={`mb-1 text-right text-[12px] font-bold ${surface.mutedClass}`}>
+              →
+            </p>
             <div
-              className="overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+              className="overflow-x-auto pb-1 shadow-[inset_-16px_0_12px_-12px_rgba(0,0,0,0.45)]"
               data-projections-table-wrap
             >
               {!data || teams.length === 0 ? (
-                <p
-                  className={`px-6 py-16 text-center text-sm ${surface.mutedClass}`}
-                >
-                  {pending ? ui.loading : ui.empty}
-                </p>
+                <div className="space-y-3 px-6 py-8" role="status">
+                  <p className={`text-sm font-bold ${surface.mutedClass}`}>
+                    {pending || !data
+                      ? lang === "pl"
+                        ? "Ładuję dane…"
+                        : "Loading data…"
+                      : ui.empty}
+                  </p>
+                  {(pending || !data) && teams.length === 0
+                    ? [0, 1, 2, 3, 4].map((i) => (
+                        <div
+                          key={i}
+                          className="h-8 animate-pulse rounded-xl bg-slate-500/20"
+                          style={{ width: `${96 - i * 6}%` }}
+                        />
+                      ))
+                    : null}
+                </div>
               ) : (
                 <table className="min-w-full border-collapse text-left">
                   <thead>
@@ -2475,11 +2513,8 @@ export function StatsLabProjectionsClient({ lang, themeId }: Props) {
                               {gameweeks.length > 1 && !isExporting ? (
                                 <button
                                   type="button"
-                                  title={
-                                    lang === "pl"
-                                      ? `Ukryj GW${gw}`
-                                      : `Hide GW${gw}`
-                                  }
+                                  title={ui.hideGwHint}
+                                  aria-label={ui.hideGwHint}
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     toggleHideGw(gw);

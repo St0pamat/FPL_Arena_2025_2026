@@ -11,8 +11,12 @@ describe("U5 planner poster copy", () => {
     expect(pt("en", "planner.poster.brand")).toBe("FPL Planner");
     expect(pt("pl", "planner.pitch.emptySlot")).toBe("Wolne miejsce");
     expect(pt("en", "planner.pitch.emptySlot")).toBe("Empty slot");
-    expect(pt("pl", "planner.poster.teamValue")).toBe("Wartość drużyny");
-    expect(pt("en", "planner.poster.teamValue")).toBe("Team value");
+    expect(pt("pl", "planner.poster.teamValue")).toBe(
+      "Wartość drużyny (skład + bank)",
+    );
+    expect(pt("en", "planner.poster.teamValue")).toBe(
+      "Team value (squad + bank)",
+    );
     expect(pt("pl", "planner.poster.footer")).toBe(
       "fpl-arena.com · Dane: FPL · Predykcje: FPL Arena",
     );
@@ -23,7 +27,7 @@ describe("U5 planner poster copy", () => {
 
   it("KPI/market nadal „Do wydania”; plakat używa teamValue + computePosterTeamValueTenths", () => {
     expect(pt("pl", "planner.price.spendingPower")).toBe("Do wydania");
-    expect(pt("pl", "planner.kpi.spendingPower")).toBe("Do wydania");
+    expect(pt("pl", "planner.kpi.spendingPower")).toBe("Wartość składu");
     const client = readFileSync(
       path.join(
         ROOT,
