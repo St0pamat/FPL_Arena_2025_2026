@@ -69,6 +69,8 @@ export type PlannerPitchProps = {
   /** Ostrzeżenia C/VC missing dla bieżącej GW — banner przy boisku. */
   missingCaptain?: boolean;
   missingVice?: boolean;
+  /** Bank albo bank + SP gracza do zejścia. Pusty slot dopisuje „do £X.Xm”. */
+  emptySlotBudgetTenths?: number;
 };
 
 function hasRoleMissingBanner(
@@ -127,6 +129,7 @@ export function PlannerPitch({
   hideActionChrome = false,
   missingCaptain = false,
   missingVice = false,
+  emptySlotBudgetTenths,
 }: PlannerPitchProps) {
   const chromeHidden = hideActionChrome || isExporting;
   const chrome = getStatsLabMenuChrome(themeId);
@@ -288,6 +291,7 @@ export function PlannerPitch({
               isLight,
               isExporting: chromeHidden,
               activeChip,
+              emptySlotBudgetTenths,
               watchlistIds,
               dragSlot,
               swapAllowed,
@@ -322,6 +326,7 @@ export function PlannerPitch({
               isLight,
               isExporting: chromeHidden,
               activeChip,
+              emptySlotBudgetTenths,
               watchlistIds,
               dragSlot,
               swapAllowed,
@@ -356,6 +361,7 @@ export function PlannerPitch({
               isLight,
               isExporting: chromeHidden,
               activeChip,
+              emptySlotBudgetTenths,
               watchlistIds,
               dragSlot,
               swapAllowed,
@@ -390,6 +396,7 @@ export function PlannerPitch({
               isLight,
               isExporting: chromeHidden,
               activeChip,
+              emptySlotBudgetTenths,
               watchlistIds,
               dragSlot,
               swapAllowed,
@@ -466,6 +473,7 @@ export function PlannerPitch({
                 isLight,
                 isExporting: chromeHidden,
                 activeChip,
+                emptySlotBudgetTenths,
                 watchlistIds,
                 dragSlot,
                 swapAllowed,
@@ -601,13 +609,19 @@ type TileCtx = {
   setDragSlot: (slot: number | null) => void;
   trySwap: (from: number, to: number) => void;
   benchAccessibleLabel?: string;
+  emptySlotBudgetTenths?: number;
 };
 
 function renderTile(slot: number, ctx: TileCtx): ReactNode {
   const pick = ctx.bySlot.get(slot);
   if (!pick) {
     return (
-      <PlannerEmptySlot themeId={ctx.themeId} lang={ctx.lang} slot={slot} />
+      <PlannerEmptySlot
+        themeId={ctx.themeId}
+        lang={ctx.lang}
+        slot={slot}
+        budgetTenths={ctx.emptySlotBudgetTenths}
+      />
     );
   }
 

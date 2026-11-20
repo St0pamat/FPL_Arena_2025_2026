@@ -17,7 +17,6 @@ import {
   Flame,
   Grid3X3,
   Layers,
-  Loader2,
   PieChart,
   RefreshCw,
   SlidersHorizontal,
@@ -63,6 +62,7 @@ import { StatsLabExportBar } from "@/components/admin/stats-lab/StatsLabExportBa
 import { StatsLabPosterFrame } from "@/components/admin/stats-lab/StatsLabPosterFrame";
 import { StatsLabExportNode } from "@/components/admin/stats-lab/StatsLabExportNode";
 import { RadarQuickSlotsBar } from "@/components/admin/stats-lab/RadarQuickSlotsBar";
+import { StudioPendingCue } from "@/components/admin/stats-lab/StudioPendingCue";
 import type { PointsSortKey } from "@/components/admin/stats-lab/charts/PointsBreakdownChart";
 import type { KnowledgeHelpAnchor } from "@/lib/stats-lab/knowledgeBaseContent";
 import {
@@ -792,20 +792,12 @@ export function StatsLabStudioClient({
           ) : null}
 
           <div data-stats-lab-canvas-preview="true" className="relative">
-            {pending && displayResult ? (
-              <div className="pointer-events-none absolute right-3 top-3 z-30">
-                <span
-                  className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-wider shadow-sm ${
-                    chrome.isLight
-                      ? "border-emerald-700 bg-emerald-700 text-white"
-                      : "border-emerald-300 bg-emerald-400 text-slate-950"
-                  }`}
-                >
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                  {ui.lang === "pl" ? "Przeliczanie…" : "Updating…"}
-                </span>
-              </div>
-            ) : null}
+            <StudioPendingCue
+              pending={pending}
+              hasResult={displayResult != null}
+              lang={ui.lang}
+              isLight={chrome.isLight}
+            />
             <StatsLabPosterFrame>
               <StatsLabChartCanvas
                 result={displayResult}

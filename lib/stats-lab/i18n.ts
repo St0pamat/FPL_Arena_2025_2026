@@ -262,6 +262,10 @@ export const UI_COPY = {
     pool: "Pula",
     onChart: "Na wykresie",
     heatmapRankedByPoints: "Ranking wg punktów",
+    sortedByPoints: "Posortowane po punktach",
+    sortedByMetric: "Posortowane po: {name}",
+    pointsWord: "Punkty",
+    ratingWord: "Ocena",
     heatmapRatingTooltip:
       "Średnia percentyli wybranych metryk na tle porównywanej puli",
     percentileExplain:
@@ -321,6 +325,10 @@ export const UI_COPY = {
     pool: "Pool",
     onChart: "On chart",
     heatmapRankedByPoints: "Ranked by points",
+    sortedByPoints: "Sorted by points",
+    sortedByMetric: "Sorted by: {name}",
+    pointsWord: "Points",
+    ratingWord: "Rating",
     heatmapRatingTooltip:
       "Average of selected-metric percentiles vs the comparison pool",
     percentileExplain:

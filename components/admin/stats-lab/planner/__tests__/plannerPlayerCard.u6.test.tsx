@@ -375,7 +375,7 @@ describe("U6 karta zawodnika", () => {
     );
     expect(css).toMatch(/\.ppc-data\s*\{[^}]*overflow:\s*hidden/);
     const compact = css.slice(css.indexOf("@container (max-width: 84px)"));
-    expect(compact).toMatch(/\.ppc-act-info\s*\{[^}]*display:\s*none/);
+    expect(compact).toMatch(/\.ppc-act-sell,\s*\n\s*\.ppc-act-swap\s*\{[^}]*display:\s*none/);
     expect(compact).toMatch(/\.ppc-prices-full\s*\{[^}]*display:\s*none/);
     expect(compact).toMatch(/\.ppc-prices-short\s*\{[^}]*display:\s*inline/);
   });

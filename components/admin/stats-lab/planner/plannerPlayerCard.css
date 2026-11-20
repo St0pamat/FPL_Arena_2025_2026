@@ -11,7 +11,7 @@
 
 .ppc-shirt {
   position: relative;
-  width: clamp(28px, 46cqw, 52px);
+  width: clamp(28px, 44cqw, 46px);
   aspect-ratio: 60 / 56;
   margin-top: 2px;
   color: inherit;
@@ -154,9 +154,28 @@
   font-weight: 600;
 }
 
+/* U7: ikona 20px, pole 32px (top -8px, bok -4px). Rogi od 102px. */
 .ppc-act {
   position: absolute;
-  z-index: 2;
+  z-index: 3;
+  box-sizing: border-box;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.ppc-act::before {
+  content: "";
+  position: absolute;
+  width: 32px;
+  height: 32px;
 }
 
 .ppc-act-sell {
@@ -164,14 +183,45 @@
   left: 0;
 }
 
+.ppc-act-sell::before {
+  top: -8px;
+  left: -4px;
+}
+
 .ppc-act-swap {
   top: 0;
   right: 0;
 }
 
-.ppc-act-info {
-  top: 0;
-  left: 2rem;
+.ppc-act-swap::before {
+  top: -8px;
+  right: -4px;
+}
+
+.ppc-info-hit {
+  cursor: pointer;
+}
+
+.ppc-info-hit:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+.ppc-shirt-info {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border: 0;
+  background: transparent;
+  border-radius: 8px;
+}
+
+button.ppc-name {
+  width: 100%;
+  margin: 0;
+  border: 0;
+  background: none;
+  font-family: inherit;
 }
 
 .ppc-shirt-hit {
@@ -228,6 +278,22 @@
   font-weight: 600;
 }
 
+/* Węższa niż 102 px: ✕ i ⇄ nie mieszczą się obok koszulki. */
+@container (max-width: 101px) {
+  .ppc-act-sell,
+  .ppc-act-swap {
+    display: none;
+  }
+
+  .ppc-shirt-info {
+    display: none;
+  }
+
+  .ppc-shirt-hit {
+    display: block;
+  }
+}
+
 /* 5 kart w rzędzie przy 320–360 px: karta ~58 px */
 @container (max-width: 84px) {
   .ppc-shirt {
@@ -238,10 +304,6 @@
     font-size: 9.5px;
     line-height: 13px;
     padding: 0 1px;
-  }
-
-  .ppc-act-info {
-    display: none;
   }
 
   .ppc-prices-full {
@@ -336,5 +398,9 @@
 
   .ppc-empty-sub {
     font-size: 8px;
+  }
+
+  .ppc-empty-budget {
+    display: none;
   }
 }

@@ -593,6 +593,7 @@ export function RadarPizzaChart({
                 ? clampedBlockY - (plotted.length > 2 ? 25 : 14)
                 : clampedBlockY;
               const short = statLabel(key, lang, true);
+              const full = statLabel(key, lang);
 
               const pillW = 54;
               const pillH = 21;
@@ -620,7 +621,9 @@ export function RadarPizzaChart({
                     fill={theme.text}
                     fontSize={15.5}
                     fontWeight={900}
+                    aria-label={full}
                   >
+                    <title>{full}</title>
                     {short}
                   </text>
                   {showPills

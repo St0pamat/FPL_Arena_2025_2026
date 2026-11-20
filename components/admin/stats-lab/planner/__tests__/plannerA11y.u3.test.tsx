@@ -339,7 +339,7 @@ describe("U3 a11y render — every button / role=button in Planner surfaces", ()
       assertAllButtonsNamed(root, lang);
       const user = userEvent.setup();
       const infoButtons = within(root).getAllByRole("button", {
-        name: lang === "pl" ? /Informacje: Salah/ : /Details: Salah/,
+        name: /Info: Salah/,
       });
       const cardInfo =
         infoButtons.find((button) => button.closest("[data-card='u6']")) ??

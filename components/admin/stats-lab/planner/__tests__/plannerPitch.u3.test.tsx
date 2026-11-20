@@ -11,8 +11,6 @@ import { PlannerFixturePills } from "@/components/admin/stats-lab/planner/Planne
 import { FIXTURE_PILL_CLASS } from "@/lib/stats-lab/plannerFixtureUi";
 import { ptTip } from "@/lib/stats-lab/plannerI18n";
 import { formatPlusButtonLabel } from "@/lib/stats-lab/plannerUiFormat";
-import { PLANNER_ACTION_HIT_CLASS } from "@/lib/stats-lab/plannerFixtureUi";
-
 function catalog(
   id: number,
   name: string,
@@ -422,7 +420,7 @@ describe("U3 PlannerPitch armband + BGW captain", () => {
     );
 
     await user.click(
-      screen.getByRole("button", { name: "Details: Haaland" }),
+      screen.getAllByRole("button", { name: "Info: Haaland" })[0]!,
     );
     const setCap = screen.getByRole("button", {
       name: "Captain: Haaland",
@@ -504,12 +502,10 @@ describe("U3 PlannerPitch armband + BGW captain", () => {
     );
 
     const sell = screen.getAllByRole("button", { name: /Sprzedaj:/ })[0]!;
-    expect(sell.className).toContain("min-h-8");
-    expect(sell.className).toContain(
-      PLANNER_ACTION_HIT_CLASS.split(" ").find((c) =>
-        c.includes("pointer:coarse"),
-      )!,
-    );
+    expect(sell.className).toContain("ppc-act-sell");
+    expect(sell.getAttribute("aria-label")).toMatch(/Sprzedaj:/);
+    expect(sell.className).not.toContain("h-8");
+    expect(sell.className).not.toContain("min-h-11");
 
     rerender(
       <PlannerPitch

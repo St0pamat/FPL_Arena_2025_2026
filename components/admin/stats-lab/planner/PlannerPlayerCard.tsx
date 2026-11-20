@@ -1,7 +1,7 @@
 "use client";
 
 import type { DragEvent, ReactNode } from "react";
-import { ArrowLeftRight, Info, X } from "lucide-react";
+import { ArrowLeftRight, X } from "lucide-react";
 import {
   getScatterClubColor,
   type StatsLabChartThemeId,
@@ -17,7 +17,6 @@ import {
   type PlannerTileMetric,
 } from "@/lib/stats-lab/plannerI18n";
 import {
-  PLANNER_ACTION_HIT_CLASS,
   captainArmbandAria,
   captainArmbandLabel,
   type CaptainArmbandKind,
@@ -27,6 +26,7 @@ import {
   cardDisplayedXPts,
   cardNextFdrDots,
   formatCardXPts,
+  emptySlotBudgetText,
   formatPlayerTileAccessibleName,
 } from "@/lib/stats-lab/plannerUiFormat";
 import { fplLabBadgeUrl } from "@/lib/stats-lab/mediaUrls";
@@ -112,14 +112,21 @@ export function PlannerEmptySlot({
   themeId,
   lang,
   slot,
+  budgetTenths,
 }: {
   themeId: StatsLabChartThemeId;
   lang: StatsLabLang;
   slot: number;
+  /** Bank, albo bank + cena sprzedaży gracza do zejścia. Brak liczby = bez linii budżetu. */
+  budgetTenths?: number;
 }) {
   const palette = plannerCardPalette(themeId);
   const pos = pt(lang, emptyPositionKey(slot));
-  const label = pt(lang, "planner.pitch.emptyAdd", { pos });
+  const budget =
+    budgetTenths == null ? null : emptySlotBudgetText(lang, budgetTenths);
+  const label = budget
+    ? `${pt(lang, "planner.pitch.emptyAdd", { pos })}. ${budget}`
+    : pt(lang, "planner.pitch.emptyAdd", { pos });
   return (
     <div
       role="group"
@@ -133,7 +140,10 @@ export function PlannerEmptySlot({
       <b className="ppc-empty-title" data-allow-ellipsis="1">
         {pt(lang, "planner.pitch.emptySlot")}
       </b>
-      <b className="ppc-empty-sub">{pos}</b>
+      <b className="ppc-empty-sub">
+        {pos}
+        {budget ? <span className="ppc-empty-budget"> · {budget}</span> : null}
+      </b>
     </div>
   );
 }
@@ -207,6 +217,9 @@ export function PlannerPlayerCard({
   const dots = cardNextFdrDots(projectionsForElement, currentGw);
   const fill = shirtFill(player?.club_primary_color, player?.club_short_name);
   const showActions = !isExporting;
+  const infoLabel = pt(lang, "planner.card.info", {
+    player: fullName || playerName,
+  });
 
   return (
     <article
@@ -227,37 +240,25 @@ export function PlannerPlayerCard({
             type="button"
             title={actionAria(lang, "planner.action.sell", playerName)}
             aria-label={actionAria(lang, "planner.action.sell", playerName)}
-            className={`ppc-act ppc-act-sell ${PLANNER_ACTION_HIT_CLASS} rounded-full ${palette.icon}`}
+            className={`ppc-act ppc-act-sell rounded-full ${palette.icon}`}
             onClick={(event) => {
               event.stopPropagation();
               onSell();
             }}
           >
-            <X className="h-3.5 w-3.5" />
+            <X size={18} aria-hidden="true" />
           </button>
           <button
             type="button"
             title={actionAria(lang, "planner.action.swap", playerName)}
             aria-label={actionAria(lang, "planner.action.swap", playerName)}
-            className={`ppc-act ppc-act-swap ${PLANNER_ACTION_HIT_CLASS} rounded-full ${palette.icon}`}
+            className={`ppc-act ppc-act-swap rounded-full ${palette.icon}`}
             onClick={(event) => {
               event.stopPropagation();
               onSwap();
             }}
           >
-            <ArrowLeftRight className="h-3.5 w-3.5" />
-          </button>
-          <button
-            type="button"
-            title={actionAria(lang, "planner.action.info", playerName)}
-            aria-label={actionAria(lang, "planner.action.info", playerName)}
-            className={`ppc-act ppc-act-info ${PLANNER_ACTION_HIT_CLASS} rounded-full ${palette.icon}`}
-            onClick={(event) => {
-              event.stopPropagation();
-              onInfo();
-            }}
-          >
-            <Info className="h-3.5 w-3.5" />
+            <ArrowLeftRight size={18} aria-hidden="true" />
           </button>
         </>
       ) : null}
@@ -285,27 +286,58 @@ export function PlannerPlayerCard({
           />
         ) : null}
         {showActions ? (
-          <button
-            type="button"
-            className="ppc-shirt-hit"
-            aria-label={pt(lang, "planner.card.actions", { player: fullName || playerName })}
-            onClick={(event) => {
-              event.stopPropagation();
-              onOpenActions();
-            }}
-          />
+          <>
+            <button
+              type="button"
+              className="ppc-shirt-info ppc-info-hit"
+              data-testid="card-shirt-info"
+              aria-label={infoLabel}
+              onClick={(event) => {
+                event.stopPropagation();
+                onInfo();
+              }}
+            />
+            <button
+              type="button"
+              className="ppc-shirt-hit"
+              aria-label={pt(lang, "planner.card.actions", {
+                player: fullName || playerName,
+              })}
+              onClick={(event) => {
+                event.stopPropagation();
+                onOpenActions();
+              }}
+            />
+          </>
         ) : null}
       </div>
 
       <div className={`ppc-plate ${palette.plate}`}>
-        <b
-          className={`ppc-name ${palette.name}`}
-          data-testid="card-player-name"
-          data-allow-ellipsis="1"
-          title={fullName || playerName}
-        >
-          {playerName}
-        </b>
+        {showActions ? (
+          <button
+            type="button"
+            className={`ppc-name ppc-info-hit ${palette.name}`}
+            data-testid="card-player-name"
+            data-allow-ellipsis="1"
+            title={fullName || playerName}
+            aria-label={infoLabel}
+            onClick={(event) => {
+              event.stopPropagation();
+              onInfo();
+            }}
+          >
+            {playerName}
+          </button>
+        ) : (
+          <b
+            className={`ppc-name ${palette.name}`}
+            data-testid="card-player-name"
+            data-allow-ellipsis="1"
+            title={fullName || playerName}
+          >
+            {playerName}
+          </b>
+        )}
         <PlannerFixturePills
           lang={lang}
           proj={proj}
