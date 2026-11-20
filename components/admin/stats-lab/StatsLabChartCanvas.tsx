@@ -279,8 +279,8 @@ function autoSubtitle(
   if (poolSize > 0 && !isMatchTotals) {
     bits.push(
       lang === "pl"
-        ? `Grupa porównawcza: ${poolSize} graczy`
-        : `Comparison group: ${poolSize} players`,
+        ? `grupa: ${poolSize}`
+        : `group: ${poolSize}`,
     );
   }
 

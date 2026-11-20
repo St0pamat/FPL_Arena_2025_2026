@@ -1957,19 +1957,18 @@ export function colourPillClass(
   }
 
   if (effectiveNorm >= 0.85) {
-    return "bg-emerald-500/30 text-emerald-200 border border-emerald-500/40 font-extrabold";
+    return "bg-emerald-300 text-emerald-950 border border-emerald-100 font-extrabold";
   }
   if (effectiveNorm >= 0.65) {
-    return "bg-emerald-500/30 text-emerald-200 border border-emerald-500/40";
+    return "bg-emerald-500 text-emerald-950 border border-emerald-300 font-bold";
   }
   if (effectiveNorm >= 0.45) {
-    return "bg-emerald-500/15 text-emerald-300 border border-emerald-500/25";
+    return "bg-emerald-800 text-emerald-50 border border-emerald-600";
   }
   if (effectiveNorm >= 0.25) {
-    return "bg-slate-800/45 text-slate-200 border border-transparent";
+    return "bg-slate-600 text-slate-50 border border-slate-400";
   }
-  // Zwykłe dodatnie przy niskim norm — szare bez ramki
-  return "bg-slate-800/30 text-slate-400 border border-transparent";
+  return "bg-slate-900 text-slate-300 border border-slate-700";
 }
 
 /** Neutralna pigułka dla kolumn tekstowych / porządkowych / null. */
@@ -2008,6 +2007,9 @@ const PER90_TWO_DP_KEYS = new Set([
   "creativity",
   "influence",
   "ict_index",
+  "dd_hauls",
+  "starts",
+  "dreamteam_count",
 ]);
 
 /** Całkowite w Totals → w Ø średniej 1 dp. */

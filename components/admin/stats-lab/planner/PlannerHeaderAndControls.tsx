@@ -180,7 +180,7 @@ export function PlannerHeaderAndControls({
   const isLight = chrome.isLight;
   const emdash = shellLabel(lang, "common.emdash");
   const [showCompare, setShowCompare] = useState(false);
-  const [deadlineCollapsed, setDeadlineCollapsed] = useState(false);
+  const [deadlineCollapsed, setDeadlineCollapsed] = useState(true);
   const [editFtOpen, setEditFtOpen] = useState(false);
   const [editBankOpen, setEditBankOpen] = useState(false);
   const [bankDraft, setBankDraft] = useState("");
@@ -654,11 +654,14 @@ export function PlannerHeaderAndControls({
               title={shellTooltip(lang, "common.deadline")}
               className={`mb-2 inline-flex min-h-[28px] items-center gap-1.5 rounded-xl px-3 py-1 text-[10px] font-black uppercase transition-colors ${chrome.inactiveBtn}`}
             >
-              {shellLabel(lang, "common.deadline")} ·{" "}
-              {shellLabel(lang, "common.gw", { gw: currentGw })}{" "}
-              {deadlineCollapsed
-                ? (lang === "pl" ? "(rozwiń)" : "(expand)")
-                : (lang === "pl" ? "(zwiń)" : "(collapse)")}
+              {countdown
+                ? pt(lang, "planner.deadline.line", {
+                    gw: currentGw,
+                    d: countdown.days,
+                    h: countdown.hours,
+                    m: countdown.mins,
+                  })
+                : `${shellLabel(lang, "common.deadline")} · ${shellLabel(lang, "common.gw", { gw: currentGw })}`}
             </button>
             {!deadlineCollapsed ? (
               <div className="grid grid-cols-4 gap-2">
@@ -862,8 +865,10 @@ export function PlannerHeaderAndControls({
                 : "border-[#39FF14]/50 bg-[#39FF14]/15 text-slate-100"
           }`}
         >
-          {pt(lang, "planner.kpi.spendingPower")}:{" "}
-          {formatTenthsAsPounds(spendingPowerTenths)}
+          {pt(lang, "planner.kpi.squadBank", {
+            squad: formatTenthsAsPounds(spendingPowerTenths),
+            bank: formatTenthsAsPounds(bankTenths),
+          })}
         </span>
         <span
           className={`inline-flex items-center rounded-full border px-3 py-1.5 text-[11px] font-bold ${
@@ -897,6 +902,12 @@ export function PlannerHeaderAndControls({
             const isActive = activeChip === chip;
             const isSpent = usedGw != null && usedGw !== currentGw;
             const label = pt(lang, PLANNER_CHIP_LABEL_KEY[chip]);
+            const glossKey = {
+              wildcard: "chip.gloss.wildcard",
+              freehit: "chip.gloss.freehit",
+              "3xc": "chip.gloss.triplecaptain",
+              bboost: "chip.gloss.benchboost",
+            } as const;
             const statusLine = isSpent
               ? pt(lang, "chip.usedIn", { gw: usedGw! })
               : pt(lang, "chip.available");
@@ -918,7 +929,12 @@ export function PlannerHeaderAndControls({
                 }`}
                 title={statusLine}
               >
-                <span className="block leading-tight">{label}</span>
+                <span className="block leading-tight">
+                  {label}
+                  <span className="mt-0.5 block text-[9px] font-semibold normal-case opacity-80">
+                    {pt(lang, glossKey[chip])}
+                  </span>
+                </span>
                 <span className="mt-0.5 block text-[9px] font-semibold normal-case opacity-80">
                   {statusLine}
                 </span>
@@ -986,7 +1002,7 @@ export function PlannerHeaderAndControls({
       {/* Validation banner R1–R12 */}
       {errors.length > 0 || warnings.length > 0 ? (
         <section
-          className={`rounded-2xl border px-3 py-3 ${
+          className={`max-w-full break-words rounded-2xl border px-3 py-3 ${
             errors.length
               ? isLight
                 ? "border-rose-400 bg-rose-50 text-rose-950"

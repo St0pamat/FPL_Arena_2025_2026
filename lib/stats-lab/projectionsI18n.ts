@@ -31,13 +31,13 @@ export const PROJECTIONS_SUBVIEW_LABELS: Record<
   pl: {
     FIXTURES_FDR: "Kalendarz FDR",
     PROJECTED_GOALS: "Predykcja Goli",
-    CLEAN_SHEETS: "Czyste Konta %",
+    CLEAN_SHEETS: "Szansa na czyste konto (%)",
     MATCHUP_CARDS: "Karty Meczowe",
   },
   en: {
     FIXTURES_FDR: "FDR Fixture Ticker",
     PROJECTED_GOALS: "Projected Goals",
-    CLEAN_SHEETS: "Clean Sheet Odds",
+    CLEAN_SHEETS: "Clean sheet chance (%)",
     MATCHUP_CARDS: "Matchup Cards",
   },
 };
@@ -229,14 +229,14 @@ export const PROJECTIONS_MATCHUP_MODE_LABELS: Record<
   Record<ProjectionsMatchupDisplayMode, string>
 > = {
   pl: {
-    CARDS_GRID: "Karty Pojedynków (Siatka)",
+    CARDS_GRID: "Siatka meczów",
     POSTER_3COL: "Plakat 1-GW (3 Kolumny)",
-    VERIFICATION: "Weryfikacja: Predykcje vs Rzeczywistość",
+    VERIFICATION: "Prognoza a wynik",
   },
   en: {
-    CARDS_GRID: "Matchup Cards (Grid)",
+    CARDS_GRID: "Match grid",
     POSTER_3COL: "1-GW Poster (3 Columns)",
-    VERIFICATION: "Verification: Projected vs Actual",
+    VERIFICATION: "Forecast vs result",
   },
 };
 
@@ -266,9 +266,10 @@ export function projectionsUi(lang: StatsLabLang) {
       ? "Brak danych terminarza — uruchom Sync FPL (bootstrap + fixtures)."
       : "No fixture data — run Stats Lab Sync (bootstrap + fixtures).",
     error: isPl ? "Błąd ładowania projekcji" : "Failed to load projections",
-    exportPair: isPl ? "Eksport JPG + JSON" : "Export JPG + JSON",
+    exportPair: isPl ? "Pobierz obraz" : "Download image",
+    exportJson: isPl ? "Dane techniczne (.json)" : "Technical data (.json)",
     exportBusy: isPl ? "Eksport…" : "Exporting…",
-    customSubtitle: isPl ? "Podtytuł redakcyjny" : "Editorial subtitle",
+    customSubtitle: isPl ? "Własny podpis" : "Custom caption",
     customSubtitlePh: isPl
       ? "np. Najłatwiejszy terminarz mid-season"
       : "e.g. Easiest mid-season run",
@@ -277,14 +278,14 @@ export function projectionsUi(lang: StatsLabLang) {
     hiddenGws: isPl ? "Ukryte kolejki" : "Hidden GWs",
     restoreAllGws: isPl ? "Przywróć wszystkie GW" : "Restore all GWs",
     fdrMode: isPl ? "Skala FDR" : "FDR scale",
-    cellMetric: isPl ? "Miara w komórce" : "Cell metric",
+    cellMetric: isPl ? "Co pokazać w komórce" : "Cell value",
     venueFilter: isPl ? "Filtr meczu" : "Venue filter",
-    cellLayout: isPl ? "Układ komórki" : "Cell layout",
+    cellLayout: isPl ? "Wygląd komórki" : "Cell style",
     fdrNumberFormat: isPl ? "Format FDR" : "FDR format",
     dgwCsMode: isPl ? "Prezentacja DGW" : "DGW display",
     topAttacksPreset: isPl
-      ? "🔥 Top Ataki: Następne 6 GW"
-      : "🔥 Top Attacks: Next 6 GWs",
+      ? "Najlepsze ataki w najbliższych 6 kolejkach"
+      : "Best attacks, next 6 GWs",
     topDefencesPreset: isPl
       ? "🛡️ Top Obrony: Następne 6 GW"
       : "🛡️ Top Defences: Next 6 GWs",
@@ -300,10 +301,10 @@ export function projectionsUi(lang: StatsLabLang) {
     colGoalsFull: isPl
       ? "Suma oczekiwanych goli"
       : "Total projected goals",
-    colCs: "CS",
+    colCs: isPl ? "Oczek. CS" : "Exp. CS",
     colCsFull: isPl
-      ? "Suma oczekiwanych czystych kont"
-      : "Total expected clean sheets",
+      ? "Oczekiwane czyste konta (zakres GW). Opis w Bazie Wiedzy."
+      : "Expected clean sheets (GW range). See Knowledge Base.",
     colAvgPerMatch: isPl ? "ŚR. / MECZ" : "AVG / M",
     colAvgPerMatchFull: isPl
       ? "Średnia oczekiwanych goli na mecz"
@@ -334,17 +335,22 @@ export function projectionsUi(lang: StatsLabLang) {
       season: string;
       gwRangeLabel: string;
     }) => {
-      const sync =
-        args.syncedAt &&
-        args.syncedAt.trim() !== "" &&
-        args.syncedAt !== "—"
+      const raw = args.syncedAt?.trim() ?? "";
+      const stamp = raw && raw !== "—" ? raw.replace(/:\d{2}(\s|$)/, "$1").trim() : "";
+      const sync = stamp
+        ? isPl
+          ? ` · Zaktualizowano ${stamp}`
+          : ` · Updated ${stamp}`
+        : "";
+      const season =
+        args.season && args.season !== "—"
           ? isPl
-            ? ` · Aktualizacja: ${args.syncedAt}`
-            : ` · Updated: ${args.syncedAt}`
+            ? `Sezon: ${args.season} · `
+            : `Season: ${args.season} · `
           : "";
       return isPl
-        ? `Sezon: ${args.season} · Zakres: ${args.gwRangeLabel}${sync} · Opis wyliczeń w Bazie Wiedzy`
-        : `Season: ${args.season} · Range: ${args.gwRangeLabel}${sync} · Methodology in Knowledge Base`;
+        ? `${season}Zakres: ${args.gwRangeLabel}${sync} · Opis wyliczeń w Bazie Wiedzy`
+        : `${season}Range: ${args.gwRangeLabel}${sync} · Methodology in Knowledge Base`;
     },
     brandFooter: isPl
       ? "fpl-arena.com · Dane: FPL · Predykcje: FPL Arena"
@@ -371,7 +377,7 @@ export function projectionsUi(lang: StatsLabLang) {
     matchupNext: isPl ? "Następna GW ▶" : "Next GW ▶",
     projectedGoalsLabel: isPl ? "OCZEKIWANE GOLE (xG)" : "PROJECTED GOALS",
     topExactScores: isPl ? "TOP 3 DOKŁADNE WYNIKI" : "TOP 3 EXACT SCORES",
-    csPctLabel: isPl ? "Czyste Konto % (CS%)" : "Clean Sheet %",
+    csPctLabel: isPl ? "Szansa na czyste konto (%)" : "Clean sheet chance (%)",
     twoPlusLabel: isPl ? "Szansa na 2+ Gole %" : "2+ Goals Odds %",
     drawLabel: isPl ? "Remis" : "Draw",
     posterColGoals: (gw: number) =>

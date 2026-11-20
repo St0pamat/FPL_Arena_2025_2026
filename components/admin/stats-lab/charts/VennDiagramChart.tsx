@@ -336,7 +336,7 @@ export function VennDiagramChart({
       ) : null}
 
       <p className="mb-2 text-sm font-semibold" style={{ color: theme.muted }} data-venn-legend="true">
-        {copy.vennLegend}
+        {phrases.join(" · ")}
       </p>
 
       <div className={`relative w-full ${listLayout ? "mx-auto max-w-[220px]" : ""}`}>
@@ -346,7 +346,7 @@ export function VennDiagramChart({
             listLayout
               ? "max-h-40"
               : variant === "export"
-                ? "min-h-[720px]"
+                ? "h-[680px] max-h-[680px]"
                 : "min-h-[520px]"
           }`}
           role="img"

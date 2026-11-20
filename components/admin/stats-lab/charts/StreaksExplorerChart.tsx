@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   ArrowDown,
   Award,
@@ -375,6 +376,8 @@ export function StreaksExplorerChart({
   const sorted = [...players].sort((a, b) =>
     comparePlayersByStreak(a, b, sortKey, sortDir),
   );
+  const [showAllStreaks, setShowAllStreaks] = useState(false);
+  const streakRows = showAllStreaks ? sorted : sorted.slice(0, 10);
 
   const maxima = Object.fromEntries(
     displayKeys.map((k) => [
@@ -555,6 +558,57 @@ export function StreaksExplorerChart({
         </>
       )}
 
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[640px] border-collapse text-left text-[13px]">
+          <thead>
+            <tr className={tokens.textMuted}>
+              <th className="px-2 py-2 font-bold">#</th>
+              <th className="px-2 py-2 font-bold">{lang === "pl" ? "Gracz" : "Player"}</th>
+              <th className="px-2 py-2 font-bold">{lang === "pl" ? "Najdłuższa seria" : "Longest streak"}</th>
+              <th className="px-2 py-2 font-bold">GW</th>
+            </tr>
+          </thead>
+          <tbody>
+            {streakRows.map((p, rank) => {
+              const longest = Number(p.streaks.maxReturnStreak ?? 0);
+              const dots = timelineDotsForKey(p.streaks, sortKey);
+              return (
+                <tr key={p.fpl_element_id} className="border-t" style={{ borderColor: theme.border }}>
+                  <td className="px-2 py-2 tabular-nums">{rank + 1}</td>
+                  <td className="px-2 py-2 font-bold">{p.web_name}</td>
+                  <td className="px-2 py-2 tabular-nums">{longest}</td>
+                  <td className="px-2 py-2">
+                    <span className="inline-flex flex-wrap gap-1">
+                      {dots.map((dot, i) => (
+                        <span key={i} aria-hidden="true">
+                          {dot === "HIT" ? "✓" : "–"}
+                        </span>
+                      ))}
+                    </span>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      {sorted.length > 10 ? (
+        <button
+          type="button"
+          className="min-h-11 rounded-xl px-3 text-sm font-bold"
+          style={{ color: theme.text }}
+          onClick={() => setShowAllStreaks((v) => !v)}
+        >
+          {showAllStreaks
+            ? lang === "pl"
+              ? "Pokaż mniej"
+              : "Show less"
+            : lang === "pl"
+              ? "Pokaż więcej"
+              : "Show more"}
+        </button>
+      ) : null}
+      {showAllStreaks ? (
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {sorted.map((p, rank) => {
           const isSpot = spotlightId === p.fpl_element_id;
@@ -826,6 +880,7 @@ export function StreaksExplorerChart({
           );
         })}
       </div>
+      ) : null}
     </div>
   );
 }

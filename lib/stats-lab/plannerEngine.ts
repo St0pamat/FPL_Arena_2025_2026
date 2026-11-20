@@ -1884,23 +1884,32 @@ export function pickDemoSquadPlayers(players: FplLabPlayer[]): FplLabPlayer[] {
     }
   }
 
-  if (picked.length < 15) {
+  for (const quota of quotas) {
+    const have = picked.filter((player) => player.element_type === quota.type).length;
+    let need = quota.count - have;
+    if (need <= 0) continue;
     const fillers = players
       .filter(
         (player) =>
+          player.element_type === quota.type &&
+          String(player.status ?? "a").toLowerCase() === "a" &&
           !picked.some((chosen) => chosen.fpl_element_id === player.fpl_element_id),
       )
       .slice()
       .sort((a, b) => demoPlayerPrice(a) - demoPlayerPrice(b));
     for (const player of fillers) {
-      if (picked.length >= 15) break;
+      if (need <= 0 || picked.length >= 15) break;
       const clubCount = usedClubs.get(player.fpl_team_id) ?? 0;
       if (clubCount >= CLUB_LIMIT) continue;
       const price = demoPlayerPrice(player);
-      if (spent + price > DEMO_BUDGET_TENTHS) continue;
+      const slotsAfter = 15 - picked.length - 1;
+      if (spent + price + slotsAfter * DEMO_MIN_PRICE_TENTHS > DEMO_BUDGET_TENTHS) {
+        continue;
+      }
       picked.push(player);
       spent += price;
       usedClubs.set(player.fpl_team_id, clubCount + 1);
+      need -= 1;
     }
   }
 

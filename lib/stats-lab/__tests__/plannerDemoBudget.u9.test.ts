@@ -92,4 +92,47 @@ describe("U9 skład demo", () => {
     expect(entry.bankTenths).toBeGreaterThanOrEqual(0);
     expect(entry.squadMarketValueTenths).toBeLessThanOrEqual(1000);
   });
+
+  it("uzupełnienie budżetu zostaje w limicie pozycji i tylko wśród dostępnych", () => {
+    const rows: FplLabPlayer[] = [];
+    const push = (
+      type: FplPositionType,
+      count: number,
+      cost: number,
+      points: number,
+      status = "a",
+      teamBase = 1,
+    ) => {
+      for (let i = 0; i < count; i += 1) {
+        rows.push({
+          ...player({
+            id: rows.length + 1,
+            type,
+            team: teamBase + i,
+            cost,
+            points,
+          }),
+          status,
+        } as FplLabPlayer);
+      }
+    };
+    push(1, 2, 90, 200, "a", 1);
+    push(2, 5, 90, 200, "a", 1);
+    push(3, 5, 90, 200, "a", 1);
+    push(4, 3, 90, 200, "a", 1);
+    push(1, 2, 40, 1, "a", 40);
+    push(2, 5, 40, 1, "a", 40);
+    push(3, 5, 40, 1, "a", 40);
+    push(4, 3, 40, 1, "a", 40);
+    push(1, 4, 40, 50, "u", 80);
+    const picked = pickDemoSquadPlayers(rows);
+    const count = (type: FplPositionType) =>
+      picked.filter((row) => row.element_type === type).length;
+    expect(picked).toHaveLength(15);
+    expect(count(1)).toBe(2);
+    expect(count(2)).toBe(5);
+    expect(count(3)).toBe(5);
+    expect(count(4)).toBe(3);
+    expect(picked.every((row) => row.status === "a")).toBe(true);
+  });
 });

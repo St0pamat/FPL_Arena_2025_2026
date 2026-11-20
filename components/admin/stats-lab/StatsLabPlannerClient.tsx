@@ -268,6 +268,7 @@ export function StatsLabPlannerClient({
   const [isExporting, setIsExporting] = useState(false);
   const [flash, setFlash] = useState<string | null>(null);
   const [marketInfoId, setMarketInfoId] = useState<number | null>(null);
+  const [chipNotice, setChipNotice] = useState<string | null>(null);
 
   const entry = payload?.entryState ?? null;
 
@@ -759,6 +760,7 @@ export function StatsLabPlannerClient({
   }
 
   function onToggleChip(chip: PlannerChipType) {
+    const turningOn = activeGwState?.activeChip !== chip;
     pushUndoAndUpdate((draft) => {
       const dec = ensureDecision(draft.decisionsByGw, currentGw);
       draft.decisionsByGw[currentGw] = {
@@ -767,6 +769,15 @@ export function StatsLabPlannerClient({
       };
       return draft;
     });
+    if (turningOn) {
+      const label = pt(lang, PLANNER_CHIP_LABEL_KEY[chip]);
+      setChipNotice(
+        `${pt(lang, "planner.chip.undoBar", { chip: label, gw: currentGw })} · ${pt(lang, "chip.undo")}`,
+      );
+      window.setTimeout(() => setChipNotice(null), 5000);
+    } else {
+      setChipNotice(null);
+    }
   }
 
   function onOptimiseXi() {
@@ -895,7 +906,19 @@ export function StatsLabPlannerClient({
       const url = await toJpeg(node, opts);
       const base = `fpl-arena-planner-gw${currentGw}-variant-${activeVariant}-${themeId.toLowerCase()}`;
       downloadDataUrl(url, `${base}.jpg`);
-      const report = buildPlannerAiAuditReport({
+      setFlash("OK");
+    } catch (e) {
+      setLoadError(e instanceof Error ? e.message : "Export failed");
+    } finally {
+      setIsExporting(false);
+    }
+  }
+
+  function exportAuditJson() {
+    const node = exportRef.current;
+    if (!node || !entry || !activeGwState || !payload) return;
+    const base = `fpl-arena-planner-gw${currentGw}-variant-${activeVariant}-${themeId.toLowerCase()}`;
+    const report = buildPlannerAiAuditReport({
         lang,
         themeId,
         seasonCode,
@@ -927,13 +950,7 @@ export function StatsLabPlannerClient({
           })),
         },
       });
-      downloadJsonFile(`${base}-audit.json`, report);
-      setFlash("OK");
-    } catch (e) {
-      setLoadError(e instanceof Error ? e.message : "Export failed");
-    } finally {
-      setIsExporting(false);
-    }
+    downloadJsonFile(`${base}-audit.json`, report);
   }
 
   const removedElementIdsInGw = useMemo(() => {
@@ -943,15 +960,24 @@ export function StatsLabPlannerClient({
 
   if (!payload || !entry) {
     return (
-      <div className={`rounded-2xl border p-6 ${chrome.panel}`}>
+      <div className={`space-y-3 rounded-2xl border p-6 ${chrome.panel}`} role="status">
         <p className={`text-sm font-bold ${chrome.text}`}>
           {isLoadingTeam || pending
             ? lang === "pl"
-              ? "Ładowanie Planera FPL…"
-              : "Loading FPL Planner…"
+              ? "Ładuję dane…"
+              : "Loading data…"
             : loadError ??
               (lang === "pl" ? "Brak danych." : "No data.")}
         </p>
+        {isLoadingTeam || pending
+          ? [0, 1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className="h-10 animate-pulse rounded-xl bg-slate-500/20"
+                style={{ width: `${92 - i * 8}%` }}
+              />
+            ))
+          : null}
       </div>
     );
   }
@@ -985,18 +1011,44 @@ export function StatsLabPlannerClient({
             {label}
           </button>
         ))}
+        {layoutMode === "pitch_poster" ? (
+          <button
+            type="button"
+            onClick={() => setLayoutMode("pitch_market")}
+            className={`min-h-11 rounded-xl px-3 py-1.5 text-[10px] font-black uppercase ${chrome.inactiveBtn}`}
+          >
+            {lang === "pl" ? "Wróć do edycji" : "Back to edit"}
+          </button>
+        ) : null}
         <button
           type="button"
           disabled={isExporting}
           onClick={() => startTransition(() => void exportPair())}
-          className={`rounded-xl px-3 py-1.5 text-[10px] font-black uppercase disabled:opacity-50 ${chrome.exportPrimary}`}
+          className={`min-h-11 rounded-xl px-3 py-1.5 text-[10px] font-black uppercase disabled:opacity-50 ${chrome.exportPrimary}`}
         >
-          {isExporting
-            ? "…"
-            : lang === "pl"
-              ? "📸 Pobierz Plakat (.jpg) + Audyt (.json)"
-              : "📸 Download Poster (.jpg) + Audit (.json)"}
+          {isExporting ? "…" : pt(lang, "planner.export.poster")}
         </button>
+        <details className="relative">
+          <summary
+            className={`min-h-11 cursor-pointer list-none rounded-xl px-3 py-1.5 text-[10px] font-black uppercase ${chrome.inactiveBtn}`}
+          >
+            {pt(lang, "planner.export.more")} ▾
+          </summary>
+          <div className={`absolute right-0 z-20 mt-1 min-w-52 rounded-xl border p-2 ${chrome.panel}`}>
+            <button
+              type="button"
+              onClick={() => exportAuditJson()}
+              className={`min-h-11 w-full rounded-lg px-3 text-left text-[11px] font-bold ${chrome.inactiveBtn}`}
+            >
+              {pt(lang, "planner.export.techJson")}
+            </button>
+          </div>
+        </details>
+        {pending ? (
+          <span className={`text-[11px] font-bold ${chrome.mutedLabel}`}>
+            {pt(lang, "planner.recalculating")}
+          </span>
+        ) : null}
         {flash === "OK" ? (
           <span className="text-[10px] font-black text-emerald-400">OK</span>
         ) : null}
@@ -1014,6 +1066,29 @@ export function StatsLabPlannerClient({
         </div>
       ) : null}
 
+      {chipNotice ? (
+        <div
+          className={`flex flex-wrap items-center justify-between gap-2 rounded-xl border px-3 py-2 text-sm font-semibold ${
+            isLight
+              ? "border-emerald-400 bg-emerald-50 text-emerald-950"
+              : "border-emerald-400/40 bg-emerald-500/15 text-emerald-100"
+          }`}
+        >
+          <span>{chipNotice}</span>
+          <button
+            type="button"
+            className={`min-h-11 rounded-lg px-3 text-xs font-black uppercase ${chrome.inactiveBtn}`}
+            onClick={() => {
+              onUndo();
+              setChipNotice(null);
+            }}
+          >
+            {pt(lang, "chip.undo")}
+          </button>
+        </div>
+      ) : null}
+
+      {layoutMode === "pitch_poster" ? null : (
       <PlannerHeaderAndControls
         themeId={themeId}
         lang={lang}
@@ -1105,6 +1180,7 @@ export function StatsLabPlannerClient({
         validationWarnings={activeGwState?.warnings}
         evaluatedGw={activeGwState}
       />
+      )}
 
 
       {/* Pitch+Market workspace: market lives OUTSIDE exportRef for symmetric posters */}

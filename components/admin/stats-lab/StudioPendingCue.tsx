@@ -19,21 +19,31 @@ export function StudioPendingCue({
   lang: StatsLabLang;
   isLight: boolean;
 }) {
-  if (!pending || !hasResult) return null;
+  if (!pending) return null;
+  const label = hasResult
+    ? t(lang).recalculating
+    : lang === "pl"
+      ? "Ładuję dane…"
+      : "Loading data…";
   return (
     <div
-      className="pointer-events-none absolute right-3 top-3 z-30"
+      className="absolute inset-0 z-30 flex flex-col justify-center gap-3 px-6"
       data-testid="studio-pending-cue"
+      role="status"
+      aria-label={label}
     >
-      <span
-        role="status"
-        aria-label={t(lang).recalculating}
-        className={`inline-flex h-6 w-6 items-center justify-center rounded-full ${
-          isLight ? "bg-emerald-700/80 text-white" : "bg-slate-950/80 text-emerald-300"
-        }`}
-      >
-        <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
-      </span>
+      <div className={`absolute inset-0 ${isLight ? "bg-white/80" : "bg-slate-950/75"}`} />
+      <p className={`relative text-sm font-bold ${isLight ? "text-slate-900" : "text-slate-100"}`}>
+        <Loader2 className="mr-2 inline h-4 w-4 animate-spin" aria-hidden="true" />
+        {label}
+      </p>
+      {[0, 1, 2, 3].map((i) => (
+        <div
+          key={i}
+          className={`relative h-8 animate-pulse rounded-xl ${isLight ? "bg-slate-200" : "bg-slate-800"}`}
+          style={{ width: `${88 - i * 8}%` }}
+        />
+      ))}
     </div>
   );
 }

@@ -331,10 +331,10 @@ export const FPL_STAT_DEFINITIONS: readonly FplStatDefinition[] = [
   {
     key: "total_points",
     labelPl: "Punkty FPL",
-    shortLabelPl: "TP",
+    shortLabelPl: "PKT",
     descriptionPl: "Suma punktów Fantasy Premier League w badanym okresie.",
     labelEn: "FPL Points",
-    shortLabelEn: "TP",
+    shortLabelEn: "PTS",
     descriptionEn: "Fantasy Premier League points in the selected period.",
     category: "OVERVIEW",
     supportsPer90: true,

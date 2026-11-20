@@ -205,7 +205,7 @@ function PlayerPortrait({
   const [broken, setBroken] = useState(false);
   const initials = initialsFromName(row.web_name);
   return (
-    <span className="relative inline-flex h-[52px] w-[52px] shrink-0">
+    <span className="relative inline-flex h-[52px] w-[52px] shrink-0 max-[420px]:h-7 max-[420px]:w-7">
       {row.player_code && !broken ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
@@ -215,7 +215,7 @@ function PlayerPortrait({
           height={52}
           crossOrigin="anonymous"
           onError={() => setBroken(true)}
-          className={`h-[52px] w-[52px] shrink-0 rounded-full border object-cover object-top ${
+          className={`h-[52px] w-[52px] shrink-0 rounded-full border object-cover object-top max-[420px]:h-7 max-[420px]:w-7 ${
             isLight ? "border-slate-300 bg-slate-200" : "border-slate-700/80 bg-slate-800"
           }`}
         />
@@ -747,8 +747,6 @@ export function StatsCentreView({
     try {
       const base = buildExportBaseName();
       await withFitExportWidth(node, async () => {
-        const url = await captureCentreJpegDataUrl(node, surface.canvasBg);
-        downloadDataUrl(url, `${base}.jpg`);
         const report = buildAuditReport();
         if (report) downloadJsonFile(`${base}.json`, report);
       });
@@ -1004,7 +1002,7 @@ export function StatsCentreView({
                 {ui.allPositions}
               </option>
               <option value={1} className={chrome.option}>
-                GK
+                {lang === "pl" ? "BR" : "GK"}
               </option>
               <option value={2} className={chrome.option}>
                 DEF
@@ -1062,20 +1060,37 @@ export function StatsCentreView({
                 onClick={() =>
                   patchFilter({
                     per90: true,
-                    minMinutes: Math.max(filter.minMinutes, 90),
+                    minMinutes:
+                      filter.centreMode === "TEAMS"
+                        ? filter.minMinutes
+                        : Math.max(filter.minMinutes, 90),
                   })
                 }
-                className={`rounded-md px-2.5 py-1.5 text-[10px] uppercase ${
+                className={`min-h-11 rounded-md px-2.5 py-1.5 text-[10px] uppercase ${
                   filter.per90 ? chrome.activeBtn : chrome.inactiveBtn
                 }`}
               >
-                {ui.per90}
+                {filter.centreMode === "TEAMS" ? ui.perMatch : ui.per90}
               </button>
             </div>
           ) : (
-            <span className={`rounded-md px-2.5 py-1.5 text-[10px] uppercase ${chrome.inactiveBtn}`}>
-              {ui.singleMatches}
-            </span>
+            <div className={`inline-flex rounded-lg p-0.5 ${chrome.group}`}>
+              <button
+                type="button"
+                className={`min-h-11 rounded-md px-2.5 py-1.5 text-[10px] uppercase ${chrome.activeBtn}`}
+              >
+                {lang === "pl" ? "Każdy mecz" : "Each match"}
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  patchFilter({ centreMode: "PLAYERS", per90: false })
+                }
+                className={`min-h-11 rounded-md px-2.5 py-1.5 text-[10px] uppercase ${chrome.inactiveBtn}`}
+              >
+                {ui.totals}
+              </button>
+            </div>
           )}
 
           <div className="relative min-w-[180px] flex-1">
@@ -1083,7 +1098,9 @@ export function StatsCentreView({
             <input
               value={filter.search}
               onChange={(e) => patchFilter({ search: e.target.value })}
-              placeholder={ui.search}
+              placeholder={
+                filter.centreMode === "TEAMS" ? ui.searchClubs : ui.search
+              }
               className={`w-full rounded-lg py-1.5 pl-8 pr-2 text-xs ${chrome.input}`}
             />
           </div>
@@ -1183,33 +1200,40 @@ export function StatsCentreView({
         <button
           type="button"
           disabled={exportBusy || !pageRows.length}
-          onClick={() => void exportPair()}
-          className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-[10px] ${chrome.exportPrimary}`}
+          onClick={() => void exportJpgOnly("download")}
+          className={`inline-flex min-h-11 items-center gap-1.5 rounded-xl px-3 py-2 text-[10px] ${chrome.exportPrimary}`}
         >
           {exportBusy ? (
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
           ) : (
             <Download className="h-3.5 w-3.5" />
           )}
-          {ui.downloadPair}
-        </button>
-        <button
-          type="button"
-          disabled={exportBusy || !pageRows.length}
-          onClick={() => void exportJpgOnly("download")}
-          className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-[10px] ${chrome.exportSecondary}`}
-        >
           {ui.downloadJpg}
         </button>
         <button
           type="button"
           disabled={exportBusy || !pageRows.length}
           onClick={() => void exportJpgOnly("copy")}
-          className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-[10px] ${chrome.exportSecondary}`}
+          className={`inline-flex min-h-11 items-center gap-1.5 rounded-xl px-3 py-2 text-[10px] ${chrome.exportSecondary}`}
         >
           <ClipboardCopy className="h-3.5 w-3.5" />
           {ui.copyJpg}
         </button>
+        <details className="relative">
+          <summary
+            className={`min-h-11 cursor-pointer list-none rounded-xl px-3 py-2 text-[10px] font-bold ${chrome.inactiveBtn}`}
+          >
+            {lang === "pl" ? "Więcej" : "More"} ▾
+          </summary>
+          <button
+            type="button"
+            disabled={exportBusy || !pageRows.length}
+            onClick={() => void exportPair()}
+            className={`mt-1 min-h-11 rounded-xl px-3 py-2 text-[10px] ${chrome.inactiveBtn}`}
+          >
+            {ui.downloadPair}
+          </button>
+        </details>
         {pending ? (
           <span className="inline-flex items-center gap-1 text-[10px] text-slate-500">
             <Loader2 className="h-3 w-3 animate-spin" /> …
@@ -1281,8 +1305,19 @@ export function StatsCentreView({
           </div>
         </div>
 
+        {filter.per90 && filter.centreMode === "PLAYERS" ? (
+          <p className={`px-4 pt-3 text-xs font-semibold ${surface.textClass}`}>
+            {ui.per90Badge
+              .replace("{min}", String(filter.minMinutes))
+              .replace("{shown}", String(result?.totalRows ?? 0))
+              .replace("{total}", String(bootstrap.players.length))}
+          </p>
+        ) : null}
+        <p className={`px-4 pt-2 text-xs font-bold ${surface.mutedClass}`}>
+          {lang === "pl" ? "→ przewiń" : "→ scroll"}
+        </p>
         <div
-          className="overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+          className="overflow-x-auto pb-1 shadow-[inset_-12px_0_12px_-12px_rgba(0,0,0,0.35)]"
           data-centre-table-wrap
         >
           {error ? (
@@ -1489,7 +1524,7 @@ export function StatsCentreView({
                                 {row.web_name}
                               </span>
                               <span
-                                className={`mt-0.5 whitespace-nowrap text-[11px] font-semibold uppercase tracking-wider leading-tight opacity-75 ${surface.mutedClass}`}
+                                className={`mt-0.5 whitespace-nowrap text-[11px] font-semibold uppercase tracking-wider leading-tight opacity-75 max-[420px]:hidden ${surface.mutedClass}`}
                               >
                                 {row.club_short}
                                 {row.position_label !== "TEAM"

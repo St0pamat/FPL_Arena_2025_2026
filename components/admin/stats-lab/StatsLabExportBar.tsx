@@ -482,7 +482,7 @@ export function StatsLabExportBar({
           ) : (
             <Download className="h-3.5 w-3.5" />
           )}
-          {lang === "pl" ? "Pobierz PNG (HD)" : "Download PNG ↓"}
+          {lang === "pl" ? "Pobierz obraz (PNG)" : "Download image (PNG)"}
         </button>
 
         <button
@@ -498,9 +498,14 @@ export function StatsLabExportBar({
           ) : (
             <ClipboardCopy className="h-3.5 w-3.5" />
           )}
-          {lang === "pl" ? "Kopiuj grafikę do schowka" : "Copy PNG 📋"}
+          {lang === "pl" ? "Kopiuj obraz" : "Copy image"}
         </button>
 
+        <details className="relative">
+          <summary className={`${btnNeutral} cursor-pointer list-none`}>
+            {lang === "pl" ? "Udostępnij" : "Share"} ▾
+          </summary>
+          <div className="absolute z-20 mt-1 flex min-w-52 flex-col gap-1">
         <button
           type="button"
           disabled={busy != null}
@@ -528,7 +533,14 @@ export function StatsLabExportBar({
           <Send className="h-3.5 w-3.5" />
           {lang === "pl" ? "Wyślij na Discord" : "Send to Discord"}
         </button>
+          </div>
+        </details>
 
+        <details className="relative">
+          <summary className={`${btnNeutral} cursor-pointer list-none`}>
+            {lang === "pl" ? "Więcej" : "More"} ▾
+          </summary>
+          <div className="absolute z-20 mt-1 flex min-w-52 flex-col gap-1">
         <button
           type="button"
           disabled={disabled}
@@ -545,9 +557,7 @@ export function StatsLabExportBar({
           ) : (
             <FileJson className="h-3.5 w-3.5" />
           )}
-          {lang === "pl"
-            ? "🔍 Pobierz Audyt AI (.json)"
-            : "🔍 Download AI Audit JSON"}
+          {lang === "pl" ? "Dane techniczne (.json)" : "Technical data (.json)"}
         </button>
 
         <button
@@ -561,8 +571,10 @@ export function StatsLabExportBar({
           ) : (
             <ClipboardCopy className="h-3.5 w-3.5" />
           )}
-          {lang === "pl" ? "📋 Kopiuj JSON dla AI" : "📋 Copy AI Audit"}
+          {lang === "pl" ? "Kopiuj dane techniczne" : "Copy technical data"}
         </button>
+          </div>
+        </details>
       </div>
 
       {discordOpen ? (

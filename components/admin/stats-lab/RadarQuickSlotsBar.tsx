@@ -336,8 +336,8 @@ export function RadarQuickSlotsBar({
           className={`text-[10px] font-black uppercase tracking-wider ${chrome.title}`}
         >
           {lang === "pl"
-            ? "Szybkie sloty radaru (max 4) — poza eksportem PNG"
-            : "Radar quick slots (max 4) — outside PNG export"}
+            ? "Porównaj do 4 graczy (nie trafia do PNG)"
+            : "Compare up to 4 players (not in PNG)"}
         </p>
         <button
           type="button"

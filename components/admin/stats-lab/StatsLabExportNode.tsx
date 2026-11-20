@@ -93,7 +93,9 @@ export function StatsLabExportNode({
         style={{
           width: frameWidth,
           minWidth: frameWidth,
-          minHeight: vennFrame ? 1080 : undefined,
+          height: vennFrame ? 1080 : undefined,
+          maxHeight: vennFrame ? 1080 : undefined,
+          overflow: vennFrame ? "hidden" : undefined,
           background: STATS_LAB_EXPORT_BG,
           color: "#F8FAFC",
           padding: 0,

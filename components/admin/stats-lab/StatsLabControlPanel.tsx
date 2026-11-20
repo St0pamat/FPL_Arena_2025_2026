@@ -28,7 +28,6 @@ import {
   STREAK_METRIC_KEYS,
   categoryLabel,
   statLabel,
-  statShort,
   t,
   vennConditionPhrase,
 } from "@/lib/stats-lab/i18n";
@@ -529,7 +528,7 @@ export function StatsLabControlPanel({
                     >
                       {FPL_STAT_DEFINITIONS.map((def) => (
                         <option key={def.key} value={def.key} className={chrome.option}>
-                          {`(${statShort(def.key, lang)}) ${statLabel(def.key, lang)}`}
+                          {statLabel(def.key, lang)}
                         </option>
                       ))}
                     </select>
@@ -578,7 +577,7 @@ export function StatsLabControlPanel({
               >
                 {FPL_STAT_DEFINITIONS.map((d) => (
                   <option key={d.key} value={d.key} className={chrome.option}>
-                    {`(${statShort(d.key, lang)}) ${statLabel(d.key, lang)}`}
+                    {statLabel(d.key, lang)}
                   </option>
                 ))}
               </select>
@@ -594,7 +593,7 @@ export function StatsLabControlPanel({
               >
                 {FPL_STAT_DEFINITIONS.map((d) => (
                   <option key={d.key} value={d.key} className={chrome.option}>
-                    {`(${statShort(d.key, lang)}) ${statLabel(d.key, lang)}`}
+                    {statLabel(d.key, lang)}
                   </option>
                 ))}
               </select>
@@ -1040,7 +1039,7 @@ export function StatsLabControlPanel({
                 >
                   {FPL_STAT_DEFINITIONS.map((d) => (
                     <option key={d.key} value={d.key} className={chrome.option}>
-                      {`(${statShort(d.key, lang)}) ${statLabel(d.key, lang)}`}
+                      {statLabel(d.key, lang)}
                     </option>
                   ))}
                 </select>
