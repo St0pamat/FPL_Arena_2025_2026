@@ -30,7 +30,15 @@ import {
   statLabel,
   statShort,
   t,
+  vennConditionPhrase,
 } from "@/lib/stats-lab/i18n";
+import {
+  VENN_PRESETS,
+  applyVennPresetToFilter,
+  cloneVennConditions,
+  type VennCondition,
+  type VennPresetId,
+} from "@/lib/stats-lab/vennEngine";
 import type {
   StatsLabChartThemeId,
   StatsLabVizMode,
@@ -62,6 +70,8 @@ export type StudioUiState = {
   axisX: FplStatKey;
   axisY: FplStatKey;
   sortByComposite: boolean;
+  vennPresetId: VennPresetId | "CUSTOM";
+  vennConditions: [VennCondition, VennCondition, VennCondition];
 };
 
 type Props = {
@@ -453,6 +463,108 @@ export function StatsLabControlPanel({
               </div>
             ))}
           </div>
+        ) : ui.vizMode === "VENN_3" ? (
+          <div className="space-y-3" data-venn-controls="true">
+            <p className={`text-[11px] leading-snug ${chrome.mutedLabel}`}>
+              {copy.vennTotalsNote}
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {VENN_PRESETS.map((preset) => {
+                const label = lang === "en" ? preset.labelEn : preset.labelPl;
+                const description =
+                  lang === "en" ? preset.descriptionEn : preset.descriptionPl;
+                const active = ui.vennPresetId === preset.id;
+                return (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    title={description}
+                    aria-label={label}
+                    onClick={() => {
+                      onUiChange({
+                        vennPresetId: preset.id,
+                        vennConditions: cloneVennConditions(preset.conditions),
+                      });
+                      onFilterChange(applyVennPresetToFilter(filter, preset.id));
+                    }}
+                    className={`min-h-11 rounded-lg px-2.5 py-2 text-[10px] font-black uppercase tracking-wide ${
+                      active ? chrome.activeBtn : chrome.inactiveBtn
+                    }`}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+            {ui.vennConditions.map((condition, index) => {
+              const phrase = vennConditionPhrase(
+                condition.metric,
+                condition.threshold,
+                lang,
+              );
+              return (
+                <div key={condition.id} className="space-y-1.5">
+                  <p className={`text-[10px] font-bold uppercase ${chrome.mutedLabel}`}>
+                    {condition.id} · {phrase}
+                  </p>
+                  <label className="block text-[10px] font-bold uppercase">
+                    <span className={chrome.mutedLabel}>
+                      {copy.metricsCount}
+                    </span>
+                    <select
+                      className={`mt-1 min-h-11 w-full rounded-lg px-2 py-2 text-sm ${chrome.input}`}
+                      aria-label={phrase}
+                      value={condition.metric}
+                      onChange={(event) => {
+                        const next = cloneVennConditions(ui.vennConditions);
+                        next[index] = {
+                          ...next[index],
+                          metric: event.target.value as FplStatKey,
+                        };
+                        onUiChange({
+                          vennPresetId: "CUSTOM",
+                          vennConditions: next,
+                        });
+                      }}
+                    >
+                      {FPL_STAT_DEFINITIONS.map((def) => (
+                        <option key={def.key} value={def.key} className={chrome.option}>
+                          {`(${statShort(def.key, lang)}) ${statLabel(def.key, lang)}`}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="block text-[10px] font-bold uppercase">
+                    <span className={chrome.mutedLabel}>{copy.vennThreshold}</span>
+                    <input
+                      type="number"
+                      min={0}
+                      step={0.5}
+                      value={Number.isFinite(condition.threshold) ? condition.threshold : 0}
+                      aria-label={`${phrase}. ${copy.vennThreshold}`}
+                      onChange={(event) => {
+                        const next = cloneVennConditions(ui.vennConditions);
+                        next[index] = {
+                          ...next[index],
+                          threshold: Number(event.target.value),
+                        };
+                        onUiChange({
+                          vennPresetId: "CUSTOM",
+                          vennConditions: next,
+                        });
+                      }}
+                      className={`mt-1 min-h-11 w-full rounded-lg px-2 py-2 text-sm ${chrome.input}`}
+                    />
+                  </label>
+                </div>
+              );
+            })}
+            {ui.vennPresetId === "CUSTOM" ? (
+              <p className={`text-[10px] font-bold uppercase ${chrome.mutedLabel}`}>
+                {copy.vennCustom}
+              </p>
+            ) : null}
+          </div>
         ) : ui.vizMode === "SCATTER_2D" ? (
           <div className="space-y-2">
             <label className={`block text-[10px] font-bold uppercase ${chrome.mutedLabel}`}>
@@ -785,7 +897,7 @@ export function StatsLabControlPanel({
               ) : null}
             </div>
 
-            {/* Top N quick selector */}
+            {ui.vizMode === "VENN_3" ? null : (
             <div>
               <p className="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">
                 {copy.showTop}
@@ -809,6 +921,7 @@ export function StatsLabControlPanel({
                 ))}
               </div>
             </div>
+            )}
 
             <div>
               <label className={`block text-[10px] font-bold uppercase ${chrome.mutedLabel}`}>

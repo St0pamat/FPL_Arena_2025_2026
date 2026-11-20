@@ -14,32 +14,22 @@ Powiązane: [`01-ARCHITEKTURA-I-BAZA-DANYCH.md`](./01-ARCHITEKTURA-I-BAZA-DANYCH
 
 | # | Moduł | Zakres | Status |
 |---|--------|--------|--------|
-| 1 | `CHART_STUDIO` | 6/6 wykresów (Stacked, Points, Streaks, Radar/Pizza, Scatter 2D, Heatmap) | ✅ **UKOŃCZONY I ZAMROŻONY (PASS AAA)** |
-| 2 | `STATS_CENTRE` | 13/13 widoków (Players 8 + Per GW + Teams 4) | ✅ **UKOŃCZONY I ZAMROŻONY (PASS AAA)** |
-| 3 | `PROJECTIONS_CENTRE` | 4/4 widoki (FDR · Goals · CS% · Matchup Cards) | ✅ **UKOŃCZONY I ZAMROŻONY (PASS AAA)** |
-| 4 | `FPL_PLANNER` | Interaktywny Planer Drużyny i Transferów (wzorowany na `fpl.team/plan/`) | 🎯 **AKTYWNY CEL W NOWYM OKNIE** |
+| 1 | `CHART_STUDIO` | 7 wykresów (Stacked, Points, Streaks, Radar/Pizza, Scatter 2D, Heatmap, Diagram Venna) | ✅ **AKTYWNY** — stan po U8: [`stats-lab/stan-po-u8.md`](./stats-lab/stan-po-u8.md) |
+| 2 | `STATS_CENTRE` | 13 widoków (Players 8 + Per GW + Teams 4) | ✅ **AKTYWNY** |
+| 3 | `PROJECTIONS_CENTRE` | 4 widoki (FDR · Goals · CS% · Matchup Cards) | ✅ **AKTYWNY** |
+| 4 | `FPL_PLANNER` | Interaktywny Planer Drużyny i Transferów | ✅ **AKTYWNY** (karta U6, panel admina U6b) |
 | 5 | `PLAYER_PROJECTIONS` | Predykcje punktowe zawodników (`xMins`, `xPts`) | ⏭️ **KOLEJNY W KOLEJCE** |
 
 ---
 
-## Zero-Regression
+## Zakres bez zmian
 
-Właściciel odmroził cały Stats Lab (Centre, Studio, Predykcje, Planer) poza „Baza i Synchronizacja FPL”.
+Właściciel odmroził cały Stats Lab (Centre, Studio, Predykcje, Planer). Bez zmian zostaje tylko „Baza i Synchronizacja FPL” (`/admin/stats-lab/sync`).
 
-Poniższa lista opisuje dawny zakres zamrożenia. Dziś bez zmian zostaje tylko „Baza i Synchronizacja FPL” (`/admin/stats-lab/sync`).
-
-| Moduł | Pliki / katalogi |
-|-------|------------------|
-| Chart Studio | `components/admin/stats-lab/charts/*`, `RadarQuickSlotsBar.tsx`, `StatsLabChartCanvas.tsx`, `StatsLabStudioClient.tsx`, `StatsLabControlPanel.tsx`, `lib/stats-lab/analyticsEngine.ts` |
-| Stats Centre | `StatsCentreView.tsx`, `lib/stats-lab/statsCentreEngine.ts`, `statsCentreI18n.ts` |
-| Projections | `StatsLabProjectionsClient.tsx`, `lib/stats-lab/projectionsEngine.ts`, `projectionsI18n.ts` |
-
-Wspólna infrastruktura shella (Keep-Alive, Baza Wiedzy, Turbo-Cache, audit DOM) jest opisana w [`01-ARCHITEKTURA-I-BAZA-DANYCH.md`](./01-ARCHITEKTURA-I-BAZA-DANYCH.md) — zmiany tylko przy nowym module, **bez regresji** trzech zamrożonych zakładek.
+Wspólna infrastruktura shella (Keep-Alive, Baza Wiedzy, Turbo-Cache, audit DOM) jest opisana w [`01-ARCHITEKTURA-I-BAZA-DANYCH.md`](./01-ARCHITEKTURA-I-BAZA-DANYCH.md).
 
 ---
 
-## Następny krok produktowy
+## Stan po U5c–U8
 
-1. **Nowe okno / wątek:** projektowanie i implementacja **Modułu 4 — `FPL_PLANNER`** (patrz [`09-PLANER-FPL-TEAM.md`](./09-PLANER-FPL-TEAM.md)).
-2. Wpięcie 4. zakładki w `StatsLabModuleShell.tsx` **bez** edycji zamrożonych widoków 1–3.
-3. Dopiero po stabilizacji Planera — Moduł 5 `PLAYER_PROJECTIONS`.
+Opis kroków (karta Planera, zwijany panel, Studio, diagram Venna): [`stats-lab/stan-po-u8.md`](./stats-lab/stan-po-u8.md).

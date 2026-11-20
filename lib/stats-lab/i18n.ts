@@ -208,6 +208,7 @@ export const VIZ_MODE_LABELS: Record<
     RADAR_PIZZA: "Radar / Pizza",
     SCATTER_2D: "Scatter 2D",
     HEATMAP_MATRIX: "Macierz heatmap",
+    VENN_3: "Diagram Venna",
   },
   en: {
     STACKED_COMPOSITE: "Multi-metric profile",
@@ -216,6 +217,7 @@ export const VIZ_MODE_LABELS: Record<
     RADAR_PIZZA: "Radar / Pizza",
     SCATTER_2D: "Scatter 2D",
     HEATMAP_MATRIX: "Heatmap matrix",
+    VENN_3: "Venn diagram",
   },
 };
 
@@ -261,6 +263,18 @@ export const UI_COPY = {
     recalculating: "Przeliczam porównanie…",
     pool: "Pula",
     onChart: "Na wykresie",
+    vennSection: "Warunki diagramu",
+    vennThreshold: "Próg (≥)",
+    vennCustom: "Własne",
+    vennNobody: "nikt",
+    vennListTitle: "Zawodnicy według obszaru",
+    vennTotalsNote:
+      "Progi porównują sumy w wybranym zakresie kolejek. Per 90 i tło grupy nie zmieniają diagramu.",
+    vennMorePlayers: "Jeszcze {n} w liście pod wykresem",
+    vennReading:
+      "Każde koło to jeden warunek (metryka ≥ próg) w wybranym zakresie kolejek. Środek oznacza wszystkie trzy. Pusty obszar oznacza, że nikt nie spełnia tej kombinacji. Lista pod wykresem ma pełne nazwiska.",
+    vennSourceData: "fpl-arena.com · Dane: FPL",
+    vennAllThree: "Wszystkie trzy",
     heatmapRankedByPoints: "Ranking wg punktów",
     sortedByPoints: "Posortowane po punktach",
     sortedByMetric: "Posortowane po: {name}",
@@ -324,6 +338,18 @@ export const UI_COPY = {
     recalculating: "Recalculating comparison…",
     pool: "Pool",
     onChart: "On chart",
+    vennSection: "Diagram conditions",
+    vennThreshold: "Threshold (≥)",
+    vennCustom: "Custom",
+    vennNobody: "nobody",
+    vennListTitle: "Players by region",
+    vennTotalsNote:
+      "Thresholds compare totals in the selected gameweek range. Per 90 and group rank do not change the diagram.",
+    vennMorePlayers: "{n} more in the list below the chart",
+    vennReading:
+      "Each circle is one condition (stat ≥ threshold) in the selected gameweek range. The centre means all three. An empty area means nobody meets that mix. The list below has full names.",
+    vennSourceData: "fpl-arena.com · Data: FPL",
+    vennAllThree: "All three",
     heatmapRankedByPoints: "Ranked by points",
     sortedByPoints: "Sorted by points",
     sortedByMetric: "Sorted by: {name}",
@@ -708,3 +734,129 @@ export const POINTS_NEG_LABELS: Record<
     ownGoalDeduction: "Own goals (−2)",
   },
 };
+
+export type VennCohort = "gk" | "def" | "mid" | "fwd" | "any";
+
+const VENN_COHORT: Record<
+  StatsLabLang,
+  Record<VennCohort, { one: string; many: string }>
+> = {
+  pl: {
+    gk: { one: "bramkarz", many: "bramkarzy" },
+    def: { one: "obrońca", many: "obrońców" },
+    mid: { one: "pomocnik", many: "pomocników" },
+    fwd: { one: "napastnik", many: "napastników" },
+    any: { one: "zawodnik", many: "zawodników" },
+  },
+  en: {
+    gk: { one: "goalkeeper", many: "goalkeepers" },
+    def: { one: "defender", many: "defenders" },
+    mid: { one: "midfielder", many: "midfielders" },
+    fwd: { one: "forward", many: "forwards" },
+    any: { one: "player", many: "players" },
+  },
+};
+
+export function vennCohortFromPositions(positions: readonly number[]): VennCohort {
+  if (positions.length !== 1) return "any";
+  if (positions[0] === 1) return "gk";
+  if (positions[0] === 2) return "def";
+  if (positions[0] === 3) return "mid";
+  if (positions[0] === 4) return "fwd";
+  return "any";
+}
+
+export function formatVennNumber(value: number): string {
+  if (!Number.isFinite(value)) return "0";
+  const rounded = Math.round(value * 10) / 10;
+  return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
+}
+
+export function vennConditionPhrase(
+  metric: FplStatKey,
+  threshold: number,
+  lang: StatsLabLang,
+): string {
+  const full = statLabel(metric, lang);
+  const head =
+    full.charAt(0).toLocaleLowerCase(lang === "pl" ? "pl-PL" : "en-GB") +
+    full.slice(1);
+  const def = getFplStatDefinition(metric);
+  const decimals = def?.decimals ?? 0;
+  const shown = Number.isFinite(threshold)
+    ? decimals === 0
+      ? String(Math.round(threshold))
+      : formatVennNumber(threshold)
+    : "—";
+  return `${shown}+ ${head}`;
+}
+
+export function vennMetricAria(
+  metric: FplStatKey,
+  value: number,
+  lang: StatsLabLang,
+): string {
+  const label = statLabel(metric, lang);
+  const short = statShort(metric, lang);
+  const desc = statDescription(metric, lang);
+  return `${label} (${short}): ${formatVennNumber(value)}. ${desc}`;
+}
+
+/** Krótka linia na żetonie środka. Pełna nazwa zostaje w aria. */
+export function vennChipStatLine(
+  metrics: readonly FplStatKey[],
+  values: readonly number[],
+  lang: StatsLabLang,
+): string {
+  return metrics
+    .map((metric, index) => {
+      const token = statShort(metric, lang).split(/[\s(]/)[0] || statShort(metric, lang);
+      return `${formatVennNumber(values[index] ?? 0)} ${token}`;
+    })
+    .join(" · ");
+}
+
+export function vennShortStatLine(
+  metrics: readonly FplStatKey[],
+  values: readonly number[],
+  lang: StatsLabLang,
+): string {
+  return metrics
+    .map(
+      (metric, index) =>
+        `${formatVennNumber(values[index] ?? 0)} ${statShort(metric, lang)}`,
+    )
+    .join(" · ");
+}
+
+export function buildVennSummary(args: {
+  lang: StatsLabLang;
+  cohort: VennCohort;
+  atLeastOne: number;
+  allThree: number;
+}): string {
+  const noun = VENN_COHORT[args.lang][args.cohort];
+  const n = Math.max(0, Math.floor(args.atLeastOne));
+  const all = Math.max(0, Math.floor(args.allThree));
+  if (args.lang === "pl") {
+    if (n === 0) return `Żaden ${noun.one} nie spełnia żadnego warunku.`;
+    const who = n === 1 ? noun.one : noun.many;
+    const tail =
+      all === 0
+        ? "nikt nie spełnia wszystkich trzech"
+        : all === 1
+          ? "tylko 1 wszystkie trzy"
+          : `${all} spełnia wszystkie trzy`;
+    return `${n} ${who} spełnia co najmniej jeden warunek, ${tail}.`;
+  }
+  if (n === 0) return `No ${noun.one} meets any condition.`;
+  const who = n === 1 ? noun.one : noun.many;
+  const verb = n === 1 ? "meets" : "meet";
+  const tail =
+    all === 0
+      ? "nobody meets all three"
+      : all === 1
+        ? "only 1 meets all three"
+        : `${all} meet all three`;
+  return `${n} ${who} ${verb} at least one condition, ${tail}.`;
+}

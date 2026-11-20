@@ -75,6 +75,9 @@ type Props = {
   /** Osie Scatter — dokumentowane w audit.json. */
   scatterAxisX?: FplStatKey | null;
   scatterAxisY?: FplStatKey | null;
+  /** Metryki do copy / audytu, gdy wykres nie używa activeMetrics (Venn). */
+  focusMetrics?: FplStatKey[] | null;
+  vennConditions?: { metric: FplStatKey; threshold: number }[] | null;
 };
 
 type FlashKind = "ok" | "err";
@@ -94,6 +97,8 @@ export function StatsLabExportBar({
   streakSortKey,
   scatterAxisX = null,
   scatterAxisY = null,
+  focusMetrics = null,
+  vennConditions = null,
 }: Props) {
   const [busy, setBusy] = useState<
     null | "png" | "copy" | "post" | "discord" | "audit" | "auditCopy"
@@ -109,9 +114,11 @@ export function StatsLabExportBar({
   const [copiedPng, setCopiedPng] = useState(false);
 
   const players = result?.plottedPlayers ?? [];
-  const metrics = result?.activeMetrics?.length
-    ? result.activeMetrics
-    : filter.activeMetrics;
+  const metrics = focusMetrics?.length
+    ? focusMetrics
+    : result?.activeMetrics?.length
+      ? result.activeMetrics
+      : filter.activeMetrics;
   const gwRange = result?.effectiveGwRange ?? ([0, 0] as [number, number]);
 
   const fileName = useMemo(
@@ -273,6 +280,7 @@ export function StatsLabExportBar({
       streakSortKey: streakSortKey ?? filter.streakSortKey,
       scatterAxisX,
       scatterAxisY,
+      vennConditions,
       rootElement: exportRef.current,
     });
   }

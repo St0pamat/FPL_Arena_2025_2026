@@ -442,7 +442,9 @@ function chartStudioAlgorithmSpec(input: {
       ? `1) ${streakSortKey} ${filter.sortDirection} → 2) returnConsistencyPct DESC → 3) returnsCount DESC → 4) maxReturnStreak DESC → 5) currentReturnStreak DESC → 6) total_points DESC; TOP N requires minAppearances = max(4, ceil(periodGws*0.65)) when auto Top N`
       : vizMode === "POINTS_BREAKDOWN"
         ? `1) official FPL match totals (pointsBreakdown.estimatedTotal / rawValues.total_points) ${filter.sortDirection} on FULL comparisonPool — Per90 NEVER affects order → 2) compositeScore tie-break only → 3) slice Top N; chart + audit.json share identical order`
-        : useComposite
+        : vizMode === "VENN_3"
+          ? "Venn: rawValues[metric] >= threshold in the filtered GW range; returnAllEligible keeps the whole filtered pool (no Top N); regions A/B/C/AB/AC/BC/ABC; missing or NaN values count as 0"
+          : useComposite
           ? `1) compositeScore ${filter.sortDirection} on FULL comparisonPool → 2) total_points tie-break → 3) slice Top N; NO post-slice reshuffle; RADAR_PIZZA displays max 4; scaleMode=${scaleMode}; sortByComposite=true`
           : `1) ${valueLane}[${filter.sortByStat}] ${filter.sortDirection} on FULL comparisonPool → 2) compositeScore tie-break only → 3) slice Top N; preserve sortByStat order (sortByComposite=false; no composite reshuffle); RADAR_PIZZA displays max 4; scaleMode=${scaleMode}`;
 
@@ -475,6 +477,7 @@ export function buildChartStudioAiAuditReport(input: {
   /** Osie Scatter 2D (UI state — nie są częścią StatsLabQueryFilter). */
   scatterAxisX?: FplStatKey | null;
   scatterAxisY?: FplStatKey | null;
+  vennConditions?: { metric: FplStatKey; threshold: number }[] | null;
   rootElement?: HTMLElement | null;
 }): StatsLabAiAuditReport {
   const {
@@ -490,6 +493,7 @@ export function buildChartStudioAiAuditReport(input: {
     streakSortKey,
     scatterAxisX = null,
     scatterAxisY = null,
+    vennConditions = null,
     rootElement = null,
   } = input;
 
@@ -543,6 +547,8 @@ export function buildChartStudioAiAuditReport(input: {
         vizMode === "SCATTER_2D" ? (scatterAxisX ?? null) : null,
       scatterAxisY:
         vizMode === "SCATTER_2D" ? (scatterAxisY ?? null) : null,
+      vennConditions: vizMode === "VENN_3" ? (vennConditions ?? null) : null,
+      returnAllEligible: filter.returnAllEligible === true,
     },
     algorithmSpecification: chartStudioAlgorithmSpec({
       vizMode,

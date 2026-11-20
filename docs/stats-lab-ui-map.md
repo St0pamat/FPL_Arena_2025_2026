@@ -1,4 +1,6 @@
-# Stats Lab — UI Map (analiza repo, stan na 2026-11-13)
+# Stats Lab — UI Map
+
+Stan po U5c–U8: [`stats-lab/stan-po-u8.md`](./stats-lab/stan-po-u8.md). Poniższa mapa powstała 2026-11-13 i opisuje układ sprzed diagramu Venna. Studio ma teraz 7 wykresów, w tym `VennDiagramChart`.
 
 Dokument mapuje moduł Stats Lab (`/admin/stats-lab`, zakładki `planner` / `centre` / `studio` / `projections`) bez zmian w kodzie produkcyjnym. Jedyny nowy artefakt: ten plik.
 
@@ -123,12 +125,12 @@ Dane bootstrap/studio: Server Actions `loadStatsLabBootstrapDataAction` / `query
 
 | Zakładka | Client | Engine / i18n | Dane |
 |----------|--------|---------------|------|
-| **Centre** | `StatsCentreView.tsx` (**FROZEN**) | `statsCentreEngine.ts`, `statsCentreI18n.ts` | bootstrap + lokalne filtry; tabele FFS-style |
-| **Studio** | `StatsLabStudioClient.tsx` + charts (**FROZEN**) | `analyticsEngine.ts`, `i18n.ts`, `presets.ts` | `queryStatsLabComparisonAction` |
+| **Centre** | `StatsCentreView.tsx` | `statsCentreEngine.ts`, `statsCentreI18n.ts` | bootstrap + lokalne filtry; tabele FFS-style |
+| **Studio** | `StatsLabStudioClient.tsx` + charts | `analyticsEngine.ts`, `vennEngine.ts`, `i18n.ts`, `presets.ts` | `queryStatsLabComparisonAction` |
 | **Predykcje / Terminarz** | `StatsLabProjectionsClient.tsx` | `projectionsEngine.ts`, `projectionsI18n.ts` | `queryStatsLabProjectionsAction` |
 | **Sync** (osobna strona) | `StatsLabSyncClient.tsx` | `syncEngine.ts` | `app/admin/actions/statsLabSync.ts` → upsert DB |
 
-Charts Studio (FROZEN): `PointsBreakdownChart`, `StreaksExplorerChart`, `StackedCompositeChart`, `RadarPizzaChart`, `RadarQuickSlotsBar`, `Scatter2DChart`, `HeatmapMatrixChart`.
+Charts Studio: `PointsBreakdownChart`, `StreaksExplorerChart`, `StackedCompositeChart`, `RadarPizzaChart`, `RadarQuickSlotsBar`, `Scatter2DChart`, `HeatmapMatrixChart`, `VennDiagramChart`.
 
 ---
 
@@ -314,8 +316,8 @@ Zapisy `fpl_lab_*` są w **Sync** (`statsLabSync.ts`: upsert clubs/players/fixtu
 
 1. **KPI vs Compare** — łatwo mylić sumę horyzontu z xPts jednej GW (to §8).
 2. **Brak testów / CI** — regresje silnika i UI niewykrywalne automatycznie.
-3. **FROZEN Centre/Studio** vs żywy Planer — rozjazd konwencji i18n/export.
-4. **Sidebar bez mobile** — wspólny layout psuje wąskie ekrany całego `/admin`.
+3. Centre, Studio, Predykcje i Planer są aktywne. Synchronizacja FPL zostaje bez zmian.
+4. Panel admina poniżej 768 px jest zwijany (U6b).
 5. **Stan tylko w `localStorage`** — brak sync między urządzeniami; kolizje kluczy watchlist Centre↔Planer.
 6. **Warnings EN w silniku** — dziury i18n.
 7. **Hardcoded UI strings** obok `plannerI18n` — dryf PL/EN.
@@ -414,7 +416,7 @@ lib/stats-lab/themeTokens.ts / menuChrome.ts / auditExport.ts
 3. Czy Planer ma kiedykolwiek **persystować drafty w Supabase**, czy `localStorage` zostaje SSOT?
 4. Czy e2e mają iść na **Demo Squad + seed DB**, czy na **fixture’ach MSW** odcinających FPL API i ewentualnie Supabase?
 5. Czy mobile hamburger ma wejść **tylko** w Stats Lab, czy od razu w całym `/admin`?
-6. Czy zamrażamy też Planer po AAA, czy Centre/Studio mają dostać wyjątek od FROZEN na i18n skrótów (DD/ST)?
+6. Skróty na wykresach (U7) mają pełną nazwę w `title` i `aria-label`. Czy ten sam wzorzec ma objąć resztę Planera (DD/ST)?
 7. Czy nagłówek strony `Stats Centre & Studio` ma zostać ujednolicony z 4 zakładkami (w tym Planer/Predykcje) i PL/EN?
 8. Czy warningi z `evaluateRollingPlan` mają wejść do `plannerI18n` w tej samej iteracji co UI polish?
 

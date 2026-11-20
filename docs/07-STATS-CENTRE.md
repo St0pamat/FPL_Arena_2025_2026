@@ -1,11 +1,11 @@
-# Stats Centre — zamrożony (Zero-Regression — Social-First AAA)
+# Stats Centre
 
-Właściciel odmroził cały Stats Lab (Centre, Studio, Predykcje, Planer) poza „Baza i Synchronizacja FPL”.
+Właściciel odmroził cały Stats Lab (Centre, Studio, Predykcje, Planer) poza „Baza i Synchronizacja FPL”. Stan po U5c–U8: [`stats-lab/stan-po-u8.md`](./stats-lab/stan-po-u8.md).
 
 | Pole | Wartość |
 |------|---------|
 | Moduł | `STATS_CENTRE` (`/admin/stats-lab` → zakładka Centre / `/admin/stats-lab/centre`) |
-| Status | **Zamrożony / ukończony (Zero-Regression — Social-First AAA)** |
+| Status | Aktywny. U5c: ładowanie, błąd i pusta pula są rozróżnione |
 | Komplet | **Players 8/8 · Per GW · Teams 4/4** |
 | UI | `components/admin/stats-lab/StatsCentreView.tsx` |
 | Silnik | `lib/stats-lab/statsCentreEngine.ts` |
@@ -13,10 +13,7 @@ Właściciel odmroził cały Stats Lab (Centre, Studio, Predykcje, Planer) poza 
 | Motywy | `ARENA_DARK` · `SCOUT_DARK` · `ANALYST_LIGHT` |
 | Eksport | sparowana para `.jpg` + `.json` (audyt AI) |
 
-Powiązane: [`01-APLIKACJA-PRZEGLAD-FUNKCJONALNY.md`](./01-APLIKACJA-PRZEGLAD-FUNKCJONALNY.md) · [`02-STATS-LAB-STUDIO-KONTEKST.md`](./02-STATS-LAB-STUDIO-KONTEKST.md) · Chart Studio docs/03–06 (**zamrożone 6/6**).
-
-**Zakaz dalszych zmian UI/logiki Stats Centre** bez osobnej decyzji produktowej.  
-**Zero-Regression Chart Studio:** nie modyfikować `charts/*`, `StatsLabChartCanvas.tsx`, `StatsLabStudioClient.tsx`, `StatsLabControlPanel.tsx`, `analyticsEngine.ts`.
+Powiązane: [`01-APLIKACJA-PRZEGLAD-FUNKCJONALNY.md`](./01-APLIKACJA-PRZEGLAD-FUNKCJONALNY.md) · [`02-STATS-LAB-STUDIO-KONTEKST.md`](./02-STATS-LAB-STUDIO-KONTEKST.md) · Chart Studio docs/03–06 i diagram Venna.
 
 ---
 
@@ -173,12 +170,10 @@ Pigułki słownikowe `SKRÓT: pełna nazwa` (`COLUMN_FULL_LABELS`) + legenda ska
 
 ---
 
-## 7. Zero-regression — Stats Centre
+## 7. Pliki kontraktu
 
-Przy dalszych pracach **nie wolno** zmieniać bez decyzji:
+Geometria plakatu zostaje kontraktem. Synchronizacja FPL (`/admin/stats-lab/sync`) zostaje bez zmian.
 
-1. `StatsCentreView.tsx` (ten dokument — geometria plakatu / pigułki / eksport)
+1. `StatsCentreView.tsx` (geometria plakatu / pigułki / eksport)
 2. `statsCentreEngine.ts` (colorNorm, Per 90 TEAMS, filtrowanie fixture’ów, kary/TO)
 3. `statsCentreI18n.ts` (słownik skrótów i pełnych nazw)
-
-Dozwolone: Sync ETL, KB copy, Chart Studio (osobno zamrożone docs/03–06).

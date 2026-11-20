@@ -33,6 +33,13 @@ import {
   type PointsSortKey,
 } from "@/components/admin/stats-lab/charts/PointsBreakdownChart";
 import { StreaksExplorerChart } from "@/components/admin/stats-lab/charts/StreaksExplorerChart";
+import { VennDiagramChart } from "@/components/admin/stats-lab/charts/VennDiagramChart";
+import {
+  cloneVennConditions,
+  getVennPreset,
+  type VennCondition,
+  type VennPresetId,
+} from "@/lib/stats-lab/vennEngine";
 
 export type StatsLabChartCanvasVariant = "studio" | "export";
 
@@ -69,6 +76,8 @@ type Props = {
   onSelectPlayer: (id: number) => void;
   /** studio = interaktywny podgląd; export = branding social / bez kontrolek UI */
   variant?: StatsLabChartCanvasVariant;
+  vennConditions?: [VennCondition, VennCondition, VennCondition];
+  vennPresetId?: VennPresetId | "CUSTOM";
 };
 
 /** Logo z fallbackiem SVG — html-to-image nie może paść na CORS/404. */
@@ -172,10 +181,19 @@ function autoTitle(
     fpl_team_id: number;
     club: { short_name: string; fpl_team_id: number } | null;
   }[],
+  vennPresetId?: VennPresetId | "CUSTOM" | null,
 ): string {
   const chartMode = VIZ_MODE_LABELS[lang][vizMode] ?? vizMode;
   const pos = positionBit(filter, lang);
   const n = plottedPlayers.length;
+
+  if (vizMode === "VENN_3" && filter.selectedPlayerIds.length === 0) {
+    if (vennPresetId && vennPresetId !== "CUSTOM") {
+      const preset = getVennPreset(vennPresetId);
+      return lang === "pl" ? preset.labelPl : preset.labelEn;
+    }
+    return lang === "pl" ? `Diagram Venna · ${pos}` : `Venn diagram · ${pos}`;
+  }
 
   if (filter.selectedPlayerIds.length > 0) {
     if (n >= 2 && n <= 4) {
@@ -230,7 +248,11 @@ function autoSubtitle(
       : `Min. ${filter.minMinutes} mins`,
   );
 
-  if (isMatchTotals) {
+  if (vizMode === "VENN_3") {
+    bits.push(
+      lang === "pl" ? "Sumy warunków (≥ próg)" : "Condition totals (≥ threshold)",
+    );
+  } else if (isMatchTotals) {
     bits.push(
       lang === "pl" ? "Oficjalne punkty FPL" : "Official FPL points",
     );
@@ -348,6 +370,8 @@ export function StatsLabChartCanvas({
   onShowNegativesChange,
   onSelectPlayer,
   variant = "studio",
+  vennConditions,
+  vennPresetId = "COMPLETE_DEFENDER",
 }: Props) {
   const isExport = variant === "export";
   const theme = STATS_LAB_CHART_THEMES[themeId];
@@ -364,8 +388,12 @@ export function StatsLabChartCanvas({
     ? result.activeMetrics
     : filter.activeMetrics;
 
+  const resolvedVenn =
+    vennConditions ??
+    cloneVennConditions(getVennPreset("COMPLETE_DEFENDER").conditions);
   const title =
-    customTitle.trim() || autoTitle(filter, vizMode, lang, players);
+    customTitle.trim() ||
+    autoTitle(filter, vizMode, lang, players, vennPresetId);
   const technicalSubtitle = `${lang === "pl" ? "Sezon" : "Season"} ${seasonCode} · ${autoSubtitle(
     filter,
     result?.poolSize ?? 0,
@@ -380,11 +408,14 @@ export function StatsLabChartCanvas({
     vizMode === "POINTS_BREAKDOWN" || vizMode === "STREAKS_EXPLORER";
 
   /** Pigułki skrót→nazwa w stopce (bez descriptionPl/En). */
-  const footerMetricKeys: FplStatKey[] = METRIC_FOOTER_VIZ.has(vizMode)
-    ? vizMode === "SCATTER_2D"
-      ? [axisX, axisY]
-      : metrics.slice(0, 8)
-    : [];
+  const footerMetricKeys: FplStatKey[] =
+    vizMode === "VENN_3"
+      ? resolvedVenn.map((condition) => condition.metric)
+      : METRIC_FOOTER_VIZ.has(vizMode)
+        ? vizMode === "SCATTER_2D"
+          ? [axisX, axisY]
+          : metrics.slice(0, 8)
+        : [];
 
   const readingHint = chartReadingHint(vizMode, scaleMode, lang);
 
@@ -579,6 +610,35 @@ export function StatsLabChartCanvas({
             per90={filter.per90}
             poolSize={result.poolSize}
           />
+        ) : vizMode === "VENN_3" ? (
+          <VennDiagramChart
+            players={players.map((player) => ({
+              id: player.fpl_element_id,
+              name: player.web_name,
+              fullName:
+                `${player.first_name ?? ""} ${player.second_name ?? ""}`
+                  .replace(/\s+/g, " ")
+                  .trim() || player.web_name,
+              clubShort: player.club?.short_name ?? "",
+              clubName: player.club?.name ?? "",
+              minutes: player.minutes,
+              points: Number(player.rawValues?.total_points ?? 0),
+              badgeCode: Number(player.clubPulseCode ?? 0),
+              totals: player.rawValues,
+            }))}
+            conditions={resolvedVenn}
+            theme={theme}
+            lang={lang}
+            positions={filter.positions}
+            gwLabel={
+              (result.effectiveGwRange?.[0] ?? 0) > 0
+                ? `GW ${result.effectiveGwRange[0]}–${result.effectiveGwRange[1]}`
+                : seasonCode
+            }
+            minMinutes={filter.minMinutes}
+            variant={variant}
+            density={variant === "export" ? "full" : "auto"}
+          />
         ) : (
           <HeatmapMatrixChart
             players={players}
@@ -674,6 +734,15 @@ export function StatsLabChartCanvas({
             style={isLightTheme ? undefined : { color: theme.muted }}
           >
             {streaksReturnFooterExplain(lang)}
+          </p>
+        ) : vizMode === "VENN_3" ? (
+          <p
+            className={`mb-2 text-[11px] leading-relaxed opacity-80 ${
+              isLightTheme ? "font-medium text-slate-700" : ""
+            }`}
+            style={isLightTheme ? undefined : { color: theme.muted }}
+          >
+            {copy.vennReading}
           </p>
         ) : readingHint ? (
           <p

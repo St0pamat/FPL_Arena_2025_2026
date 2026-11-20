@@ -1,12 +1,12 @@
-# Macierz heatmap (`HEATMAP_MATRIX`) — zamrożony (Zero-Regression)
+# Macierz heatmap (`HEATMAP_MATRIX`)
 
-Właściciel odmroził cały Stats Lab (Centre, Studio, Predykcje, Planer) poza „Baza i Synchronizacja FPL”.
+Właściciel odmroził cały Stats Lab (Centre, Studio, Predykcje, Planer) poza „Baza i Synchronizacja FPL”. Stan po U5c–U8: [`stats-lab/stan-po-u8.md`](./stats-lab/stan-po-u8.md).
 
 | Pole | Wartość |
 |------|---------|
 | Tryb | `vizMode === "HEATMAP_MATRIX"` |
-| Status | **Zamrożony / ukończony (Zero-Regression — Social-First AAA)** |
-| Pakiet Studio | **Chart Studio 6/6 zamrożone** (Radar, Points, Stacked, Streaks, Scatter, Heatmap) |
+| Status | Aktywny. Geometria poniżej jest kontraktem |
+| Pakiet Studio | 7 wykresów (Radar, Points, Stacked, Streaks, Scatter, Heatmap, Diagram Venna) |
 | Implementacja | `components/admin/stats-lab/charts/HeatmapMatrixChart.tsx` |
 | Canvas / stopka | `StatsLabChartCanvas.tsx` (`scaleMode`, `per90`, `poolAverages`, `poolSize`, `showAvg` / `showPoolAverage`, `showMeta`) |
 | Słownik PL | ujednolicone `labelPl` w `lib/stats-lab/types.ts` (`FPL_STAT_DEFINITIONS`) |
@@ -152,9 +152,9 @@ Jedna instrukcja (bez kodów P0–100):
 
 ---
 
-## 11. Zero-regression — Chart Studio 6/6
+## 11. Sąsiednie wykresy Studio
 
-Przy dalszych pracach **nie wolno** zmieniać bez decyzji produktowej:
+Geometria tej macierzy zostaje kontraktem. Diagram Venna: [`stats-lab/studio-venn-plan.md`](./stats-lab/studio-venn-plan.md).
 
 1. `RadarPizzaChart.tsx` + `RadarQuickSlotsBar.tsx` (docs/03)
 2. `PointsBreakdownChart.tsx` (docs/04)
@@ -162,5 +162,4 @@ Przy dalszych pracach **nie wolno** zmieniać bez decyzji produktowej:
 4. `StreaksExplorerChart.tsx` (docs/04 / Studio)
 5. `Scatter2DChart.tsx` (docs/05)
 6. `HeatmapMatrixChart.tsx` (ten dokument — docs/06)
-
-Dozwolone: wspólne typy/silnik, KB copy, inne moduły poza geometrią zamrożonych viz.
+7. `VennDiagramChart.tsx` + `lib/stats-lab/vennEngine.ts`

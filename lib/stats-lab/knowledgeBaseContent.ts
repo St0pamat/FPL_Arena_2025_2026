@@ -67,7 +67,7 @@ const HOW_TO_USE_PL: KnowledgeTabContent = {
       ],
     },
     {
-      heading: "Moduł 2: Studio Wykresów — 6 wizualizacji",
+      heading: "Moduł 2: Studio Wykresów — 7 wizualizacji",
       paragraphs: [
         "Profil wielowymiarowy: porównanie wielu cech na raz + kafelek OCENA.",
         "Dekompozycja punktów: za co dokładnie gracz zbiera punkty FPL (i kary).",
@@ -75,6 +75,7 @@ const HOW_TO_USE_PL: KnowledgeTabContent = {
         "Radar / Pizza: 1–4 graczy na tych samych osiach + szybkie sloty wyboru.",
         "Scatter 2D: dwie osie X/Y z ćwiartkami względem grupy.",
         "Macierz heatmap: szybki skan Top N po wielu statystykach + kolumna OCENA.",
+        "Diagram Venna: trzy warunki (metryka ≥ próg) w tym samym zakresie kolejek. Środek = wszystkie trzy. Pusty obszar = nikt. Pod wykresem jest pełna lista.",
       ],
     },
     {
@@ -158,7 +159,7 @@ const HOW_TO_USE_EN: KnowledgeTabContent = {
       ],
     },
     {
-      heading: "Module 2: Chart Studio — 6 visualisations",
+      heading: "Module 2: Chart Studio — 7 visualisations",
       paragraphs: [
         "Multi-metric profile: many traits at once + RATING tile.",
         "Points breakdown: exactly where FPL points (and penalties) come from.",
@@ -166,6 +167,7 @@ const HOW_TO_USE_EN: KnowledgeTabContent = {
         "Radar / Pizza: 1–4 players on shared axes + quick player slots.",
         "Scatter 2D: X/Y axes with group quadrants.",
         "Heatmap matrix: fast Top N scan across many stats + RATING column.",
+        "Venn diagram: three conditions (stat ≥ threshold) over the same gameweek range. The centre means all three. An empty area means nobody. The full list sits under the chart.",
       ],
     },
     {

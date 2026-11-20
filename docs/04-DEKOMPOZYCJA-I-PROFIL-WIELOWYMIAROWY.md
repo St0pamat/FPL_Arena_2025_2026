@@ -1,14 +1,13 @@
-# Dekompozycja punktów + Profil wielowymiarowy — **ZAMROŻONE (Zero-Regression)**
+# Dekompozycja punktów + Profil wielowymiarowy
 
-Właściciel odmroził cały Stats Lab (Centre, Studio, Predykcje, Planer) poza „Baza i Synchronizacja FPL”.
+Właściciel odmroził cały Stats Lab (Centre, Studio, Predykcje, Planer) poza „Baza i Synchronizacja FPL”. Stan po U5c–U8: [`stats-lab/stan-po-u8.md`](./stats-lab/stan-po-u8.md).
 
-Dokument dla architekta AI / osoby z zewnątrz: **finalny stan kodu** widoków `POINTS_BREAKDOWN` i `STACKED_COMPOSITE`.  
-**Zakaz dalszych zmian UI/logiki tych wykresów** bez osobnej decyzji produktowej. Scatter 2D jest również zamrożony — [`05-WYKRES-SCATTER-2D.md`](./05-WYKRES-SCATTER-2D.md).
+Dokument opisuje widoki `POINTS_BREAKDOWN` i `STACKED_COMPOSITE`. Scatter 2D: [`05-WYKRES-SCATTER-2D.md`](./05-WYKRES-SCATTER-2D.md).
 
 | Etap | Zakres | Status |
 |------|--------|--------|
-| **A** | `PointsBreakdownChart` — legenda dynamiczna + kontrast AAA | **ZAMROŻONY (Zero-Regression)** |
-| **B** | `StackedCompositeChart` + OCENA/RATING + presety / DC Per 90 + flat metrics | **ZAMROŻONY (Zero-Regression)** |
+| **A** | `PointsBreakdownChart` — legenda dynamiczna + kontrast AAA | Aktywny. Geometria poniżej jest kontraktem |
+| **B** | `StackedCompositeChart` + OCENA/RATING + presety / DC Per 90 + flat metrics | Aktywny. Geometria poniżej jest kontraktem |
 
 Powiązane: [`02-STATS-LAB-STUDIO-KONTEKST.md`](./02-STATS-LAB-STUDIO-KONTEKST.md) · [`03-WYKRES-RADAROWY-PIZZA.md`](./03-WYKRES-RADAROWY-PIZZA.md) · [`05-WYKRES-SCATTER-2D.md`](./05-WYKRES-SCATTER-2D.md)
 
@@ -18,19 +17,19 @@ Powiązane: [`02-STATS-LAB-STUDIO-KONTEKST.md`](./02-STATS-LAB-STUDIO-KONTEKST.m
 
 | Obszar | Plik | Status |
 |--------|------|--------|
-| UI Dekompozycja | `components/admin/stats-lab/charts/PointsBreakdownChart.tsx` | **ZAMROŻONY** |
-| UI Profil wielowymiarowy | `components/admin/stats-lab/charts/StackedCompositeChart.tsx` | **ZAMROŻONY** |
-| Format pigułek (DC Per 90) | `components/admin/stats-lab/chartTheme.ts` | **ZAMROŻONY** (reguła Opta) |
+| UI Dekompozycja | `components/admin/stats-lab/charts/PointsBreakdownChart.tsx` | Aktywny |
+| UI Profil wielowymiarowy | `components/admin/stats-lab/charts/StackedCompositeChart.tsx` | Aktywny |
+| Format pigułek (DC Per 90) | `components/admin/stats-lab/chartTheme.ts` | Aktywny (reguła Opta) |
 | Wyliczenia breakdown / DC / `formatStatDisplay` | `lib/stats-lab/analyticsEngine.ts` | Wspólny silnik |
 | Typy breakdown / progi DC | `lib/stats-lab/types.ts` | — |
-| Presety + `defaultActiveMetricsForPositions` + `isSortByStatAlignedWithPositions` | `lib/stats-lab/presets.ts` | **ZAMROŻONY** (kontrakt formacji) |
-| Reakcja na zmianę pozycji | `components/admin/stats-lab/StatsLabStudioClient.tsx` → `onFilterChange` | **ZAMROŻONY** |
+| Presety + `defaultActiveMetricsForPositions` + `isSortByStatAlignedWithPositions` | `lib/stats-lab/presets.ts` | Aktywny (kontrakt formacji) |
+| Reakcja na zmianę pozycji | `components/admin/stats-lab/StatsLabStudioClient.tsx` → `onFilterChange` | Aktywny |
 | Panel filtrów | `components/admin/stats-lab/StatsLabControlPanel.tsx` | — |
 | Canvas / stopka PNG | `components/admin/stats-lab/StatsLabChartCanvas.tsx` | — |
 
 ---
 
-# Część A — `POINTS_BREAKDOWN` (Etap A — zamrożony)
+# Część A — `POINTS_BREAKDOWN`
 
 ## A1. Cel widoku
 
@@ -81,7 +80,7 @@ W UI włącza je przełącznik **`showNegativeBreakdown`** → prop `showNegativ
 
 ## A5. Górna legenda kategorii — **reguła uniwersalna (wdrożona)**
 
-**Status: ZAMROŻONE.** Legenda pokazuje wyłącznie kategorie, które faktycznie występują na wykresie.
+Legenda pokazuje wyłącznie kategorie, które faktycznie występują na wykresie.
 
 ```ts
 const visiblePosKeys = POS_KEYS.filter((key) =>
@@ -134,7 +133,7 @@ Sort: `PointsSortKey` (netto, brutto, kary, pojedyncze kategorie) z fallbackiem 
 
 ---
 
-# Część B — `STACKED_COMPOSITE` (Etap B — zamrożony)
+# Część B — `STACKED_COMPOSITE`
 
 ## B1. Cel
 
@@ -220,7 +219,7 @@ Górna `MetricLegendBar`: pigułki metryk (`ANALYST_LIGHT`: `bg-slate-100 border
 
 ---
 
-# Część C — Domyślne `activeMetrics`, presety, pipeline DC (Etap B — zamrożony)
+# Część C — Domyślne `activeMetrics`, presety, pipeline DC
 
 ## C1. Co się dzieje po kliknięciu pozycji (Wszystkie / GK / DEF / MID / FWD)?
 
