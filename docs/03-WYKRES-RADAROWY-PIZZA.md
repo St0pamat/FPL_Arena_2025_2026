@@ -1,8 +1,8 @@
-# Wykres Radarowy (Pizza / Polygon Radar) — **ZAMROŻONY / UKOŃCZONY**
+# Wykres Radarowy (Pizza / Polygon Radar)
 
-Właściciel odmroził cały Stats Lab (Centre, Studio, Predykcje, Planer) poza „Baza i Synchronizacja FPL”.
+Właściciel odmroził cały Stats Lab (Centre, Studio, Predykcje, Planer) poza „Baza i Synchronizacja FPL”. Stan po U5c–U8: [`stats-lab/stan-po-u8.md`](./stats-lab/stan-po-u8.md).
 
-**Status:** zamknięty etap. Nie zmieniać layoutu tarczy, kartotek ani geometrii bez osobnej decyzji produktowej.
+Poniżej jest kontrakt geometrii radaru. Nowy wykres (diagram Venna) go nie zmienia.
 
 | Pole | Wartość |
 |------|---------|
@@ -74,7 +74,7 @@ Niezależnie od `scaleMode === 'PERCENTILE' | 'RAW'` etykiety osi pokazują fakt
 
 ## 3. Duża Kartoteka Piłkarza (Hero Dossier, max-width 246px)
 
-| Element | Specyfikacja zamrożona |
+| Element | Specyfikacja |
 |---------|------------------------|
 | Portret | **`82×82px`** (`w-[82px] h-[82px]`), `rounded-full`, `border-[3px]` w kolorze slotu, `object-cover object-top scale-105` — **bez** herbu na koszulce |
 | Herb | Niezależny medalion **`44×44px`** (`w-11 h-11`), `rounded-xl bg-white border-2 p-1.5 shadow-md`, `ml-auto`; `<img className="w-full h-full object-contain">` (**bez** `scale-110` — bez obcinania czubków ARS/MCI) |
@@ -140,13 +140,13 @@ Wspólny standard Canvas (docs/02 §6):
 
 ---
 
-## 8. Pliki (zamrożone)
+## 8. Pliki
 
 | Temat | Plik | Status |
 |-------|------|--------|
-| Centralna Arena + kartoteki + Pizza | `charts/RadarPizzaChart.tsx` | **ZAMROŻONY** |
-| Quick slots | `RadarQuickSlotsBar.tsx` | **ZAMROŻONY** (UX poza PNG) |
+| Centralna Arena + kartoteki + Pizza | `charts/RadarPizzaChart.tsx` | Aktywny |
+| Quick slots | `RadarQuickSlotsBar.tsx` | Aktywny (UX poza PNG) |
 | Stopka / podtytuł | `StatsLabChartCanvas.tsx` | Wspólny standard (nie łamać RADAR) |
 | Dane / okres / transfery k | `analyticsEngine.ts` + `chartTheme.ts` | Globalne |
 
-**Również zamrożone (zero-regression):** `PointsBreakdownChart`, `StreaksExplorerChart`, `StackedCompositeChart` (docs/04 — Etap A/B ukończony). W `RadarPizzaChart.tsx` dozwolona jest wyłącznie podmiana etykiety tekstowej `COMPOSITE` → `OCENA`/`RATING` — **bez** zmian geometrii.
+Sąsiednie wykresy: `PointsBreakdownChart`, `StreaksExplorerChart`, `StackedCompositeChart` (docs/04). Etykieta `OCENA` / `RATING` zastąpiła dawne `COMPOSITE`.

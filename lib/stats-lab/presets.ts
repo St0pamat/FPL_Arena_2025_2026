@@ -72,6 +72,11 @@ export type StatsLabQueryFilter = {
    * (POINTS_BREAKDOWN = oficjalne sumy meczowe FPL 1:1 z wykresem).
    */
   sortByRawValues?: boolean;
+  /**
+   * Diagram Venna: zwróć całą pulę filtra, bez cięcia Top N.
+   * Inne wykresy ignorują flagę (zostaje limit 1–50).
+   */
+  returnAllEligible?: boolean;
 };
 
 export type StatsLabPresetId =

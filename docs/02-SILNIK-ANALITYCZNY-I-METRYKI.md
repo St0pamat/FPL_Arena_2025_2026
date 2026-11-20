@@ -2,8 +2,8 @@
 
 | Pole | Wartość |
 |------|---------|
-| Zakres | Trzy zamrożone silniki + infrastruktura cache/audyt |
-| Status | PASS AAA — Zero-Regression |
+| Zakres | Silniki Studio, Centre, Predykcji + infrastruktura cache/audyt |
+| Status | Aktywne. Bez zmian zostaje tylko synchronizacja FPL |
 
 Powiązane: [`00-ACTIVE-ROADMAP.md`](./00-ACTIVE-ROADMAP.md) · [`01-ARCHITEKTURA-I-BAZA-DANYCH.md`](./01-ARCHITEKTURA-I-BAZA-DANYCH.md) · docs/03–08.
 
@@ -15,7 +15,7 @@ Właściciel odmroził cały Stats Lab (Centre, Studio, Predykcje, Planer) poza 
 
 | Silnik | Plik | Konsument | Zakres |
 |--------|------|-----------|--------|
-| Chart Studio | `lib/stats-lab/analyticsEngine.ts` | Studio 6/6 | Percentyle, composite `OCENA`, Per 90, streaks, breakdown |
+| Chart Studio | `lib/stats-lab/analyticsEngine.ts` | Studio, 7 wykresów | Percentyle, composite `OCENA`, Per 90, streaks, breakdown. Venna: `vennEngine.ts` |
 | Stats Centre | `lib/stats-lab/statsCentreEngine.ts` | Centre 13/13 | Tabele Players / Per GW / Teams, `colorNorm` P5–P95 |
 | Projections | `lib/stats-lab/projectionsEngine.ts` | Predykcje 4/4 | Dixon-Coles, FDR, λ goli, CS%, karty meczowe |
 
@@ -84,4 +84,4 @@ Każdy eksport JSON zawiera m.in.:
 - `pageAndMenuDiagnostics` z `inspectFullStatsLabPageDom` (kontrast, theme mismatch, menu),
 - dla Predykcji: `qaSelfCheck` silnika Dixona-Colesa.
 
-Kontrakt zamrożenia: **`totalIssuesCount: 0`** w `ARENA_DARK`, `SCOUT_DARK`, `ANALYST_LIGHT`.
+Kontrakt audytu: **`totalIssuesCount: 0`** w `ARENA_DARK`, `SCOUT_DARK`, `ANALYST_LIGHT`.

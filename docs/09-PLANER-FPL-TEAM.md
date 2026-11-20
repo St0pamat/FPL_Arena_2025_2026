@@ -4,7 +4,7 @@
 |------|---------|
 | Moduł | `FPL_PLANNER` — Interaktywny Planer Drużyny i Transferów |
 | Wzorzec UX | [fpl.team/plan](https://fpl.team/plan/) (pitch + transfery + chipy) |
-| Status | 🎯 **AKTYWNY CEL** (nowe okno) — kod jeszcze niezaimplementowany |
+| Status | Aktywny. Karta U6 i zwijany panel admina (U6b): [`stats-lab/stan-po-u8.md`](./stats-lab/stan-po-u8.md) |
 | Zero-Regression | Właściciel odmroził cały Stats Lab (Centre, Studio, Predykcje, Planer) poza „Baza i Synchronizacja FPL”. |
 
 Powiązane: [`00-ACTIVE-ROADMAP.md`](./00-ACTIVE-ROADMAP.md) · [`01-ARCHITEKTURA-I-BAZA-DANYCH.md`](./01-ARCHITEKTURA-I-BAZA-DANYCH.md).
@@ -102,7 +102,7 @@ Stack UI: React 18 + Next 14 + Tailwind CSS v3 (oficjalne opacity `/5`…`/95`).
 
 ---
 
-## 4. Proponowana architektura wpięcia (bez naruszenia FROZEN)
+## 4. Architektura wpięcia
 
 ### 4.1 Nowe pliki (zielone pole)
 

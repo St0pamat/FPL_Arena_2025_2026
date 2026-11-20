@@ -10,7 +10,8 @@ export type StatsLabVizMode =
   | "STREAKS_EXPLORER"
   | "RADAR_PIZZA"
   | "SCATTER_2D"
-  | "HEATMAP_MATRIX";
+  | "HEATMAP_MATRIX"
+  | "VENN_3";
 
 export type StatsLabChartTheme = {
   id: StatsLabChartThemeId;

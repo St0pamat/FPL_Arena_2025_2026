@@ -127,11 +127,12 @@ Właściciel odmroził cały Stats Lab (Centre, Studio, Predykcje, Planer) poza 
 | Plik | Treść |
 |------|--------|
 | [`02-STATS-LAB-STUDIO-KONTEKST.md`](./02-STATS-LAB-STUDIO-KONTEKST.md) | Stats Lab Studio: pojęcia, okresowe metryki, Per 90/DC, OCENA, stopka PNG |
-| [`03-WYKRES-RADAROWY-PIZZA.md`](./03-WYKRES-RADAROWY-PIZZA.md) | **Zamrożony** Radar / Pizza + Quick Slots |
-| [`04-DEKOMPOZYCJA-I-PROFIL-WIELOWYMIAROWY.md`](./04-DEKOMPOZYCJA-I-PROFIL-WIELOWYMIAROWY.md) | **Zamrożony (Zero-Regression):** Points Breakdown + Stacked + Streaks / DC |
-| [`05-WYKRES-SCATTER-2D.md`](./05-WYKRES-SCATTER-2D.md) | **Zamrożony (Zero-Regression):** Scatter 2D — Social-First AAA |
-| [`06-MACIERZ-HEATMAP.md`](./06-MACIERZ-HEATMAP.md) | **Zamrożony (Zero-Regression):** Macierz Heatmap — Social-First AAA (6/6) |
-| [`07-STATS-CENTRE.md`](./07-STATS-CENTRE.md) | **Zamrożony (Zero-Regression):** Stats Centre — Social-First AAA (komplet: Players 8/8, Per GW, Teams 4/4) |
+| [`03-WYKRES-RADAROWY-PIZZA.md`](./03-WYKRES-RADAROWY-PIZZA.md) | Radar / Pizza + Quick Slots |
+| [`04-DEKOMPOZYCJA-I-PROFIL-WIELOWYMIAROWY.md`](./04-DEKOMPOZYCJA-I-PROFIL-WIELOWYMIAROWY.md) | Points Breakdown + Stacked + Streaks / DC |
+| [`05-WYKRES-SCATTER-2D.md`](./05-WYKRES-SCATTER-2D.md) | Scatter 2D |
+| [`06-MACIERZ-HEATMAP.md`](./06-MACIERZ-HEATMAP.md) | Macierz Heatmap |
+| [`07-STATS-CENTRE.md`](./07-STATS-CENTRE.md) | Stats Centre (Players, Per GW, Teams) |
+| [`stats-lab/stan-po-u8.md`](./stats-lab/stan-po-u8.md) | Stan po U5c–U8: karta Planera, panel, Studio, diagram Venna |
 | `TECHNICAL.md`, `architecture.md`, `project_overview.md` | Starsza / głębsza dokumentacja Skarb Kibica i architektury |
 
 ---

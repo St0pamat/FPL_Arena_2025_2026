@@ -16,6 +16,7 @@ import {
 import type { StatsLabChartThemeId, StatsLabVizMode } from "@/components/admin/stats-lab/chartTheme";
 import { StatsLabChartCanvas } from "@/components/admin/stats-lab/StatsLabChartCanvas";
 import type { PointsSortKey } from "@/components/admin/stats-lab/charts/PointsBreakdownChart";
+import type { VennCondition, VennPresetId } from "@/lib/stats-lab/vennEngine";
 
 type Props = {
   exportRef:
@@ -41,6 +42,8 @@ type Props = {
   pointsSortKey: PointsSortKey;
   streakSortKey: StreakMetricKey;
   activeStreakKeys: StreakMetricKey[];
+  vennConditions?: [VennCondition, VennCondition, VennCondition];
+  vennPresetId?: VennPresetId | "CUSTOM";
 };
 
 /**
@@ -68,6 +71,8 @@ export function StatsLabExportNode({
   pointsSortKey,
   streakSortKey,
   activeStreakKeys,
+  vennConditions,
+  vennPresetId,
 }: Props) {
   return (
     <div
@@ -116,6 +121,8 @@ export function StatsLabExportNode({
           onShowNegativesChange={() => undefined}
           onSelectPlayer={() => undefined}
           variant="export"
+          vennConditions={vennConditions}
+          vennPresetId={vennPresetId}
         />
       </div>
     </div>

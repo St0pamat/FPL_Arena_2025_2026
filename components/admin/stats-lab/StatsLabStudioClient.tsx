@@ -12,6 +12,7 @@ import Link from "next/link";
 import {
   Activity,
   BarChart3,
+  Blend,
   ChartScatter,
   Database,
   Flame,
@@ -63,6 +64,12 @@ import { StatsLabPosterFrame } from "@/components/admin/stats-lab/StatsLabPoster
 import { StatsLabExportNode } from "@/components/admin/stats-lab/StatsLabExportNode";
 import { RadarQuickSlotsBar } from "@/components/admin/stats-lab/RadarQuickSlotsBar";
 import { StudioPendingCue } from "@/components/admin/stats-lab/StudioPendingCue";
+import {
+  applyVennPresetToFilter,
+  cloneVennConditions,
+  getVennPreset,
+  vennUsesFullPool,
+} from "@/lib/stats-lab/vennEngine";
 import type { PointsSortKey } from "@/components/admin/stats-lab/charts/PointsBreakdownChart";
 import type { KnowledgeHelpAnchor } from "@/lib/stats-lab/knowledgeBaseContent";
 import {
@@ -93,6 +100,7 @@ const VIZ_TABS: {
   { id: "RADAR_PIZZA", icon: PieChart },
   { id: "SCATTER_2D", icon: ChartScatter },
   { id: "HEATMAP_MATRIX", icon: Grid3X3 },
+  { id: "VENN_3", icon: Blend },
 ];
 
 const DEFAULT_UI: StudioUiState = {
@@ -111,6 +119,10 @@ const DEFAULT_UI: StudioUiState = {
   axisX: "expected_goal_involvements",
   axisY: "total_points",
   sortByComposite: false,
+  vennPresetId: "COMPLETE_DEFENDER",
+  vennConditions: cloneVennConditions(
+    getVennPreset("COMPLETE_DEFENDER").conditions,
+  ),
 };
 
 export function StatsLabStudioClient({
@@ -180,11 +192,13 @@ export function StatsLabStudioClient({
           setError(null);
           const isPointsBreakdown = ui.vizMode === "POINTS_BREAKDOWN";
           const isStreaks = ui.vizMode === "STREAKS_EXPLORER";
+          const isVenn = ui.vizMode === "VENN_3";
           // Composite TYLKO przy jawnym przełączniku i TYLKO na widokach wielometrycznych.
           // Zmiana vizMode / okresu / per90 NIGDY nie włącza composite po cichu.
           const allowComposite =
             !isPointsBreakdown &&
             !isStreaks &&
+            !isVenn &&
             ui.sortByComposite === true;
           const payload: StatsLabQueryFilter = {
             ...nextFilter,
@@ -193,6 +207,12 @@ export function StatsLabStudioClient({
             // STREAKS: sortuj całą pulę po serii przed Top N
             streakSortKey: isStreaks ? streakSortKey : undefined,
             sortByComposite: allowComposite,
+            returnAllEligible:
+              isVenn &&
+              vennUsesFullPool(
+                ui.pickMode,
+                ui.pickMode === "MANUAL" ? nextFilter.selectedPlayerIds : [],
+              ),
             // POINTS_BREAKDOWN: Top N + kolejność = oficjalne sumy FPL (nie Per 90)
             sortByRawValues: isPointsBreakdown ? true : false,
             ...(isPointsBreakdown
@@ -416,9 +436,18 @@ export function StatsLabStudioClient({
       // Wejście na POINTS_BREAKDOWN / STREAKS: composite zawsze OFF (brak sensu UX)
       if (
         patch.vizMode === "POINTS_BREAKDOWN" ||
-        patch.vizMode === "STREAKS_EXPLORER"
+        patch.vizMode === "STREAKS_EXPLORER" ||
+        patch.vizMode === "VENN_3"
       ) {
         next.sortByComposite = false;
+      }
+      if (patch.vizMode === "VENN_3" && prev.vizMode !== "VENN_3") {
+        next.vennPresetId = "COMPLETE_DEFENDER";
+        next.vennConditions = cloneVennConditions(
+          getVennPreset("COMPLETE_DEFENDER").conditions,
+        );
+        // Preset czyści ręczną listę. Zostawienie MANUAL ucinałoby pulę do Top N.
+        next.pickMode = "AUTO";
       }
       return next;
     });
@@ -434,6 +463,15 @@ export function StatsLabStudioClient({
       patch.vizMode === "STREAKS_EXPLORER"
     ) {
       setFilter((prev) => ({ ...prev, sortByComposite: false }));
+    }
+    if (patch.vizMode === "VENN_3" && ui.vizMode !== "VENN_3") {
+      setFilter((prev) => applyVennPresetToFilter(prev, "COMPLETE_DEFENDER"));
+    } else if (
+      patch.vizMode &&
+      patch.vizMode !== "VENN_3" &&
+      ui.vizMode === "VENN_3"
+    ) {
+      setFilter((prev) => ({ ...prev, returnAllEligible: false, sortByComposite: false }));
     }
     if (patch.lang != null) onLangChange?.(patch.lang);
     if (patch.chartTheme != null) onChartThemeChange?.(patch.chartTheme);
@@ -754,6 +792,12 @@ export function StatsLabStudioClient({
             streakSortKey={streakSortKey}
             scatterAxisX={ui.axisX}
             scatterAxisY={ui.axisY}
+            focusMetrics={
+              ui.vizMode === "VENN_3"
+                ? ui.vennConditions.map((condition) => condition.metric)
+                : null
+            }
+            vennConditions={ui.vizMode === "VENN_3" ? ui.vennConditions : null}
           />
 
           {/* Poza exportRef / PosterFrame — nigdy nie trafia na PNG */}
@@ -832,6 +876,8 @@ export function StatsLabStudioClient({
                   onUiChange({ showNegativeBreakdown: v })
                 }
                 onSelectPlayer={(id) => onUiChange({ spotlightPlayerId: id })}
+                vennConditions={ui.vennConditions}
+                vennPresetId={ui.vennPresetId}
               />
             </StatsLabPosterFrame>
           </div>
@@ -867,6 +913,8 @@ export function StatsLabStudioClient({
         pointsSortKey={pointsSortKey}
         streakSortKey={streakSortKey}
         activeStreakKeys={activeStreakKeys}
+        vennConditions={ui.vennConditions}
+        vennPresetId={ui.vennPresetId}
       />
 
     </div>

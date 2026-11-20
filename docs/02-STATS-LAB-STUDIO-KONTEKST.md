@@ -2,7 +2,7 @@
 
 Właściciel odmroził cały Stats Lab (Centre, Studio, Predykcje, Planer) poza „Baza i Synchronizacja FPL”.
 
-Dokument ogólny: **czym jest Stats Lab**, jak działa **Studio** (pracownia wykresów) i jakimi pojęciami operuje. Nie jest to pełna specyfikacja każdego wykresu — szczegóły w docs/03–07. **Chart Studio: zamrożone 6/6** — Radar, Points, Stacked, Streaks, Scatter, Heatmap. **Stats Centre: zamrożony** (docs/07) — Players 8/8, Per GW, Teams 4/4.
+Dokument ogólny: **czym jest Stats Lab**, jak działa **Studio** (pracownia wykresów) i jakimi pojęciami operuje. Nie jest to pełna specyfikacja każdego wykresu — szczegóły w docs/03–07. Studio ma **7 trybów**, w tym diagram Venna (U8). Stan po U5c–U8: [`stats-lab/stan-po-u8.md`](./stats-lab/stan-po-u8.md).
 
 ---
 
@@ -41,7 +41,7 @@ Zapytanie serwerowe (Server Action)
         ↓
 Silnik analyticsEngine → porównanie / percentyle / composite
         ↓
-Canvas wykresu (jeden z 6 trybów wizualizacji)
+Canvas wykresu (jeden z 7 trybów wizualizacji)
         ↓
 Eksport PNG / copy / Discord / audit JSON
 ```
@@ -52,18 +52,19 @@ Płótno: `components/admin/stats-lab/StatsLabChartCanvas.tsx`
 
 ---
 
-## 3. Sześć trybów wizualizacji (viz modes)
+## 3. Siedem trybów wizualizacji (viz modes)
 
-| ID | Nazwa UI (skrót) | Status | Do czego służy |
-|----|------------------|--------|----------------|
-| `STACKED_COMPOSITE` | Profil wielowymiarowy | **Zamrożony** (docs/04) | Paski / segmenty wielu metryk + **OCENA (0–100)** (`compositeScore`) |
-| `POINTS_BREAKDOWN` | Dekompozycja punktów | **Zamrożony** (docs/04) | Skąd biorą się punkty FPL (gole, CS, DC, bonus, kary…) |
-| `STREAKS_EXPLORER` | Serie / regularność | **Zamrożony** (docs/04) | Serie returnów, CS, timeline HIT/MISS/DNP |
-| `RADAR_PIZZA` | Radar / Pizza | **Zamrożony / ukończony** (docs/03) | Kształt profilu 1–4 graczy na tych samych osiach |
-| `SCATTER_2D` | Scatter 2D | **Zamrożony / ukończony** (docs/05) | Korelacja X vs Y, RAW/PERCENTILE, ćwiartki vs średnia grupy |
-| `HEATMAP_MATRIX` | Heatmapa | **Zamrożony / ukończony** (docs/06) | Macierz gracze × metryki, RAW/PERCENTILE, ★ liderzy, Ø średnia grupy |
+| ID | Nazwa UI (skrót) | Dokument | Do czego służy |
+|----|------------------|----------|----------------|
+| `STACKED_COMPOSITE` | Profil wielowymiarowy | docs/04 | Paski / segmenty wielu metryk + **OCENA (0–100)** (`compositeScore`) |
+| `POINTS_BREAKDOWN` | Dekompozycja punktów | docs/04 | Skąd biorą się punkty FPL (gole, CS, DC, bonus, kary…) |
+| `STREAKS_EXPLORER` | Serie / regularność | docs/04 | Serie returnów, CS, timeline HIT/MISS/DNP |
+| `RADAR_PIZZA` | Radar / Pizza | docs/03 | Kształt profilu 1–4 graczy na tych samych osiach |
+| `SCATTER_2D` | Scatter 2D | docs/05 | Korelacja X vs Y, RAW/PERCENTILE, ćwiartki vs średnia grupy |
+| `HEATMAP_MATRIX` | Heatmapa | docs/06 | Macierz gracze × metryki, RAW/PERCENTILE, ★ liderzy, Ø średnia grupy |
+| `VENN_3` | Diagram Venna | [`stats-lab/studio-venn-plan.md`](./stats-lab/studio-venn-plan.md) | Trzy warunki (metryka ≥ próg). Środek = wszystkie trzy. Pula filtra, sumy okresu |
 
-Użytkownik przełącza tryb zakładkami u góry Studio. **Ten sam filtr i ta sama wynikowa lista graczy** karmią różne wykresy — zmienia się tylko sposób rysowania.
+Użytkownik przełącza tryb zakładkami u góry Studio. **Ten sam filtr** karmi wykresy. Diagram Venna bierze całą pulę filtra (nie Top N) i liczy progi z sum okresu (`rawValues`).
 
 ---
 
@@ -287,9 +288,10 @@ Przy wejściu na zakładkę `RADAR_PIZZA` Studio wymusza `showPoolAverage = fals
 
 | Dokument | Temat |
 |----------|-------|
-| [`03-WYKRES-RADAROWY-PIZZA.md`](./03-WYKRES-RADAROWY-PIZZA.md) | **Zamrożony** Radar / Pizza + Quick Slots |
-| [`04-DEKOMPOZYCJA-I-PROFIL-WIELOWYMIAROWY.md`](./04-DEKOMPOZYCJA-I-PROFIL-WIELOWYMIAROWY.md) | **Zamrożony (Zero-Regression):** Points Breakdown + Stacked Composite + OCENA / Tło grupy + DC |
-| [`05-WYKRES-SCATTER-2D.md`](./05-WYKRES-SCATTER-2D.md) | **Zamrożony (Zero-Regression):** Scatter 2D — Social-First AAA |
-| [`06-MACIERZ-HEATMAP.md`](./06-MACIERZ-HEATMAP.md) | **Zamrożony (Zero-Regression):** Macierz Heatmap — Social-First AAA (**Chart Studio 6/6**) |
-| [`07-STATS-CENTRE.md`](./07-STATS-CENTRE.md) | **Zamrożony (Zero-Regression):** Stats Centre — Social-First AAA (komplet: Players 8/8, Per GW, Teams 4/4) |
+| [`03-WYKRES-RADAROWY-PIZZA.md`](./03-WYKRES-RADAROWY-PIZZA.md) | Radar / Pizza + Quick Slots |
+| [`04-DEKOMPOZYCJA-I-PROFIL-WIELOWYMIAROWY.md`](./04-DEKOMPOZYCJA-I-PROFIL-WIELOWYMIAROWY.md) | Points Breakdown + Stacked Composite + OCENA / Tło grupy + DC |
+| [`05-WYKRES-SCATTER-2D.md`](./05-WYKRES-SCATTER-2D.md) | Scatter 2D |
+| [`06-MACIERZ-HEATMAP.md`](./06-MACIERZ-HEATMAP.md) | Macierz Heatmap |
+| [`07-STATS-CENTRE.md`](./07-STATS-CENTRE.md) | Stats Centre (Players, Per GW, Teams) |
+| [`stats-lab/stan-po-u8.md`](./stats-lab/stan-po-u8.md) | Stan po U5c–U8, w tym diagram Venna |
 | [`01-APLIKACJA-PRZEGLAD-FUNKCJONALNY.md`](./01-APLIKACJA-PRZEGLAD-FUNKCJONALNY.md) | Przegląd całej aplikacji FPL Arena |

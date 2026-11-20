@@ -1,11 +1,11 @@
-# Wykres punktowy 2D (`SCATTER_2D`) — zamrożony (Zero-Regression)
+# Wykres punktowy 2D (`SCATTER_2D`)
 
-Właściciel odmroził cały Stats Lab (Centre, Studio, Predykcje, Planer) poza „Baza i Synchronizacja FPL”.
+Właściciel odmroził cały Stats Lab (Centre, Studio, Predykcje, Planer) poza „Baza i Synchronizacja FPL”. Stan po U5c–U8: [`stats-lab/stan-po-u8.md`](./stats-lab/stan-po-u8.md).
 
 | Pole | Wartość |
 |------|---------|
 | Tryb | `vizMode === "SCATTER_2D"` |
-| Status | **Zamrożony / ukończony** (Social-First AAA — Kroki 1–5) |
+| Status | Aktywny. Geometria poniżej jest kontraktem |
 | Implementacja | `components/admin/stats-lab/charts/Scatter2DChart.tsx` |
 | Osie UI | `ui.axisX` / `ui.axisY` + Quick Axis Presets |
 | Canvas / stopka | `StatsLabChartCanvas.tsx` (`scaleMode`, `per90`, `poolSize`) |
@@ -157,9 +157,9 @@ Przekazanie: `StatsLabStudioClient` → `StatsLabExportBar` → `auditExport.ts`
 
 ---
 
-## 8. Zero-regression — Chart Studio 6/6
+## 8. Sąsiednie wykresy Studio
 
-Przy dalszych pracach Studio **nie wolno** zmieniać bez decyzji (pakiet **6/6 zamrożony**):
+Geometria tego wykresu zostaje kontraktem. Siódmy tryb, diagram Venna, jest opisany w [`stats-lab/studio-venn-plan.md`](./stats-lab/studio-venn-plan.md).
 
 1. `RadarPizzaChart.tsx` + `RadarQuickSlotsBar.tsx` (docs/03)
 2. `PointsBreakdownChart.tsx` (docs/04)
@@ -167,5 +167,4 @@ Przy dalszych pracach Studio **nie wolno** zmieniać bez decyzji (pakiet **6/6 z
 4. `StreaksExplorerChart.tsx` (docs/04)
 5. `Scatter2DChart.tsx` (ten dokument — docs/05)
 6. `HeatmapMatrixChart.tsx` ([docs/06](./06-MACIERZ-HEATMAP.md))
-
-Dozwolone: wspólne typy/silnik, KB copy (poza geometrią zamrożonych viz).
+7. `VennDiagramChart.tsx` + `lib/stats-lab/vennEngine.ts`

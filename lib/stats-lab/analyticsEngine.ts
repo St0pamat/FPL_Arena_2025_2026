@@ -155,6 +155,16 @@ export type StatsLabBootstrapData = {
   maxGw: number;
 };
 
+/** Top N zostaje 1–50. Venn (`returnAllEligible`) bierze całą pulę filtra. */
+export function plottedPlayerLimit(
+  filter: { returnAllEligible?: boolean; limitPlayers?: number },
+  poolLength: number,
+): number {
+  const pool = Math.max(0, Math.floor(poolLength));
+  if (filter.returnAllEligible) return pool;
+  return Math.max(1, Math.min(50, filter.limitPlayers || 10));
+}
+
 function emptyRawValues(): Record<FplStatKey, number> {
   const out = {} as Record<FplStatKey, number>;
   for (const def of FPL_STAT_DEFINITIONS) out[def.key] = 0;
@@ -2296,7 +2306,7 @@ export function buildStatsLabComparison(args: {
             sortDef,
             sortValueSource,
           );
-    const limit = Math.max(1, Math.min(50, filter.limitPlayers || 10));
+    const limit = plottedPlayerLimit(filter, sorted.length);
     selected = sorted.slice(0, limit);
   }
 

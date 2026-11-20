@@ -5,7 +5,7 @@ Właściciel odmroził cały Stats Lab (Centre, Studio, Predykcje, Planer) poza 
 | Pole | Wartość |
 |------|---------|
 | Moduł | `PROJECTIONS_CENTRE` (`FIXTURES_FDR` · `PROJECTED_GOALS` · `CLEAN_SHEETS` · `MATCHUP_CARDS`) |
-| Status | **`FROZEN / PASS AAA (Zero-Regression)`** — `totalIssuesCount: 0` |
+| Status | Aktywny. Audyt celu: `totalIssuesCount: 0` |
 | Komplet | **4/4 widoki** |
 | UI | `components/admin/stats-lab/StatsLabProjectionsClient.tsx` |
 | Silnik | `lib/stats-lab/projectionsEngine.ts` — **Dixon-Coles v0.2** |
@@ -15,12 +15,11 @@ Właściciel odmroził cały Stats Lab (Centre, Studio, Predykcje, Planer) poza 
 
 Powiązane: [`00-ACTIVE-ROADMAP.md`](./00-ACTIVE-ROADMAP.md) · [`01-ARCHITEKTURA-I-BAZA-DANYCH.md`](./01-ARCHITEKTURA-I-BAZA-DANYCH.md) · [`02-SILNIK-ANALITYCZNY-I-METRYKI.md`](./02-SILNIK-ANALITYCZNY-I-METRYKI.md) · [`07-STATS-CENTRE.md`](./07-STATS-CENTRE.md) · Chart Studio docs/03–06.
 
-**Zakaz dalszych zmian UI/logiki Predykcji** bez osobnej decyzji produktowej.  
-**Zero-Regression:** nie modyfikować `StatsLabProjectionsClient.tsx`, `projectionsEngine.ts`, ani zamrożonych modułów Chart Studio / Stats Centre.
+Stan po U5c–U8: [`stats-lab/stan-po-u8.md`](./stats-lab/stan-po-u8.md). Synchronizacja FPL zostaje bez zmian.
 
 ---
 
-## 0. Finalne poprawki AAA (zamrożone)
+## 0. Finalne poprawki AAA
 
 ### 0.1 Skale CS: `matchCsPct` (0…100) vs `expectedCs` (0…1)
 
@@ -153,23 +152,23 @@ Szkic docelowych kolumn `fpl_lab_fixtures` (do decyzji w implementacji):
 
 Aktualny shell: `components/admin/stats-lab/StatsLabModuleShell.tsx`.
 
-Dziś tylko **2 zakładki**:
+Shell ma zakładki Centre, Studio, Predykcje i Planer.
 
 | Tab | Komponent |
 |-----|-----------|
-| `centre` | `StatsCentreView` (FROZEN) |
-| `studio` | `StatsLabStudioClient` (FROZEN) |
+| `centre` | `StatsCentreView` |
+| `studio` | `StatsLabStudioClient` |
 
 PL/EN i 3 motywy są **wspólne** w shellu (`LANG_KEY` / `THEME_KEY`).  
 „Baza Wiedzy” to modal w Studio (`StatsLabKnowledgeBaseModal`), nie osobny tab.  
 Sync: osobna trasa `/admin/stats-lab/sync`.
 
-**Rekomendacja wpięcia (bez ruszania zamrożonych chartów):**
+**Jak moduł został wpięty:**
 
 1. Rozszerzyć `ModuleTab` o trzecią wartość, np. `"projections"` / `"fdr"`.
 2. Dodać trzeci przycisk w pasku shellu obok Centre / Studio, np. **„Predykcje i Terminarz”** / **„Projections & Fixtures”**.
 3. Query: `?tab=projections` (obok `centre` / `studio`).
-4. Nowy klient: `StatsLabProjectionsClient.tsx` (lub `TeamProjectionsView.tsx`) — **nowy plik**, nie edycja zamrożonego Centre/Studio poza minimalnym shell switcherem.
+4. Klient: `StatsLabProjectionsClient.tsx`.
 5. Nowy silnik: `lib/stats-lab/projectionsEngine.ts` (Dixon-Coles v0.2 — sekcja 6) + `projectionsI18n.ts`.
 
 Alternatywa (gorsza): podtrasa `/admin/stats-lab/projections` jak `/centre` — shell i tak powinien być spójny z PL/EN/motywami.
@@ -178,14 +177,14 @@ Alternatywa (gorsza): podtrasa `/admin/stats-lab/projections` jak `/centre` — 
 
 | Element | Stan dziś | Plan dla Projections |
 |---------|-----------|----------------------|
-| `StatsLabChartCanvas.tsx` | **FROZEN** (Chart Studio) | **Nie modyfikować.** Nowy moduł ma mieć **własną ramę plakatu** (wzorzec `StatsCentreView` + `exportRef`), nie dokładać vizMode do Canvas. |
+| `StatsLabChartCanvas.tsx` | Rama plakatu Studio | Predykcje mają własną ramę (`exportRef`), bez dokładania widoku do Canvas Studio. |
 | Motywy `ARENA_DARK` / `SCOUT_DARK` / `ANALYST_LIGHT` | Shell + `chartTheme` / `themeTokens` | Przekazać `themeId` z shellu; tokeny powierzchni jak w Centre. |
 | PL / EN | Shell `lang` | Osobny `projectionsI18n.ts` (jak `statsCentreI18n`). |
 | Audyt JSON | `auditExport.ts` (`CHART_STUDIO` \| `STATS_CENTRE`) | Dodać moduł `TEAM_PROJECTIONS` / `PROJECTIONS_CENTRE` + `subView` (`FIXTURES_FDR` …) oraz `inspectCanvasLayoutDom(exportRef)`. |
 | Media klubów | `/api/uploads/fpl-lab/badge/{pulse_code}` + `crossOrigin="anonymous"` | Obowiązkowe na plakatach FDR / Matchup. |
 | Stopka wiarygodności | — | Obowiązkowa na każdym plakacie (sekcja 7.3). |
 
-**Zero-Regression:** dozwolone zmiany infrastrukturalne (shell tab, nowy silnik, nowa migracja fixtures, rozszerzenie `auditExport` o nowy module enum) — **zakaz** edycji plików Chart Studio charts / Canvas / StudioClient / ControlPanel / `analyticsEngine` oraz zamrożonego Centre bez jawnego polecenia.
+Synchronizacja FPL (`/admin/stats-lab/sync`) zostaje bez zmian. Studio, Centre, Predykcje i Planer są aktywne.
 
 ---
 
@@ -256,7 +255,7 @@ Wspólne kontrolki globalne:
 | **4** | `FIXTURES_FDR` (ticker, filtry Dom/Wyjazd, układy komórki, FDR 0–100 / 1–5) |
 | **5** | `PROJECTED_GOALS` + `CLEAN_SHEETS` (SUMA, preset Next 6, DGW/BGW) |
 | **6** | `MATCHUP_CARDS` + plakat 3-kolumnowy + weryfikacja vs rzeczywistość + audit JPG/JSON |
-| **7** | Dokumentacja zamrożenia `docs/09-…` gdy AAA ukończone |
+| **7** | Dokumentacja stanu w [`stats-lab/stan-po-u8.md`](./stats-lab/stan-po-u8.md) |
 
 ---
 
