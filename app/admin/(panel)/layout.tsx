@@ -18,7 +18,7 @@ export default async function AdminPanelLayout({ children }: { children: React.R
   }
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen flex-col md:flex-row">
       <AdminSidebar userEmail={user.email ?? ""} />
       <div className="flex min-w-0 flex-1 flex-col">{children}</div>
     </div>

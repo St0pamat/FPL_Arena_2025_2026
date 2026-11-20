@@ -48,6 +48,11 @@ import {
   assignViceCaptain,
   clearRolesForElement,
 } from "@/lib/stats-lab/plannerCaptainRoles";
+import {
+  appendPlannedTransfer,
+  removePlannedTransfer,
+  undoPurchaseOfElement,
+} from "@/lib/stats-lab/plannerDraftTransfers";
 import { shellLabel } from "@/lib/stats-lab/i18n";
 import {
   PLANNER_CHIP_LABEL_KEY,
@@ -629,20 +634,17 @@ export function StatsLabPlannerClient({
 
   function onMarkPlayerForTransferOut(slot: number, elementId: number) {
     if (!activeGwState) return;
-    const boughtHere = activeGwState.transfers.find(
-      (t) => !t.hasConflict && t.inElementId === elementId,
-    );
-    if (boughtHere) {
-      pushUndoAndUpdate((draft) => {
-        const dec = ensureDecision(draft.decisionsByGw, currentGw);
-        draft.decisionsByGw[currentGw] = {
-          ...dec,
-          transfers: dec.transfers.filter((t) => t.id !== boughtHere.id),
-        };
-        return draft;
-      });
-      setPendingTransferOut(null);
-      return;
+    const currentDecision = drafts[activeVariant].decisionsByGw[currentGw];
+    if (currentDecision) {
+      const undone = undoPurchaseOfElement(currentDecision, elementId);
+      if (undone.undone) {
+        pushUndoAndUpdate((draft) => {
+          draft.decisionsByGw[currentGw] = undone.decision;
+          return draft;
+        });
+        setPendingTransferOut(null);
+        return;
+      }
     }
     const pick = activeGwState.squad.find((p) => p.elementId === elementId);
     setPendingTransferOut({
@@ -678,11 +680,17 @@ export function StatsLabPlannerClient({
         inElementId: args.inElementId,
         outSellingPriceTenths: out.sellingPriceTenths,
         inPurchasePriceTenths: inPlayer.now_cost,
+        captainBefore: {
+          captainElementId: dec.captainElementId ?? null,
+          viceCaptainElementId: dec.viceCaptainElementId ?? null,
+          captainClearedByUser: dec.captainClearedByUser,
+          viceClearedByUser: dec.viceClearedByUser,
+        },
       };
-      const order =
-        dec.lineupOrder ?? lineupFromSquad(activeGwState.squad);
-      const nextOrder = order.map((id) =>
-        id === args.outElementId ? args.inElementId : id,
+      const withTransfer = appendPlannedTransfer(
+        dec,
+        transfer,
+        lineupFromSquad(activeGwState.squad),
       );
       const roles = clearRolesForElement(
         {
@@ -698,9 +706,7 @@ export function StatsLabPlannerClient({
         },
       );
       draft.decisionsByGw[currentGw] = {
-        ...dec,
-        transfers: [...dec.transfers, transfer],
-        lineupOrder: nextOrder,
+        ...withTransfer,
         ...roles,
       };
       return draft;
@@ -857,10 +863,7 @@ export function StatsLabPlannerClient({
   function onRemoveTransfer(transferId: string, gw: number) {
     pushUndoAndUpdate((draft) => {
       const dec = ensureDecision(draft.decisionsByGw, gw);
-      draft.decisionsByGw[gw] = {
-        ...dec,
-        transfers: dec.transfers.filter((t) => t.id !== transferId),
-      };
+      draft.decisionsByGw[gw] = removePlannedTransfer(dec, transferId);
       return draft;
     });
   }

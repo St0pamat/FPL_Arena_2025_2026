@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
-import { ChevronLeft, ExternalLink, Home, Lock, type LucideIcon } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ChevronLeft, ExternalLink, Home, Lock, Menu, X, type LucideIcon } from "lucide-react";
 import {
   ADMIN_BRAND,
   ADMIN_PROJECTS,
@@ -18,6 +18,7 @@ function NavLink({
   icon: Icon,
   active,
   external = false,
+  onNavigate,
 }: {
   href: string;
   label: string;
@@ -25,6 +26,7 @@ function NavLink({
   icon: LucideIcon;
   active: boolean;
   external?: boolean;
+  onNavigate?: () => void;
 }) {
   const className = `flex items-start gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors ${
     active
@@ -55,14 +57,20 @@ function NavLink({
 
   if (external) {
     return (
-      <a href={href} target="_blank" rel="noopener noreferrer" className={className}>
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={className}
+        onClick={onNavigate}
+      >
         {content}
       </a>
     );
   }
 
   return (
-    <Link href={href} className={className}>
+    <Link href={href} className={className} onClick={onNavigate}>
       {content}
     </Link>
   );
@@ -106,17 +114,88 @@ function ProjectButton({
   );
 }
 
+const SIDEBAR_ID = "admin-sidebar-panel";
+
 export function AdminSidebar({ userEmail }: { userEmail: string }) {
   const pathname = usePathname();
   const [activeProject, setActiveProject] = useState<AdminProject | null>(null);
+  const [open, setOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const panelRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     const detected = findProjectForAdminPath(pathname);
     if (detected) setActiveProject(detected);
+    setOpen(false);
   }, [pathname]);
 
+  useEffect(() => {
+    if (typeof window.matchMedia !== "function") return;
+    const mq = window.matchMedia("(max-width: 767px)");
+    const apply = () => setIsMobile(mq.matches);
+    apply();
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
+  }, []);
+
+  useEffect(() => {
+    const node = panelRef.current;
+    if (!node) return;
+    if (isMobile && !open) node.setAttribute("inert", "");
+    else node.removeAttribute("inert");
+  }, [isMobile, open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const node = panelRef.current;
+    const focusable = node?.querySelector<HTMLElement>("a, button");
+    (focusable ?? node)?.focus();
+    function onKey(event: KeyboardEvent) {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      setOpen(false);
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open]);
+
+  function closeMenu() {
+    setOpen(false);
+  }
+
   return (
-    <aside className="flex w-64 shrink-0 flex-col border-r border-[#1a1a1a] bg-[#0a0a0a]">
+    <>
+      <div className="sticky top-0 z-50 flex h-12 shrink-0 items-center border-b border-[#1a1a1a] bg-[#0a0a0a] px-2 md:hidden">
+        <button
+          type="button"
+          className="inline-flex h-11 w-11 items-center justify-center rounded-lg text-white"
+          aria-expanded={open}
+          aria-controls={SIDEBAR_ID}
+          aria-label={open ? "Zamknij menu" : "Otwórz menu"}
+          onClick={() => setOpen((value) => !value)}
+        >
+          {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+        </button>
+      </div>
+      {open ? (
+        <button
+          type="button"
+          className="fixed inset-x-0 bottom-0 top-12 z-30 bg-black/60 md:hidden"
+          aria-label="Zamknij menu"
+          onClick={closeMenu}
+        />
+      ) : null}
+      <aside
+        ref={panelRef}
+        id={SIDEBAR_ID}
+        tabIndex={-1}
+        aria-hidden={isMobile && !open ? true : undefined}
+        className={`flex w-64 shrink-0 flex-col border-r border-[#1a1a1a] bg-[#0a0a0a] max-md:fixed max-md:bottom-0 max-md:left-0 max-md:top-12 max-md:z-40 md:static ${
+          open
+            ? "max-md:translate-x-0"
+            : "max-md:-translate-x-full max-md:pointer-events-none"
+        }`}
+      >
       <div className="border-b border-[#1a1a1a] px-5 py-6">
         <p className="text-xs font-black uppercase tracking-[0.2em] text-[#39FF14]">Panel</p>
         <p className="mt-1 text-sm font-bold text-white">{ADMIN_BRAND}</p>
@@ -132,6 +211,7 @@ export function AdminSidebar({ userEmail }: { userEmail: string }) {
           href="/"
           target="_blank"
           rel="noopener noreferrer"
+          onClick={closeMenu}
           className="flex items-center gap-3 rounded-lg border border-[#39FF14]/25 bg-[#39FF14]/5 px-3 py-2.5 text-sm font-semibold text-[#39FF14] transition-colors hover:bg-[#39FF14]/10"
         >
           <Home className="h-4 w-4 shrink-0" strokeWidth={1.75} />
@@ -180,6 +260,7 @@ export function AdminSidebar({ userEmail }: { userEmail: string }) {
                         icon={icon}
                         active={active}
                         external={external}
+                        onNavigate={closeMenu}
                       />
                     );
                   })}
@@ -199,6 +280,7 @@ export function AdminSidebar({ userEmail }: { userEmail: string }) {
                         label={label}
                         icon={icon}
                         active={active}
+                        onNavigate={closeMenu}
                       />
                     );
                   })}
@@ -226,5 +308,6 @@ export function AdminSidebar({ userEmail }: { userEmail: string }) {
         <LogoutButton />
       </div>
     </aside>
+    </>
   );
 }
