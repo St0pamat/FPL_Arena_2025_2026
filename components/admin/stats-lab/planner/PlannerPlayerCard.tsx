@@ -2,7 +2,10 @@
 
 import type { DragEvent, ReactNode } from "react";
 import { ArrowLeftRight, Info, X } from "lucide-react";
-import type { StatsLabChartThemeId } from "@/components/admin/stats-lab/chartTheme";
+import {
+  getScatterClubColor,
+  type StatsLabChartThemeId,
+} from "@/components/admin/stats-lab/chartTheme";
 import type { StatsLabLang } from "@/lib/stats-lab/i18n";
 import type { ReconstructedSquadPick } from "@/lib/stats-lab/fplEntryApi";
 import type { PlannerPlayerCatalogItem } from "@/app/admin/actions/statsLabPlanner";
@@ -39,17 +42,36 @@ function safePounds(tenths: number | null | undefined): string {
   return formatTenthsAsPounds(Number.isFinite(n) ? n : 0);
 }
 
-function shirtFill(color: string | null | undefined): string | undefined {
-  if (typeof color !== "string") return undefined;
-  return /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(color.trim())
-    ? color.trim()
-    : undefined;
+/** Krótki zapis ceny na wąskiej karcie: 15.6 zamiast £15.6m. */
+function shortTenths(tenths: number | null | undefined): string {
+  const n = Number(tenths);
+  if (!Number.isFinite(n)) return "0.0";
+  const rounded = Math.round(n);
+  const sign = rounded < 0 ? "-" : "";
+  return `${sign}${(Math.abs(rounded) / 10).toFixed(1)}`;
+}
+
+function shirtFill(
+  color: string | null | undefined,
+  clubShort: string | null | undefined,
+): string {
+  if (typeof color === "string") {
+    const hex = color.trim();
+    if (/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(hex)) return hex;
+  }
+  // Sync zapisuje primary_color jako null. Paleta short_name jest tym samym źródłem co kropki klubów w Studio.
+  return getScatterClubColor(clubShort, null, "#94a3b8");
 }
 
 function ClubShirt({ color }: { color?: string }) {
   const fill = color ?? "currentColor";
   return (
-    <svg viewBox="0 0 60 56" aria-hidden="true">
+    <svg
+      viewBox="0 0 60 56"
+      aria-hidden="true"
+      data-testid="club-shirt"
+      data-shirt-fill={color ?? "currentColor"}
+    >
       <path
         d="M18 3 L8 7 L1 18 L9 25 L13 21 L13 53 L47 53 L47 21 L51 25 L59 18 L52 7 L42 3 C38 9 22 9 18 3 Z"
         fill={fill}
@@ -182,7 +204,7 @@ export function PlannerPlayerCard({
   });
   const armbandText = captainArmbandLabel(lang, armbandKind);
   const dots = cardNextFdrDots(projectionsForElement, currentGw);
-  const fill = shirtFill(player?.club_primary_color);
+  const fill = shirtFill(player?.club_primary_color, player?.club_short_name);
   const showActions = !isExporting;
 
   return (
@@ -364,10 +386,12 @@ function CardDataLine({
       </>
     );
   } else if (tileMetric === "PRICES") {
+    const full = `${safePounds(pick.purchasePriceTenths)}/${safePounds(pick.nowCostTenths)}/${price}`;
+    const short = `${shortTenths(pick.purchasePriceTenths)}/${shortTenths(pick.nowCostTenths)}/${shortTenths(pick.sellingPriceTenths)}`;
     body = (
-      <span className={`ppc-price ${priceClass}`}>
-        {safePounds(pick.purchasePriceTenths)}/{safePounds(pick.nowCostTenths)}/
-        {price}
+      <span className={`ppc-price ${priceClass}`} title={full} aria-label={full}>
+        <span className="ppc-prices-full">{full}</span>
+        <span className="ppc-prices-short">{short}</span>
       </span>
     );
   } else if (tileMetric === "FORM") {

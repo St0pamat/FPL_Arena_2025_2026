@@ -9,7 +9,12 @@ import { PlannerPitch } from "@/components/admin/stats-lab/planner/PlannerPitch"
 import { PlannerHeaderAndControls } from "@/components/admin/stats-lab/planner/PlannerHeaderAndControls";
 import { PlannerPlayerCard } from "@/components/admin/stats-lab/planner/PlannerPlayerCard";
 import { plannerCardPalette } from "@/components/admin/stats-lab/planner/plannerCardPalette";
-import type { StatsLabChartThemeId } from "@/components/admin/stats-lab/chartTheme";
+import {
+  getScatterClubColor,
+  type StatsLabChartThemeId,
+} from "@/components/admin/stats-lab/chartTheme";
+import fs from "node:fs";
+import path from "node:path";
 import {
   computeWcagContrastRatio,
   parseCssColorToRgba,
@@ -67,15 +72,21 @@ function catalog(
 function pick(
   id: number,
   slot: number,
-  opts: { captain?: boolean; vice?: boolean; sell?: number } = {},
+  opts: {
+    captain?: boolean;
+    vice?: boolean;
+    sell?: number;
+    purchase?: number;
+    now?: number;
+  } = {},
 ): ReconstructedSquadPick {
   return {
     elementId: id,
     slot,
     isCaptain: !!opts.captain,
     isViceCaptain: !!opts.vice,
-    purchasePriceTenths: opts.sell ?? 156,
-    nowCostTenths: opts.sell ?? 156,
+    purchasePriceTenths: opts.purchase ?? opts.sell ?? 156,
+    nowCostTenths: opts.now ?? opts.sell ?? 156,
     sellingPriceTenths: opts.sell ?? 156,
     priceSource: "api",
     priceApprox: false,
@@ -134,6 +145,9 @@ function renderCard(opts: {
   player?: PlannerPlayerCatalogItem;
   byGw?: Record<number, PlayerGwProjection>;
   sell?: number;
+  purchase?: number;
+  now?: number;
+  tileMetric?: "FIXTURES" | "PRICES" | "XPTS" | "FORM" | "DC";
 }) {
   const player = opts.player ?? catalog(1, "Haaland", 4);
   const byGw = opts.byGw ?? {
@@ -152,12 +166,14 @@ function renderCard(opts: {
         captain: opts.captain,
         vice: opts.vice,
         sell: opts.sell ?? 156,
+        purchase: opts.purchase,
+        now: opts.now,
       })}
       player={player}
       proj={byGw[11]}
       projectionsForElement={byGw}
       currentGw={11}
-      tileMetric="FIXTURES"
+      tileMetric={opts.tileMetric ?? "FIXTURES"}
       activeChip={opts.chip ?? null}
       armbandKind={
         opts.captain ? (opts.chip === "3xc" ? "TC" : "C") : opts.vice ? "VC" : null
@@ -310,6 +326,58 @@ describe("U6 karta zawodnika", () => {
         view.unmount();
       }
     }
+  });
+
+  it("koszulka bierze kolor klubu, a przy null paletę short_name", () => {
+    const mci = renderCard({ player: catalog(1, "Haaland", 4) });
+    const mciFill = mci.container
+      .querySelector('[data-testid="club-shirt"]')
+      ?.getAttribute("data-shirt-fill");
+    expect(mciFill).toBe(getScatterClubColor("MCI"));
+    mci.unmount();
+
+    const ars = renderCard({
+      player: catalog(2, "Saka", 3, { club_short_name: "ARS" }),
+    });
+    const arsFill = ars.container
+      .querySelector('[data-testid="club-shirt"]')
+      ?.getAttribute("data-shirt-fill");
+    expect(arsFill).toBe(getScatterClubColor("ARS"));
+    expect(arsFill).not.toBe(mciFill);
+    ars.unmount();
+
+    const custom = renderCard({
+      player: catalog(3, "Palmer", 3, {
+        club_short_name: "CHE",
+        club_primary_color: "#123456",
+      }),
+    });
+    expect(
+      custom.container.querySelector('[data-testid="club-shirt"]')?.getAttribute("data-shirt-fill"),
+    ).toBe("#123456");
+  });
+
+  it("ceny na wąskiej karcie mają krótki zapis i nie wylewają się na sąsiada", () => {
+    renderCard({
+      tileMetric: "PRICES",
+      purchase: 65,
+      now: 71,
+      sell: 70,
+    });
+    const price = screen.getByTestId("card-data-line").querySelector(".ppc-price") as HTMLElement;
+    expect(price.getAttribute("aria-label")).toBe("£6.5m/£7.1m/£7.0m");
+    expect(price.querySelector(".ppc-prices-full")?.textContent).toBe("£6.5m/£7.1m/£7.0m");
+    expect(price.querySelector(".ppc-prices-short")?.textContent).toBe("6.5/7.1/7.0");
+
+    const css = fs.readFileSync(
+      path.resolve(__dirname, "../plannerPlayerCard.css"),
+      "utf8",
+    );
+    expect(css).toMatch(/\.ppc-data\s*\{[^}]*overflow:\s*hidden/);
+    const compact = css.slice(css.indexOf("@container (max-width: 84px)"));
+    expect(compact).toMatch(/\.ppc-act-info\s*\{[^}]*display:\s*none/);
+    expect(compact).toMatch(/\.ppc-prices-full\s*\{[^}]*display:\s*none/);
+    expect(compact).toMatch(/\.ppc-prices-short\s*\{[^}]*display:\s*inline/);
   });
 });
 

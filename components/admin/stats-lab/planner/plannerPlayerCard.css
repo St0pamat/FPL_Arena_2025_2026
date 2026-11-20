@@ -127,9 +127,15 @@
   gap: 3px;
   white-space: nowrap;
   max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
   margin-top: 2px;
   line-height: 13px;
   font-variant-numeric: tabular-nums;
+}
+
+.ppc-prices-short {
+  display: none;
 }
 
 .ppc-xp {
@@ -232,6 +238,18 @@
     font-size: 9.5px;
     line-height: 13px;
     padding: 0 1px;
+  }
+
+  .ppc-act-info {
+    display: none;
+  }
+
+  .ppc-prices-full {
+    display: none;
+  }
+
+  .ppc-prices-short {
+    display: inline;
   }
 
   .ppc-plate {
