@@ -468,7 +468,9 @@ export function StatsCentreView({
     initialLoadError ? centreUi(lang).loadError : null,
   );
   const loadGen = useRef(0);
-  // Dane albo błąd z ładowania strony zostają, dopóki użytkownik nie zmieni filtra.
+  // Wynik (albo błąd) z ładowania strony zostaje tylko przy tym samym filtrze.
+  // Po pierwszej zmianie filtra sentinel znika, więc powrót do domyślnego
+  // filtra odpytuje Centre jeszcze raz.
   const bootFilterKey = useRef<string | null>(
     initialResult != null || initialLoadError ? JSON.stringify(filter) : null,
   );
@@ -548,6 +550,7 @@ export function StatsCentreView({
     ) {
       return;
     }
+    bootFilterKey.current = null;
     const tmr = window.setTimeout(() => runQuery(filter), 200);
     return () => window.clearTimeout(tmr);
   }, [bootstrap.players.length, filter, runQuery]);

@@ -6,7 +6,7 @@ import React from "react";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { queryStatsCentreAction } from "@/app/admin/actions/statsLabCentre";
 import { StatsCentreView } from "@/components/admin/stats-lab/StatsCentreView";
@@ -268,6 +268,32 @@ describe("U5c Centre: ładowanie, pusta pula, błąd", () => {
     expect(seen.has("0")).toBe(false);
     expect(poolEl().getAttribute("data-centre-pool")).toBe(firstCount);
     expect(queryMock).not.toHaveBeenCalled();
+  });
+
+  it("powrót do filtra startowego odpytuje Centre jeszcze raz", async () => {
+    queryMock.mockImplementation(async (filter: { search?: string }) =>
+      makeResult(filter.search ? 12 : 7),
+    );
+    renderCentre({ initialResult: makeResult(459), queryTimeoutMs: 5000 });
+    expect(poolEl().getAttribute("data-centre-pool")).toBe("459");
+    await new Promise((r) => setTimeout(r, 280));
+    expect(queryMock).not.toHaveBeenCalled();
+
+    const search = screen.getByPlaceholderText(centreUi("pl").search);
+    fireEvent.change(search, { target: { value: "Haaland" } });
+    await waitFor(() =>
+      expect(poolEl().getAttribute("data-centre-pool")).toBe("12"),
+    );
+
+    fireEvent.change(search, { target: { value: "" } });
+    await waitFor(() =>
+      expect(poolEl().getAttribute("data-centre-pool")).toBe("7"),
+    );
+    const searches = queryMock.mock.calls.map(
+      (call) => (call[0] as { search?: string }).search,
+    );
+    expect(searches).toContain("Haaland");
+    expect(searches[searches.length - 1]).toBe("");
   });
 
   it("zawieszenie wczytania strony na ?tab=centre → błąd, nie wieczne ładowanie", async () => {
