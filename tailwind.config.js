@@ -3,6 +3,8 @@ export default {
   content: [
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
+    // Klasy z lib/stats-lab (menuChrome, shellNavChrome). Bez tego JIT ich nie emituje.
+    "./lib/**/*.{js,ts,jsx,tsx,mdx}",
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],

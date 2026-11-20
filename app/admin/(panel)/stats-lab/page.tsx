@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { Database } from "lucide-react";
+import { queryStatsCentreAction } from "@/app/admin/actions/statsLabCentre";
 import {
   loadStatsLabBootstrapDataAction,
   queryStatsLabComparisonAction,
 } from "@/app/admin/actions/statsLabStudio";
+import { loadCentrePageBoot } from "@/lib/stats-lab/centrePageBoot";
 import { StatsLabModuleShell } from "@/components/admin/stats-lab/StatsLabModuleShell";
 import {
   applyStatsLabPreset,
@@ -70,6 +72,11 @@ export default async function AdminStatsLabStudioPage({
   }
 
   const pageTab = parseStatsLabPageTab(searchParams?.tab);
+  const centreBoot = await loadCentrePageBoot({
+    tab: pageTab,
+    seasonCode: bootstrap.seasonCode || DEFAULT_STATS_LAB_SEASON,
+    load: (filter) => queryStatsCentreAction(filter),
+  });
   const initialTab =
     pageTab === "centre"
       ? ("centre" as const)
@@ -92,6 +99,8 @@ export default async function AdminStatsLabStudioPage({
             initialResult={initialResult}
             initialFilter={initialFilter}
             initialTab={initialTab}
+            initialCentreResult={centreBoot.initialResult}
+            initialCentreError={centreBoot.initialError}
           />
         </Suspense>
       </div>

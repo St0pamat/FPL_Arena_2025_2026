@@ -45,9 +45,14 @@ import {
   centreColLabel,
   centreColShort,
   centreEmptyFilterMessage,
+  centrePoolPhrase,
   centreUi,
   logStatsCentreLoadError,
 } from "@/lib/stats-lab/statsCentreI18n";
+import {
+  CENTRE_QUERY_TIMEOUT_MS,
+  withTimeout,
+} from "@/lib/stats-lab/centrePageBoot";
 import { toJpeg } from "html-to-image";
 import {
   copyPngBlobToClipboard,
@@ -159,6 +164,12 @@ type Props = {
   onLangChange: (lang: StatsLabLang) => void;
   themeId?: StatsLabChartThemeId;
   onThemeChange?: (theme: StatsLabChartThemeId) => void;
+  /** Wynik z ładowania strony (F5). `null` = jeszcze nie ma danych, nie pusta lista. */
+  initialResult?: StatsCentreResult | null;
+  /** Błąd albo timeout danych startowych — od razu stan z „Spróbuj ponownie”. */
+  initialLoadError?: boolean;
+  /** Testy: krótszy limit wiszącego fetchu. */
+  queryTimeoutMs?: number;
 };
 
 function loadWatchlist(): number[] {
@@ -432,6 +443,9 @@ export function StatsCentreView({
   onLangChange,
   themeId = "ARENA_DARK",
   onThemeChange,
+  initialResult = null,
+  initialLoadError = false,
+  queryTimeoutMs = CENTRE_QUERY_TIMEOUT_MS,
 }: Props) {
   const ui = centreUi(lang);
   const tokens = getThemeTokens(themeId);
@@ -449,8 +463,17 @@ export function StatsCentreView({
   );
   const [draftGwFrom, setDraftGwFrom] = useState(1);
   const [draftGwTo, setDraftGwTo] = useState(Math.max(1, bootstrap.maxGw || 1));
-  const [result, setResult] = useState<StatsCentreResult | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<StatsCentreResult | null>(initialResult);
+  const [error, setError] = useState<string | null>(
+    initialLoadError ? centreUi(lang).loadError : null,
+  );
+  const loadGen = useRef(0);
+  // Wynik (albo błąd) z ładowania strony zostaje tylko przy tym samym filtrze.
+  // Po pierwszej zmianie filtra sentinel znika, więc powrót do domyślnego
+  // filtra odpytuje Centre jeszcze raz.
+  const bootFilterKey = useRef<string | null>(
+    initialResult != null || initialLoadError ? JSON.stringify(filter) : null,
+  );
   const [pending, startTransition] = useTransition();
   const [watchlist, setWatchlist] = useState<number[]>([]);
   const [onlyWatchlist, setOnlyWatchlist] = useState(false);
@@ -486,22 +509,48 @@ export function StatsCentreView({
   }, [onLangChange, onThemeChange]);
 
   const runQuery = useCallback((next: StatsCentreFilter) => {
+    const gen = ++loadGen.current;
     startTransition(async () => {
       try {
         setError(null);
-        const data = await queryStatsCentreAction(next);
+        const data = await withTimeout(
+          queryStatsCentreAction(next),
+          queryTimeoutMs,
+        );
+        if (gen !== loadGen.current) return;
         setResult(data);
+        setError(null);
         setPage(1);
       } catch (e) {
+        if (gen !== loadGen.current) return;
         logStatsCentreLoadError(e);
         setResult(null);
         setError(centreUi(lang).loadError);
       }
     });
-  }, [lang]);
+  }, [lang, queryTimeoutMs]);
 
   useEffect(() => {
-    if (bootstrap.players.length === 0) return;
+    if (result || error) return;
+    const gen = loadGen.current;
+    const tmr = window.setTimeout(() => {
+      if (gen !== loadGen.current) return;
+      logStatsCentreLoadError(
+        Object.assign(new Error("CENTRE_LOAD_TIMEOUT"), { code: "TIMEOUT" }),
+      );
+      setError(centreUi(lang).loadError);
+    }, queryTimeoutMs);
+    return () => window.clearTimeout(tmr);
+  }, [result, error, lang, queryTimeoutMs]);
+
+  useEffect(() => {
+    if (
+      bootFilterKey.current &&
+      JSON.stringify(filter) === bootFilterKey.current
+    ) {
+      return;
+    }
+    bootFilterKey.current = null;
     const tmr = window.setTimeout(() => runQuery(filter), 200);
     return () => window.clearTimeout(tmr);
   }, [bootstrap.players.length, filter, runQuery]);
@@ -614,6 +663,9 @@ export function StatsCentreView({
         ? ui.per90
         : ui.totals;
 
+  const poolTotal: number | null =
+    error || result == null ? null : result.totalRows;
+
   const posterSubtitle = useMemo(() => {
     const parts = [
       `${ui.season} ${bootstrap.seasonCode}`,
@@ -624,19 +676,10 @@ export function StatsCentreView({
       parts.push(`Min. ${filter.minMinutes} min`);
     }
     parts.push(scaleLabel);
-    if (error) {
-      parts.push(lang === "pl" ? "Pula: —" : "Pool: —");
-    } else {
-      parts.push(
-        lang === "pl"
-          ? `Pula: ${result?.totalRows ?? 0} ${poolNoun}`
-          : `Pool: ${result?.totalRows ?? 0} ${poolNoun}`,
-      );
-    }
+    parts.push(centrePoolPhrase(lang, poolTotal, poolNoun));
     return parts.join(" · ");
   }, [
     bootstrap.seasonCode,
-    error,
     filter.centreMode,
     filter.minMinutes,
     filter.rangeMode,
@@ -644,7 +687,7 @@ export function StatsCentreView({
     gwLo,
     lang,
     poolNoun,
-    result?.totalRows,
+    poolTotal,
     scaleLabel,
     ui.season,
   ]);
@@ -1184,7 +1227,7 @@ export function StatsCentreView({
           className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rose-500/30 bg-rose-950/40 px-4 py-3"
           data-centre-load-error="true"
         >
-          <p className="text-sm text-rose-200">{error}</p>
+          <p className="text-sm text-rose-200">{ui.loadError}</p>
           <button
             type="button"
             data-centre-retry="true"
@@ -1229,7 +1272,10 @@ export function StatsCentreView({
             >
               {posterTitle}
             </p>
-            <p className={`mt-0.5 text-[13px] font-medium ${surface.mutedClass}`}>
+            <p
+              className={`mt-0.5 text-[13px] font-medium ${surface.mutedClass}`}
+              data-centre-pool={poolTotal == null ? "none" : String(poolTotal)}
+            >
               {posterSubtitle}
             </p>
           </div>
@@ -1246,7 +1292,31 @@ export function StatsCentreView({
             >
               {ui.loadError}
             </p>
-          ) : !result || pageRows.length === 0 ? (
+          ) : !result ? (
+            <div
+              className="px-6 py-10"
+              data-centre-table-state="loading"
+              aria-busy="true"
+            >
+              <p
+                className={`text-center text-sm font-semibold ${surface.textClass}`}
+              >
+                {ui.loadingPlayers}
+              </p>
+              <div
+                className="mx-auto mt-4 max-w-3xl space-y-2"
+                aria-hidden="true"
+              >
+                {[0, 1, 2, 3].map((i) => (
+                  <div
+                    key={i}
+                    className="h-8 animate-pulse rounded-lg"
+                    style={{ background: surface.headBg }}
+                  />
+                ))}
+              </div>
+            </div>
+          ) : pageRows.length === 0 ? (
             <p
               className={`px-6 py-16 text-center text-sm ${surface.mutedClass}`}
               data-centre-table-state="empty"
@@ -1587,7 +1657,7 @@ export function StatsCentreView({
             </button>
           ))}
           <span className={`ml-2 ${chrome.mutedLabel}`}>
-            {result?.totalRows ?? 0} · {page}/{totalPages}
+            {poolTotal == null ? "—" : poolTotal} · {page}/{totalPages}
           </span>
         </div>
         <div className="flex gap-2">

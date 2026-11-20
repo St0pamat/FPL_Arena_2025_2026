@@ -7,6 +7,7 @@ import type {
   StatsLabBootstrapData,
   StatsLabComparisonResult,
 } from "@/lib/stats-lab/analyticsEngine";
+import type { StatsCentreResult } from "@/lib/stats-lab/statsCentreEngine";
 import type { StatsLabQueryFilter } from "@/lib/stats-lab/presets";
 import {
   shellLabel,
@@ -40,6 +41,8 @@ type Props = {
   initialResult: StatsLabComparisonResult | null;
   initialFilter: StatsLabQueryFilter;
   initialTab?: ModuleTab;
+  initialCentreResult?: StatsCentreResult | null;
+  initialCentreError?: boolean;
 };
 
 const LANG_KEYS = [
@@ -115,6 +118,8 @@ export function StatsLabModuleShell({
   initialResult,
   initialFilter,
   initialTab = "studio",
+  initialCentreResult = null,
+  initialCentreError = false,
 }: Props) {
   const router = useRouter();
   const pathname = usePathname();
@@ -408,6 +413,8 @@ export function StatsLabModuleShell({
               onLangChange={applyLang}
               themeId={chartTheme}
               onThemeChange={applyTheme}
+              initialResult={initialCentreResult}
+              initialLoadError={initialCentreError}
             />
           </div>
         ) : null}
