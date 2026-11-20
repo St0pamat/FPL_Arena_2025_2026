@@ -390,7 +390,7 @@ export function StatsLabModuleShell({
             type="button"
             title={shellTooltip(lang, "nav.knowledge")}
             onClick={() => openKnowledge("general")}
-            className={`inline-flex min-h-[28px] items-center justify-center gap-1.5 rounded-lg px-2.5 py-1 text-[11px] uppercase tracking-wider ${chrome.knowledgeBtn}`}
+            className={`inline-flex min-h-11 items-center justify-center gap-1.5 rounded-lg px-2.5 py-1 text-[11px] uppercase tracking-wider ${chrome.knowledgeBtn}`}
           >
             <BookOpen className="h-3.5 w-3.5" />
             {shellLabel(lang, "nav.knowledge")}

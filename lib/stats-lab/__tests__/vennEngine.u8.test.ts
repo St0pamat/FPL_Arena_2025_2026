@@ -6,9 +6,11 @@ import {
   assignPlayersToVennRegions,
   boxInsideVennRegion,
   boxesOverlap,
+  VENN_TOKEN_SIZE,
   layoutVennRegion,
   planVennTokens,
   shortenPlayerLabel,
+  vennChipBudget,
   vennUsesFullPool,
   type VennCondition,
   type VennRegionId,
@@ -155,10 +157,16 @@ describe("U8 układ żetonów", () => {
   it("w każdym polu jest licznik wewnątrz, a żetony się nie nakładają", () => {
     for (const region of VENN_REGION_IDS) {
       const layout = layoutVennRegion(region);
-      const countBox = { x: layout.count.x, y: layout.count.y, hw: 26, hh: 10 };
+      const countBox = {
+        x: layout.count.x,
+        y: layout.count.y,
+        hw: VENN_TOKEN_SIZE.count.w / 2,
+        hh: VENN_TOKEN_SIZE.count.h / 2,
+      };
       expect(boxInsideVennRegion(countBox, region), region).toBe(true);
       expect(layout.slots.length, region).toBeGreaterThan(0);
-      const box = region === "ABC" ? { hw: 34, hh: 20 } : { hw: 28, hh: 15 };
+      const size = region === "ABC" ? VENN_TOKEN_SIZE.center : VENN_TOKEN_SIZE.normal;
+      const box = { hw: size.w / 2, hh: size.h / 2 };
       const placed = [
         countBox,
         ...layout.slots.map((slot) => ({ ...slot, ...box })),
@@ -194,8 +202,13 @@ describe("U8 układ żetonów", () => {
 
   it("skraca długie nazwisko wielokropkiem, krótkiego nie rusza", () => {
     expect(shortenPlayerLabel("Vuskovic")).toBe("Vuskovic");
-    expect(shortenPlayerLabel("Alexander-Arnold")).toBe("Alexander-A…");
+    expect(shortenPlayerLabel("Mykolenko")).toBe("Mykolenko");
+    expect(shortenPlayerLabel("Alexander-Arnold")).toBe("Alexander-Arn…");
     expect(shortenPlayerLabel("Alexander-Arnold").endsWith("…")).toBe(true);
+    expect(vennChipBudget(12, 5, 8)).toEqual({ shown: 5, overflow: 7 });
+    expect(vennChipBudget(2, 5, 8)).toEqual({ shown: 2, overflow: 0 });
+    expect(vennChipBudget(12, "all", 8)).toEqual({ shown: 8, overflow: 4 });
+    expect(vennChipBudget(9, 8, 2)).toEqual({ shown: 2, overflow: 7 });
   });
 });
 

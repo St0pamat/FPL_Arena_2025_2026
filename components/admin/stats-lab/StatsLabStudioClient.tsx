@@ -69,6 +69,7 @@ import {
   cloneVennConditions,
   getVennPreset,
   vennUsesFullPool,
+  type VennPlayersPerArea,
 } from "@/lib/stats-lab/vennEngine";
 import type { PointsSortKey } from "@/components/admin/stats-lab/charts/PointsBreakdownChart";
 import type { KnowledgeHelpAnchor } from "@/lib/stats-lab/knowledgeBaseContent";
@@ -176,6 +177,9 @@ export function StatsLabStudioClient({
     () => defaultStreakKeysForPositions(seededFilter.positions),
   );
   const [isControlPanelCollapsed, setIsControlPanelCollapsed] = useState(false);
+  const [vennPlayersPerArea, setVennPlayersPerArea] =
+    useState<VennPlayersPerArea>(5);
+  const [vennIncludeList, setVennIncludeList] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
 
   const emptyDb = bootstrap.players.length === 0;
@@ -465,6 +469,7 @@ export function StatsLabStudioClient({
       setFilter((prev) => ({ ...prev, sortByComposite: false }));
     }
     if (patch.vizMode === "VENN_3" && ui.vizMode !== "VENN_3") {
+      setResult(null);
       setFilter((prev) => applyVennPresetToFilter(prev, "COMPLETE_DEFENDER"));
     } else if (
       patch.vizMode &&
@@ -878,6 +883,11 @@ export function StatsLabStudioClient({
                 onSelectPlayer={(id) => onUiChange({ spotlightPlayerId: id })}
                 vennConditions={ui.vennConditions}
                 vennPresetId={ui.vennPresetId}
+                vennPlayersPerArea={vennPlayersPerArea}
+                onVennPlayersPerAreaChange={setVennPlayersPerArea}
+                vennIncludeList={vennIncludeList}
+                onVennIncludeListChange={setVennIncludeList}
+                vennLoading={ui.vizMode === "VENN_3" && (pending || !displayResult)}
               />
             </StatsLabPosterFrame>
           </div>
@@ -915,6 +925,8 @@ export function StatsLabStudioClient({
         activeStreakKeys={activeStreakKeys}
         vennConditions={ui.vennConditions}
         vennPresetId={ui.vennPresetId}
+        vennPlayersPerArea={vennPlayersPerArea}
+        vennIncludeList={vennIncludeList}
       />
 
     </div>

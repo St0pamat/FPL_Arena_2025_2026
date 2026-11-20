@@ -50,9 +50,9 @@ const PAIRS: ContrastPair[] = [
   { id: "scout text/panel", theme: "SCOUT_DARK", fg: "text", bg: "panel", min: 4.5, expected: 14.2 },
   { id: "scout muted/page", theme: "SCOUT_DARK", fg: "textMuted", bg: "page", min: 4.5, expected: 6.71 },
   { id: "scout muted/panel", theme: "SCOUT_DARK", fg: "textMuted", bg: "panel", min: 4.5, expected: 5.78 },
-  { id: "scout accent/page", theme: "SCOUT_DARK", fg: "accent", bg: "page", min: 3, expected: 9.25 },
-  { id: "scout accent/panel", theme: "SCOUT_DARK", fg: "accent", bg: "panel", min: 3, expected: 7.96 },
-  { id: "scout onAccent/accent", theme: "SCOUT_DARK", fg: "accentOnText", bg: "accent", min: 4.5, expected: 10.84 },
+  { id: "scout accent/page", theme: "SCOUT_DARK", fg: "accent", bg: "page", min: 3, expected: 8.02 },
+  { id: "scout accent/panel", theme: "SCOUT_DARK", fg: "accent", bg: "panel", min: 3, expected: 6.9 },
+  { id: "scout onAccent/accent", theme: "SCOUT_DARK", fg: "accentOnText", bg: "accent", min: 4.5, expected: 9.39 },
   // Złoto Scout osobno vs page #0b1c2e i panel #122a3a (nie „jak Arena”)
   { id: "scout gold/page", theme: "SCOUT_DARK", fg: "gold", bg: "page", min: 3, expected: 8.02 },
   { id: "scout gold/panel", theme: "SCOUT_DARK", fg: "gold", bg: "panel", min: 3, expected: 6.9 },
@@ -139,7 +139,7 @@ describe("U4/U4b theme contrast (WCAG from token hex)", () => {
   it("biały na Scout accent nie przechodzi; accentOnText przechodzi we wszystkich motywach", () => {
     const whiteOnScout = ratio("#ffffff", STATS_LAB_THEME_HEX.SCOUT_DARK.accent);
     expect(Number.isFinite(whiteOnScout)).toBe(true);
-    expect(whiteOnScout).toBe(1.86);
+    expect(whiteOnScout).toBe(2.15);
     expect(whiteOnScout).toBeLessThan(3);
 
     for (const theme of Object.keys(STATS_LAB_THEME_HEX) as StatsLabChartThemeId[]) {

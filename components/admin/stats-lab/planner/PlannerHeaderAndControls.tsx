@@ -268,7 +268,7 @@ export function PlannerHeaderAndControls({
               type="button"
               disabled={isLoadingTeam}
               onClick={onLoadTeam}
-              className={`inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-xs font-black uppercase ${chrome.activeBtn}`}
+              className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-3 py-2 text-xs font-black uppercase ${chrome.activeBtn}`}
             >
               {isLoadingTeam ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -279,15 +279,19 @@ export function PlannerHeaderAndControls({
               type="button"
               disabled={isLoadingTeam}
               onClick={onLoadDemo}
-              className={`rounded-xl px-3 py-2 text-xs font-black uppercase ${chrome.inactiveBtn}`}
+              className={`min-h-11 rounded-xl border px-3 py-2 text-xs font-black uppercase ${
+                isLight
+                  ? "border-slate-400 bg-white text-slate-900"
+                  : "border-slate-500 bg-slate-900 text-slate-100"
+              }`}
             >
               {shellLabel(lang, "common.demoSquad")}
             </button>
           </div>
 
-          <div className="text-left lg:text-right">
+          <div className="text-left lg:max-w-md lg:text-right">
             {teamName ? (
-              <p className={`text-sm font-black ${chrome.text}`}>
+              <p className={`text-sm font-black ${chrome.text}`} data-planner-squad-identity="true">
                 {teamName}
                 {managerName ? (
                   <span className={`font-semibold ${chrome.mutedLabel}`}>
@@ -573,10 +577,10 @@ export function PlannerHeaderAndControls({
             onClick={() => prevGw != null && onSelectGw(prevGw)}
             title={ptTip(lang, "planner.gw.prev")}
             aria-label={ptTip(lang, "planner.gw.prev")}
-            className={`inline-flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-[10px] font-black uppercase disabled:opacity-40 ${chrome.inactiveBtn}`}
+            className={`inline-flex min-h-11 min-w-11 items-center gap-1 rounded-xl px-2.5 py-1.5 text-[10px] font-black uppercase disabled:opacity-40 ${chrome.inactiveBtn}`}
           >
             <ChevronLeft className="h-3.5 w-3.5" />
-            {pt(lang, "planner.gw.prev")}
+            <span className="max-[420px]:sr-only">{pt(lang, "planner.gw.prev")}</span>
           </button>
           <div className="flex min-w-0 flex-1 gap-1.5 overflow-x-auto pb-1">
             {availableGameweeks.map((gw) => {
@@ -588,12 +592,21 @@ export function PlannerHeaderAndControls({
                   key={gw}
                   type="button"
                   onClick={() => onSelectGw(gw)}
-                  aria-label={formatGwPillAccessibleName({
+                  aria-label={`${formatGwPillAccessibleName({
                     lang,
                     gw,
                     transferCount,
-                  })}
-                  className={`relative shrink-0 rounded-xl px-2.5 py-1.5 text-[11px] font-black ${
+                  })}${
+                    marker?.hasValidationIssue
+                      ? `. ${pt(lang, "planner.gw.invalid")}`
+                      : ""
+                  }`}
+                  title={
+                    marker?.hasValidationIssue
+                      ? pt(lang, "planner.gw.invalid")
+                      : undefined
+                  }
+                  className={`relative min-h-11 min-w-16 shrink-0 rounded-xl px-2.5 py-1.5 text-[11px] font-black ${
                     active ? chrome.activeBtn : chrome.inactiveBtn
                   }`}
                 >
@@ -613,7 +626,7 @@ export function PlannerHeaderAndControls({
                       </span>
                     ) : null}
                     {marker?.hasValidationIssue ? (
-                      <span aria-hidden>⚠️</span>
+                      <span title={pt(lang, "planner.gw.invalid")}>⚠️</span>
                     ) : null}
                   </span>
                 </button>
@@ -626,9 +639,9 @@ export function PlannerHeaderAndControls({
             onClick={() => nextGw != null && onSelectGw(nextGw)}
             title={ptTip(lang, "planner.gw.next")}
             aria-label={ptTip(lang, "planner.gw.next")}
-            className={`inline-flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-[10px] font-black uppercase disabled:opacity-40 ${chrome.inactiveBtn}`}
+            className={`inline-flex min-h-11 min-w-11 items-center gap-1 rounded-xl px-2.5 py-1.5 text-[10px] font-black uppercase disabled:opacity-40 ${chrome.inactiveBtn}`}
           >
-            {pt(lang, "planner.gw.next")}
+            <span className="max-[420px]:sr-only">{pt(lang, "planner.gw.next")}</span>
             <ChevronRight className="h-3.5 w-3.5" />
           </button>
         </div>
@@ -836,6 +849,11 @@ export function PlannerHeaderAndControls({
 
       <div className="flex flex-wrap items-center gap-2">
         <span
+          title={
+            lang === "pl"
+              ? "Suma cen sprzedaży Twoich 15 graczy"
+              : "Sum of selling prices of your 15 players"
+          }
           className={`inline-flex items-center rounded-full border px-3 py-1.5 text-[11px] font-black ${
             isLight
               ? "border-[#0f766e] bg-[#0f766e]/10 text-slate-950"

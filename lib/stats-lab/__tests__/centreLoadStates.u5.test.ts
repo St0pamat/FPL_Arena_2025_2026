@@ -73,6 +73,35 @@ describe("U5/U5b Centre: błąd ≠ pusty wynik", () => {
     ).toMatch(/selected positions \(DEF, FWD\).*min\. 90 min/);
   });
 
+  it("fraza wyszukiwania nie zrzuca winy na minuty", () => {
+    expect(
+      centreEmptyFilterMessage("pl", {
+        positions: [],
+        minMinutes: 90,
+        centreMode: "PLAYERS",
+        search: "zzzz",
+      }),
+    ).toBe(
+      "Nie znaleziono „zzzz”. Sprawdź pisownię lub wyczyść wyszukiwanie.",
+    );
+    expect(
+      centreEmptyFilterMessage("en", {
+        positions: [],
+        minMinutes: 90,
+        centreMode: "PLAYERS",
+        search: "zzzz",
+      }),
+    ).toBe('No results for "zzzz". Check spelling or clear search.');
+    expect(
+      centreEmptyFilterMessage("pl", {
+        positions: [],
+        minMinutes: 90,
+        centreMode: "PLAYERS",
+        search: "   ",
+      }),
+    ).toMatch(/min\. 90 min/);
+  });
+
   it("loadError i18n PL/EN", () => {
     expect(centreUi("pl").loadError).toMatch(/Nie udało się wczytać/);
     expect(centreUi("en").loadError).toMatch(/Couldn't load data/);

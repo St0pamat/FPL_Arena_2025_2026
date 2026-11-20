@@ -114,10 +114,12 @@
 }
 
 .ppc-dot {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
   border-radius: 999px;
   box-sizing: border-box;
+  border-width: 1px;
+  border-style: solid;
 }
 
 .ppc-data {
@@ -200,6 +202,10 @@
 
 .ppc-info-hit {
   cursor: pointer;
+}
+
+.ppc-info-hit:focus {
+  outline: none;
 }
 
 .ppc-info-hit:focus-visible {
@@ -338,8 +344,13 @@ button.ppc-name {
   }
 
   .ppc-dot {
-    width: 5px;
-    height: 5px;
+    width: 7px;
+    height: 7px;
+  }
+
+  .ppc-price,
+  .ppc-sep {
+    display: none;
   }
 
   .ppc-xpl {

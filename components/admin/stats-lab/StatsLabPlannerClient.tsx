@@ -267,6 +267,7 @@ export function StatsLabPlannerClient({
   );
   const [isExporting, setIsExporting] = useState(false);
   const [flash, setFlash] = useState<string | null>(null);
+  const [marketInfoId, setMarketInfoId] = useState<number | null>(null);
 
   const entry = payload?.entryState ?? null;
 
@@ -300,7 +301,7 @@ export function StatsLabPlannerClient({
         setLoadError(data.loadError);
         setCurrentGw(data.entryState.planningStartGw);
         const stored = readDrafts(data.entryState.teamId);
-        setDrafts(stored ?? emptyBundle());
+        setDrafts(teamId ? (stored ?? emptyBundle()) : emptyBundle());
         if (teamId) setTeamIdInput(String(teamId));
       } catch (e) {
         if (!cancelled) {
@@ -573,8 +574,7 @@ export function StatsLabPlannerClient({
       setPayload(data);
       setLoadError(data.loadError);
       setCurrentGw(data.entryState.planningStartGw);
-      const stored = readDrafts(data.entryState.teamId);
-      setDrafts(stored ?? emptyBundle());
+      setDrafts(emptyBundle());
       setPendingTransferOut(null);
       setSelectedSlotForSwap(null);
       setTeamIdInput("");
@@ -1022,8 +1022,17 @@ export function StatsLabPlannerClient({
         onLoadTeam={() => void onLoadTeam()}
         onLoadDemo={() => void onLoadDemo()}
         isLoadingTeam={isLoadingTeam}
-        teamName={entry.teamName}
-        managerName={entry.managerName}
+        teamName={
+          payload.isDemoSquad ? pt(lang, "planner.demo.hint") : entry.teamName
+        }
+        managerName={
+          payload.isDemoSquad
+            ? ""
+            : pt(lang, "planner.demo.remembered", {
+                name: entry.managerName || entry.teamName,
+                id: entry.teamId,
+              })
+        }
         rolledBackFromFreeHit={entry.rolledBackFromFreeHit}
         activeVariant={activeVariant}
         onSelectVariant={setActiveVariant}
@@ -1052,7 +1061,7 @@ export function StatsLabPlannerClient({
         }
         grossXPts={activeGwState?.grossXPts ?? 0}
         netXPts={activeGwState?.netXPts ?? 0}
-        spendingPowerTenths={spendingPowerTenths}
+        spendingPowerTenths={squadSellingValueTenths}
         onManualSetFt={(ft) =>
           pushUndoAndUpdate((d) => {
             d.manualOverrides = {
@@ -1102,7 +1111,7 @@ export function StatsLabPlannerClient({
       <div
         className={
           layoutMode === "pitch_market" && !isExporting
-            ? "grid gap-3 xl:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.9fr)]"
+            ? "grid min-w-0 gap-3 overflow-x-hidden xl:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.9fr)]"
             : "w-full"
         }
       >
@@ -1117,7 +1126,7 @@ export function StatsLabPlannerClient({
             <p className={`text-[10px] font-black uppercase tracking-[0.2em] ${chrome.mutedLabel}`}>
               {pt(lang, "planner.poster.brand")}
             </p>
-            <h2 className={`text-lg font-black sm:text-xl ${chrome.text}`}>
+            <h2 className={`break-words text-lg font-black sm:text-xl ${chrome.text}`}>
               {entry.teamName} ·{" "}
               {pt(lang, "planner.variant.label", { id: activeVariant })} ·{" "}
               {shellLabel(lang, "common.gw", { gw: currentGw })}
@@ -1185,6 +1194,8 @@ export function StatsLabPlannerClient({
                   (w) => w.key === "planner.vice.missing",
                 ) ?? false
               }
+              requestedInfoElementId={marketInfoId}
+              onRequestedInfoHandled={() => setMarketInfoId(null)}
               emptySlotBudgetTenths={availableBudgetTenths}
             />
 
@@ -1253,9 +1264,7 @@ export function StatsLabPlannerClient({
             bankTenths={activeGwState?.bankTenths ?? entry.bankTenths}
             overLimitClubIds={entry.overLimitClubIds}
             onExecuteTransfer={onExecuteTransfer}
-            onOpenPlayerInfo={() => {
-              /* Pitch owns player info modal */
-            }}
+            onOpenPlayerInfo={(elementId) => setMarketInfoId(elementId)}
             evaluatedGws={evaluated}
             squadMarketValueTenths={squadMarketValueTenths}
             squadSellingValueTenths={squadSellingValueTenths}

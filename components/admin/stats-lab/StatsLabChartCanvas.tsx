@@ -78,6 +78,13 @@ type Props = {
   variant?: StatsLabChartCanvasVariant;
   vennConditions?: [VennCondition, VennCondition, VennCondition];
   vennPresetId?: VennPresetId | "CUSTOM";
+  vennPlayersPerArea?: import("@/lib/stats-lab/vennEngine").VennPlayersPerArea;
+  onVennPlayersPerAreaChange?: (
+    value: import("@/lib/stats-lab/vennEngine").VennPlayersPerArea,
+  ) => void;
+  vennIncludeList?: boolean;
+  onVennIncludeListChange?: (value: boolean) => void;
+  vennLoading?: boolean;
 };
 
 /** Logo z fallbackiem SVG — html-to-image nie może paść na CORS/404. */
@@ -372,6 +379,11 @@ export function StatsLabChartCanvas({
   variant = "studio",
   vennConditions,
   vennPresetId = "COMPLETE_DEFENDER",
+  vennPlayersPerArea = 5,
+  onVennPlayersPerAreaChange,
+  vennIncludeList = false,
+  onVennIncludeListChange,
+  vennLoading = false,
 }: Props) {
   const isExport = variant === "export";
   const theme = STATS_LAB_CHART_THEMES[themeId];
@@ -521,7 +533,24 @@ export function StatsLabChartCanvas({
       </header>
 
       <div className={isExport ? "px-7 py-6" : "px-4 py-5 sm:px-5"}>
-        {!result || players.length === 0 ? (
+        {vizMode === "VENN_3" && (!result || vennLoading) ? (
+          <VennDiagramChart
+            players={[]}
+            conditions={resolvedVenn}
+            theme={theme}
+            lang={lang}
+            positions={filter.positions}
+            gwLabel=""
+            minMinutes={filter.minMinutes}
+            variant={variant}
+            density={variant === "export" ? "full" : "auto"}
+            playersPerArea={vennPlayersPerArea}
+            onPlayersPerAreaChange={onVennPlayersPerAreaChange}
+            includePlayerList={vennIncludeList}
+            onIncludePlayerListChange={onVennIncludeListChange}
+            loading
+          />
+        ) : !result || players.length === 0 ? (
           <div
             className="rounded-xl border border-dashed px-6 py-16 text-center text-sm"
             style={{ borderColor: theme.border, color: theme.muted }}
@@ -638,6 +667,10 @@ export function StatsLabChartCanvas({
             minMinutes={filter.minMinutes}
             variant={variant}
             density={variant === "export" ? "full" : "auto"}
+            playersPerArea={vennPlayersPerArea}
+            onPlayersPerAreaChange={onVennPlayersPerAreaChange}
+            includePlayerList={vennIncludeList}
+            onIncludePlayerListChange={onVennIncludeListChange}
           />
         ) : (
           <HeatmapMatrixChart
@@ -786,7 +819,9 @@ export function StatsLabChartCanvas({
                 : { color: isExport ? "#39FF14" : theme.muted }
             }
           >
-            www.fpl-arena.com • Powered by St0pa | FPL Arena
+            {lang === "pl"
+              ? "fpl-arena.com · Dane: FPL · Predykcje: FPL Arena"
+              : "fpl-arena.com · Data: FPL · Predictions: FPL Arena"}
           </span>
         </div>
       </div>

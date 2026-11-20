@@ -57,7 +57,7 @@ export const STATS_LAB_CHART_THEMES: Record<
     text: "#f0fdfa",
     muted: "#94a3b8",
     border: "#115e59",
-    accent: "#2dd4bf",
+    accent: "#f59e0b",
     gold: "#f59e0b",
     grid: "#0f313c",
     avgLine: "#64748b",

@@ -21,7 +21,7 @@ export type StatsLabScaleMode = "PERCENTILE" | "RAW";
  */
 export const STATS_LAB_SHELL_LABELS = {
   pl: {
-    "nav.centre": "Statystyki",
+    "nav.centre": "Tabele",
     "nav.studio": "Wykresy",
     "nav.projections": "Predykcje",
     "nav.planner": "Planer",
@@ -40,7 +40,7 @@ export const STATS_LAB_SHELL_LABELS = {
     "shell.aria.theme": "Zmień motyw",
   },
   en: {
-    "nav.centre": "Statistics",
+    "nav.centre": "Tables",
     "nav.studio": "Charts",
     "nav.projections": "Projections",
     "nav.planner": "Planner",
@@ -205,18 +205,18 @@ export const VIZ_MODE_LABELS: Record<
     STACKED_COMPOSITE: "Profil wielowymiarowy",
     POINTS_BREAKDOWN: "Dekompozycja punktów",
     STREAKS_EXPLORER: "Passy i regularność",
-    RADAR_PIZZA: "Radar / Pizza",
-    SCATTER_2D: "Scatter 2D",
-    HEATMAP_MATRIX: "Macierz heatmap",
+    RADAR_PIZZA: "Radar",
+    SCATTER_2D: "Wykres punktowy",
+    HEATMAP_MATRIX: "Mapa cieplna",
     VENN_3: "Diagram Venna",
   },
   en: {
     STACKED_COMPOSITE: "Multi-metric profile",
     POINTS_BREAKDOWN: "Points breakdown",
     STREAKS_EXPLORER: "Streaks & consistency",
-    RADAR_PIZZA: "Radar / Pizza",
-    SCATTER_2D: "Scatter 2D",
-    HEATMAP_MATRIX: "Heatmap matrix",
+    RADAR_PIZZA: "Radar",
+    SCATTER_2D: "Scatter plot",
+    HEATMAP_MATRIX: "Heatmap",
     VENN_3: "Venn diagram",
   },
 };
@@ -266,13 +266,20 @@ export const UI_COPY = {
     vennSection: "Warunki diagramu",
     vennThreshold: "Próg (≥)",
     vennCustom: "Własne",
-    vennNobody: "nikt",
+    vennNobody: "0 graczy",
     vennListTitle: "Zawodnicy według obszaru",
     vennTotalsNote:
-      "Progi porównują sumy w wybranym zakresie kolejek. Per 90 i tło grupy nie zmieniają diagramu.",
-    vennMorePlayers: "Jeszcze {n} w liście pod wykresem",
+      "Progi porównują sumy w wybranym zakresie kolejek. Na 90 min i tło grupy nie zmieniają diagramu.",
+    vennMorePlayers: "+{n} więcej",
     vennReading:
-      "Każde koło to jeden warunek (metryka ≥ próg) w wybranym zakresie kolejek. Środek oznacza wszystkie trzy. Pusty obszar oznacza, że nikt nie spełnia tej kombinacji. Lista pod wykresem ma pełne nazwiska.",
+      "Każde koło to jeden warunek w wybranym zakresie kolejek. Środek oznacza wszystkie trzy. Pusty obszar to 0 graczy. Lista używa nazwy z FPL, pełne nazwisko jest w podpowiedzi.",
+    vennPlayersPerArea: "Graczy w obszarze",
+    vennPlayersAll: "Wszyscy",
+    vennIncludeList: "Dołącz listę zawodników",
+    vennCalculating: "Liczę…",
+    vennMeetsAll: "Spełnia wszystkie 3",
+    vennLegend: "Czyste konta · Gole i asysty · Mecze z premią DC",
+    vennPresetsIgnored: "Nie dotyczy diagramu Venna",
     vennSourceData: "fpl-arena.com · Dane: FPL",
     vennAllThree: "Wszystkie trzy",
     heatmapRankedByPoints: "Ranking wg punktów",
@@ -341,13 +348,20 @@ export const UI_COPY = {
     vennSection: "Diagram conditions",
     vennThreshold: "Threshold (≥)",
     vennCustom: "Custom",
-    vennNobody: "nobody",
+    vennNobody: "0 players",
     vennListTitle: "Players by region",
     vennTotalsNote:
       "Thresholds compare totals in the selected gameweek range. Per 90 and group rank do not change the diagram.",
-    vennMorePlayers: "{n} more in the list below the chart",
+    vennMorePlayers: "+{n} more",
     vennReading:
-      "Each circle is one condition (stat ≥ threshold) in the selected gameweek range. The centre means all three. An empty area means nobody meets that mix. The list below has full names.",
+      "Each circle is one condition in the selected gameweek range. The centre means all three. An empty area is 0 players. The list uses the FPL display name; the full name is in the tooltip.",
+    vennPlayersPerArea: "Players per area",
+    vennPlayersAll: "All",
+    vennIncludeList: "Include player list",
+    vennCalculating: "Calculating…",
+    vennMeetsAll: "Meets all 3",
+    vennLegend: "Clean sheets · Goals + assists · DC bonus matches",
+    vennPresetsIgnored: "Not used by Venn",
     vennSourceData: "fpl-arena.com · Data: FPL",
     vennAllThree: "All three",
     heatmapRankedByPoints: "Ranked by points",
@@ -772,6 +786,22 @@ export function formatVennNumber(value: number): string {
   return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
 }
 
+const VENN_PHRASE: Record<
+  StatsLabLang,
+  Partial<Record<FplStatKey, (shown: string) => string>>
+> = {
+  pl: {
+    clean_sheets: (shown) => `${shown}+ czyste konta`,
+    goals_assists: (shown) => `${shown}+ gole i asysty (G+A)`,
+    dc_bonus_matches: (shown) => `${shown}+ mecze z premią DC (+2)`,
+  },
+  en: {
+    clean_sheets: (shown) => `${shown}+ clean sheets`,
+    goals_assists: (shown) => `${shown}+ goals + assists (G+A)`,
+    dc_bonus_matches: (shown) => `${shown}+ matches with DC bonus (+2)`,
+  },
+};
+
 export function vennConditionPhrase(
   metric: FplStatKey,
   threshold: number,
@@ -788,6 +818,8 @@ export function vennConditionPhrase(
       ? String(Math.round(threshold))
       : formatVennNumber(threshold)
     : "—";
+  const special = VENN_PHRASE[lang][metric];
+  if (special) return special(shown);
   return `${shown}+ ${head}`;
 }
 

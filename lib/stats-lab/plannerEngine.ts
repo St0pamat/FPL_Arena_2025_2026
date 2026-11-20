@@ -1828,37 +1828,83 @@ export function buildAllPlayerGwProjections(
   return out;
 }
 
-function pickTopPlayers(
-  players: FplLabPlayer[],
-  elementType: FplPositionType,
-  count: number,
-  usedClubs: Map<number, number>,
-): FplLabPlayer[] {
-  const pool = players
-    .filter(
-      (p) =>
-        p.element_type === elementType &&
-        String(p.status ?? "a").toLowerCase() === "a",
-    )
-    .slice()
-    .sort((a, b) => {
-      const score = (p: FplLabPlayer) =>
-        Number(p.total_points) * 2 +
-        Number(p.minutes) / 90 +
-        Number(p.selected_by_percent) * 3 +
-        Number(p.form) * 5;
-      return score(b) - score(a);
-    });
+const DEMO_BUDGET_TENTHS = 1000;
+const DEMO_MIN_PRICE_TENTHS = 40;
 
+function demoPlayerPrice(player: FplLabPlayer): number {
+  const cost = Math.round(Number(player.now_cost) || DEMO_MIN_PRICE_TENTHS);
+  return Math.max(DEMO_MIN_PRICE_TENTHS, cost);
+}
+
+/**
+ * Skład demo mieści się w budżecie £100.0m (bank ≥ 0).
+ * Najpierw najlepsi dostępni, potem najtańsi, zawsze z limitem 3 z klubu.
+ */
+export function pickDemoSquadPlayers(players: FplLabPlayer[]): FplLabPlayer[] {
+  const quotas: Array<{ type: FplPositionType; count: number }> = [
+    { type: 1, count: 2 },
+    { type: 2, count: 5 },
+    { type: 3, count: 5 },
+    { type: 4, count: 3 },
+  ];
+  const usedClubs = new Map<number, number>();
   const picked: FplLabPlayer[] = [];
-  for (const p of pool) {
-    if (picked.length >= count) break;
-    const clubN = usedClubs.get(p.fpl_team_id) ?? 0;
-    if (clubN >= CLUB_LIMIT) continue;
-    picked.push(p);
-    usedClubs.set(p.fpl_team_id, clubN + 1);
+  let spent = 0;
+
+  const score = (player: FplLabPlayer) =>
+    Number(player.total_points) * 2 +
+    Number(player.minutes) / 90 +
+    Number(player.selected_by_percent) * 3 +
+    Number(player.form) * 5;
+
+  for (const quota of quotas) {
+    const pool = players
+      .filter(
+        (player) =>
+          player.element_type === quota.type &&
+          String(player.status ?? "a").toLowerCase() === "a" &&
+          !picked.some((chosen) => chosen.fpl_element_id === player.fpl_element_id),
+      )
+      .slice()
+      .sort((a, b) => score(b) - score(a));
+    let got = 0;
+    for (const player of pool) {
+      if (got >= quota.count) break;
+      const clubCount = usedClubs.get(player.fpl_team_id) ?? 0;
+      if (clubCount >= CLUB_LIMIT) continue;
+      const price = demoPlayerPrice(player);
+      const slotsAfter = 15 - picked.length - 1;
+      if (spent + price + slotsAfter * DEMO_MIN_PRICE_TENTHS > DEMO_BUDGET_TENTHS) {
+        continue;
+      }
+      picked.push(player);
+      spent += price;
+      usedClubs.set(player.fpl_team_id, clubCount + 1);
+      got += 1;
+    }
   }
-  return picked;
+
+  if (picked.length < 15) {
+    const fillers = players
+      .filter(
+        (player) =>
+          !picked.some((chosen) => chosen.fpl_element_id === player.fpl_element_id),
+      )
+      .slice()
+      .sort((a, b) => demoPlayerPrice(a) - demoPlayerPrice(b));
+    for (const player of fillers) {
+      if (picked.length >= 15) break;
+      const clubCount = usedClubs.get(player.fpl_team_id) ?? 0;
+      if (clubCount >= CLUB_LIMIT) continue;
+      const price = demoPlayerPrice(player);
+      if (spent + price > DEMO_BUDGET_TENTHS) continue;
+      picked.push(player);
+      spent += price;
+      usedClubs.set(player.fpl_team_id, clubCount + 1);
+    }
+  }
+
+  return picked.slice(0, 15);
 }
 
 /**
@@ -1870,12 +1916,13 @@ export function buildDemoEntryState(args: {
   projectionsByElement: Record<number, Record<number, PlayerGwProjection>>;
 }): ReconstructedEntryState {
   const { players, planningStartGw, projectionsByElement } = args;
-  const usedClubs = new Map<number, number>();
-
-  const gkps = pickTopPlayers(players, 1, 2, usedClubs);
-  const defs = pickTopPlayers(players, 2, 5, usedClubs);
-  const mids = pickTopPlayers(players, 3, 5, usedClubs);
-  const fwds = pickTopPlayers(players, 4, 3, usedClubs);
+  const squadPlayers = pickDemoSquadPlayers(players);
+  const byType = (type: FplPositionType) =>
+    squadPlayers.filter((player) => player.element_type === type);
+  const gkps = byType(1);
+  const defs = byType(2);
+  const mids = byType(3);
+  const fwds = byType(4);
 
   // Formacja 1-3-4-3: XI = GKP + 3 DEF + 4 MID + 3 FWD; bench = GKP + 2 DEF + 1 MID
   const xiGk = gkps[0];
@@ -1896,15 +1943,11 @@ export function buildDemoEntryState(args: {
     ...benchMid,
   ].filter((p): p is FplLabPlayer => p != null);
 
-  // Uzupełnij do 15 jeśli brakuje (fallback bez limitu klubu)
-  if (ordered.length < 15) {
-    const have = new Set(ordered.map((p) => p.fpl_element_id));
-    const fillers = players
-      .filter((p) => !have.has(p.fpl_element_id))
-      .sort((a, b) => Number(b.total_points) - Number(a.total_points));
-    for (const p of fillers) {
+  if (ordered.length < squadPlayers.length) {
+    const have = new Set(ordered.map((player) => player.fpl_element_id));
+    for (const player of squadPlayers) {
       if (ordered.length >= 15) break;
-      ordered.push(p);
+      if (!have.has(player.fpl_element_id)) ordered.push(player);
     }
   }
 
@@ -1992,12 +2035,12 @@ export function buildDemoEntryState(args: {
     (s, p) => s + p.nowCostTenths,
     0,
   );
-  const bankTenths = 5;
+  const bankTenths = Math.max(0, DEMO_BUDGET_TENTHS - squadMarketValueTenths);
 
   return {
     teamId: 0,
-    teamName: "FPL Arena Demo XI",
-    managerName: "Demo Mode (Wpisz swoje FPL ID)",
+    teamName: "Skład demo",
+    managerName: "",
     startedEvent: 1,
     currentGw: Math.max(0, planningStartGw - 1),
     planningStartGw,

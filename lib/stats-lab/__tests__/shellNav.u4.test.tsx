@@ -61,7 +61,7 @@ describe("U4 shell nav — one active tab + one accent", () => {
     expect(shellNavActiveClass("SCOUT_DARK").toLowerCase()).not.toContain(
       "39ff14",
     );
-    expect(shellNavActiveClass("SCOUT_DARK")).toContain("2dd4bf");
+    expect(shellNavActiveClass("SCOUT_DARK")).toContain("f59e0b");
     expect(shellNavActiveClass("ARENA_DARK")).toContain("39FF14");
   });
 

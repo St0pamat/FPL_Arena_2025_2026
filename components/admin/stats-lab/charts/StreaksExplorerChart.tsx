@@ -576,7 +576,7 @@ export function StreaksExplorerChart({
                   ? `Max seria: ${heroVal} GW`
                   : `Max streak: ${heroVal} GW`;
           const price = `£${(p.rawValues.now_cost / 10).toFixed(1)}m`;
-          const tsb = `${p.rawValues.selected_by_percent.toFixed(1)}% TSB`;
+          const tsb = `${p.rawValues.selected_by_percent.toFixed(1)}%`;
           const isLastOdd =
             sorted.length % 2 === 1 && rank === sorted.length - 1;
           const totalGws = Math.max(

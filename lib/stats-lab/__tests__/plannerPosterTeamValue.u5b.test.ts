@@ -26,8 +26,12 @@ describe("U5b poster team value (CP + bank)", () => {
   });
 
   it("etykieta PL/EN + stopka Predykcje", () => {
-    expect(pt("pl", "planner.poster.teamValue")).toBe("Wartość drużyny");
-    expect(pt("en", "planner.poster.teamValue")).toBe("Team value");
+    expect(pt("pl", "planner.poster.teamValue")).toBe(
+      "Wartość drużyny (skład + bank)",
+    );
+    expect(pt("en", "planner.poster.teamValue")).toBe(
+      "Team value (squad + bank)",
+    );
     expect(pt("pl", "planner.poster.footer")).toBe(
       "fpl-arena.com · Dane: FPL · Predykcje: FPL Arena",
     );

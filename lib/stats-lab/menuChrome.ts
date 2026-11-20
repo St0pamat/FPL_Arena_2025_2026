@@ -65,7 +65,7 @@ export function getStatsLabMenuChrome(
   }
 
   if (isScout) {
-    // accent #2dd4bf; page #0b1c2e; panel #122a3a
+    // accent #f59e0b; page #0b1c2e; panel #122a3a
     return {
       themeId,
       isLight,
@@ -73,18 +73,18 @@ export function getStatsLabMenuChrome(
       panel: "border border-teal-800/80 bg-[#122a3a] text-[#f0fdfa]",
       group: "border border-teal-900 bg-[#0b1c2e]",
       input:
-        "min-h-[28px] border border-teal-700 bg-[#0b1c2e] text-[#f0fdfa] focus:border-[#2dd4bf]",
+        "min-h-[28px] border border-teal-700 bg-[#0b1c2e] text-[#f0fdfa] focus:border-[#f59e0b]",
       option: "bg-[#0b1c2e] font-semibold text-[#f0fdfa]",
       inactiveBtn:
         "min-h-[28px] border border-teal-700 bg-[#122a3a] font-bold text-[#f0fdfa] hover:bg-teal-900/60",
       activeBtn:
-        "min-h-[28px] border border-[#2dd4bf] bg-[#2dd4bf] font-black text-[#020617] shadow-sm hover:bg-teal-300",
+        "min-h-[28px] border border-[#f59e0b] bg-[#f59e0b] font-black text-[#020617] shadow-sm hover:bg-teal-300",
       mutedLabel: "text-[#94a3b8]",
       text: "text-[#f0fdfa]",
       secondaryBtn:
         "min-h-[28px] border border-teal-700 bg-[#122a3a] font-bold text-[#f0fdfa] hover:bg-teal-900/60 disabled:opacity-50",
       exportPrimary:
-        "min-h-[28px] border border-[#2dd4bf] bg-[#2dd4bf] font-black text-[#020617] shadow-sm hover:bg-teal-300 disabled:opacity-50",
+        "min-h-[28px] border border-[#f59e0b] bg-[#f59e0b] font-black text-[#020617] shadow-sm hover:bg-teal-300 disabled:opacity-50",
       exportSecondary:
         "min-h-[28px] border border-teal-700 bg-[#122a3a] font-bold text-[#f0fdfa] hover:bg-teal-900/60 disabled:opacity-50",
       exportDiscord:
@@ -92,7 +92,7 @@ export function getStatsLabMenuChrome(
       exportAudit:
         "min-h-[28px] border border-teal-700 bg-[#122a3a] font-bold text-[#f0fdfa] hover:bg-teal-900/60 disabled:opacity-50",
       knowledgeBtn:
-        "min-h-[28px] border border-[#2dd4bf] bg-[#2dd4bf] font-black text-[#020617] shadow-sm hover:bg-teal-300",
+        "min-h-[28px] border border-[#f59e0b] bg-[#f59e0b] font-black text-[#020617] shadow-sm hover:bg-teal-300",
     };
   }
 

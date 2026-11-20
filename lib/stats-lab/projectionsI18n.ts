@@ -324,8 +324,8 @@ export function projectionsUi(lang: StatsLabLang) {
     dgwBadge: "DGW",
     blankCell: "—",
     venueLegend: isPl
-      ? "WIELKIE LITERY = mecz u siebie (np. ARS) · małe litery = mecz na wyjeździe (np. avl)"
-      : "UPPERCASE = Home match (e.g. ARS) · lowercase = Away match (e.g. avl)",
+      ? "(D) – u siebie · (W) – na wyjeździe"
+      : "(H) – home · (A) – away",
     credibilityLine1: isPl
       ? "Prognozy FPL Arena oparte na formie drużyn (gole, xG, defensywa) oraz sile terminarza Premier League"
       : "FPL Arena projections based on team form (goals, xG, defence) and Premier League fixture strength",
@@ -346,7 +346,9 @@ export function projectionsUi(lang: StatsLabLang) {
         ? `Sezon: ${args.season} · Zakres: ${args.gwRangeLabel}${sync} · Opis wyliczeń w Bazie Wiedzy`
         : `Season: ${args.season} · Range: ${args.gwRangeLabel}${sync} · Methodology in Knowledge Base`;
     },
-    brandFooter: "www.fpl-arena.com • Powered by St0pa | FPL Arena",
+    brandFooter: isPl
+      ? "fpl-arena.com · Dane: FPL · Predykcje: FPL Arena"
+      : "fpl-arena.com · Data: FPL · Predictions: FPL Arena",
     qaPass: isPl
       ? "✓ Dane i prognozy zweryfikowane"
       : "✓ Projections verified",

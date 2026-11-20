@@ -83,7 +83,7 @@ export function plannerCardPalette(themeId: StatsLabChartThemeId): CardPalette {
     return {
       plate: "border border-teal-900/70 bg-[#122a3a]/95 text-[#f0fdfa]",
       name: "text-[#f0fdfa]",
-      xpts: "text-[#2dd4bf]",
+      xpts: "text-[#f59e0b]",
       price: "text-[#94a3b8]",
       badgeC: "bg-[#f59e0b] text-[#1c1917]",
       badgeVC: "bg-[#e2e8f0] text-[#0f172a]",

@@ -1317,12 +1317,23 @@ export function StatsCentreView({
               </div>
             </div>
           ) : pageRows.length === 0 ? (
-            <p
+            <div
               className={`px-6 py-16 text-center text-sm ${surface.mutedClass}`}
               data-centre-table-state="empty"
             >
-              {centreEmptyFilterMessage(lang, filter)}
-            </p>
+              <p>
+                {centreEmptyFilterMessage(lang, filter)}
+              </p>
+              {filter.search.trim() ? (
+                <button
+                  type="button"
+                  className={`mt-3 min-h-11 rounded-xl px-4 text-sm font-bold ${chrome.activeBtn}`}
+                  onClick={() => patchFilter({ search: "" })}
+                >
+                  {lang === "pl" ? "Wyczyść" : "Clear"}
+                </button>
+              ) : null}
+            </div>
           ) : (
             <table className="min-w-full border-collapse text-left">
               <thead>
@@ -1621,7 +1632,9 @@ export function StatsCentreView({
                 className="text-[10px] font-semibold"
                 style={{ color: surface.accent }}
               >
-                www.fpl-arena.com • Powered by St0pa | FPL Arena
+                {lang === "pl"
+                  ? "fpl-arena.com · Dane: FPL · Predykcje: FPL Arena"
+                  : "fpl-arena.com · Data: FPL · Predictions: FPL Arena"}
               </span>
             </div>
           </div>
@@ -1631,7 +1644,9 @@ export function StatsCentreView({
           >
             <span>{ui.colourLegend}</span>
             <span className="font-semibold" style={{ color: surface.accent }}>
-              www.fpl-arena.com • Powered by St0pa | FPL Arena
+              {lang === "pl"
+                ? "fpl-arena.com · Dane: FPL · Predykcje: FPL Arena"
+                : "fpl-arena.com · Data: FPL · Predictions: FPL Arena"}
             </span>
           </div>
         )}

@@ -189,12 +189,16 @@ export function assignPlayersToVennRegions<T extends VennSubject>(args: {
   };
 }
 
-export function shortenPlayerLabel(name: string, max = 12): string {
+/** Wielokropek dopiero powyżej 14 znaków (web_name z FPL). */
+export function shortenPlayerLabel(name: string, max = 14): string {
   const clean = name.trim().replace(/\s+/g, " ");
   if (clean.length <= max) return clean;
   const cut = Math.max(1, max - 1);
   return `${clean.slice(0, cut)}…`;
 }
+
+export const VENN_PLAYERS_PER_AREA = [3, 5, 8] as const;
+export type VennPlayersPerArea = (typeof VENN_PLAYERS_PER_AREA)[number] | "all";
 
 export type VennPresetId =
   | "COMPLETE_DEFENDER"
@@ -349,9 +353,9 @@ export type VennBox = {
 };
 
 const TOKEN_BOX = {
-  normal: { hw: 28, hh: 15 },
-  center: { hw: 34, hh: 20 },
-  count: { hw: 26, hh: 10 },
+  normal: { hw: 46, hh: 20 },
+  center: { hw: 42, hh: 18 },
+  count: { hw: 30, hh: 12 },
 } as const;
 
 export const VENN_TOKEN_SIZE = {
@@ -360,7 +364,7 @@ export const VENN_TOKEN_SIZE = {
   count: { w: TOKEN_BOX.count.hw * 2, h: TOKEN_BOX.count.hh * 2 },
 } as const;
 
-const SLOT_CAP = { normal: 8, center: 4 } as const;
+const SLOT_CAP = { normal: 6, center: 2 } as const;
 
 export function boxesOverlap(a: VennBox, b: VennBox, gap = 4): boolean {
   return (
@@ -402,10 +406,14 @@ function boxFor(region: VennRegionId): { hw: number; hh: number } {
   return region === "ABC" ? TOKEN_BOX.center : TOKEN_BOX.normal;
 }
 
+/** Margines żetonu od obwodu koła, w jednostkach widoku (≈ 8 px na ekranie 1280). */
+export const VENN_CHIP_INSET = 8;
+
 /** Cały prostokąt żetonu leży w polu (narożniki, nie tylko środek). */
 export function boxInsideVennRegion(
   box: VennBox,
   region: VennRegionId,
+  inset = VENN_CHIP_INSET,
 ): boolean {
   const corners: Array<[number, number]> = [
     [box.x - box.hw, box.y - box.hh],
@@ -413,7 +421,7 @@ export function boxInsideVennRegion(
     [box.x - box.hw, box.y + box.hh],
     [box.x + box.hw, box.y + box.hh],
   ];
-  return corners.every(([x, y]) => pointInVennRegion(x, y, region, 1));
+  return corners.every(([x, y]) => pointInVennRegion(x, y, region, inset));
 }
 
 function layoutOne(region: VennRegionId): VennRegionLayout {
@@ -480,23 +488,57 @@ export type VennTokenPlan = {
   slots: { x: number; y: number }[];
 };
 
-/** Ile żetonów widać w polu. Ostatni slot przy nadmiarze to „+N”. */
+/** Ile nazwisk pokazać w polu, zanim reszta idzie do „+N”. +N nie zjada ostatniego nazwiska. */
+export function vennChipBudget(
+  playerCount: number,
+  perArea: VennPlayersPerArea | number,
+  hardCap: number,
+): { shown: number; overflow: number } {
+  const count = Math.max(0, Math.floor(finiteOrZero(playerCount)));
+  const cap = Math.max(0, Math.floor(finiteOrZero(hardCap)));
+  if (count <= 0 || cap <= 0) return { shown: 0, overflow: count };
+  const requested =
+    perArea === "all" ? cap : Math.max(1, Math.min(cap, Math.floor(perArea)));
+  if (count <= requested) return { shown: count, overflow: 0 };
+  return { shown: requested, overflow: count - requested };
+}
+
+/** Twarde limity czytelnego stosu: ekskluzywne pola mieszczą więcej niż przecięcia. */
+export const VENN_VISUAL_CAP: Record<VennRegionId, number> = {
+  A: 8,
+  B: 8,
+  C: 8,
+  AB: 2,
+  AC: 4,
+  BC: 4,
+  ABC: 2,
+};
+
+/**
+ * Ile żetonów widać w polu. Ostatni slot przy nadmiarze to „+N”.
+ * `perArea` ogranicza liczbę nazw (3 / 5 / 8 / wszyscy). Gdy pole jest ciaśniejsze, zostaje mniej chipów.
+ */
 export function planVennTokens(
   region: VennRegionId,
   playerCount: number,
+  perArea: VennPlayersPerArea | number = "all",
 ): VennTokenPlan {
   const slots = layoutVennRegion(region).slots;
   const count = Math.max(0, Math.floor(finiteOrZero(playerCount)));
   if (count <= 0 || slots.length === 0) {
     return { shown: 0, overflow: count, slots: [] };
   }
-  if (count <= slots.length) {
+  const requested =
+    perArea === "all"
+      ? slots.length
+      : Math.max(1, Math.min(slots.length, Math.floor(finiteOrZero(perArea))));
+  if (count <= requested) {
     return { shown: count, overflow: 0, slots: slots.slice(0, count) };
   }
-  const shown = slots.length - 1;
+  const shown = Math.min(requested, slots.length - 1);
   return {
     shown,
     overflow: count - shown,
-    slots: slots.slice(0, slots.length),
+    slots: slots.slice(0, shown + 1),
   };
 }

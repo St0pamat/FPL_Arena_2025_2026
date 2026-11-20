@@ -44,6 +44,8 @@ type Props = {
   activeStreakKeys: StreakMetricKey[];
   vennConditions?: [VennCondition, VennCondition, VennCondition];
   vennPresetId?: VennPresetId | "CUSTOM";
+  vennPlayersPerArea?: import("@/lib/stats-lab/vennEngine").VennPlayersPerArea;
+  vennIncludeList?: boolean;
 };
 
 /**
@@ -73,19 +75,25 @@ export function StatsLabExportNode({
   activeStreakKeys,
   vennConditions,
   vennPresetId,
+  vennPlayersPerArea = 5,
+  vennIncludeList = false,
 }: Props) {
+  const vennFrame = vizMode === "VENN_3";
+  const frameWidth = vennFrame ? 1080 : STATS_LAB_EXPORT_WIDTH;
   return (
     <div
       aria-hidden
       className="pointer-events-none fixed left-[-10000px] top-0 z-[-1] overflow-hidden"
-      style={{ width: STATS_LAB_EXPORT_WIDTH }}
+      style={{ width: frameWidth }}
     >
       <div
         ref={exportRef as Ref<HTMLDivElement>}
         data-stats-lab-export="true"
+        data-export-frame={vennFrame ? "venn" : undefined}
         style={{
-          width: STATS_LAB_EXPORT_WIDTH,
-          minWidth: STATS_LAB_EXPORT_WIDTH,
+          width: frameWidth,
+          minWidth: frameWidth,
+          minHeight: vennFrame ? 1080 : undefined,
           background: STATS_LAB_EXPORT_BG,
           color: "#F8FAFC",
           padding: 0,
@@ -123,6 +131,8 @@ export function StatsLabExportNode({
           variant="export"
           vennConditions={vennConditions}
           vennPresetId={vennPresetId}
+          vennPlayersPerArea={vennPlayersPerArea}
+          vennIncludeList={vennIncludeList}
         />
       </div>
     </div>

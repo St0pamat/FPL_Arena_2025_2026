@@ -392,8 +392,8 @@ export const CENTRE_UI = {
     team: "Klub",
     allTeams: "Wszystkie kluby",
     dataType: "Typ danych",
-    totals: "Totals (Suma)",
-    per90: "Per 90",
+    totals: "Suma",
+    per90: "Na 90 min",
     singleMatches: "Pojedyncze mecze",
     search: "Szukaj graczy lub klubów…",
     advanced: "Zaawansowane",
@@ -533,8 +533,15 @@ export function centreEmptyFilterMessage(
     positions: number[];
     minMinutes: number;
     centreMode: string;
+    search?: string;
   },
 ): string {
+  const query = filter.search?.trim() ?? "";
+  if (query) {
+    return lang === "pl"
+      ? `Nie znaleziono „${query}”. Sprawdź pisownię lub wyczyść wyszukiwanie.`
+      : `No results for "${query}". Check spelling or clear search.`;
+  }
   const positions = filter.positions.filter((p) => p >= 1 && p <= 4);
   const min = Math.max(0, Math.round(Number(filter.minMinutes) || 0));
   const mentionMinutes = min > 1;
