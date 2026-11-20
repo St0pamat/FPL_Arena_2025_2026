@@ -177,10 +177,7 @@ describe("A4+U3 PlannerPitch — ławka bez C/VC", () => {
     ).toBeNull();
     expect(within(benchTile).queryByText("C")).toBeNull();
     expect(within(benchTile).queryByText("VC")).toBeNull();
-
-    expect(
-      screen.getByRole("button", { name: /Kapitan: P7/ }),
-    ).toBeTruthy();
+    expect(screen.getByLabelText("Kapitan").textContent).toBe("C");
   });
 
   it("Bench Boost: brak przycisku C/VC na ławce", () => {
@@ -239,13 +236,14 @@ describe("A4+U3 PlannerPitch — ostrzeżenia missing przy boisku", () => {
     );
 
     expect(screen.queryByTestId("pitch-role-missing")).toBeNull();
+    await user.click(screen.getByRole("button", { name: /Informacje: P7/ }));
     await user.click(screen.getByRole("button", { name: /Kapitan: P7/ }));
     expect(onSetCaptain).toHaveBeenCalled();
   });
 });
 
-describe("A4+U3 PlannerPitch — pasek akcji karty", () => {
-  it("pasek akcji: klasy max-w-full, brak w-max/min-w", () => {
+describe("A4+U3 PlannerPitch — akcje karty w rogach", () => {
+  it("karta ma max-w-full i nie ma osobnego rzędu przycisków", () => {
     const { container } = renderPitch();
     const tile = container.querySelector(
       '[data-testid="player-tile"]',
@@ -254,29 +252,33 @@ describe("A4+U3 PlannerPitch — pasek akcji karty", () => {
     expect(tile.className).toMatch(/\bmax-w-full\b/);
     expect(tile.className).not.toMatch(/\bw-max\b/);
     expect(tile.className).not.toMatch(/\bmin-w-/);
-
-    const actionRow = tile.querySelector(
-      ":scope > div.mb-0\\.5",
-    ) as HTMLElement | null;
-    expect(actionRow).toBeTruthy();
-    expect(actionRow!.className).toMatch(/\bmax-w-full\b/);
-    expect(actionRow!.className).not.toMatch(/\bw-max\b/);
-    expect(actionRow!.className).not.toMatch(/\bmin-w-/);
+    expect(tile.querySelector(":scope > div.mb-0\\.5")).toBeNull();
+    expect(
+      within(tile).getByRole("button", { name: /Sprzedaj:/ }),
+    ).toBeTruthy();
   });
 
-  it("przycisk C/VC ma aria-pressed u zawodnika z opaską", () => {
+  it("przycisk C/VC w Info ma aria-pressed u zawodnika z opaską", async () => {
+    const user = userEvent.setup();
     renderPitch();
+    await user.click(screen.getByRole("button", { name: /Informacje: P7/ }));
     const capBtn = screen.getByRole("button", { name: /Kapitan: P7/ });
-    const viceBtn = screen.getByRole("button", { name: /Wicekapitan: P9/ });
     expect(capBtn.getAttribute("aria-pressed")).toBe("true");
+    await user.click(screen.getByRole("button", { name: "Zamknij" }));
+
+    await user.click(screen.getByRole("button", { name: /Informacje: P9/ }));
+    const viceBtn = screen.getByRole("button", { name: /Wicekapitan: P9/ });
     expect(viceBtn.getAttribute("aria-pressed")).toBe("true");
+    await user.click(screen.getByRole("button", { name: "Zamknij" }));
+
+    await user.click(screen.getByRole("button", { name: /Informacje: P8/ }));
     const otherCap = screen.getByRole("button", { name: /Kapitan: P8/ });
     expect(otherCap.getAttribute("aria-pressed")).toBe("false");
   });
 });
 
 describe("A4+U3 PlannerPitch — pigułki GW na ławce/plakacie", () => {
-  it("ławka z 3 GW renderuje 3 wiersze, a DGW renderuje 2 pigułki w jednym wierszu", () => {
+  it("ławka: 1 rząd pigułek bieżącej GW, DGW to 2 pigułki, dalej 3 kropki", () => {
     const base = buildSquad();
     // DGW w GW10 dla ławkowego GK
     base.projectionsByElement[12]![10] = {
@@ -317,13 +319,11 @@ describe("A4+U3 PlannerPitch — pigułki GW na ławce/plakacie", () => {
     });
 
     const benchTile = screen.getByRole("group", { name: /BenchGk/i });
-    const stack = within(benchTile).getByTestId("fixture-pills-stack");
-    const rows = within(stack).getAllByTestId("fixture-pills-row");
-    expect(rows).toHaveLength(3);
-
-    const dgwRow = rows[0]!;
-    const pills = within(dgwRow).getAllByText(/^[A-Z]{3} \((D|W)\)$/);
+    const rows = within(benchTile).getAllByTestId("fixture-pills-row");
+    expect(rows).toHaveLength(1);
+    const pills = within(rows[0]!).getAllByText(/^[A-Z]{3} \((D|W)\)$/);
     expect(pills).toHaveLength(2);
-    expect(dgwRow.className).toMatch(/flex-nowrap/);
+    expect(rows[0]!.className).toMatch(/flex-nowrap/);
+    expect(within(benchTile).getAllByTestId("fdr-dot")).toHaveLength(3);
   });
 });

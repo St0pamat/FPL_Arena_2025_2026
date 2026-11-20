@@ -122,7 +122,7 @@ Wymagania środowiskowe: Node 20+, zmienne Supabase / sekrety admina dla pełneg
 
 ## 8. Powiązane dokumenty w tym pakiecie
 
-**Chart Studio: zamrożone 6/6 · Stats Centre: zamrożony (Zero-Regression).**
+Właściciel odmroził cały Stats Lab (Centre, Studio, Predykcje, Planer) poza „Baza i Synchronizacja FPL”.
 
 | Plik | Treść |
 |------|--------|

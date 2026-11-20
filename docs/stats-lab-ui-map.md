@@ -220,7 +220,7 @@ Uruchomienie testów: **nie dotyczy** — nie ma komendy. Najbliższy gate: `npm
 
 ### 6.1 `fpl-arena-standards.mdc` (`alwaysApply: true`)
 
-1. **Zero-regression FROZEN:** `CHART_STUDIO` (6 widoków + RadarQuickSlotsBar) oraz `STATS_CENTRE` (`StatsCentreView`, `statsCentreEngine`, `statsCentreI18n`) — bez edycji bez jawnego polecenia.
+1. Właściciel odmroził cały Stats Lab (Centre, Studio, Predykcje, Planer) poza „Baza i Synchronizacja FPL”.
 2. **Tailwind v3 opacity:** tylko oficjalne kroki (`/5`…`/95`); zakaz `/35`, `/45`.
 3. Zakaz `truncate` / `text-ellipsis` na nazwiskach/klubach na plakatach.
 4. Kontrast 3 motywów × PL/EN; media przez `/api/uploads/fpl-lab/player|badge/...` + `crossOrigin="anonymous"`.

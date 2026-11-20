@@ -5,7 +5,7 @@
 | Moduł | `FPL_PLANNER` — Interaktywny Planer Drużyny i Transferów |
 | Wzorzec UX | [fpl.team/plan](https://fpl.team/plan/) (pitch + transfery + chipy) |
 | Status | 🎯 **AKTYWNY CEL** (nowe okno) — kod jeszcze niezaimplementowany |
-| Zero-Regression | Zakaz edycji zamrożonych widoków/silników Centre · Studio · Projections |
+| Zero-Regression | Właściciel odmroził cały Stats Lab (Centre, Studio, Predykcje, Planer) poza „Baza i Synchronizacja FPL”. |
 
 Powiązane: [`00-ACTIVE-ROADMAP.md`](./00-ACTIVE-ROADMAP.md) · [`01-ARCHITEKTURA-I-BAZA-DANYCH.md`](./01-ARCHITEKTURA-I-BAZA-DANYCH.md).
 

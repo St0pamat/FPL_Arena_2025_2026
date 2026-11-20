@@ -1,5 +1,7 @@
 # Wykres punktowy 2D (`SCATTER_2D`) — zamrożony (Zero-Regression)
 
+Właściciel odmroził cały Stats Lab (Centre, Studio, Predykcje, Planer) poza „Baza i Synchronizacja FPL”.
+
 | Pole | Wartość |
 |------|---------|
 | Tryb | `vizMode === "SCATTER_2D"` |

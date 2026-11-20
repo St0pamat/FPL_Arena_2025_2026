@@ -17,14 +17,14 @@ alwaysApply: false
 
 # Stats Lab: zasady pracy
 
-Uzupełnia `fpl-arena-standards.mdc`; FROZEN i `npx tsc --noEmit` nadal obowiązują.
+Uzupełnia `fpl-arena-standards.mdc`. Właściciel odmroził cały Stats Lab (Centre, Studio, Predykcje, Planer) poza „Baza i Synchronizacja FPL”. `npx tsc --noEmit` nadal obowiązuje.
 
 ## Zakres zmian
 
 - Każde zadanie to jedna mała zmiana. Zmieniasz tylko pliki potrzebne do bieżącego zadania. Nie robisz przy okazji refaktorów, zmian nazw ani formatowania innych plików.
 - Zadania UX (prezentacja) zmieniają tylko komponenty, style i teksty i18n. Nie ruszają logiki obliczeń xPts, FDR, cen (PP/CP/SP), FT, sum wariantów A/B/C i KPI.
 - Zadania logiki zmieniają tylko pliki logiki w `lib/stats-lab/` (np. `*Engine.ts`, `lib/stats-lab/engine/**`) i ich testy. Nie zmieniają wyglądu ani tekstów UI. Wyjątek: przeniesienie zahardkodowanych komunikatów silnika do słowników i18n.
-- Komponenty oznaczone jako FROZEN (`StatsCentreView.tsx`, `StatsLabStudioClient.tsx` i wykresy Studio) zmieniasz tylko wtedy, gdy zadanie wprost to nakazuje.
+- Właściciel odmroził cały Stats Lab (Centre, Studio, Predykcje, Planer) poza „Baza i Synchronizacja FPL”. Sync (`/admin/stats-lab/sync`, `statsLabSync.ts`) zostaje bez zmian.
 - Wspólny layout i sidebar admina (używany też przez inne moduły) jest poza zakresem. Zmiany mobilne ograniczasz do `/admin/stats-lab`.
 - Nie usuwasz istniejących funkcji: ukrywasz albo przenosisz, nie kasujesz.
 - Jeśli prompt zadania wprost zapisuje wyjątek od tych zasad (np. połączenie logiki i UI, przeniesienie obliczeń z komponentu do czystej funkcji w `lib/stats-lab/`, instalacja narzędzi testowych, CI), prompt ma pierwszeństwo, ale tylko w zakresie, który wymienia.

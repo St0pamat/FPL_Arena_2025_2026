@@ -1,5 +1,7 @@
 # Stats Lab Studio — kontekst funkcjonalny
 
+Właściciel odmroził cały Stats Lab (Centre, Studio, Predykcje, Planer) poza „Baza i Synchronizacja FPL”.
+
 Dokument ogólny: **czym jest Stats Lab**, jak działa **Studio** (pracownia wykresów) i jakimi pojęciami operuje. Nie jest to pełna specyfikacja każdego wykresu — szczegóły w docs/03–07. **Chart Studio: zamrożone 6/6** — Radar, Points, Stacked, Streaks, Scatter, Heatmap. **Stats Centre: zamrożony** (docs/07) — Players 8/8, Per GW, Teams 4/4.
 
 ---

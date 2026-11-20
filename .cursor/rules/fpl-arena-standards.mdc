@@ -6,10 +6,9 @@ alwaysApply: true
 
 # ŻELAZNE ZASADY PROJEKTU FPL ARENA (ZERO-REGRESSION & AAA STANDARD)
 
-1. **REŻIM ZERO-REGRESSION (ZAMROŻONE MODUŁY — ZAKAZ MODYFIKACJI BEZ JAWNEGO POLECENIA)**:
-   - Moduł `CHART_STUDIO` (6/6 widoków: `PointsBreakdownChart.tsx`, `StreaksExplorerChart.tsx`, `StackedCompositeChart.tsx`, `RadarPizzaChart.tsx`, `RadarQuickSlotsBar.tsx`, `Scatter2DChart.tsx`, `HeatmapMatrixChart.tsx`) jest ZAMROŻONY (FROZEN).
-   - Moduł `STATS_CENTRE` (13/13 widoków w `StatsCentreView.tsx`, `statsCentreEngine.ts`, `statsCentreI18n.ts`) jest ZAMROŻONY (FROZEN).
-   - Nigdy nie modyfikuj zamrożonych plików, chyba że prompt użytkownika wprost wymienia konkretny plik jako cel edycji.
+1. **REŻIM ZERO-REGRESSION**:
+   - Właściciel odmroził cały Stats Lab (Centre, Studio, Predykcje, Planer) poza „Baza i Synchronizacja FPL”.
+   - Moduł „Baza i Synchronizacja FPL” (`/admin/stats-lab/sync`) zostaje bez zmian, dopóki polecenie wprost go nie wymienia.
 
 2. **TWARDE REGUŁY STYLÓW TAILWIND CSS V3 I UI (SOCIAL-FIRST AAA)**:
    - Używaj WYŁĄCZNIE oficjalnych kroków przezroczystości Tailwind CSS v3 (`/5`, `/10`, `/15`, `/20`, `/25`, `/30`, `/40`, `/50`, `/60`, `/70`, `/75`, `/80`, `/90`, `/95`). ZAKAZ używania nieistniejących klas typu `/35` lub `/45`, które generują przezroczyste tło!

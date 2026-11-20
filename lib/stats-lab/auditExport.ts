@@ -303,6 +303,7 @@ export function inspectCanvasLayoutDom(
   );
 
   for (const el of textNodes) {
+    if (el.hasAttribute("data-allow-ellipsis")) continue;
     const text = (el.textContent ?? "").replace(/\s+/g, " ").trim();
     if (!text || text.length < 2) continue;
     const sw = el.scrollWidth;

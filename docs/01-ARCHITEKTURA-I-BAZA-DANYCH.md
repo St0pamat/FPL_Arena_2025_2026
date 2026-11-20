@@ -15,9 +15,11 @@ Jedna strona `/admin/stats-lab` z zakładkami:
 
 | Tab | Komponent | Status |
 |-----|-----------|--------|
-| `centre` | `StatsCentreView` | FROZEN |
-| `studio` | `StatsLabStudioClient` | FROZEN |
-| `projections` | `StatsLabProjectionsClient` | FROZEN |
+| `centre` | `StatsCentreView` | odmrożony |
+| `studio` | `StatsLabStudioClient` | odmrożony |
+| `projections` | `StatsLabProjectionsClient` | odmrożony |
+
+Właściciel odmroził cały Stats Lab (Centre, Studio, Predykcje, Planer) poza „Baza i Synchronizacja FPL”.
 | *(plan)* `planner` | `StatsLabPlannerClient` (Moduł 4) | roadmap |
 
 Globalny chrome: język PL/EN, motyw (`ARENA_DARK` / `SCOUT_DARK` / `ANALYST_LIGHT`), przycisk **📚 Baza Wiedzy i Zasady FPL**.

@@ -1,0 +1,333 @@
+/* Karta U6. Rozmiary z makiety; kolory zostają w klasach tokenów (Tailwind). */
+.ppc-card {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.ppc-shirt {
+  position: relative;
+  width: clamp(28px, 46cqw, 52px);
+  aspect-ratio: 60 / 56;
+  margin-top: 2px;
+  color: inherit;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.35));
+}
+
+.ppc-shirt svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.ppc-badge {
+  position: absolute;
+  left: -7px;
+  bottom: -3px;
+  width: 21px;
+  height: 21px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-size: 9.5px;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.ppc-badge-tc {
+  font-size: 8.5px;
+}
+
+.ppc-crest {
+  position: absolute;
+  right: -4px;
+  bottom: -2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  object-fit: contain;
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.ppc-plate {
+  position: relative;
+  width: 100%;
+  margin-top: 3px;
+  border-radius: 7px;
+  padding: 3px 2px 4px;
+  text-align: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+
+.ppc-name {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11.5px;
+  font-weight: 700;
+  line-height: 15px;
+  padding: 0 16px;
+}
+
+.ppc-pills {
+  display: flex;
+  justify-content: center;
+  gap: 2px;
+  flex-wrap: nowrap;
+  max-width: 100%;
+  margin-top: 2px;
+}
+
+.ppc-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  border-radius: 3px;
+  padding: 0 4px;
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 14px;
+}
+
+.ppc-pills-dgw {
+  gap: 2px;
+}
+
+.ppc-pills-dgw .ppc-pill {
+  font-size: 9.5px;
+  padding: 0 2px;
+}
+
+.ppc-dots {
+  display: flex;
+  gap: 3px;
+  justify-content: center;
+  margin-top: 3px;
+}
+
+.ppc-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25);
+}
+
+.ppc-data {
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+  gap: 3px;
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+  line-height: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.ppc-prices-short {
+  display: none;
+}
+
+.ppc-xp {
+  font-size: 11.5px;
+  font-weight: 800;
+}
+
+.ppc-xpl,
+.ppc-sep {
+  font-size: 9px;
+  font-weight: 600;
+}
+
+.ppc-price {
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.ppc-act {
+  position: absolute;
+  z-index: 2;
+}
+
+.ppc-act-sell {
+  top: 0;
+  left: 0;
+}
+
+.ppc-act-swap {
+  top: 0;
+  right: 0;
+}
+
+.ppc-act-info {
+  top: 0;
+  right: 0;
+}
+
+.ppc-shirt-hit {
+  display: none;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 32px;
+  height: 32px;
+  transform: translate(-50%, -50%);
+  border-radius: 8px;
+}
+
+.ppc-empty {
+  width: 100%;
+  aspect-ratio: 112 / 100;
+  max-height: 104px;
+  border: 2px dashed currentColor;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.ppc-empty-plus {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: 2px solid currentColor;
+  display: grid;
+  place-items: center;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.ppc-empty-title {
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0 2px;
+}
+
+.ppc-empty-sub {
+  font-size: 9.5px;
+  font-weight: 600;
+}
+
+/* 5 kart w rzędzie przy 320–360 px: karta ~58 px */
+@container (max-width: 84px) {
+  .ppc-shirt {
+    width: 30px;
+  }
+
+  .ppc-name {
+    font-size: 9.5px;
+    line-height: 13px;
+    padding: 0 1px;
+  }
+
+  .ppc-act-info {
+    display: none;
+  }
+
+  .ppc-prices-full {
+    display: none;
+  }
+
+  .ppc-prices-short {
+    display: inline;
+  }
+
+  .ppc-plate {
+    padding: 3px 1px 4px;
+  }
+
+  .ppc-pill {
+    font-size: 9px;
+    line-height: 12px;
+    padding: 0 3px;
+  }
+
+  .ppc-pills-dgw {
+    gap: 1px;
+  }
+
+  .ppc-pills-dgw .ppc-pill {
+    font-size: 8px;
+    padding: 0 1px;
+  }
+
+  .ppc-dots {
+    gap: 2px;
+  }
+
+  .ppc-dot {
+    width: 5px;
+    height: 5px;
+  }
+
+  .ppc-xpl {
+    display: none;
+  }
+
+  .ppc-xp {
+    font-size: 10px;
+  }
+
+  .ppc-price,
+  .ppc-sep {
+    font-size: 8px;
+  }
+
+  .ppc-data {
+    gap: 1.5px;
+  }
+
+  .ppc-badge {
+    width: 17px;
+    height: 17px;
+    font-size: 8.5px;
+    left: -6px;
+  }
+
+  .ppc-badge-tc {
+    font-size: 7.5px;
+  }
+
+  .ppc-act-sell,
+  .ppc-act-swap {
+    display: none;
+  }
+
+  .ppc-shirt-hit {
+    display: block;
+  }
+
+  .ppc-empty-plus {
+    width: 22px;
+    height: 22px;
+    font-size: 16px;
+  }
+
+  .ppc-empty-title {
+    font-size: 9px;
+  }
+
+  .ppc-empty-sub {
+    font-size: 8px;
+  }
+}

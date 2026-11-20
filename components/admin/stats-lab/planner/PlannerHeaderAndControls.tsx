@@ -757,6 +757,18 @@ export function PlannerHeaderAndControls({
               : undefined
           }
         >
+          {Number.isFinite(bankTenths) && bankTenths < 0 ? (
+            <p
+              data-testid="bank-shortfall"
+              className={`mt-1 text-[10px] font-bold ${
+                isLight ? "text-rose-700" : "text-rose-300"
+              }`}
+            >
+              {pt(lang, "planner.kpi.bankShortfall", {
+                value: formatTenthsAsPounds(Math.abs(bankTenths)),
+              })}
+            </p>
+          ) : null}
           {editBankOpen ? (
             <div className="mt-2 space-y-2">
               {onManualAdjustBankTenths ? (

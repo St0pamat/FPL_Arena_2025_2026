@@ -9,7 +9,9 @@ Powiązane: [`00-ACTIVE-ROADMAP.md`](./00-ACTIVE-ROADMAP.md) · [`01-ARCHITEKTUR
 
 ---
 
-## 1. Mapa silników (FROZEN)
+## 1. Mapa silników
+
+Właściciel odmroził cały Stats Lab (Centre, Studio, Predykcje, Planer) poza „Baza i Synchronizacja FPL”.
 
 | Silnik | Plik | Konsument | Zakres |
 |--------|------|-----------|--------|
