@@ -6,6 +6,17 @@ Korekta właściciela do 2.1: zapamiętywanie wcześniej wczytanego składu zost
 
 Wzory xPts, FDR, predykcji i cen bez zmian. 7.1 i 26.4 mają część prezentacyjną; znaczenie modelu zostaje do decyzji analityka.
 
+## Korekta właściciela — Passy i regularność
+
+Wykres Studio „Passy i regularność” wraca do stanu sprzed U9 (`d5ca75f`). Właściciel nie akceptuje zmian z PR #6 (merge `39a2f0a`).
+
+- 18.1 cofnięte: z powrotem siatka kart (jedna na zawodnika, 2 kolumny od `md`), bez tabeli gracz × kolejka i bez „Pokaż więcej”.
+- 18.2 cofnięte: z powrotem krótkie nazwy „Seria G/A” / „G/A streak” oraz „Seria DC (+2)” / „DC (+2) streak”.
+- Kolor serii DC w ciemnym motywie z powrotem turkus (`#2dd4bf`), osobno od złotego bonusu.
+- Na karcie z powrotem „% TSB”. Słownik nazw (POS% / OWN%) zostaje.
+- Stopka eksportu zostaje wspólna i nowa: „fpl-arena.com · Dane: FPL · Predykcje: FPL Arena”.
+- Reszta U9 (inne wykresy, Planer, Centre, Predykcje, Venn, akcent Scout) bez zmian.
+
 ## Do decyzji analityka
 
 | Numer | Co jest na ekranie | Czego nie ruszano |
@@ -62,7 +73,7 @@ Wzory xPts, FDR, predykcji i cen bez zmian. 7.1 i 26.4 mają część prezentacy
 | 15.4 | zrobione | Szkielet na całą ramkę i napis „Ładuję dane…”. |
 | 16.1 | zrobione | Jedna legenda nad profilem. Szczegół metryki w tooltipie segmentu. |
 | 16.2 | zrobione | W segmencie ocena 0–100. Zdanie „Długość = ocena na tle grupy”. Surowa liczba w tooltipie. |
-| 18.1 | zrobione | Tabela gracz × kolejka, domyślnie 10 wierszy i „Pokaż więcej”. |
+| 18.1 | cofnięte | Decyzja właściciela: z powrotem siatka kart, bez tabeli i „Pokaż więcej”. |
 | 20.1 | zrobione | Na karcie nazwa metryki może się zawinąć. Liczba zostaje w całości. |
 | 21.1 | zrobione | Podtytuł używa krótkiego „grupa: N”. |
 | 22.1 | zrobione | Dwa przyciski, „Udostępnij” i „Więcej”. |
@@ -121,7 +132,7 @@ Wzory xPts, FDR, predykcji i cen bez zmian. 7.1 i 26.4 mają część prezentacy
 | 17.1 | zrobione | Legenda: „Występ”, „60+ min”, „Bonus”. Skrót w wierszu ma tooltip. |
 | 17.2 | zrobione | „Pokaż punkty ujemne”. |
 | 17.3 | zrobione | „Zdobyte” / „Odjęte”. |
-| 18.2 | zrobione | „Mecze z golem lub asystą z rzędu”, „Mecze z premią DC z rzędu”. |
+| 18.2 | cofnięte | Decyzja właściciela: „Seria G/A” i „Seria DC (+2)”. |
 | 19.1 | zrobione | Osie: Punkty, Czyste konta, Akcje obr., Pkt z DC, Mecze z DC, xGI, Bonus BPS. |
 | 19.2 | zrobione | „Porównaj do 4 graczy (nie trafia do PNG)”. |
 | 19.3 | zrobione | Zakładka „Radar”. |
