@@ -288,7 +288,7 @@ export const STREAK_METRIC_STYLES: Record<
     light: { accent: "#e11d48", pillBg: "#e11d48", pillText: "#ffffff" },
   },
   maxDcPointsStreak: {
-    dark: { accent: "#f59e0b", pillBg: "#f59e0b", pillText: "#020617" },
+    dark: { accent: "#2dd4bf", pillBg: "#2dd4bf", pillText: "#020617" },
     light: { accent: "#0d9488", pillBg: "#0d9488", pillText: "#ffffff" },
   },
   max60MinStreak: {
