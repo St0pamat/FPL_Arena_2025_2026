@@ -319,6 +319,22 @@ export function formatOpponentCell(cell: PlayerGwSlice | undefined): string {
   return cell.opponents.join(" · ");
 }
 
+/** Rywal razem z poziomem FDR. Puste poziomy nie dostają wymyślonej liczby. */
+export function formatFdrCell(cell: PlayerGwSlice | undefined): string {
+  if (!cell || cell.isBlank || cell.opponents.length === 0) return "—";
+  return cell.opponents
+    .map((name, index) => {
+      const level = cell.fdrLevels[index];
+      return level == null ? name : `${name} ${level}`;
+    })
+    .join(" · ");
+}
+
+export function formatFdrColumn(gameweeks: readonly PlayerGwSlice[]): string {
+  if (!gameweeks.length) return "—";
+  return gameweeks.map((gw) => formatFdrCell(gw)).join(" · ");
+}
+
 export function formatCsText(
   position: number,
   gameweeks: readonly PlayerGwSlice[],
@@ -392,12 +408,7 @@ export function playerProjectionsToCsv(args: {
     if (on.has("goal")) cells.push("—");
     if (on.has("assist")) cells.push("—");
     if (on.has("cs")) cells.push(formatCsText(view.row.position, view.horizonGws));
-    if (on.has("fdr")) {
-      const text = view.horizonGws
-        .flatMap((gw) => gw.opponents)
-        .join(" · ");
-      cells.push(text || "—");
-    }
+    if (on.has("fdr")) cells.push(formatFdrColumn(view.horizonGws));
     lines.push(cells.map(csvCell).join(","));
   }
   return lines.join("\n");

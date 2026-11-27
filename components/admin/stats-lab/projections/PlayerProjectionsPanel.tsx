@@ -6,6 +6,7 @@ import { toJpeg } from "html-to-image";
 import { queryStatsLabPlayerProjectionsAction } from "@/app/admin/actions/statsLabPlayerProjections";
 import type { StatsLabChartThemeId } from "@/components/admin/stats-lab/chartTheme";
 import { AvailabilityBadge } from "@/components/admin/stats-lab/planner/AvailabilityBadge";
+import { fdrPillClass } from "@/components/admin/stats-lab/planner/plannerCardPalette";
 import { downloadJsonFile } from "@/lib/stats-lab/auditExport";
 import { mapAvailabilityMarker } from "@/lib/stats-lab/availabilityMarker";
 import { downloadDataUrl } from "@/lib/stats-lab/exportCapture";
@@ -20,6 +21,7 @@ import {
   PLAYER_PROJECTION_COLUMNS,
   PLAYER_PROJECTION_HORIZONS,
   formatCsText,
+  formatFdrCell,
   formatOpponentCell,
   formatXptsCell,
   playerProjectionsToCsv,
@@ -184,16 +186,22 @@ export function PlayerProjectionsPanel({
     if (!node) return;
     setExportBusy(true);
     try {
-      const dataUrl = await toJpeg(node, {
-        quality: 0.95,
-        pixelRatio: 2,
-        backgroundColor: hex.page,
-        cacheBust: true,
+      await withFitExportWidth(node, async () => {
+        const opts = {
+          quality: 0.95,
+          pixelRatio: 2,
+          backgroundColor: hex.page,
+          cacheBust: true,
+          width: node.offsetWidth,
+          height: node.offsetHeight,
+        };
+        await toJpeg(node, opts);
+        const dataUrl = await toJpeg(node, opts);
+        downloadDataUrl(
+          dataUrl,
+          `fpl-arena-player-projections-${seasonCode || "season"}-${lang}.jpg`,
+        );
       });
-      downloadDataUrl(
-        dataUrl,
-        `fpl-arena-player-projections-${seasonCode || "season"}-${lang}.jpg`,
-      );
     } finally {
       setExportBusy(false);
     }
@@ -486,7 +494,7 @@ export function PlayerProjectionsPanel({
             {pending ? copy.loading : copy.empty}
           </p>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto" data-player-projections-table-wrap="true">
             <table className="min-w-full border-collapse text-left">
               <thead>
                 <tr>
@@ -556,6 +564,7 @@ export function PlayerProjectionsPanel({
                     columns={on}
                     copy={copy}
                     card={hex.card}
+                    isLight={themeId === "ANALYST_LIGHT"}
                   />
                 ))}
               </tbody>
@@ -568,6 +577,65 @@ export function PlayerProjectionsPanel({
       </div>
     </div>
   );
+}
+
+async function withFitExportWidth<T>(
+  node: HTMLElement,
+  run: () => Promise<T>,
+): Promise<T> {
+  const prev = {
+    width: node.style.width,
+    minWidth: node.style.minWidth,
+    maxWidth: node.style.maxWidth,
+    overflow: node.style.overflow,
+    overflowX: node.style.overflowX,
+  };
+  const wrappers: Array<{
+    el: HTMLElement;
+    overflow: string;
+    overflowX: string;
+    overflowY: string;
+  }> = [];
+  try {
+    const tableEl = node.querySelector("table");
+    if (tableEl) {
+      const fullTableWidth = Math.max(1200, tableEl.scrollWidth + 64);
+      node.style.width = `${fullTableWidth}px`;
+      node.style.minWidth = `${fullTableWidth}px`;
+      node.style.maxWidth = "none";
+      node.style.overflow = "visible";
+      node.style.overflowX = "visible";
+      for (const el of Array.from(
+        node.querySelectorAll<HTMLElement>(
+          "[data-player-projections-table-wrap], .overflow-x-auto",
+        ),
+      )) {
+        wrappers.push({
+          el,
+          overflow: el.style.overflow,
+          overflowX: el.style.overflowX,
+          overflowY: el.style.overflowY,
+        });
+        el.style.overflow = "visible";
+        el.style.overflowX = "visible";
+        el.style.overflowY = "visible";
+      }
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    }
+    return await run();
+  } finally {
+    node.style.width = prev.width;
+    node.style.minWidth = prev.minWidth;
+    node.style.maxWidth = prev.maxWidth;
+    node.style.overflow = prev.overflow;
+    node.style.overflowX = prev.overflowX;
+    for (const wrapper of wrappers) {
+      wrapper.el.style.overflow = wrapper.overflow;
+      wrapper.el.style.overflowX = wrapper.overflowX;
+      wrapper.el.style.overflowY = wrapper.overflowY;
+    }
+  }
 }
 
 function SortTh({
@@ -612,12 +680,14 @@ function PlayerRow({
   columns,
   copy,
   card,
+  isLight,
 }: {
   view: PlayerProjectionViewRow;
   lang: StatsLabLang;
   columns: Set<PlayerProjectionColumnId>;
   copy: PlayerProjectionCopy;
   card: string;
+  isLight: boolean;
 }) {
   const row = view.row;
   const marker = mapAvailabilityMarker({
@@ -711,7 +781,35 @@ function PlayerRow({
       ) : null}
       {columns.has("fdr") ? (
         <td className="whitespace-nowrap px-2 py-2 text-[12px]">
-          {view.horizonGws.map((gw) => formatOpponentCell(gw)).join(" · ") || "—"}
+          <span className="inline-flex flex-wrap items-center gap-1">
+            {view.horizonGws.length === 0 ? "—" : null}
+            {view.horizonGws.map((gw) => {
+              const text = formatFdrCell(gw);
+              if (text === "—") {
+                return (
+                  <span key={gw.gw} title={copy.dashBlank}>
+                    —
+                  </span>
+                );
+              }
+              return gw.opponents.map((name, index) => {
+                const level = gw.fdrLevels[index];
+                const label = level == null ? name : `${name} ${level}`;
+                return (
+                  <span
+                    key={`${gw.gw}-${index}`}
+                    className={
+                      level == null
+                        ? "font-semibold"
+                        : `inline-flex items-center rounded border px-1 py-0.5 font-bold ${fdrPillClass(level, isLight)}`
+                    }
+                  >
+                    {label}
+                  </span>
+                );
+              });
+            })}
+          </span>
         </td>
       ) : null}
     </tr>

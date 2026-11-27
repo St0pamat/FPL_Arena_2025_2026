@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   formatCsText,
+  formatFdrColumn,
   horizonXptsSum,
   playerProjectionsToCsv,
   queryPlayerProjectionTable,
@@ -157,5 +158,26 @@ describe("U12 tabela predykcji piłkarzy", () => {
     expect(csv.split("\n")[1]).toMatch(/—,—,—$/);
     expect(formatCsText(3, [gw({ gw: 12, teamCsPcts: [40] })])).toBe("—");
     expect(formatCsText(1, [gw({ gw: 12, teamCsPcts: [32] })])).toBe("32%");
+    const fdrCsv = playerProjectionsToCsv({
+      views: query({
+        rows: [
+          player({
+            elementId: 8,
+            webName: "Fdr",
+            gameweeks: [
+              gw({ gw: 12, opponents: ["MCI (H)"], fdrLevels: [2] }),
+              gw({ gw: 13, isBlank: true, xPts: null, opponents: [], fdrLevels: [] }),
+            ],
+          }),
+        ],
+        horizon: 3,
+      }),
+      lang: "en",
+      columns: ["fdr"],
+    });
+    expect(fdrCsv).toContain("MCI (H) 2");
+    expect(formatFdrColumn([
+      gw({ gw: 12, opponents: ["FUL (A)", "NEW (H)"], fdrLevels: [4, 3] }),
+    ])).toBe("FUL (A) 4 · NEW (H) 3");
   });
 });
