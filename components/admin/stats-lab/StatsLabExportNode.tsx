@@ -16,7 +16,7 @@ import {
 import type { StatsLabChartThemeId, StatsLabVizMode } from "@/components/admin/stats-lab/chartTheme";
 import { StatsLabChartCanvas } from "@/components/admin/stats-lab/StatsLabChartCanvas";
 import type { PointsSortKey } from "@/components/admin/stats-lab/charts/PointsBreakdownChart";
-import type { VennCondition, VennPresetId } from "@/lib/stats-lab/vennEngine";
+import type { VennCondition } from "@/lib/stats-lab/vennEngine";
 
 type Props = {
   exportRef:
@@ -43,9 +43,6 @@ type Props = {
   streakSortKey: StreakMetricKey;
   activeStreakKeys: StreakMetricKey[];
   vennConditions?: [VennCondition, VennCondition, VennCondition];
-  vennPresetId?: VennPresetId | "CUSTOM";
-  vennPlayersPerArea?: import("@/lib/stats-lab/vennEngine").VennPlayersPerArea;
-  vennIncludeList?: boolean;
 };
 
 /**
@@ -74,9 +71,6 @@ export function StatsLabExportNode({
   streakSortKey,
   activeStreakKeys,
   vennConditions,
-  vennPresetId,
-  vennPlayersPerArea = 5,
-  vennIncludeList = false,
 }: Props) {
   const vennFrame = vizMode === "VENN_3";
   const frameWidth = vennFrame ? 1080 : STATS_LAB_EXPORT_WIDTH;
@@ -132,9 +126,6 @@ export function StatsLabExportNode({
           onSelectPlayer={() => undefined}
           variant="export"
           vennConditions={vennConditions}
-          vennPresetId={vennPresetId}
-          vennPlayersPerArea={vennPlayersPerArea}
-          vennIncludeList={vennIncludeList}
         />
       </div>
     </div>

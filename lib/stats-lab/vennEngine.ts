@@ -321,14 +321,147 @@ export function applyVennPresetToFilter(
 }
 
 /**
- * Venn bez ręcznej listy bierze całą pulę filtra.
- * Pusty wybór ręczny nie może spaść do Top N.
+ * Zapytanie Venna bez konkretnej listy bierze całą pulę filtra,
+ * żeby TOP N dało się ułożyć po liczbie warunków, a nie po wycinku punktów.
+ * Pusty wybór ręczny nie może spaść do Top N silnika (punkty).
+ * Na diagramie i tak zostaje najwyżej VENN_SELECTION_CAP zawodników.
  */
 export function vennUsesFullPool(
   pickMode: "AUTO" | "MANUAL",
   selectedPlayerIds: readonly number[],
 ): boolean {
   return pickMode !== "MANUAL" || selectedPlayerIds.length === 0;
+}
+
+/** Tyle nazwisk mieści się czytelnie: pełne nazwisko i herb, bez „+N”. */
+export const VENN_SELECTION_CAP = 20;
+
+const VENN_PRESET_BY_POSITION: Record<number, VennPresetId> = {
+  1: "GK_WALL",
+  2: "COMPLETE_DEFENDER",
+  3: "MID_CREATORS",
+  4: "FWD_FINISHERS",
+};
+
+export function vennPresetIdForPosition(position: number): VennPresetId | null {
+  return VENN_PRESET_BY_POSITION[position] ?? null;
+}
+
+/** Domyślne 3 kryteria pozycji. `null`, gdy pozycja nie jest jedną z GK/DEF/MID/FWD. */
+export function defaultVennConditionsForPosition(
+  position: number,
+): [VennCondition, VennCondition, VennCondition] | null {
+  const presetId = vennPresetIdForPosition(position);
+  if (!presetId) return null;
+  return cloneVennConditions(getVennPreset(presetId).conditions);
+}
+
+/**
+ * Zmiana pozycji (jedna z czterech) przywraca domyślne kryteria tej pozycji.
+ * „Wszystkie” i brak zmiany pozycji zostawiają kryteria użytkownika.
+ */
+export function vennConditionsAfterPositionChange(args: {
+  previousPositions: readonly number[];
+  nextPositions: readonly number[];
+}): {
+  presetId: VennPresetId;
+  conditions: [VennCondition, VennCondition, VennCondition];
+} | null {
+  const prev = args.previousPositions.join(",");
+  const next = args.nextPositions.join(",");
+  if (prev === next) return null;
+  if (args.nextPositions.length !== 1) return null;
+  const position = args.nextPositions[0];
+  const presetId = vennPresetIdForPosition(position);
+  const conditions = defaultVennConditionsForPosition(position);
+  if (!presetId || !conditions) return null;
+  return { presetId, conditions };
+}
+
+/** TOP N z przycisków Studio, nigdy powyżej limitu diagramu. */
+export function clampVennTopN(limit: number | null | undefined): number {
+  const n = Math.floor(finiteOrZero(limit));
+  if (n <= 0) return 10;
+  return Math.min(VENN_SELECTION_CAP, n);
+}
+
+function conditionsMetForRegion(region: VennRegionId | "none"): number {
+  if (region === "none") return 0;
+  if (region === "ABC") return 3;
+  return region.length;
+}
+
+/**
+ * Kogo narysować.
+ * AUTO: cała pula po progu minut, sort: liczba spełnionych warunków, potem punkty, potem id.
+ * MANUAL: wyłącznie podane id (kolejność zaznaczenia), maks. 20, także poniżej minut.
+ */
+export function selectVennRoster<T extends VennSubject>(args: {
+  players: readonly T[];
+  conditions: readonly [VennCondition, VennCondition, VennCondition];
+  gwFrom?: number;
+  gwTo?: number;
+  minMinutes?: number;
+  mode: "AUTO" | "MANUAL";
+  selectedIds?: readonly (string | number)[];
+  limit?: number;
+}): T[] {
+  const assignment = assignPlayersToVennRegions({
+    players: args.players,
+    conditions: args.conditions,
+    gwFrom: args.gwFrom,
+    gwTo: args.gwTo,
+    minMinutes: args.minMinutes,
+  });
+  const rank = new Map<string, { met: number; points: number }>();
+  for (const region of VENN_REGION_IDS) {
+    const met = conditionsMetForRegion(region);
+    for (const player of assignment.regions[region]) {
+      rank.set(String(player.id), { met, points: player.pointsInScope });
+    }
+  }
+  for (const player of assignment.none) {
+    rank.set(String(player.id), {
+      met: 0,
+      points: player.pointsInScope,
+    });
+  }
+  for (const player of assignment.belowMinutes) {
+    rank.set(String(player.id), {
+      met: -1,
+      points: player.pointsInScope,
+    });
+  }
+
+  const byRank = (a: T, b: T) => {
+    const left = rank.get(String(a.id)) ?? { met: -1, points: 0 };
+    const right = rank.get(String(b.id)) ?? { met: -1, points: 0 };
+    if (right.met !== left.met) return right.met - left.met;
+    if (right.points !== left.points) return right.points - left.points;
+    return String(a.id).localeCompare(String(b.id));
+  };
+
+  const selected = (args.selectedIds ?? []).map(String);
+  if (args.mode === "MANUAL" && selected.length > 0) {
+    const byId = new Map(args.players.map((player) => [String(player.id), player]));
+    const picked: T[] = [];
+    const seen = new Set<string>();
+    for (const id of selected) {
+      if (seen.has(id)) continue;
+      const player = byId.get(id);
+      if (!player) continue;
+      seen.add(id);
+      picked.push(player);
+      if (picked.length >= VENN_SELECTION_CAP) break;
+    }
+    return picked;
+  }
+
+  const eligible = args.players.filter((player) => {
+    const row = rank.get(String(player.id));
+    return row != null && row.met >= 0;
+  });
+  return [...eligible].sort(byRank).slice(0, clampVennTopN(args.limit));
 }
 
 /* ─────────────────────────────────────────────────

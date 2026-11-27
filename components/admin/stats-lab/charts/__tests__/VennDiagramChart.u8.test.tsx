@@ -90,7 +90,11 @@ describe("U8 diagram Venna — render", () => {
     expect(document.body.textContent).toMatch(/gole i asysty \(G\+A\)/);
     expect(document.body.textContent).toMatch(/mecze z premią DC/);
     expect(document.body.textContent).toMatch(/0 graczy/);
-    expect(document.body.textContent).toMatch(/Graczy w obszarze/);
+    expect(document.body.textContent).toMatch(
+      /Posortowane: liczba spełnionych warunków, potem punkty/,
+    );
+    expect(document.querySelector("[data-venn-plus]")).toBeNull();
+    expect(document.querySelector("[data-venn-controls]")).toBeNull();
     view.unmount();
 
     renderChart({ lang: "en" });
@@ -123,49 +127,63 @@ describe("U8 diagram Venna — render", () => {
     }
   });
 
-  it("pokazuje +N i pełną listę, a skrót ma pełną nazwę w aria", () => {
+  it("rysuje każdego wybranego bez +N, z pełnym nazwiskiem i herbem", () => {
     const crowd = Array.from({ length: 12 }, (_, index) =>
-      person(index + 1, `Defender${index + 1}`, {
+      person(index + 1, index === 0 ? "Alexander-Arnold" : `Defender${index + 1}`, {
         clean_sheets: 4 + index,
         goals_assists: 0,
         dc_bonus_matches: 0,
       }),
     );
     renderChart({ players: crowd });
-    const plus = document.querySelector("[data-venn-plus='A']");
-    expect(plus?.textContent).toMatch(/\+\d+/);
-    const hidden = Number((plus?.textContent ?? "").replace(/[^\d]/g, ""));
-    const tokens = document.querySelectorAll("[data-venn-token='A']");
-    expect(tokens.length + hidden).toBe(12);
-    expect(screen.getAllByText("Defender1").length).toBeGreaterThan(0);
+    expect(document.querySelector("[data-venn-plus]")).toBeNull();
+    expect(document.querySelectorAll("[data-venn-token='A']").length).toBe(12);
+    expect(screen.getAllByText("Alexander-Arnold").length).toBeGreaterThan(0);
+    expect(document.body.textContent).not.toMatch(/Alexander-Arn…/);
     expect(screen.getAllByText("Defender12").length).toBeGreaterThan(0);
-    expect(document.querySelector("[title='Defender1 Full']")).toBeTruthy();
+    expect(document.querySelector("[title='Alexander-Arnold Full']")).toBeTruthy();
     const chip = document.querySelector("[data-venn-chip='true']") as HTMLElement;
     expect(Number.parseFloat(chip.style.fontSize)).toBeGreaterThanOrEqual(14);
     expect(Number.parseFloat(chip.style.minHeight)).toBeGreaterThanOrEqual(32);
     const badge = chip.querySelector("[data-venn-badge='true']") as HTMLElement;
     expect(Number.parseFloat(badge.style.width)).toBeGreaterThanOrEqual(24);
-
-    const centre = document.querySelector("[data-venn-token='ABC']");
-    expect(centre).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "3" }));
-    expect(document.querySelectorAll("[data-venn-token='A']").length).toBe(3);
-    fireEvent.click(screen.getByRole("button", { name: "8" }));
-    expect(document.querySelectorAll("[data-venn-token='A']").length).toBe(8);
+    expect(document.querySelector("[data-venn-token='ABC']")).toBeNull();
+    expect(document.querySelector("[data-venn-legend-list]")).toBeTruthy();
 
     const live = document.querySelectorAll("[data-venn-token='A']");
     fireEvent.focus(live[0] as HTMLElement);
     const tip = screen.getByRole("tooltip");
-    expect(tip.textContent).toMatch(/Defender/);
+    expect(tip.textContent).toMatch(/Full/);
     expect(tip.textContent).toMatch(/Czyste konta \(CS\)/);
     expect(document.body.innerHTML).not.toMatch(/class="[^"]*\btruncate\b/);
     expect(document.body.innerHTML).not.toMatch(/text-ellipsis/);
+  });
+
+  it("A+B i A+C mają własny kod i inny pasek niż samo A", () => {
+    renderChart({
+      players: [
+        person(1, "OnlyA", { clean_sheets: 6, goals_assists: 0, dc_bonus_matches: 0 }),
+        person(2, "BothAB", { clean_sheets: 6, goals_assists: 4, dc_bonus_matches: 0 }),
+        person(3, "BothAC", { clean_sheets: 6, goals_assists: 0, dc_bonus_matches: 5 }),
+      ],
+    });
+    const edge = (region: string) =>
+      (document.querySelector(`[data-venn-token='${region}']`) as HTMLElement).style.boxShadow;
+    expect(document.querySelector("[data-venn-region-code='AB']")?.textContent).toBe("A+B");
+    expect(document.querySelector("[data-venn-region-code='AC']")?.textContent).toBe("A+C");
+    expect(edge("A")).not.toBe(edge("AB"));
+    expect(edge("AB")).not.toBe(edge("AC"));
+    expect(edge("A")).not.toBe(edge("AC"));
   });
 
   it("eksport nie ma panelu sterowania, a wąski układ zostawia zawodników na liście", () => {
     const view = renderChart({ variant: "export", density: "full" });
     expect(document.querySelector("[data-variant='export']")).toBeTruthy();
     expect(document.querySelector("[data-venn-controls]")).toBeNull();
+    expect(document.querySelector("[data-venn-region-heading='A']")?.textContent).toMatch(/A/);
+    expect(document.querySelector("[data-venn-region-code='A']")?.textContent).toBe("A");
+    expect(document.querySelector("[data-venn-region-heading='ABC']")?.textContent).toMatch(/A\+B\+C/);
+    expect(document.querySelector("[data-venn-region-code='ABC']")?.textContent).toBe("A+B+C");
     expect(document.querySelector("select")).toBeNull();
     expect(document.querySelector("[data-venn-token]")).toBeTruthy();
     expect(document.querySelector("[data-venn-source]")?.textContent).toMatch(

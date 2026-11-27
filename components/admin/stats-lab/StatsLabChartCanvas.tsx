@@ -38,7 +38,6 @@ import {
   cloneVennConditions,
   getVennPreset,
   type VennCondition,
-  type VennPresetId,
 } from "@/lib/stats-lab/vennEngine";
 
 export type StatsLabChartCanvasVariant = "studio" | "export";
@@ -77,13 +76,6 @@ type Props = {
   /** studio = interaktywny podgląd; export = branding social / bez kontrolek UI */
   variant?: StatsLabChartCanvasVariant;
   vennConditions?: [VennCondition, VennCondition, VennCondition];
-  vennPresetId?: VennPresetId | "CUSTOM";
-  vennPlayersPerArea?: import("@/lib/stats-lab/vennEngine").VennPlayersPerArea;
-  onVennPlayersPerAreaChange?: (
-    value: import("@/lib/stats-lab/vennEngine").VennPlayersPerArea,
-  ) => void;
-  vennIncludeList?: boolean;
-  onVennIncludeListChange?: (value: boolean) => void;
   vennLoading?: boolean;
 };
 
@@ -188,19 +180,10 @@ function autoTitle(
     fpl_team_id: number;
     club: { short_name: string; fpl_team_id: number } | null;
   }[],
-  vennPresetId?: VennPresetId | "CUSTOM" | null,
 ): string {
   const chartMode = VIZ_MODE_LABELS[lang][vizMode] ?? vizMode;
   const pos = positionBit(filter, lang);
   const n = plottedPlayers.length;
-
-  if (vizMode === "VENN_3" && filter.selectedPlayerIds.length === 0) {
-    if (vennPresetId && vennPresetId !== "CUSTOM") {
-      const preset = getVennPreset(vennPresetId);
-      return lang === "pl" ? preset.labelPl : preset.labelEn;
-    }
-    return lang === "pl" ? `Diagram Venna · ${pos}` : `Venn diagram · ${pos}`;
-  }
 
   if (filter.selectedPlayerIds.length > 0) {
     if (n >= 2 && n <= 4) {
@@ -378,11 +361,6 @@ export function StatsLabChartCanvas({
   onSelectPlayer,
   variant = "studio",
   vennConditions,
-  vennPresetId = "COMPLETE_DEFENDER",
-  vennPlayersPerArea = 5,
-  onVennPlayersPerAreaChange,
-  vennIncludeList = false,
-  onVennIncludeListChange,
   vennLoading = false,
 }: Props) {
   const isExport = variant === "export";
@@ -405,7 +383,7 @@ export function StatsLabChartCanvas({
     cloneVennConditions(getVennPreset("COMPLETE_DEFENDER").conditions);
   const title =
     customTitle.trim() ||
-    autoTitle(filter, vizMode, lang, players, vennPresetId);
+    autoTitle(filter, vizMode, lang, players);
   const technicalSubtitle = `${lang === "pl" ? "Sezon" : "Season"} ${seasonCode} · ${autoSubtitle(
     filter,
     result?.poolSize ?? 0,
@@ -544,10 +522,7 @@ export function StatsLabChartCanvas({
             minMinutes={filter.minMinutes}
             variant={variant}
             density={variant === "export" ? "full" : "auto"}
-            playersPerArea={vennPlayersPerArea}
-            onPlayersPerAreaChange={onVennPlayersPerAreaChange}
-            includePlayerList={vennIncludeList}
-            onIncludePlayerListChange={onVennIncludeListChange}
+            selectionMode={filter.selectedPlayerIds.length > 0 ? "manual" : "auto"}
             loading
           />
         ) : !result || players.length === 0 ? (
@@ -667,10 +642,7 @@ export function StatsLabChartCanvas({
             minMinutes={filter.minMinutes}
             variant={variant}
             density={variant === "export" ? "full" : "auto"}
-            playersPerArea={vennPlayersPerArea}
-            onPlayersPerAreaChange={onVennPlayersPerAreaChange}
-            includePlayerList={vennIncludeList}
-            onIncludePlayerListChange={onVennIncludeListChange}
+            selectionMode={filter.selectedPlayerIds.length > 0 ? "manual" : "auto"}
           />
         ) : (
           <HeatmapMatrixChart

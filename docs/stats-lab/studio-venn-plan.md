@@ -1,62 +1,49 @@
-# Studio U8 — diagram Venna (3 warunki)
+# Studio — diagram Venna (3 warunki)
 
-Plan wdrożenia w tym samym PR. Wygląd wzoru FPL Labs jest tylko typem wykresu: trzy nachodzące koła, siedem pól, środek = wszystkie warunki. Grafika ma zostać w tokenach Studio (Arena / Scout / Light), nie kopią plakatu.
+Wygląd to nadal trzy nachodzące koła i siedem pól. Środek = wszystkie warunki. Grafika zostaje w tokenach Studio (Arena / Scout / Light).
 
-## Co powstaje
+## Wybór zawodników (jak Profil wielowymiarowy)
 
-Nowy tryb Studio `VENN_3` („Diagram Venna”). Trzy warunki, każdy to metryka + próg `≥ N`. Zakres kolejek, pozycja, min. minut, cena i klub są wspólne z resztą Studio.
+Ta sama sekcja „Wybór zawodników”:
 
-Pola: `A`, `B`, `C`, `AB`, `AC`, `BC`, `ABC`. Kto nie spełnia żadnego progu, nie wchodzi do kół. Puste pole pokazuje „nikt” / „nobody”.
+- ręcznie: wyszukiwarka i lista zaznaczeń, maks. 20;
+- automatycznie: „Pokaż najlepszych (Top N)” — Top 3 / 5 / 8 / 10 / 15 / 20.
 
-## Skąd dane
+Na diagramie są tylko ci zawodnicy. Nie ma „+N więcej” ani listy setek graczy. Pod spodem jest krótka legenda wybranych (pole i wartości). Każdy wybrany ma pełne nazwisko z FPL i herb.
 
-Tylko odczyt tego, co Studio już agreguje w `rawValues` za wybrany okres (`analyticsEngine`, historia `fpl_lab_player_gw_history`):
+Przełącznik „3 / 5 / 8 / Wszyscy” przy wykresie jest zdjęty — zastępuje go Top N.
 
-| Warunek domyślny | Klucz | Znaczenie |
-|---|---|---|
-| 4+ czyste konta | `clean_sheets` | suma czystych kont w zakresie GW |
-| 3+ gole i asysty | `goals_assists` | gole + asysty |
-| 4+ mecze z progiem DefCon | `dc_bonus_matches` | mecze, w których FPL dało +2 za próg DC |
+## Trzy kryteria
 
-DefCon jest w danych. Dla obrońcy próg to CBI + wślizgi ≥ 10 (dla pomocnika i napastnika CBI + wślizgi + odbiory ≥ 12). `dc_bonus_matches` liczy **mecze**, nie unikalne kolejki: w DGW mogą być dwa hity. Brak osobnej kolumny „kolejka z ≥10 akcjami” poza tym agregatem — nie dodajemy synchronizacji. Gdy historii GW nie ma, metryka zostaje 0 (nie zgadujemy).
+Po zmianie pozycji (GK / DEF / MID / FWD) wracają domyślne progi tej pozycji. Użytkownik może dla każdego koła wybrać dowolną metrykę z puli Studio i dowolny próg. „Wszystkie” nie zeruje własnych progów.
 
-Progi czytają **sumy okresu** (`rawValues`), nie Per 90 i nie percentyle. Inaczej „4+ czyste konta” rozjeżdżałoby się przy włączonym Per 90.
+| Pozycja | Koło A | Koło B | Koło C |
+|---|---|---|---|
+| GK | 3+ czyste konta | 20+ obron | 2+ bonus |
+| DEF | 4+ czyste konta | 3+ gole i asysty | 4+ mecze z progiem DefCon (+2) |
+| MID | 3+ gole i asysty | 3+ xGI | 4+ bonus |
+| FWD | 4+ gole | 3+ xG | 3+ bonus |
 
-Żeby koła objęły całą pulę filtra (a nie Top 10), zapytanie Venna ustawia `returnAllEligible`. Inne wykresy dalej tną do Top N (maks. 50).
+Progi czytają sumy okresu (`rawValues`), nie Per 90 i nie percentyle.
 
-## Jak liczymy
+## Sortowanie TOP N
 
-Czysta funkcja `assignPlayersToVennRegions` w `lib/stats-lab/vennEngine.ts`:
+1. liczba spełnionych warunków (0–3),
+2. punkty FPL,
+3. id.
 
-- wartość brakująca, `null` albo `NaN` → 0;
-- próg, który nie jest liczbą → warunek niespełniony;
-- wiersze meczowe sumujemy tylko w `[gwFrom, gwTo]`;
-- min. minut odrzuca gracza z kół (osobna grupa, nie pole);
-- remis rankingu: suma trzech metryk, potem punkty FPL, potem id.
+Opis pod wykresem: „Posortowane: liczba spełnionych warunków, potem punkty”. Ręczny wybór zostaje w kolejności zaznaczenia.
 
-Układ żetonów (`layoutVennRegion`) jest deterministyczny: siatka punktów w polu, prostokąty się nie stykają i nie wychodzą z pola. Nadmiar → najlepsi na kole i żeton „+N”; pełna lista pod wykresem.
+Żeby ranking widział całą pulę filtra, zapytanie bez konkretnej listy nadal ustawia `returnAllEligible`. Na płótnie zostaje tylko Top N albo zaznaczeni (maks. 20). Inne wykresy dalej tną Top N w silniku.
 
-## Układ i stany
+## Układ
 
-- Koła: akcent motywu, złoto motywu, błękit z palety metryk Studio. Etykieta przy kole ma pełną nazwę i próg („4+ czyste konta”).
-- Żeton: kolor klubu (ta sama paleta co karta Planera) i herb z `/api/uploads/fpl-lab/badge/…`. Nazwisko skrócone znakiem „…” jako tekst, nie klasą `truncate`. Pełne nazwisko w tooltipie, aria i liście.
-- Środek: większe żetony i skrót liczb; skrót ma pełną nazwę w aria (jak U7).
-- Poniżej 768 px szerokości wykresu: w kołach same liczniki, zawodnicy tylko na liście. Eksport PNG (1120 px) zawsze rysuje żetony i nie zawiera panelu sterowania.
-- Nagłówek: tytuł presetu + zdanie z danych. Stopka jak na innych plakatach (`fpl-arena.com`, zakres GW).
-
-## Presety
-
-1. Kompletny obrońca (domyślny): DEF, 270 min, 4 CS, 3 G+A, 4 DC.
-2. Pomocnicy: 270 min, 3 G+A, 3 xGI, 4 bonus.
-3. Napastnicy: 270 min, 4 gole, 3 xG, 3 bonus.
-4. Bramkarze: 270 min, 3 CS, 20 obron, 2 bonus.
-
-W panelu można wybrać dowolne 3 metryki i progi. Preset nie rusza zakresu kolejek, klubów ani ceny.
-
-## Testy
-
-Przydział 7 pól, puste pola, gracz bez minut, progi, zakres GW, brak NaN, ranking i „+N”, brak nachodzenia żetonów, kontrast etykiet w 3 motywach (≥ 4.5:1), PL/EN, eksport bez kontrolek.
+- Koła: akcent motywu, złoto motywu, błękit z palety metryk. Etykieta przy kole ma pełną nazwę i próg.
+- Żeton: herb z `/api/uploads/fpl-lab/badge/…` i pełne nazwisko (bez `truncate` i bez wielokropka). Wartości trzech progów są na żetonie.
+- Pusty obszar: „0 graczy” / „0 players”.
+- Eksport PNG: kwadrat 1080 px, sam diagram z wybranymi (bez panelu). Żetony są pogrupowane nagłówkiem pola (`A`, `A+B`, `A+B+C`), a pasek żetonu rysuje kolor każdego koła z tego pola. Stopka plakatu jest wspólna z resztą Studio.
+- Wąski ekran (320–360): żetony zawijają się w całą szerokość, legenda zostaje pod wykresem.
 
 ## Poza zakresem
 
-Brak zapisów do Supabase, brak syncu, brak e2e. Moduł `/admin/stats-lab/sync` bez zmian. Bez nowych zależności.
+Brak zapisów do Supabase, brak syncu, brak e2e. Moduł `/admin/stats-lab/sync` bez zmian. Wykres „Passy i regularność” bez zmian. Bez nowych zależności.

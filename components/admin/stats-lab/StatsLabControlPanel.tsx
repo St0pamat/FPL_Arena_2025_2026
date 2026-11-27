@@ -33,6 +33,7 @@ import {
 } from "@/lib/stats-lab/i18n";
 import {
   VENN_PRESETS,
+  VENN_SELECTION_CAP,
   applyVennPresetToFilter,
   cloneVennConditions,
   type VennCondition,
@@ -214,6 +215,12 @@ export function StatsLabControlPanel({
 
   function addPlayer(id: number) {
     if (filter.selectedPlayerIds.includes(id)) return;
+    if (
+      ui.vizMode === "VENN_3" &&
+      filter.selectedPlayerIds.length >= VENN_SELECTION_CAP
+    ) {
+      return;
+    }
     onFilterChange({
       ...filter,
       selectedPlayerIds: [...filter.selectedPlayerIds, id],
@@ -483,6 +490,7 @@ export function StatsLabControlPanel({
                       onUiChange({
                         vennPresetId: preset.id,
                         vennConditions: cloneVennConditions(preset.conditions),
+                        pickMode: "AUTO",
                       });
                       onFilterChange(applyVennPresetToFilter(filter, preset.id));
                     }}
@@ -757,6 +765,12 @@ export function StatsLabControlPanel({
             ) : (
               <p className="text-[11px] text-slate-500">{copy.addPlayersHint}</p>
             )}
+            {ui.vizMode === "VENN_3" &&
+            filter.selectedPlayerIds.length >= VENN_SELECTION_CAP ? (
+              <p className={`text-[11px] font-semibold ${chrome.mutedLabel}`}>
+                {copy.vennSelectionCap}
+              </p>
+            ) : null}
 
             <div>
               <label className={`block text-[10px] font-bold uppercase ${chrome.mutedLabel}`}>
@@ -896,8 +910,7 @@ export function StatsLabControlPanel({
               ) : null}
             </div>
 
-            {ui.vizMode === "VENN_3" ? null : (
-            <div>
+            <div data-studio-top-n="true">
               <p className="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">
                 {copy.showTop}
               </p>
@@ -920,7 +933,6 @@ export function StatsLabControlPanel({
                 ))}
               </div>
             </div>
-            )}
 
             <div>
               <label className={`block text-[10px] font-bold uppercase ${chrome.mutedLabel}`}>

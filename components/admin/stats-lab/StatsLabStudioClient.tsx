@@ -68,8 +68,9 @@ import {
   applyVennPresetToFilter,
   cloneVennConditions,
   getVennPreset,
+  selectVennRoster,
+  vennConditionsAfterPositionChange,
   vennUsesFullPool,
-  type VennPlayersPerArea,
 } from "@/lib/stats-lab/vennEngine";
 import type { PointsSortKey } from "@/components/admin/stats-lab/charts/PointsBreakdownChart";
 import type { KnowledgeHelpAnchor } from "@/lib/stats-lab/knowledgeBaseContent";
@@ -177,9 +178,6 @@ export function StatsLabStudioClient({
     () => defaultStreakKeysForPositions(seededFilter.positions),
   );
   const [isControlPanelCollapsed, setIsControlPanelCollapsed] = useState(false);
-  const [vennPlayersPerArea, setVennPlayersPerArea] =
-    useState<VennPlayersPerArea>(5);
-  const [vennIncludeList, setVennIncludeList] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
 
   const emptyDb = bootstrap.players.length === 0;
@@ -267,10 +265,13 @@ export function StatsLabStudioClient({
   }, [seedSelectedPlayerIds]);
 
   /**
-   * Kolejność plottedPlayers pochodzi WYŁĄCZNIE z silnika
+   * Kolejność plottedPlayers pochodzi z silnika
    * (sort całej comparisonPool → dopiero slice Top N).
    * Zakaz post-slice re-sortu po composite — psuje TOP N po sortByStat
    * (lider TP wypada poza MAX 4 na radarze).
+   *
+   * VENN_3: silnik oddaje całą pulę filtra (`returnAllEligible`), a tu
+   * zostaje maks. 20: ręczna lista albo TOP N po liczbie warunków, potem punktach.
    *
    * POINTS_BREAKDOWN: silnik sortuje po raw total_points; tutaj dodatkowo
    * synchronizujemy kolejność 1:1 z lokalnym sortem wykresu (estimatedTotal /
@@ -278,6 +279,29 @@ export function StatsLabStudioClient({
    */
   const displayResult = useMemo((): StatsLabComparisonResult | null => {
     if (!result) return null;
+    if (ui.vizMode === "VENN_3") {
+      const roster = selectVennRoster({
+        players: result.plottedPlayers.map((player) => ({
+          id: player.fpl_element_id,
+          name: player.web_name,
+          minutes: player.minutes,
+          points: Number(player.rawValues?.total_points ?? 0),
+          totals: player.rawValues,
+        })),
+        conditions: ui.vennConditions,
+        minMinutes: filter.minMinutes,
+        mode: filter.selectedPlayerIds.length > 0 ? "MANUAL" : "AUTO",
+        selectedIds: filter.selectedPlayerIds,
+        limit: filter.limitPlayers,
+      });
+      const byId = new Map(
+        result.plottedPlayers.map((player) => [String(player.fpl_element_id), player]),
+      );
+      const plottedPlayers = roster
+        .map((player) => byId.get(String(player.id)))
+        .filter((player): player is NonNullable<typeof player> => player != null);
+      return { ...result, plottedPlayers };
+    }
     if (ui.vizMode !== "POINTS_BREAKDOWN") return result;
 
     // 1:1 z PointsBreakdownChart.readSortValue — audit.json === canvas
@@ -312,7 +336,16 @@ export function StatsLabStudioClient({
       return (b.pointsBreakdown.estimatedTotal - a.pointsBreakdown.estimatedTotal) * mul;
     });
     return { ...result, plottedPlayers: sorted };
-  }, [result, ui.vizMode, pointsSortKey, chartSortDir]);
+  }, [
+    result,
+    ui.vizMode,
+    ui.vennConditions,
+    filter.minMinutes,
+    filter.selectedPlayerIds,
+    filter.limitPlayers,
+    pointsSortKey,
+    chartSortDir,
+  ]);
 
   /** Kandydaci Spotlight = gracze na wykresie (Radar: max 4). */
   const spotlightPlottedPlayers = useMemo(() => {
@@ -380,6 +413,19 @@ export function StatsLabStudioClient({
       resolved = { ...resolved, sortByComposite: false };
     }
     setFilter(resolved);
+    if (ui.vizMode === "VENN_3") {
+      const defaults = vennConditionsAfterPositionChange({
+        previousPositions: filter.positions,
+        nextPositions: resolved.positions,
+      });
+      if (defaults) {
+        setUi((prev) => ({
+          ...prev,
+          vennPresetId: defaults.presetId,
+          vennConditions: defaults.conditions,
+        }));
+      }
+    }
   }
 
   useEffect(() => {
@@ -900,11 +946,6 @@ export function StatsLabStudioClient({
                 }
                 onSelectPlayer={(id) => onUiChange({ spotlightPlayerId: id })}
                 vennConditions={ui.vennConditions}
-                vennPresetId={ui.vennPresetId}
-                vennPlayersPerArea={vennPlayersPerArea}
-                onVennPlayersPerAreaChange={setVennPlayersPerArea}
-                vennIncludeList={vennIncludeList}
-                onVennIncludeListChange={setVennIncludeList}
                 vennLoading={ui.vizMode === "VENN_3" && (pending || !displayResult)}
               />
             </StatsLabPosterFrame>
@@ -946,9 +987,6 @@ export function StatsLabStudioClient({
         streakSortKey={streakSortKey}
         activeStreakKeys={activeStreakKeys}
         vennConditions={ui.vennConditions}
-        vennPresetId={ui.vennPresetId}
-        vennPlayersPerArea={vennPlayersPerArea}
-        vennIncludeList={vennIncludeList}
       />
 
     </div>
