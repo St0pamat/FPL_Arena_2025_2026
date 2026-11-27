@@ -20,6 +20,10 @@ import {
   type PlayerGwProjection,
 } from "@/lib/stats-lab/plannerEngine";
 import {
+  readFiniteChance,
+  readNewsAdded,
+} from "@/lib/stats-lab/availabilityMarker";
+import {
   FPL_DC_BONUS_POINTS,
   type FplLabPlayer,
   type FplLabPlayerGwHistory,
@@ -60,7 +64,11 @@ export type PlannerPlayerCatalogItem = {
   cost_change_start: number;
   status: string;
   chance_of_playing_next_round: number | null;
+  /** Brak pola = kolumny nie ma w odczycie. */
+  chance_of_playing_this_round?: number | null;
   news: string;
+  /** Brak pola = kolumny nie ma w odczycie. */
+  news_added?: string | null;
   selected_by_percent: number;
   total_points: number;
   event_points: number;
@@ -95,6 +103,27 @@ export type StatsLabPlannerPayload = {
   isDemoSquad: boolean;
   loadError: string | null;
 };
+
+function optionalAvailabilityFields(player: FplLabPlayer): {
+  chance_of_playing_this_round?: number | null;
+  news_added?: string | null;
+} {
+  const extra: {
+    chance_of_playing_this_round?: number | null;
+    news_added?: string | null;
+  } = {};
+  if (
+    Object.prototype.hasOwnProperty.call(player, "chance_of_playing_this_round")
+  ) {
+    extra.chance_of_playing_this_round = readFiniteChance(
+      player.chance_of_playing_this_round,
+    );
+  }
+  if (Object.prototype.hasOwnProperty.call(player, "news_added")) {
+    extra.news_added = readNewsAdded(player.news_added);
+  }
+  return extra;
+}
 
 function dcThreshold(elementType: FplPositionType): number {
   if (elementType === 2) return 10;
@@ -142,6 +171,7 @@ function buildPlayerCatalog(
       status: String(p.status ?? "a"),
       chance_of_playing_next_round:
         p.chance_of_playing_next_round ?? null,
+      ...optionalAvailabilityFields(p),
       news: typeof p.news === "string" ? p.news : "",
       selected_by_percent: Number(p.selected_by_percent) || 0,
       total_points: Number(p.total_points) || 0,

@@ -11,6 +11,10 @@ import {
   getFplStatDefinition,
 } from "@/lib/stats-lab/types";
 import type { StatsLabPeriodMode } from "@/lib/stats-lab/presets";
+import {
+  officialMetricAbbrev,
+  type MetricNameMode,
+} from "@/lib/stats-lab/metricNameMode";
 
 export type StatsLabLang = "pl" | "en";
 export type StatsLabScaleMode = "PERCENTILE" | "RAW";
@@ -823,6 +827,7 @@ export function vennConditionPhrase(
   metric: FplStatKey,
   threshold: number,
   lang: StatsLabLang,
+  mode: MetricNameMode = "descriptive",
 ): string {
   const full = statLabel(metric, lang);
   const head =
@@ -835,6 +840,9 @@ export function vennConditionPhrase(
       ? String(Math.round(threshold))
       : formatVennNumber(threshold)
     : "—";
+  if (mode === "abbrev") {
+    return `${shown}+ ${officialMetricAbbrev(metric, lang)}`;
+  }
   const special = VENN_PHRASE[lang][metric];
   if (special) return special(shown);
   return `${shown}+ ${head}`;
@@ -869,12 +877,16 @@ export function vennShortStatLine(
   metrics: readonly FplStatKey[],
   values: readonly number[],
   lang: StatsLabLang,
+  mode: MetricNameMode = "descriptive",
 ): string {
   return metrics
-    .map(
-      (metric, index) =>
-        `${formatVennNumber(values[index] ?? 0)} ${statShort(metric, lang)}`,
-    )
+    .map((metric, index) => {
+      const token =
+        mode === "abbrev"
+          ? officialMetricAbbrev(metric, lang)
+          : statShort(metric, lang);
+      return `${formatVennNumber(values[index] ?? 0)} ${token}`;
+    })
     .join(" · ");
 }
 

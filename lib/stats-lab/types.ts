@@ -136,8 +136,18 @@ export interface FplLabPlayer {
   cost_change_event: number;
   /** Szansa gry w następnej kolejce: 0|25|50|75|100 lub null (przed syncem / brak danych). */
   chance_of_playing_next_round?: number | null;
+  /**
+   * Szansa gry w trwającej kolejce. Kolumny jeszcze nie ma w odczycie.
+   * Źródło, gdy się pojawi: bootstrap-static elements[].chance_of_playing_this_round.
+   */
+  chance_of_playing_this_round?: number | null;
   /** Komunikat kontuzji / zawieszenia z bootstrapu. */
   news?: string | null;
+  /**
+   * Kiedy FPL dodał komunikat. Kolumny jeszcze nie ma w odczycie.
+   * Źródło: bootstrap-static elements[].news_added (ISO).
+   */
+  news_added?: string | null;
   /** Oficjalne Expected Points FPL na następną kolejkę. */
   ep_next?: number | null;
   defensive_contribution: number;

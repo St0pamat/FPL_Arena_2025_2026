@@ -2,6 +2,11 @@
 
 import { Fragment, useMemo, useState } from "react";
 import { Info } from "lucide-react";
+import {
+  availabilityFromCatalog,
+  mapAvailabilityMarker,
+} from "@/lib/stats-lab/availabilityMarker";
+import { AvailabilityBadge } from "@/components/admin/stats-lab/planner/AvailabilityBadge";
 import type { StatsLabChartThemeId } from "@/components/admin/stats-lab/chartTheme";
 import type { PlannerPlayerCatalogItem } from "@/app/admin/actions/statsLabPlanner";
 import type { StatsLabLang } from "@/lib/stats-lab/i18n";
@@ -369,8 +374,13 @@ function PlayerRow({
                 : undefined
             }
           >
-            <p className={`text-[11px] font-bold leading-tight ${chrome.text}`}>
-              {player?.web_name ?? `#${pick.elementId}`}
+            <p className={`flex items-center gap-1 text-[11px] font-bold leading-tight ${chrome.text}`}>
+              <span>{player?.web_name ?? `#${pick.elementId}`}</span>
+              <AvailabilityBadge
+                marker={mapAvailabilityMarker(availabilityFromCatalog(player))}
+                lang={lang}
+                compact
+              />
               {roleBadge ? (
                 <span
                   aria-hidden
@@ -620,6 +630,7 @@ function PricesTable({
                     }`}
                   >
                     <td className="px-2 py-1.5">
+                      <div className="flex items-center gap-1">
                       <button
                         type="button"
                         onClick={() => onOpenPlayerInfo(pick.elementId)}
@@ -638,6 +649,14 @@ function PricesTable({
                           <span className="ml-1 text-[9px] font-black">VC</span>
                         ) : null}
                       </button>
+                      <AvailabilityBadge
+                        marker={mapAvailabilityMarker(
+                          availabilityFromCatalog(player),
+                        )}
+                        lang={lang}
+                        compact
+                      />
+                      </div>
                     </td>
                     <td className={`px-2 py-1.5 font-bold tabular-nums ${chrome.text}`}>
                       {formatTenthsAsPounds(pick.purchasePriceTenths)}

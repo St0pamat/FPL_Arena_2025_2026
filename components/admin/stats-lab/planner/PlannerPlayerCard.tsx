@@ -31,6 +31,11 @@ import {
   formatPlayerTileAccessibleName,
 } from "@/lib/stats-lab/plannerUiFormat";
 import { fplLabBadgeUrl } from "@/lib/stats-lab/mediaUrls";
+import {
+  availabilityFromCatalog,
+  mapAvailabilityMarker,
+} from "@/lib/stats-lab/availabilityMarker";
+import { AvailabilityBadge } from "@/components/admin/stats-lab/planner/AvailabilityBadge";
 import { PlannerFixturePills } from "@/components/admin/stats-lab/planner/PlannerFixturePills";
 import {
   fdrDotClass,
@@ -234,6 +239,7 @@ export function PlannerPlayerCard({
   });
   const fill = shirtFill(player?.club_primary_color, player?.club_short_name);
   const showActions = !isExporting;
+  const availability = mapAvailabilityMarker(availabilityFromCatalog(player));
   const infoLabel = pt(lang, "planner.card.info", {
     player: fullName || playerName,
   });
@@ -330,10 +336,17 @@ export function PlannerPlayerCard({
       </div>
 
       <div className={`ppc-plate ${palette.plate}`}>
+        {availability.visible ? (
+          <span className="ppc-avail">
+            <AvailabilityBadge marker={availability} lang={lang} compact />
+          </span>
+        ) : null}
         {showActions ? (
           <button
             type="button"
-            className={`ppc-name ppc-info-hit ${palette.name}`}
+            className={`ppc-name ppc-info-hit ${palette.name}${
+              availability.visible ? " ppc-name-avail" : ""
+            }`}
             data-testid="card-player-name"
             data-allow-ellipsis="1"
             title={fullName || playerName}
@@ -347,7 +360,9 @@ export function PlannerPlayerCard({
           </button>
         ) : (
           <b
-            className={`ppc-name ${palette.name}`}
+            className={`ppc-name ${palette.name}${
+              availability.visible ? " ppc-name-avail" : ""
+            }`}
             data-testid="card-player-name"
             data-allow-ellipsis="1"
             title={fullName || playerName}

@@ -76,6 +76,19 @@
   padding: 0 2px;
 }
 
+/* Plakietka statusu siedzi w tabliczce, nie na koszulce. */
+.ppc-avail {
+  position: absolute;
+  z-index: 2;
+  top: 1px;
+  right: 1px;
+  pointer-events: none;
+}
+
+.ppc-name-avail {
+  padding-right: 18px;
+}
+
 .ppc-pills {
   display: flex;
   justify-content: center;
@@ -310,6 +323,10 @@ button.ppc-name {
     font-size: 9.5px;
     line-height: 13px;
     padding: 0 1px;
+  }
+
+  .ppc-name-avail {
+    padding-right: 14px;
   }
 
   .ppc-prices-full {

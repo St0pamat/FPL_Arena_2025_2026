@@ -27,6 +27,8 @@ import {
   downloadJsonFile,
 } from "@/lib/stats-lab/auditExport";
 import type { StatsLabLang } from "@/lib/stats-lab/i18n";
+import { PLAYER_PROJECTION_COPY } from "@/lib/stats-lab/playerProjectionI18n";
+import { PlayerProjectionsPanel } from "@/components/admin/stats-lab/projections/PlayerProjectionsPanel";
 import { fplLabBadgeUrl } from "@/lib/stats-lab/mediaUrls";
 import { formatFixturePillLabel } from "@/lib/stats-lab/plannerFixtureUi";
 import {
@@ -811,6 +813,7 @@ export function StatsLabProjectionsClient({ lang, themeId }: Props) {
   const controlsRef = useRef<HTMLDivElement>(null);
 
   const [subView, setSubView] = useState<ProjectionsSubView>("FIXTURES_FDR");
+  const [subject, setSubject] = useState<"clubs" | "players">("clubs");
   const [data, setData] = useState<StatsLabProjectionsActionResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -1826,8 +1829,45 @@ export function StatsLabProjectionsClient({ lang, themeId }: Props) {
     );
   }
 
+  const playerCopy = PLAYER_PROJECTION_COPY[lang];
+  const subjectBar = (
+    <div
+      className={menuTabsBarClass(themeId)}
+      role="group"
+      aria-label={`${playerCopy.subjectClubs} / ${playerCopy.subjectPlayers}`}
+      data-testid="projection-subject"
+    >
+      <button
+        type="button"
+        aria-pressed={subject === "clubs"}
+        onClick={() => setSubject("clubs")}
+        className={`min-h-11 rounded-xl px-3 py-2 text-[10px] uppercase tracking-wider ${controlTabClass(subject === "clubs", themeId)}`}
+      >
+        {playerCopy.subjectClubs}
+      </button>
+      <button
+        type="button"
+        aria-pressed={subject === "players"}
+        onClick={() => setSubject("players")}
+        className={`min-h-11 rounded-xl px-3 py-2 text-[10px] uppercase tracking-wider ${controlTabClass(subject === "players", themeId)}`}
+      >
+        {playerCopy.subjectPlayers}
+      </button>
+    </div>
+  );
+
+  if (subject === "players") {
+    return (
+      <div className="space-y-4">
+        {subjectBar}
+        <PlayerProjectionsPanel lang={lang} themeId={themeId} />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
+      {subjectBar}
       <div ref={controlsRef} className="space-y-4">
       <div
         className={menuTabsBarClass(themeId)}

@@ -31,6 +31,8 @@ import { captainArmbandKind } from "@/lib/stats-lab/plannerFixtureUi";
 import { getStatsLabMenuChrome } from "@/lib/stats-lab/menuChrome";
 import { fplLabPlayerPhotoUrl } from "@/lib/stats-lab/mediaUrls";
 import type { FplLabPlayer } from "@/lib/stats-lab/types";
+import { availabilityFromCatalog } from "@/lib/stats-lab/availabilityMarker";
+import { AvailabilityDetail } from "@/components/admin/stats-lab/planner/AvailabilityBadge";
 import { PlannerFixturePills } from "@/components/admin/stats-lab/planner/PlannerFixturePills";
 import { fdrPillClass } from "@/components/admin/stats-lab/planner/plannerCardPalette";
 import {
@@ -874,18 +876,12 @@ function PlayerInfoModal({
                     ? "MID"
                     : "FWD"}
             </p>
-            {player?.news ? (
-              <p
-                className={`mt-1 text-xs font-semibold ${
-                  isLight ? "text-amber-800" : "text-amber-200"
-                }`}
-              >
-                {player.news}
-                {player.chance_of_playing_next_round != null
-                  ? ` · ${player.chance_of_playing_next_round}%`
-                  : ""}
-              </p>
-            ) : null}
+            <AvailabilityDetail
+              input={availabilityFromCatalog(player)}
+              lang={lang}
+              mutedClass={chrome.mutedLabel}
+              textClass={chrome.text}
+            />
           </div>
         </div>
 

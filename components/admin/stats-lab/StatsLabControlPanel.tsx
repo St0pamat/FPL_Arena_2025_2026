@@ -46,7 +46,10 @@ import type {
 import { STATS_LAB_CHART_THEMES } from "@/components/admin/stats-lab/chartTheme";
 import { KnowledgeHelpButton } from "@/components/admin/stats-lab/StatsLabKnowledgeBaseModal";
 import type { KnowledgeHelpAnchor } from "@/lib/stats-lab/knowledgeBaseContent";
+import { metricChipLabel } from "@/lib/stats-lab/metricNameMode";
 import { getStreakMetricStyle } from "@/lib/stats-lab/themeTokens";
+import { MetricNameToggle } from "@/components/admin/stats-lab/MetricNameMode";
+import { useMetricNameMode } from "@/components/admin/stats-lab/metricNameModeContext";
 import {
   getStatsLabMenuChrome,
   type StatsLabMenuChrome,
@@ -151,7 +154,9 @@ export function StatsLabControlPanel({
 }: Props) {
   const [query, setQuery] = useState("");
   const lang = ui.lang;
+  const { mode: nameMode } = useMetricNameMode();
   const copy = t(lang);
+  const chipName = (key: FplStatKey) => metricChipLabel(key, lang, nameMode);
   const streakLabels = STREAK_LABELS[lang];
   const chrome = getStatsLabMenuChrome(ui.chartTheme);
   const isLight = chrome.isLight;
@@ -420,9 +425,12 @@ export function StatsLabControlPanel({
 
         {multiMetric && ui.vizMode !== "POINTS_BREAKDOWN" && ui.vizMode !== "STREAKS_EXPLORER" ? (
           <div className="space-y-3">
-            <p className="text-[10px] text-slate-500">
-              {copy.metricsCount}: {filter.activeMetrics.length}/8 (min. 2)
-            </p>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-[10px] text-slate-500">
+                {copy.metricsCount}: {filter.activeMetrics.length}/8 (min. 2)
+              </p>
+              <MetricNameToggle lang={lang} themeId={ui.chartTheme} />
+            </div>
             {CATEGORIES.map((cat) => (
               <div key={cat}>
                 <p className="mb-1 flex items-center text-[10px] font-bold uppercase tracking-wider text-slate-500">
@@ -460,7 +468,7 @@ export function StatsLabControlPanel({
                               : chrome.inactiveBtn
                           }`}
                         >
-                          {statLabel(d.key, lang)}
+                          {chipName(d.key)}
                         </button>
                       );
                     },
@@ -508,6 +516,7 @@ export function StatsLabControlPanel({
                 condition.metric,
                 condition.threshold,
                 lang,
+                nameMode,
               );
               return (
                 <div key={condition.id} className="space-y-1.5">
@@ -536,7 +545,7 @@ export function StatsLabControlPanel({
                     >
                       {FPL_STAT_DEFINITIONS.map((def) => (
                         <option key={def.key} value={def.key} className={chrome.option}>
-                          {statLabel(def.key, lang)}
+                          {chipName(def.key)}
                         </option>
                       ))}
                     </select>
@@ -585,7 +594,7 @@ export function StatsLabControlPanel({
               >
                 {FPL_STAT_DEFINITIONS.map((d) => (
                   <option key={d.key} value={d.key} className={chrome.option}>
-                    {statLabel(d.key, lang)}
+                    {chipName(d.key)}
                   </option>
                 ))}
               </select>
@@ -601,7 +610,7 @@ export function StatsLabControlPanel({
               >
                 {FPL_STAT_DEFINITIONS.map((d) => (
                   <option key={d.key} value={d.key} className={chrome.option}>
-                    {statLabel(d.key, lang)}
+                    {chipName(d.key)}
                   </option>
                 ))}
               </select>
@@ -1051,7 +1060,7 @@ export function StatsLabControlPanel({
                 >
                   {FPL_STAT_DEFINITIONS.map((d) => (
                     <option key={d.key} value={d.key} className={chrome.option}>
-                      {statLabel(d.key, lang)}
+                      {chipName(d.key)}
                     </option>
                   ))}
                 </select>
@@ -1152,7 +1161,7 @@ export function StatsLabControlPanel({
       <p className="px-1 text-[10px] text-slate-600">
         {copy.metricsCount}:{" "}
         {filter.activeMetrics
-          .map((k) => statLabel(k, lang))
+          .map((k) => chipName(k))
           .join(" · ")}
       </p>
     </aside>

@@ -42,8 +42,6 @@ import {
   PLAYER_TAB_LABELS,
   TEAM_TAB_LABELS,
   centreColFullLabel,
-  centreColLabel,
-  centreColShort,
   centreEmptyFilterMessage,
   centrePoolPhrase,
   centreUi,
@@ -53,6 +51,8 @@ import {
   CENTRE_QUERY_TIMEOUT_MS,
   withTimeout,
 } from "@/lib/stats-lab/centrePageBoot";
+import { centreHeaderFace } from "@/lib/stats-lab/metricNameMode";
+import { useMetricNameMode } from "@/components/admin/stats-lab/metricNameModeContext";
 import { toJpeg } from "html-to-image";
 import {
   copyPngBlobToClipboard,
@@ -328,7 +328,7 @@ function ValuePill({
     return (
       <span
         className={`inline-flex items-center justify-center whitespace-nowrap rounded-md font-mono font-bold tabular-nums ${pillSize} ${orderPillClass(text, isDark)}`}
-        title={centreColLabel(col.key, lang)}
+        title={centreColFullLabel(col.key, lang)}
       >
         {text}
       </span>
@@ -344,7 +344,7 @@ function ValuePill({
   return (
     <span
       className={`inline-flex items-center justify-center whitespace-nowrap rounded-md font-mono font-bold tabular-nums ${pillSize} ${cls}`}
-      title={centreColLabel(col.key, lang)}
+      title={centreColFullLabel(col.key, lang)}
     >
       {formatCentreCell(col, raw, per90, isPoolAverage)}
     </span>
@@ -448,6 +448,7 @@ export function StatsCentreView({
   queryTimeoutMs = CENTRE_QUERY_TIMEOUT_MS,
 }: Props) {
   const ui = centreUi(lang);
+  const { mode: nameMode } = useMetricNameMode();
   const tokens = getThemeTokens(themeId);
   const chrome = getStatsLabMenuChrome(themeId);
   const isLight = themeId === "ANALYST_LIGHT";
@@ -1400,9 +1401,9 @@ export function StatsCentreView({
                       >
                         <button
                           type="button"
-                          title={centreColLabel(c.key, lang)}
+                          title={centreHeaderFace(c.key, lang, nameMode).title}
                           onClick={() => onSort(c.key)}
-                          className={`inline-flex items-center gap-0.5 whitespace-nowrap rounded text-[12px] font-extrabold uppercase tracking-wider ${
+                          className={`inline-flex max-w-[8.5rem] items-center gap-0.5 whitespace-normal text-left leading-tight rounded text-[12px] font-extrabold uppercase tracking-wider ${
                             isWideTable ? "px-1 py-1" : "px-2.5 py-1"
                           } ${
                             active
@@ -1419,7 +1420,7 @@ export function StatsCentreView({
                               : undefined
                           }
                         >
-                          {centreColShort(c.key, lang)}
+                          {centreHeaderFace(c.key, lang, nameMode).text}
                           {active ? (
                             filter.sortDir === "DESC" ? (
                               <ArrowDown className="h-3.5 w-3.5" />
@@ -1647,11 +1648,12 @@ export function StatsCentreView({
                   <span
                     className={`font-black ${surface.accentTextClass}`}
                     style={{ color: surface.accent }}
+                    title={centreHeaderFace(c.key, lang, nameMode).title}
                   >
-                    {centreColShort(c.key, lang)}
+                    {centreHeaderFace(c.key, lang, nameMode).text}
                   </span>
                   <span className={surface.mutedClass}>
-                    : {centreColFullLabel(c.key, lang)}
+                    : {centreHeaderFace(c.key, lang, nameMode).title}
                   </span>
                 </span>
               ))}
