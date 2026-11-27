@@ -6,6 +6,8 @@ import type { PlottedStatsLabPlayer } from "@/lib/stats-lab/analyticsEngine";
 import type { FplStatKey } from "@/lib/stats-lab/types";
 import type { StatsLabLang, StatsLabScaleMode } from "@/lib/stats-lab/i18n";
 import { statLabel, statShort, t } from "@/lib/stats-lab/i18n";
+import { metricChipLabel, metricTightLabel } from "@/lib/stats-lab/metricNameMode";
+import { useMetricNameMode } from "@/components/admin/stats-lab/metricNameModeContext";
 import {
   formatMetricDisplayValue,
   getMetricColor,
@@ -153,6 +155,7 @@ function MetricLegendBar({
   showComposite?: boolean;
 }) {
   const isLight = theme.id === "ANALYST_LIGHT";
+  const { mode: nameMode } = useMetricNameMode();
   const compositeLabel =
     lang === "pl"
       ? "OCENA (0–100) · Wybrane cechy"
@@ -177,7 +180,7 @@ function MetricLegendBar({
               className="h-4 w-4 rounded-full"
               style={{ background: getMetricColor(i, theme.id) }}
             />
-            {full}
+            {metricChipLabel(key, lang, nameMode)}
           </span>
           );
         })}
@@ -229,7 +232,7 @@ function MetricLegendBar({
               className="h-2 w-2 rounded-full"
               style={{ background: getMetricColor(i, theme.id) }}
             />
-            {full}
+            {metricChipLabel(key, lang, nameMode)}
             {active ? (
               sortDir === "DESC" ? (
                 <ArrowDown className="h-3 w-3" />
@@ -560,6 +563,7 @@ function GroupedRawBars({
 }: RawBarsProps) {
   const isExport = variant === "export";
   const isLight = theme.id === "ANALYST_LIGHT";
+  const { mode: nameMode } = useMetricNameMode();
   // Skala absolutna — ujemne metryki (price_change_gw, goals_vs_xg, …)
   // skalowane względem max |value|, nie surowego max (który bywa 0).
   const maxima = Object.fromEntries(
@@ -669,7 +673,7 @@ function GroupedRawBars({
                             style={{ background: color }}
                           />
                           <span title={statLabel(key, lang)} aria-label={statLabel(key, lang)}>
-                            {statShort(key, lang)}
+                            {metricTightLabel(key, lang, nameMode, statShort(key, lang))}
                           </span>
                         </div>
                         <div

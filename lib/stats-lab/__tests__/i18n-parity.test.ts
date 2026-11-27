@@ -50,6 +50,8 @@ import {
   PROJECTIONS_VENUE_FILTER_LABELS,
   projectionsUi,
 } from "@/lib/stats-lab/projectionsI18n";
+import { METRIC_NAME_COPY } from "@/lib/stats-lab/metricNameMode";
+import { PLAYER_PROJECTION_COPY } from "@/lib/stats-lab/playerProjectionI18n";
 
 type Dict = Record<string, unknown>;
 
@@ -255,6 +257,15 @@ describe("i18n PL/EN key parity", () => {
         "projectionsI18n.projectionsUi",
         projectionsUi("pl"),
         projectionsUi("en"),
+      ),
+    );
+    issues.push(
+      ...compareDualLangRecord("metricNameMode.METRIC_NAME_COPY", METRIC_NAME_COPY),
+    );
+    issues.push(
+      ...compareDualLangRecord(
+        "playerProjectionI18n.PLAYER_PROJECTION_COPY",
+        PLAYER_PROJECTION_COPY,
       ),
     );
 

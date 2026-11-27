@@ -9,6 +9,8 @@ import {
 } from "@/lib/stats-lab/types";
 import type { StatsLabLang, StatsLabScaleMode } from "@/lib/stats-lab/i18n";
 import { t } from "@/lib/stats-lab/i18n";
+import { metricTightLabel } from "@/lib/stats-lab/metricNameMode";
+import { useMetricNameMode } from "@/components/admin/stats-lab/metricNameModeContext";
 import { fplLabBadgeUrl, fplLabPlayerPhotoUrl } from "@/lib/stats-lab/mediaUrls";
 import {
   formatStatDisplay,
@@ -235,6 +237,7 @@ export function HeatmapMatrixChart({
   rankedByStat = "total_points",
 }: Props) {
   const isExport = variant === "export";
+  const { mode: nameMode } = useMetricNameMode();
   const isLight = theme.id === "ANALYST_LIGHT";
   const showGroupAvgRow = Boolean(showAvg) && Boolean(poolAverages);
   const ui = t(lang);
@@ -500,7 +503,7 @@ export function HeatmapMatrixChart({
                 }`}
                 title={full ?? key}
               >
-                {short ?? key}
+                {metricTightLabel(key, lang, nameMode, short ?? key)}
               </span>
               {invert ? (
                 <span className="text-[13px] font-black text-amber-500">
@@ -705,14 +708,19 @@ export function HeatmapMatrixChart({
                       rankedByStat
                     }
                   >
-                    {rankedByStat === "total_points"
-                      ? lang === "pl"
-                        ? "pkt"
-                        : "pts"
-                      : (lang === "en"
-                          ? getFplStatDefinition(rankedByStat)?.shortLabelEn
-                          : getFplStatDefinition(rankedByStat)?.shortLabelPl) ??
-                        rankedByStat}
+                    {metricTightLabel(
+                      rankedByStat,
+                      lang,
+                      nameMode,
+                      rankedByStat === "total_points"
+                        ? lang === "pl"
+                          ? "pkt"
+                          : "pts"
+                        : (lang === "en"
+                            ? getFplStatDefinition(rankedByStat)?.shortLabelEn
+                            : getFplStatDefinition(rankedByStat)?.shortLabelPl) ??
+                          rankedByStat,
+                    )}
                   </p>
                 </div>
               </div>

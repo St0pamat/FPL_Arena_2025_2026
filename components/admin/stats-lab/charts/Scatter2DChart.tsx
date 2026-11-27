@@ -6,6 +6,8 @@ import type { FplStatKey } from "@/lib/stats-lab/types";
 import { getFplStatDefinition as getStatDefinition } from "@/lib/stats-lab/types";
 import type { StatsLabLang, StatsLabScaleMode } from "@/lib/stats-lab/i18n";
 import { statLabel, statShort } from "@/lib/stats-lab/i18n";
+import { metricTightLabel } from "@/lib/stats-lab/metricNameMode";
+import { useMetricNameMode } from "@/components/admin/stats-lab/metricNameModeContext";
 import { fplLabBadgeUrl, fplLabPlayerPhotoUrl } from "@/lib/stats-lab/mediaUrls";
 import {
   computeScatterAxisConfig,
@@ -88,8 +90,9 @@ export function Scatter2DChart({
   const plotW = W - PAD.l - PAD.r;
   const plotH = H - PAD.t - PAD.b;
 
-  const shortX = statShort(axisX, lang);
-  const shortY = statShort(axisY, lang);
+  const { mode: nameMode } = useMetricNameMode();
+  const shortX = metricTightLabel(axisX, lang, nameMode, statShort(axisX, lang));
+  const shortY = metricTightLabel(axisY, lang, nameMode, statShort(axisY, lang));
   const labelX = statLabel(axisX, lang);
   const labelY = statLabel(axisY, lang);
 
@@ -741,7 +744,7 @@ export function Scatter2DChart({
                   style={{ color: theme.muted }}
                 >
                   <span className="inline-flex max-w-full items-baseline gap-1" title={labelX} aria-label={labelX}>
-                    <span className="min-w-0 break-words">{statShort(axisX, lang)}</span>
+                    <span className="min-w-0 break-words">{shortX}</span>
                     <span className="shrink-0 tabular-nums">
                       {formatMetricDisplayValue(
                         axisX,
@@ -751,7 +754,7 @@ export function Scatter2DChart({
                     </span>
                   </span>
                   <span className="inline-flex max-w-full items-baseline gap-1" title={labelY} aria-label={labelY}>
-                    <span className="min-w-0 break-words">{statShort(axisY, lang)}</span>
+                    <span className="min-w-0 break-words">{shortY}</span>
                     <span className="shrink-0 tabular-nums">
                       {formatMetricDisplayValue(
                         axisY,

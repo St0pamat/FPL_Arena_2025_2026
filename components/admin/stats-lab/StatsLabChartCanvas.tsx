@@ -10,6 +10,8 @@ import type {
   StatsLabScaleMode,
   StreakMetricKey,
 } from "@/lib/stats-lab/i18n";
+import { metricTightLabel } from "@/lib/stats-lab/metricNameMode";
+import { useMetricNameMode } from "@/components/admin/stats-lab/metricNameModeContext";
 import {
   PERIOD_LABELS,
   VIZ_MODE_LABELS,
@@ -367,6 +369,7 @@ export function StatsLabChartCanvas({
   const theme = STATS_LAB_CHART_THEMES[themeId];
   const isLightTheme = themeId === "ANALYST_LIGHT";
   const copy = t(lang);
+  const { mode: nameMode } = useMetricNameMode();
   const allPlayers = result?.plottedPlayers ?? [];
   /** Radar rysuje max 4 — tytuł TOP X i props muszą być WYSIWYG. */
   const MAX_RADAR_PLAYERS = 4;
@@ -707,7 +710,7 @@ export function StatsLabChartCanvas({
                     title={statLabel(key, lang)}
                     aria-label={statLabel(key, lang)}
                   >
-                    {statLabel(key, lang, true)}:
+                    {metricTightLabel(key, lang, nameMode, statLabel(key, lang, true))}:
                   </span>
                   <span
                     className={

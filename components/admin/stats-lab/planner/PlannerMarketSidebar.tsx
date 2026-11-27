@@ -32,6 +32,11 @@ import {
   fplLabPlayerPhotoUrl,
 } from "@/lib/stats-lab/mediaUrls";
 import type { FplPositionType } from "@/lib/stats-lab/types";
+import {
+  availabilityFromCatalog,
+  mapAvailabilityMarker,
+} from "@/lib/stats-lab/availabilityMarker";
+import { AvailabilityBadge } from "@/components/admin/stats-lab/planner/AvailabilityBadge";
 import { PlannerFixturePills } from "@/components/admin/stats-lab/planner/PlannerFixturePills";
 
 export type PlannerMarketTab = "PLAYERS" | "WATCHLIST" | "SUMMARY";
@@ -814,20 +819,15 @@ export function PlannerMarketSidebar({
                               ) : null}
                             </div>
                             <div className="min-w-0">
-                              <p className={`text-[11px] font-bold leading-tight ${chrome.text}`}>
-                                {p.web_name}
-                                {p.chance_of_playing_next_round != null &&
-                                p.chance_of_playing_next_round < 100 ? (
-                                  <span
-                                    className={`ml-1 text-[9px] font-black ${
-                                      isLight
-                                        ? "text-rose-700"
-                                        : "text-rose-300"
-                                    }`}
-                                  >
-                                    {p.chance_of_playing_next_round}%
-                                  </span>
-                                ) : null}
+                              <p className={`flex items-center gap-1 text-[11px] font-bold leading-tight ${chrome.text}`}>
+                                <span className="min-w-0">{p.web_name}</span>
+                                <AvailabilityBadge
+                                  marker={mapAvailabilityMarker(
+                                    availabilityFromCatalog(p),
+                                  )}
+                                  lang={lang}
+                                  compact
+                                />
                               </p>
                               <p className={`text-[9px] font-semibold ${chrome.mutedLabel}`}>
                                 {posLabel(p.element_type, lang)} · {p.club_short_name}

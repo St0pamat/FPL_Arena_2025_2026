@@ -19,6 +19,7 @@ import {
 } from "@/lib/stats-lab/i18n";
 import { parseCssColorToRgba } from "@/lib/stats-lab/auditExport";
 import { fplLabBadgeUrl } from "@/lib/stats-lab/mediaUrls";
+import { useMetricNameMode } from "@/components/admin/stats-lab/metricNameModeContext";
 import {
   VENN_CIRCLES,
   VENN_REGION_IDS,
@@ -213,6 +214,7 @@ export function VennDiagramChart({
   loading = false,
 }: Props) {
   const copy = t(lang);
+  const { mode: nameMode } = useMetricNameMode();
   const tipId = useId();
   const [openTip, setOpenTip] = useState<string | null>(null);
   const roster = useMemo(
@@ -225,8 +227,11 @@ export function VennDiagramChart({
 
   const colors = circleColors(theme);
   const phrases = conditions.map((condition) =>
-    vennConditionPhrase(condition.metric, condition.threshold, lang),
+    vennConditionPhrase(condition.metric, condition.threshold, lang, nameMode),
   ) as [string, string, string];
+  const phraseTitles = conditions.map((condition) =>
+    vennConditionPhrase(condition.metric, condition.threshold, lang, "descriptive"),
+  );
 
   const assignment = useMemo(
     () =>
@@ -404,6 +409,7 @@ export function VennDiagramChart({
                     data-venn-label={id}
                     data-near-circle={id}
                     className="absolute m-0 max-w-[42%] text-sm font-bold leading-snug"
+                    title={phraseTitles[index]}
                     style={{
                       left: `${anchor.x * 100}%`,
                       top: `${anchor.y * 100}%`,
@@ -561,7 +567,8 @@ function PlayerChip({
   compact: boolean;
 }) {
   const clubFill = getScatterClubColor(player.clubShort, null, theme.accent);
-  const values = vennShortStatLine(metrics, player.values, lang);
+  const { mode: nameMode } = useMetricNameMode();
+  const values = vennShortStatLine(metrics, player.values, lang, nameMode);
   const aria = [
     player.fullName || player.name,
     player.clubName || player.clubShort,
@@ -651,6 +658,7 @@ function PlayerLegendRow({
   lang: StatsLabLang;
 }) {
   const clubFill = getScatterClubColor(player.clubShort, null, theme.accent);
+  const { mode: nameMode } = useMetricNameMode();
   return (
     <li
       className="flex max-w-full flex-wrap items-center gap-2 rounded-lg px-2 py-1"
@@ -669,7 +677,7 @@ function PlayerLegendRow({
         {player.clubShort}
       </span>
       <span className="whitespace-normal break-words text-xs" style={{ color: theme.text }}>
-        {vennShortStatLine(metrics, player.values, lang)}
+        {vennShortStatLine(metrics, player.values, lang, nameMode)}
       </span>
     </li>
   );

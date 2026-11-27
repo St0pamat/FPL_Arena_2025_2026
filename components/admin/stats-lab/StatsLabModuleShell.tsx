@@ -27,6 +27,10 @@ import { StatsLabPlannerClient } from "@/components/admin/stats-lab/StatsLabPlan
 import { StatsLabKnowledgeBaseModal } from "@/components/admin/stats-lab/StatsLabKnowledgeBaseModal";
 import { getStatsLabMenuChrome } from "@/lib/stats-lab/menuChrome";
 import {
+  MetricNameModeProvider,
+  MetricNameToggle,
+} from "@/components/admin/stats-lab/MetricNameMode";
+import {
   shellNavChipClass,
   shellNavChipGroupClass,
   shellNavClass,
@@ -258,6 +262,7 @@ export function StatsLabModuleShell({
   }
 
   return (
+    <MetricNameModeProvider>
     <div
       className={shellRootClass(chartTheme)}
       data-stats-lab-shell-root="true"
@@ -337,6 +342,7 @@ export function StatsLabModuleShell({
         </button>
 
         <div className="ml-auto flex flex-wrap items-center gap-2">
+          <MetricNameToggle lang={lang} themeId={chartTheme} />
           <div
             className={shellNavChipGroupClass(chartTheme)}
             role="group"
@@ -483,5 +489,6 @@ export function StatsLabModuleShell({
         }}
       />
     </div>
+    </MetricNameModeProvider>
   );
 }

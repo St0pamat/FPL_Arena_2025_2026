@@ -6,6 +6,8 @@ import type { FplStatKey } from "@/lib/stats-lab/types";
 import { getFplStatDefinition } from "@/lib/stats-lab/types";
 import type { StatsLabLang, StatsLabScaleMode } from "@/lib/stats-lab/i18n";
 import { statLabel } from "@/lib/stats-lab/i18n";
+import { metricTightLabel } from "@/lib/stats-lab/metricNameMode";
+import { useMetricNameMode } from "@/components/admin/stats-lab/metricNameModeContext";
 import {
   formatStatDisplay,
   metricColor,
@@ -407,6 +409,7 @@ export function RadarPizzaChart({
   showPlayerMeta = true,
   showBarValues = true,
 }: Props) {
+  const { mode: nameMode } = useMetricNameMode();
   const [hover, setHover] = useState<{
     id: number;
     key: FplStatKey;
@@ -614,7 +617,12 @@ export function RadarPizzaChart({
                       expected_goal_involvements: "xGI",
                       bps: "Bonus BPS",
                     };
-              const short = AXIS_NAME[key] ?? statLabel(key, lang);
+              const short = metricTightLabel(
+                key,
+                lang,
+                nameMode,
+                AXIS_NAME[key] ?? statLabel(key, lang),
+              );
               const full = statLabel(key, lang);
 
               const pillW = 54;
