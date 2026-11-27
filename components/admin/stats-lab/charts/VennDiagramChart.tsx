@@ -102,6 +102,43 @@ function inkForFill(fill: string): string {
     : STATS_LAB_CHART_THEMES.ARENA_DARK.text;
 }
 
+function regionMark(id: LegendGroupId, outside: string, minutes: string): string {
+  if (id === "none") return outside;
+  if (id === "minutes") return minutes;
+  if (id === "ABC") return "A+B+C";
+  if (id.length === 2) return `${id[0]}+${id[1]}`;
+  return id;
+}
+
+function regionAccent(
+  id: LegendGroupId,
+  colors: Record<VennConditionId, string>,
+  theme: StatsLabChartTheme,
+): string {
+  if (id === "none" || id === "minutes") return theme.muted;
+  if (id === "ABC") return theme.text;
+  if (id === "A" || id === "B" || id === "C") return colors[id];
+  return theme.text;
+}
+
+/** Pasek każdego koła, które tworzy pole — A, A+B i A+C nie dzielą jednego koloru. */
+function regionEdge(
+  id: LegendGroupId,
+  colors: Record<VennConditionId, string>,
+  theme: StatsLabChartTheme,
+): string {
+  const bar = (ids: VennConditionId[]) =>
+    ids
+      .map((circleId, index) => `inset ${3 + index * 4}px 0 0 ${colors[circleId]}`)
+      .join(", ");
+  if (id === "A" || id === "B" || id === "C") return bar([id]);
+  if (id === "AB") return bar(["A", "B"]);
+  if (id === "AC") return bar(["A", "C"]);
+  if (id === "BC") return bar(["B", "C"]);
+  if (id === "ABC") return bar(["A", "B", "C"]);
+  return `inset 3px 0 0 ${theme.muted}`;
+}
+
 function regionHeading(
   region: VennRegionId,
   phrases: readonly [string, string, string],
@@ -389,31 +426,45 @@ export function VennDiagramChart({
       </div>
 
       {showChips ? (
-        <div className="mt-3 flex flex-wrap gap-2" data-venn-chips="true">
-          {groups.map((group) =>
-            group.players.map((player) => (
-              <PlayerChip
-                key={`${group.id}-${player.id}`}
-                player={player}
-                region={group.id}
-                metrics={metrics}
-                theme={theme}
-                lang={lang}
-                accent={
-                  group.id === "none" || group.id === "minutes"
-                    ? theme.muted
-                    : group.id === "ABC"
-                      ? theme.text
-                      : colors[group.id[0] as VennConditionId]
-                }
-                tipId={tipId}
-                open={openTip === `${group.id}-${player.id}`}
-                onTip={setOpenTip}
-                interactive={!isExport}
-                compact={isExport}
-              />
-            )),
-          )}
+        <div className="mt-3 space-y-2" data-venn-chips="true">
+          {groups.map((group) => {
+            const mark = regionMark(group.id, copy.vennRegionOut, copy.vennRegionMins);
+            const accent = regionAccent(group.id, colors, theme);
+            return (
+              <div key={group.id} data-venn-chip-region={group.id}>
+                <h4
+                  data-venn-region-heading={group.id}
+                  className="mb-1 text-sm font-bold leading-snug"
+                  style={{ color: accent }}
+                >
+                  {mark}
+                  <span className="font-semibold" style={{ color: theme.muted }}>
+                    {" "}
+                    · {group.heading}
+                  </span>
+                </h4>
+                <div className="flex flex-wrap gap-2">
+                  {group.players.map((player) => (
+                    <PlayerChip
+                      key={`${group.id}-${player.id}`}
+                      player={player}
+                      region={group.id}
+                      mark={mark}
+                      metrics={metrics}
+                      theme={theme}
+                      lang={lang}
+                      edge={regionEdge(group.id, colors, theme)}
+                      tipId={tipId}
+                      open={openTip === `${group.id}-${player.id}`}
+                      onTip={setOpenTip}
+                      interactive={!isExport}
+                      compact={isExport}
+                    />
+                  ))}
+                </div>
+              </div>
+            );
+          })}
         </div>
       ) : null}
 
@@ -428,12 +479,8 @@ export function VennDiagramChart({
             </p>
           ) : (
             groups.map((group) => {
-              const dot =
-                group.id === "none" || group.id === "minutes"
-                  ? theme.muted
-                  : group.id === "ABC"
-                    ? theme.text
-                    : colors[group.id[0] as VennConditionId];
+              const dot = regionAccent(group.id, colors, theme);
+              const mark = regionMark(group.id, copy.vennRegionOut, copy.vennRegionMins);
               return (
                 <div key={group.id} data-venn-legend-region={group.id}>
                   <h4
@@ -445,7 +492,11 @@ export function VennDiagramChart({
                       style={{ background: dot }}
                       aria-hidden
                     />
-                    {group.heading}
+                    {mark}
+                    <span className="font-semibold" style={{ color: theme.muted }}>
+                      {" "}
+                      · {group.heading}
+                    </span>
                   </h4>
                   <ul className="flex flex-col gap-1">
                     {group.players.map((player) => (
@@ -485,10 +536,11 @@ export function VennDiagramChart({
 function PlayerChip({
   player,
   region,
+  mark,
   metrics,
   theme,
   lang,
-  accent,
+  edge,
   tipId,
   open,
   onTip,
@@ -497,10 +549,11 @@ function PlayerChip({
 }: {
   player: VennPlaced<VennChartPlayer>;
   region: LegendGroupId;
+  mark: string;
   metrics: FplStatKey[];
   theme: StatsLabChartTheme;
   lang: StatsLabLang;
-  accent: string;
+  edge: string;
   tipId: string;
   open: boolean;
   onTip: (id: string | null) => void;
@@ -512,7 +565,7 @@ function PlayerChip({
   const aria = [
     player.fullName || player.name,
     player.clubName || player.clubShort,
-    region,
+    mark,
     ...metrics.map((metric, metricIndex) =>
       vennMetricAria(metric, player.values[metricIndex] ?? 0, lang),
     ),
@@ -534,7 +587,7 @@ function PlayerChip({
         color: theme.text,
         fontSize: 14,
         fontWeight: 600,
-        boxShadow: `inset 3px 0 0 ${accent}`,
+        boxShadow: edge,
       }}
       aria-label={aria}
       title={player.fullName || player.name}
@@ -545,6 +598,13 @@ function PlayerChip({
       onBlur={() => onTip(null)}
     >
       <ClubMark code={player.badgeCode} short={player.clubShort} fill={clubFill} size={24} />
+      <span
+        data-venn-region-code={region}
+        className="shrink-0 text-[11px] font-black leading-none"
+        style={{ color: theme.text }}
+      >
+        {mark}
+      </span>
       <span className="min-w-0 whitespace-normal break-words" style={{ fontWeight: 600, lineHeight: 1.15 }}>
         {compact ? (
           <span style={{ fontSize: 13 }}>

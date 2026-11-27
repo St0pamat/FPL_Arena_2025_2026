@@ -159,10 +159,31 @@ describe("U8 diagram Venna — render", () => {
     expect(document.body.innerHTML).not.toMatch(/text-ellipsis/);
   });
 
+  it("A+B i A+C mają własny kod i inny pasek niż samo A", () => {
+    renderChart({
+      players: [
+        person(1, "OnlyA", { clean_sheets: 6, goals_assists: 0, dc_bonus_matches: 0 }),
+        person(2, "BothAB", { clean_sheets: 6, goals_assists: 4, dc_bonus_matches: 0 }),
+        person(3, "BothAC", { clean_sheets: 6, goals_assists: 0, dc_bonus_matches: 5 }),
+      ],
+    });
+    const edge = (region: string) =>
+      (document.querySelector(`[data-venn-token='${region}']`) as HTMLElement).style.boxShadow;
+    expect(document.querySelector("[data-venn-region-code='AB']")?.textContent).toBe("A+B");
+    expect(document.querySelector("[data-venn-region-code='AC']")?.textContent).toBe("A+C");
+    expect(edge("A")).not.toBe(edge("AB"));
+    expect(edge("AB")).not.toBe(edge("AC"));
+    expect(edge("A")).not.toBe(edge("AC"));
+  });
+
   it("eksport nie ma panelu sterowania, a wąski układ zostawia zawodników na liście", () => {
     const view = renderChart({ variant: "export", density: "full" });
     expect(document.querySelector("[data-variant='export']")).toBeTruthy();
     expect(document.querySelector("[data-venn-controls]")).toBeNull();
+    expect(document.querySelector("[data-venn-region-heading='A']")?.textContent).toMatch(/A/);
+    expect(document.querySelector("[data-venn-region-code='A']")?.textContent).toBe("A");
+    expect(document.querySelector("[data-venn-region-heading='ABC']")?.textContent).toMatch(/A\+B\+C/);
+    expect(document.querySelector("[data-venn-region-code='ABC']")?.textContent).toBe("A+B+C");
     expect(document.querySelector("select")).toBeNull();
     expect(document.querySelector("[data-venn-token]")).toBeTruthy();
     expect(document.querySelector("[data-venn-source]")?.textContent).toMatch(

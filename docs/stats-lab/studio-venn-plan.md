@@ -41,7 +41,7 @@ Opis pod wykresem: „Posortowane: liczba spełnionych warunków, potem punkty�
 - Koła: akcent motywu, złoto motywu, błękit z palety metryk. Etykieta przy kole ma pełną nazwę i próg.
 - Żeton: herb z `/api/uploads/fpl-lab/badge/…` i pełne nazwisko (bez `truncate` i bez wielokropka). Wartości trzech progów są na żetonie.
 - Pusty obszar: „0 graczy” / „0 players”.
-- Eksport PNG: kwadrat 1080 px, sam diagram z wybranymi (bez panelu). Stopka plakatu jest wspólna z resztą Studio.
+- Eksport PNG: kwadrat 1080 px, sam diagram z wybranymi (bez panelu). Żetony są pogrupowane nagłówkiem pola (`A`, `A+B`, `A+B+C`), a pasek żetonu rysuje kolor każdego koła z tego pola. Stopka plakatu jest wspólna z resztą Studio.
 - Wąski ekran (320–360): żetony zawijają się w całą szerokość, legenda zostaje pod wykresem.
 
 ## Poza zakresem
