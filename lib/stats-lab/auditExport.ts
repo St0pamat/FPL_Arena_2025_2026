@@ -443,7 +443,7 @@ function chartStudioAlgorithmSpec(input: {
       : vizMode === "POINTS_BREAKDOWN"
         ? `1) official FPL match totals (pointsBreakdown.estimatedTotal / rawValues.total_points) ${filter.sortDirection} on FULL comparisonPool — Per90 NEVER affects order → 2) compositeScore tie-break only → 3) slice Top N; chart + audit.json share identical order`
         : vizMode === "VENN_3"
-          ? "Venn: rawValues[metric] >= threshold in the filtered GW range; returnAllEligible keeps the whole filtered pool (no Top N); regions A/B/C/AB/AC/BC/ABC; missing or NaN values count as 0"
+          ? "Venn: rawValues[metric] >= threshold in the filtered GW range; returnAllEligible loads the filtered pool so AUTO Top N can rank 1) conditions met DESC → 2) total_points DESC → 3) id; then slice Top N (max 20). MANUAL shows selected ids only (max 20, selection order). Diagram draws only that roster (no +N). Regions A/B/C/AB/AC/BC/ABC; missing or NaN values count as 0"
           : useComposite
           ? `1) compositeScore ${filter.sortDirection} on FULL comparisonPool → 2) total_points tie-break → 3) slice Top N; NO post-slice reshuffle; RADAR_PIZZA displays max 4; scaleMode=${scaleMode}; sortByComposite=true`
           : `1) ${valueLane}[${filter.sortByStat}] ${filter.sortDirection} on FULL comparisonPool → 2) compositeScore tie-break only → 3) slice Top N; preserve sortByStat order (sortByComposite=false; no composite reshuffle); RADAR_PIZZA displays max 4; scaleMode=${scaleMode}`;

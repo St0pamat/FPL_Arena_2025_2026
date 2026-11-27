@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import type { StatsLabChartTheme } from "@/components/admin/stats-lab/chartTheme";
 import {
   METRIC_SEGMENT_COLORS,
@@ -21,18 +21,14 @@ import { parseCssColorToRgba } from "@/lib/stats-lab/auditExport";
 import { fplLabBadgeUrl } from "@/lib/stats-lab/mediaUrls";
 import {
   VENN_CIRCLES,
-  VENN_PLAYERS_PER_AREA,
   VENN_REGION_IDS,
+  VENN_SELECTION_CAP,
   VENN_VIEW,
-  VENN_VISUAL_CAP,
   assignPlayersToVennRegions,
   layoutVennRegion,
-  shortenPlayerLabel,
-  vennChipBudget,
   type VennCondition,
   type VennConditionId,
   type VennPlaced,
-  type VennPlayersPerArea,
   type VennRegionId,
 } from "@/lib/stats-lab/vennEngine";
 
@@ -57,34 +53,23 @@ type Props = {
   gwLabel: string;
   minMinutes: number;
   variant?: "studio" | "export";
-  /** counts = w kołach same liczby (wąski ekran). */
+  /** counts = w kołach same liczby; nazwiska zostają w legendzie. */
   density?: "auto" | "full" | "counts";
-  playersPerArea?: VennPlayersPerArea;
-  onPlayersPerAreaChange?: (value: VennPlayersPerArea) => void;
-  includePlayerList?: boolean;
-  onIncludePlayerListChange?: (value: boolean) => void;
+  /** auto = TOP N, manual = ręczna lista. */
+  selectionMode?: "auto" | "manual";
   /** Szkielet zamiast liczb, dopóki pula Venna nie jest policzona. */
   loading?: boolean;
 };
 
 const CIRCLE_IDS: VennConditionId[] = ["A", "B", "C"];
 
-/** Środek stosu chipów w udziale widoku — w polu, z dala od obwodu. */
-const STACK_ANCHOR: Record<VennRegionId, { x: number; y: number }> = {
-  A: { x: 0.2, y: 0.32 },
-  B: { x: 0.8, y: 0.32 },
-  C: { x: 0.5, y: 0.7 },
-  AB: { x: 0.5, y: 0.2 },
-  AC: { x: 0.33, y: 0.48 },
-  BC: { x: 0.67, y: 0.48 },
-  ABC: { x: 0.5, y: 0.44 },
-};
-
 const TITLE_ANCHOR: Record<VennConditionId, { x: number; y: number }> = {
   A: { x: 0.18, y: 0.06 },
   B: { x: 0.58, y: 0.06 },
   C: { x: 0.3, y: 0.92 },
 };
+
+type LegendGroupId = VennRegionId | "none" | "minutes";
 
 function circleColors(theme: StatsLabChartTheme): Record<VennConditionId, string> {
   return {
@@ -130,31 +115,6 @@ function regionHeading(
   if (region === "A") return a;
   if (region === "B") return b;
   return c;
-}
-
-function regionCode(region: VennRegionId, lang: StatsLabLang): string {
-  if (region === "ABC") return "A + B + C";
-  if (region.length === 2) return region.split("").join(" + ");
-  return lang === "pl" ? `Tylko ${region}` : `Only ${region}`;
-}
-
-function useChartWidth(active: boolean) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [width, setWidth] = useState(0);
-  useLayoutEffect(() => {
-    if (!active) {
-      setWidth(0);
-      return;
-    }
-    const node = ref.current;
-    if (!node || typeof ResizeObserver === "undefined") return;
-    const observer = new ResizeObserver((entries) => {
-      setWidth(entries[0]?.contentRect.width ?? 0);
-    });
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, [active]);
-  return { ref, width };
 }
 
 function ClubMark({
@@ -212,22 +172,19 @@ export function VennDiagramChart({
   minMinutes,
   variant = "studio",
   density = "auto",
-  playersPerArea,
-  onPlayersPerAreaChange,
-  includePlayerList = false,
-  onIncludePlayerListChange,
+  selectionMode = "auto",
   loading = false,
 }: Props) {
   const copy = t(lang);
   const tipId = useId();
   const [openTip, setOpenTip] = useState<string | null>(null);
-  const [area, setArea] = useState<VennPlayersPerArea>(playersPerArea ?? 5);
-  const measure = density === "auto" && variant !== "export";
-  const { ref, width } = useChartWidth(measure);
-  const narrow = measure && width > 0 && width < 640;
-  const listLayout = narrow;
-  const countsOnly = density === "counts" || listLayout;
-  const perArea = playersPerArea ?? area;
+  const roster = useMemo(
+    () => players.slice(0, VENN_SELECTION_CAP),
+    [players],
+  );
+  const showChips = !loading && density !== "counts";
+  const showLegend = !loading && variant !== "export";
+  const isExport = variant === "export";
 
   const colors = circleColors(theme);
   const phrases = conditions.map((condition) =>
@@ -237,7 +194,7 @@ export function VennDiagramChart({
   const assignment = useMemo(
     () =>
       assignPlayersToVennRegions({
-        players: players.map((player) => ({
+        players: roster.map((player) => ({
           ...player,
           minutes: player.minutes,
           points: player.points,
@@ -246,7 +203,7 @@ export function VennDiagramChart({
         conditions,
         minMinutes,
       }),
-    [players, conditions, minMinutes],
+    [roster, conditions, minMinutes],
   );
 
   const summary = loading
@@ -259,266 +216,254 @@ export function VennDiagramChart({
       });
 
   const metrics = conditions.map((condition) => condition.metric);
-  const showList = variant !== "export" || includePlayerList;
-  const densityAttr = listLayout ? "list" : countsOnly ? "counts" : "full";
+  const sortCaption =
+    selectionMode === "manual" ? copy.vennSelectedPlayers : copy.vennSortedBy;
+  const densityAttr = density === "counts" ? "counts" : "full";
 
-  function chooseArea(next: VennPlayersPerArea) {
-    setArea(next);
-    onPlayersPerAreaChange?.(next);
+  const groups: { id: LegendGroupId; heading: string; players: VennPlaced<VennChartPlayer>[] }[] =
+    [];
+  for (const region of VENN_REGION_IDS) {
+    const group = assignment.regions[region];
+    if (!group.length) continue;
+    groups.push({
+      id: region,
+      heading: regionHeading(region, phrases, copy.vennAllThree),
+      players: group,
+    });
+  }
+  if (assignment.none.length) {
+    groups.push({
+      id: "none",
+      heading: copy.vennOutside,
+      players: assignment.none,
+    });
+  }
+  if (assignment.belowMinutes.length) {
+    groups.push({
+      id: "minutes",
+      heading: copy.vennBelowMinutes,
+      players: assignment.belowMinutes,
+    });
   }
 
   return (
     <div
-      ref={ref}
       data-venn-root="true"
       data-variant={variant}
       data-venn-density={densityAttr}
-      data-venn-players-per-area={String(perArea)}
-      data-venn-include-list={includePlayerList ? "true" : "false"}
+      data-venn-selection={selectionMode}
+      data-venn-roster={String(roster.length)}
       className="w-full max-w-full"
       style={{ background: theme.canvasBg, color: theme.text }}
     >
       <p
         data-venn-summary="true"
-        className="mb-3 text-sm font-semibold leading-snug"
+        className="mb-2 text-sm font-semibold leading-snug"
         style={{ color: theme.text }}
       >
         {summary}
       </p>
-
-      {variant !== "export" ? (
-        <div
-          data-venn-controls="true"
-          className="mb-3 flex flex-wrap items-center gap-2"
+      {!loading ? (
+        <p
+          data-venn-sort="true"
+          className="mb-2 text-sm font-semibold leading-snug"
+          style={{ color: theme.muted }}
         >
-          <span className="text-sm font-semibold" style={{ color: theme.text }}>
-            {copy.vennPlayersPerArea}:
-          </span>
-          {VENN_PLAYERS_PER_AREA.map((count) => (
-            <button
-              key={count}
-              type="button"
-              aria-pressed={perArea === count}
-              onClick={() => chooseArea(count)}
-              className="min-h-11 min-w-11 rounded-lg px-3 text-sm font-semibold"
-              style={{
-                background: perArea === count ? theme.accent : theme.panelBg,
-                color:
-                  perArea === count ? inkForFill(theme.accent) : theme.text,
-              }}
-            >
-              {count}
-            </button>
-          ))}
-          <button
-            type="button"
-            aria-pressed={perArea === "all"}
-            onClick={() => chooseArea("all")}
-            className="min-h-11 rounded-lg px-3 text-sm font-semibold"
-            style={{
-              background: perArea === "all" ? theme.accent : theme.panelBg,
-              color: perArea === "all" ? inkForFill(theme.accent) : theme.text,
-            }}
-          >
-            {copy.vennPlayersAll}
-          </button>
-          <label className="ml-1 inline-flex min-h-11 items-center gap-2 text-sm font-semibold">
-            <input
-              type="checkbox"
-              checked={includePlayerList}
-              onChange={(event) =>
-                onIncludePlayerListChange?.(event.target.checked)
-              }
-            />
-            {copy.vennIncludeList}
-          </label>
-        </div>
+          {sortCaption}
+        </p>
       ) : null}
 
-      <p className="mb-2 text-sm font-semibold" style={{ color: theme.muted }} data-venn-legend="true">
+      <p className="mb-2 text-sm font-semibold leading-snug" style={{ color: theme.muted }} data-venn-legend="true">
         {phrases.join(" · ")}
       </p>
 
-      <div className={`relative w-full ${listLayout ? "mx-auto max-w-[220px]" : ""}`}>
-        <svg
-          viewBox={`0 0 ${VENN_VIEW.w} ${VENN_VIEW.h}`}
-          className={`block h-auto w-full ${
-            listLayout
-              ? "max-h-40"
-              : variant === "export"
-                ? "h-[680px] max-h-[680px]"
-                : "min-h-[520px]"
-          }`}
-          role="img"
-          aria-label={summary}
+      <div className={isExport ? "mx-auto w-full max-w-[360px]" : "w-full"}>
+        <div
+          className="relative w-full"
+          style={{ aspectRatio: `${VENN_VIEW.w} / ${VENN_VIEW.h}` }}
         >
-          {loading
-            ? CIRCLE_IDS.map((id) => {
-                const circle = VENN_CIRCLES[id];
-                return (
-                  <circle
-                    key={id}
-                    cx={circle.cx}
-                    cy={circle.cy}
-                    r={circle.r}
-                    fill={theme.panelBg}
-                    stroke={theme.border}
-                    strokeWidth={2.5}
-                  />
-                );
-              })
-            : null}
-          {!loading
-            ? CIRCLE_IDS.map((id) => {
-                const circle = VENN_CIRCLES[id];
-                return (
-                  <circle
-                    key={id}
-                    cx={circle.cx}
-                    cy={circle.cy}
-                    r={circle.r}
-                    fill={colors[id]}
-                    fillOpacity={0.22}
-                    stroke={colors[id]}
-                    strokeWidth={3}
-                  />
-                );
-              })
-            : null}
-
-          {!loading
-            ? VENN_REGION_IDS.map((region) => {
-                const layout = layoutVennRegion(region);
-                const group = assignment.regions[region];
-                const empty = group.length === 0;
-                const label = empty ? copy.vennNobody : String(group.length);
-                return (
-                  <g key={`count-${region}`} data-venn-count={region}>
-                    <rect
-                      x={layout.count.x - 34}
-                      y={layout.count.y - 14}
-                      width={68}
-                      height={28}
-                      rx={8}
+          <svg
+            viewBox={`0 0 ${VENN_VIEW.w} ${VENN_VIEW.h}`}
+            className="absolute inset-0 h-full w-full"
+            role="img"
+            aria-label={summary}
+            preserveAspectRatio="xMidYMid meet"
+          >
+            {loading
+              ? CIRCLE_IDS.map((id) => {
+                  const circle = VENN_CIRCLES[id];
+                  return (
+                    <circle
+                      key={id}
+                      cx={circle.cx}
+                      cy={circle.cy}
+                      r={circle.r}
                       fill={theme.panelBg}
+                      stroke={theme.border}
+                      strokeWidth={2.5}
                     />
-                    <text
-                      data-venn-empty={empty ? region : undefined}
-                      x={layout.count.x}
-                      y={layout.count.y}
-                      textAnchor="middle"
-                      dominantBaseline="central"
-                      fill={empty ? theme.muted : theme.text}
-                      fontSize={empty ? 12 : 16}
-                      fontWeight={700}
-                    >
-                      {label}
-                    </text>
-                  </g>
+                  );
+                })
+              : null}
+            {!loading
+              ? CIRCLE_IDS.map((id) => {
+                  const circle = VENN_CIRCLES[id];
+                  return (
+                    <circle
+                      key={id}
+                      cx={circle.cx}
+                      cy={circle.cy}
+                      r={circle.r}
+                      fill={colors[id]}
+                      fillOpacity={0.22}
+                      stroke={colors[id]}
+                      strokeWidth={3}
+                    />
+                  );
+                })
+              : null}
+
+            {!loading
+              ? VENN_REGION_IDS.map((region) => {
+                  const layout = layoutVennRegion(region);
+                  const group = assignment.regions[region];
+                  const empty = group.length === 0;
+                  const label = empty ? copy.vennNobody : String(group.length);
+                  return (
+                    <g key={`count-${region}`} data-venn-count={region}>
+                      <rect
+                        x={layout.count.x - 34}
+                        y={layout.count.y - 14}
+                        width={68}
+                        height={28}
+                        rx={8}
+                        fill={theme.panelBg}
+                      />
+                      <text
+                        data-venn-empty={empty ? region : undefined}
+                        x={layout.count.x}
+                        y={layout.count.y}
+                        textAnchor="middle"
+                        dominantBaseline="central"
+                        fill={empty ? theme.muted : theme.text}
+                        fontSize={empty ? 12 : 16}
+                        fontWeight={700}
+                      >
+                        {label}
+                      </text>
+                    </g>
+                  );
+                })
+              : null}
+          </svg>
+
+          {!loading
+            ? CIRCLE_IDS.map((id, index) => {
+                const ink = titleInk(id, theme, colors[id]);
+                const anchor = TITLE_ANCHOR[id];
+                return (
+                  <p
+                    key={`label-${id}`}
+                    data-venn-label={id}
+                    data-near-circle={id}
+                    className="absolute m-0 max-w-[42%] text-sm font-bold leading-snug"
+                    style={{
+                      left: `${anchor.x * 100}%`,
+                      top: `${anchor.y * 100}%`,
+                      color: ink,
+                      fontSize: 14,
+                      fontWeight: 700,
+                    }}
+                  >
+                    <span
+                      aria-hidden
+                      className="mr-1.5 inline-block h-2.5 w-2.5 rounded-full align-middle"
+                      style={{ background: ink }}
+                    />
+                    {phrases[index]}
+                  </p>
                 );
               })
             : null}
-        </svg>
+        </div>
+      </div>
 
-        {!loading && !countsOnly
-          ? CIRCLE_IDS.map((id, index) => {
-              const ink = titleInk(id, theme, colors[id]);
-              const anchor = TITLE_ANCHOR[id];
-              return (
-                <p
-                  key={`label-${id}`}
-                  data-venn-label={id}
-                  data-near-circle={id}
-                  className="absolute m-0 max-w-[42%] text-sm font-bold leading-snug"
-                  style={{
-                    left: `${anchor.x * 100}%`,
-                    top: `${anchor.y * 100}%`,
-                    color: ink,
-                    fontSize: 14,
-                    fontWeight: 700,
-                  }}
-                >
-                  <span
-                    aria-hidden
-                    className="mr-1.5 inline-block h-2.5 w-2.5 rounded-full align-middle"
-                    style={{ background: ink }}
-                  />
-                  {phrases[index]}
-                </p>
-              );
-            })
-          : null}
-
-        {!loading && !countsOnly ? (
-          <div className="pointer-events-none absolute inset-0">
-            {VENN_REGION_IDS.map((region) => (
-              <RegionStack
-                key={region}
-                region={region}
-                players={assignment.regions[region]}
-                perArea={perArea}
+      {showChips ? (
+        <div className="mt-3 flex flex-wrap gap-2" data-venn-chips="true">
+          {groups.map((group) =>
+            group.players.map((player) => (
+              <PlayerChip
+                key={`${group.id}-${player.id}`}
+                player={player}
+                region={group.id}
                 metrics={metrics}
                 theme={theme}
                 lang={lang}
+                accent={
+                  group.id === "none" || group.id === "minutes"
+                    ? theme.muted
+                    : group.id === "ABC"
+                      ? theme.text
+                      : colors[group.id[0] as VennConditionId]
+                }
                 tipId={tipId}
-                openTip={openTip}
+                open={openTip === `${group.id}-${player.id}`}
                 onTip={setOpenTip}
-                interactive={variant !== "export"}
+                interactive={!isExport}
+                compact={isExport}
               />
-            ))}
-          </div>
-        ) : null}
-      </div>
+            )),
+          )}
+        </div>
+      ) : null}
 
-      {!loading ? (
-        <section
-          data-venn-center-card="true"
-          className="mt-3 rounded-xl px-3 py-2"
-          style={{ background: theme.panelBg, color: theme.text }}
-        >
-          <h3 className="text-sm font-bold" style={{ color: colors.A }}>
-            <span
-              aria-hidden
-              className="mr-1.5 inline-block h-2.5 w-2.5 rounded-full align-middle"
-              style={{ background: theme.text }}
-            />
-            {copy.vennMeetsAll}
-            <span className="ml-2 font-semibold" style={{ color: theme.muted }}>
-              {assignment.regions.ABC.length === 0
-                ? copy.vennNobody
-                : assignment.regions.ABC.length}
-            </span>
+      {showLegend ? (
+        <section className="mt-3 space-y-2" data-venn-legend-list="true">
+          <h3 className="text-sm font-bold" style={{ color: theme.text }}>
+            {copy.vennLegendTitle}
           </h3>
-          {assignment.regions.ABC.length === 0 ? null : (
-            <ul className="mt-1 space-y-1">
-              {assignment.regions.ABC.slice(
-                0,
-                vennChipBudget(
-                  assignment.regions.ABC.length,
-                  perArea,
-                  VENN_VISUAL_CAP.ABC,
-                ).shown,
-              ).map((player) => (
-                <li
-                  key={player.id}
-                  className="text-sm font-semibold leading-none"
-                  style={{ fontSize: 13, fontWeight: 600 }}
-                  title={player.fullName}
-                >
-                  {player.name}
-                  <span className="ml-2 font-semibold" style={{ color: theme.muted }}>
-                    {vennShortStatLine(metrics, player.values, lang)}
-                  </span>
-                </li>
-              ))}
-            </ul>
+          {groups.length === 0 ? (
+            <p className="text-sm" style={{ color: theme.muted }}>
+              {copy.vennNobody}
+            </p>
+          ) : (
+            groups.map((group) => {
+              const dot =
+                group.id === "none" || group.id === "minutes"
+                  ? theme.muted
+                  : group.id === "ABC"
+                    ? theme.text
+                    : colors[group.id[0] as VennConditionId];
+              return (
+                <div key={group.id} data-venn-legend-region={group.id}>
+                  <h4
+                    className="mb-1 text-sm font-bold leading-snug"
+                    style={{ color: dot }}
+                  >
+                    <span
+                      className="mr-1.5 inline-block h-2.5 w-2.5 rounded-full align-middle"
+                      style={{ background: dot }}
+                      aria-hidden
+                    />
+                    {group.heading}
+                  </h4>
+                  <ul className="flex flex-col gap-1">
+                    {group.players.map((player) => (
+                      <PlayerLegendRow
+                        key={player.id}
+                        player={player}
+                        metrics={metrics}
+                        theme={theme}
+                        lang={lang}
+                      />
+                    ))}
+                  </ul>
+                </div>
+              );
+            })
           )}
         </section>
-      ) : (
-        <p className="mt-3 text-sm font-semibold" style={{ color: theme.muted }}>
-          {copy.vennCalculating}
-        </p>
-      )}
+      ) : null}
 
       <p
         data-venn-source="true"
@@ -533,183 +478,108 @@ export function VennDiagramChart({
             : ` · min. ${minMinutes} mins`
           : ""}
       </p>
-
-      {showList ? (
-        <section className="mt-4 space-y-3" data-venn-list="true">
-          <h3
-            className="text-xs font-black uppercase tracking-wider"
-            style={{ color: theme.text }}
-          >
-            {copy.vennListTitle}
-          </h3>
-          {VENN_REGION_IDS.map((region) => {
-            const group = assignment.regions[region];
-            const heading = listLayout
-              ? `${regionCode(region, lang)} · ${group.length === 0 ? copy.vennNobody : group.length}`
-              : regionHeading(region, phrases, copy.vennAllThree);
-            const dot =
-              region === "ABC" ? theme.text : colors[region[0] as VennConditionId];
-            return (
-              <div key={region} id={`venn-region-${region}`} data-venn-region={region}>
-                <h4
-                  className="mb-1 text-sm font-bold leading-snug"
-                  style={{ color: titleInk(region[0] as VennConditionId, theme, dot) }}
-                >
-                  <span
-                    className="mr-1.5 inline-block h-2.5 w-2.5 rounded-full align-middle"
-                    style={{ background: dot }}
-                    aria-hidden
-                  />
-                  {heading}
-                  {listLayout ? null : (
-                    <span className="ml-2 font-semibold" style={{ color: theme.muted }}>
-                      {group.length === 0 ? copy.vennNobody : group.length}
-                    </span>
-                  )}
-                </h4>
-                {group.length === 0 ? (
-                  <p className="text-sm" style={{ color: theme.muted }}>
-                    {copy.vennNobody}
-                  </p>
-                ) : (
-                  <ul className="flex flex-wrap gap-1.5">
-                    {group.map((player) => (
-                      <li key={player.id}>
-                        <PlayerRow
-                          player={player}
-                          metrics={metrics}
-                          theme={theme}
-                          lang={lang}
-                        />
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            );
-          })}
-        </section>
-      ) : null}
     </div>
   );
 }
 
-function RegionStack({
+function PlayerChip({
+  player,
   region,
-  players,
-  perArea,
   metrics,
   theme,
   lang,
+  accent,
   tipId,
-  openTip,
+  open,
   onTip,
   interactive,
+  compact,
 }: {
-  region: VennRegionId;
-  players: VennPlaced<VennChartPlayer>[];
-  perArea: VennPlayersPerArea;
+  player: VennPlaced<VennChartPlayer>;
+  region: LegendGroupId;
   metrics: FplStatKey[];
   theme: StatsLabChartTheme;
   lang: StatsLabLang;
+  accent: string;
   tipId: string;
-  openTip: string | null;
+  open: boolean;
   onTip: (id: string | null) => void;
   interactive: boolean;
+  compact: boolean;
 }) {
-  const copy = t(lang);
-  const budget = vennChipBudget(players.length, perArea, VENN_VISUAL_CAP[region]);
-  const shown = players.slice(0, budget.shown);
-  const anchor = STACK_ANCHOR[region];
-  const tipKey = (id: number) => `${region}-${id}`;
-
+  const clubFill = getScatterClubColor(player.clubShort, null, theme.accent);
+  const values = vennShortStatLine(metrics, player.values, lang);
+  const aria = [
+    player.fullName || player.name,
+    player.clubName || player.clubShort,
+    region,
+    ...metrics.map((metric, metricIndex) =>
+      vennMetricAria(metric, player.values[metricIndex] ?? 0, lang),
+    ),
+  ]
+    .filter(Boolean)
+    .join(". ");
+  const key = `${region}-${player.id}`;
   return (
-    <>
-      {shown.map((player, index) => {
-        const clubFill = getScatterClubColor(player.clubShort, null, theme.accent);
-        const aria = [
-          player.fullName,
-          player.clubName || player.clubShort,
-          ...metrics.map((metric, metricIndex) =>
-            vennMetricAria(metric, player.values[metricIndex] ?? 0, lang),
-          ),
-        ]
-          .filter(Boolean)
-          .join(". ");
-        const key = tipKey(player.id);
-        const open = openTip === key;
-        return (
-          <button
-            key={player.id}
-            type="button"
-            data-venn-token={region}
-            data-venn-chip="true"
-            tabIndex={interactive ? 0 : -1}
-            className="pointer-events-auto absolute flex -translate-x-1/2 items-center rounded-lg px-1.5"
-            style={{
-              left: `${anchor.x * 100}%`,
-              top: `calc(${anchor.y * 100}% + ${index * 38}px)`,
-              minHeight: 32,
-              gap: 6,
-              background: theme.panelBg,
-              color: theme.text,
-              fontSize: 14,
-              fontWeight: 600,
-              zIndex: 2,
-            }}
-            aria-label={aria}
-            title={player.fullName}
-            aria-describedby={open ? tipId : undefined}
-            onMouseEnter={() => onTip(key)}
-            onMouseLeave={() => onTip(null)}
-            onFocus={() => onTip(key)}
-            onBlur={() => onTip(null)}
-          >
-            <ClubMark code={player.badgeCode} short={player.clubShort} fill={clubFill} size={24} />
-            <span style={{ fontSize: 14, fontWeight: 600, lineHeight: 1.1 }}>
-              {shortenPlayerLabel(player.name, 14)}
+    <button
+      type="button"
+      data-venn-token={region}
+      data-venn-chip="true"
+      tabIndex={interactive ? 0 : -1}
+      className="relative inline-flex max-w-full items-center rounded-lg px-1.5 text-left"
+      style={{
+        minHeight: compact ? 36 : 44,
+        gap: 6,
+        background: theme.panelBg,
+        color: theme.text,
+        fontSize: 14,
+        fontWeight: 600,
+        boxShadow: `inset 3px 0 0 ${accent}`,
+      }}
+      aria-label={aria}
+      title={player.fullName || player.name}
+      aria-describedby={open ? tipId : undefined}
+      onMouseEnter={() => onTip(key)}
+      onMouseLeave={() => onTip(null)}
+      onFocus={() => onTip(key)}
+      onBlur={() => onTip(null)}
+    >
+      <ClubMark code={player.badgeCode} short={player.clubShort} fill={clubFill} size={24} />
+      <span className="min-w-0 whitespace-normal break-words" style={{ fontWeight: 600, lineHeight: 1.15 }}>
+        {compact ? (
+          <span style={{ fontSize: 13 }}>
+            {player.name}
+            <span style={{ color: theme.muted, fontWeight: 600 }}> · {values}</span>
+          </span>
+        ) : (
+          <>
+            <span className="block" style={{ fontSize: 14, fontWeight: 600, lineHeight: 1.15 }}>
+              {player.name}
             </span>
-            {open ? (
-              <span
-                role="tooltip"
-                id={tipId}
-                className="absolute left-1/2 top-full z-30 mt-1 w-52 -translate-x-1/2 rounded-lg px-2 py-1.5 text-left text-[11px] font-medium leading-snug"
-                style={{ background: theme.tooltipBg, color: theme.text }}
-              >
-                {aria}
-              </span>
-            ) : null}
-          </button>
-        );
-      })}
-      {budget.overflow > 0 ? (
-        <button
-          type="button"
-          data-venn-plus={region}
-          tabIndex={interactive ? 0 : -1}
-          className="pointer-events-auto absolute flex -translate-x-1/2 items-center justify-center rounded-full px-2 text-xs font-black"
-          style={{
-            left: `${anchor.x * 100}%`,
-            top: `calc(${anchor.y * 100}% + ${shown.length * 38}px)`,
-            minHeight: 32,
-            background: theme.panelBg,
-            color: theme.muted,
-          }}
-          aria-label={copy.vennMorePlayers.replace("{n}", String(budget.overflow))}
-          onClick={() => {
-            document.getElementById(`venn-region-${region}`)?.scrollIntoView({
-              block: "nearest",
-            });
-          }}
+            <span
+              className="block"
+              style={{ color: theme.muted, fontSize: 11, fontWeight: 600, lineHeight: 1.2 }}
+            >
+              {values}
+            </span>
+          </>
+        )}
+      </span>
+      {open ? (
+        <span
+          role="tooltip"
+          id={tipId}
+          className="absolute z-30 mt-1 w-52 rounded-lg px-2 py-1.5 text-left text-[11px] font-medium leading-snug"
+          style={{ background: theme.tooltipBg, color: theme.text }}
         >
-          {copy.vennMorePlayers.replace("{n}", String(budget.overflow))}
-        </button>
+          {aria}
+        </span>
       ) : null}
-    </>
+    </button>
   );
 }
 
-function PlayerRow({
+function PlayerLegendRow({
   player,
   metrics,
   theme,
@@ -722,28 +592,25 @@ function PlayerRow({
 }) {
   const clubFill = getScatterClubColor(player.clubShort, null, theme.accent);
   return (
-    <div
-      className="flex min-h-11 items-center gap-2 rounded-lg px-2 py-1.5"
-      style={{ background: theme.panelBg }}
-      title={player.fullName}
+    <li
+      className="flex max-w-full flex-wrap items-center gap-2 rounded-lg px-2 py-1"
+      style={{ background: theme.panelBg, minHeight: 44 }}
+      title={player.fullName || player.name}
+      data-venn-legend-player="true"
     >
       <ClubMark code={player.badgeCode} short={player.clubShort} fill={clubFill} size={24} />
-      <span className="text-sm font-semibold" style={{ color: theme.text, fontWeight: 600 }}>
+      <span
+        className="whitespace-normal break-words text-sm font-semibold"
+        style={{ color: theme.text, fontWeight: 600 }}
+      >
         {player.name}
       </span>
       <span className="text-xs font-semibold" style={{ color: theme.muted }}>
         {player.clubShort}
       </span>
-      <span className="text-xs" style={{ color: theme.text }}>
-        {metrics.map((metric, index) => {
-          const detail = vennMetricAria(metric, player.values[index] ?? 0, lang);
-          return (
-            <span key={metric} title={detail} aria-label={detail} className="mr-2">
-              {vennShortStatLine([metric], [player.values[index] ?? 0], lang)}
-            </span>
-          );
-        })}
+      <span className="whitespace-normal break-words text-xs" style={{ color: theme.text }}>
+        {vennShortStatLine(metrics, player.values, lang)}
       </span>
-    </div>
+    </li>
   );
 }
